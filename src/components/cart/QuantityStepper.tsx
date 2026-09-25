@@ -11,8 +11,9 @@ type Props = {
 }
 
 export function QuantityStepper({ value, onChange, label, size = 'md' }: Props) {
-  const h = size === 'sm' ? 'h-9' : 'h-14'
-  const w = size === 'sm' ? 'w-9' : 'w-12'
+  // Both sizes keep 44px+ touch targets; "sm" is just narrower.
+  const h = size === 'sm' ? 'h-11' : 'h-14'
+  const w = size === 'sm' ? 'w-11' : 'w-12'
   return (
     <div
       role="group"

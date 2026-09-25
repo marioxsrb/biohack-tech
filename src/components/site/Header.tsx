@@ -6,7 +6,6 @@ import { useEffect, useRef, useState } from 'react'
 import { useCart } from '@/components/cart/CartProvider'
 import { Bag, Chevron, Close, Menu } from '@/components/ui/icons'
 import { productHref, products } from '@/content/catalog'
-import { site } from '@/config/site'
 import { formatMoney } from '@/lib/money'
 import { Wordmark } from './Wordmark'
 
@@ -62,7 +61,7 @@ export function Header() {
         }`}
       >
         <nav aria-label="Principal" className="wrap flex h-[var(--nav-h)] items-center gap-8">
-          <Link href="/" aria-label={`${site.name}, pagina principală`} className="flex h-11 flex-none items-center">
+          <Link href="/" className="flex h-11 flex-none items-center">
             <Wordmark />
           </Link>
 
@@ -95,9 +94,9 @@ export function Header() {
               aria-label={count ? `Coș, ${count} ${count === 1 ? 'produs' : 'produse'}` : 'Coș, gol'}
             >
               <Bag className="h-[22px] w-[22px]" />
-              <span className="hidden text-[15px] font-medium sm:inline">Coș</span>
+              <span className="text-[15px] font-medium">Coș</span>
               {count > 0 && (
-                <span key={count} className="cart-bump absolute top-1 left-[26px] flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red px-1 text-[11px] font-semibold tabular-nums text-white sm:static sm:h-5 sm:min-w-5">
+                <span key={count} className="cart-bump flex h-5 min-w-5 items-center justify-center rounded-full bg-red-dark px-1.5 text-[12px] font-semibold tabular-nums text-white">
                   {count}
                 </span>
               )}
@@ -133,7 +132,7 @@ export function Header() {
       <dialog ref={sheetRef} aria-label="Meniu" className="menu-sheet">
         <div className="flex h-full flex-col">
           <div className="wrap flex h-[var(--nav-h)] w-full flex-none items-center justify-between">
-            <Link href="/" onClick={closeSheet} aria-label={`${site.name}, pagina principală`} className="flex h-11 items-center">
+            <Link href="/" onClick={closeSheet} className="flex h-11 items-center">
               <Wordmark />
             </Link>
             <button type="button" onClick={closeSheet} className="-mr-2.5 flex h-11 w-11 items-center justify-center text-white" aria-label="Închide meniul">

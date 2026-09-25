@@ -1,11 +1,9 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
 import { useEffect, useRef } from 'react'
-import { Arrow } from '@/components/ui/icons'
-import { getProduct, productHref } from '@/content/catalog'
-import { formatMoney } from '@/lib/money'
+import { getProduct } from '@/content/catalog'
+import { SceneBuy } from './SceneBuy'
 
 const W = 1440
 const H = 220
@@ -19,6 +17,8 @@ const REST = 0.18
  * The path is written straight to the DOM each frame, only while the scene is visible.
  */
 export function BrainLinkScene({ mode = 'home' }: { mode?: 'home' | 'page' }) {
+  // On the homepage it follows the dark Balance Wave stage, so it opens with a dark → mist gradient.
+  const fromDark = mode === 'home'
   const product = getProduct('brainlink-pro')!
   const root = useRef<HTMLElement>(null)
   const path = useRef<SVGPathElement>(null)
@@ -38,6 +38,7 @@ export function BrainLinkScene({ mode = 'home' }: { mode?: 'home' | 'page' }) {
     let visible = false
     let demoDone = false
     let demoTimer: ReturnType<typeof setTimeout> | undefined
+    let lastF = ''
     const phases = [0.3, 1.7, 2.9, 4.1, 5.3]
 
     const draw = () => {
@@ -52,10 +53,15 @@ export function BrainLinkScene({ mode = 'home' }: { mode?: 'home' | 'page' }) {
         d += `${i ? 'L' : 'M'}${x.toFixed(1)} ${y.toFixed(1)}`
       }
       line.setAttribute('d', d)
-      el.style.setProperty('--f', focus.toFixed(3))
-      const v = Math.round(focus * 100)
-      if (readout.current) readout.current.textContent = String(v).padStart(2, '0')
-      if (bar.current) bar.current.style.transform = `scaleX(${focus.toFixed(3)})`
+      // Style and text only change when focus actually moves, not every frame.
+      const f = focus.toFixed(2)
+      if (f !== lastF) {
+        lastF = f
+        el.style.setProperty('--f', f)
+        if (bar.current) bar.current.style.transform = `scaleX(${f})`
+        const v = String(Math.round(focus * 100)).padStart(2, '0')
+        if (readout.current && readout.current.textContent !== v) readout.current.textContent = v
+      }
     }
 
     const loop = () => {
@@ -106,24 +112,16 @@ export function BrainLinkScene({ mode = 'home' }: { mode?: 'home' | 'page' }) {
   }
 
   return (
-    <section ref={root} id="brainlink" aria-labelledby="bl-title" className="bl-scene relative overflow-hidden bg-mist py-[var(--sec)]">
+    <section ref={root} id="brainlink" aria-labelledby="bl-title" className="bl-scene relative scroll-mt-[var(--nav-h)] overflow-hidden bg-mist pb-[var(--sec)]">
+      {fromDark ? (
+        <div aria-hidden className="h-[34vh] bg-[linear-gradient(180deg,var(--color-dark),#2a383c_22%,#9aa6ab_60%,var(--color-mist))]" />
+      ) : (
+        <div className="h-[var(--sec)]" />
+      )}
+      <span id="brainlink-buy" aria-hidden className="block scroll-mt-[calc(var(--nav-h)+24px)]" />
       <div className="wrap grid grid-cols-1 items-end gap-y-6 md:grid-cols-12 md:gap-x-6">
-        <div className="md:col-span-7">
-          <p className="font-mono text-[11.5px] tracking-[0.14em] text-muted uppercase">Pentru focus</p>
-          <h2 id="bl-title" className="mt-3 text-[clamp(48px,8vw,120px)] leading-[0.92] tracking-[-0.055em]">
-            BrainLink Pro
-          </h2>
-        </div>
-        <div className="md:col-span-4 md:col-start-9">
-          <p className="text-[17px] leading-relaxed text-text">Jocuri pe tabletă pe care le controlezi cu atenția. Când ești atent, jocul înaintează.</p>
-          {mode === 'home' && (
-            <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3">
-              <span className="text-[19px] font-medium text-ink tabular-nums">{formatMoney(product.price)}</span>
-              <Link href={productHref(product)} className="tlink">
-                Vezi BrainLink Pro <Arrow />
-              </Link>
-            </div>
-          )}
+        <div className="md:col-span-6">
+          <SceneBuy productId="brainlink-pro" headingId="bl-title" line="O cască ușoară și jocuri pe tabletă. Când ești atent, jocul înaintează." showLink={mode === 'home'} />
         </div>
       </div>
 

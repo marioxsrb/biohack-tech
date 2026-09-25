@@ -53,6 +53,12 @@ Toate animațiile folosesc doar `transform`, `opacity`, `filter` și culoare, ci
 `motion/scroll-vars.ts` (un listener pasiv, `requestAnimationFrame`, nicio bibliotecă). Semnalul BrainLink rulează
 doar cât scena e vizibilă. Cu `prefers-reduced-motion`, fiecare scenă apare direct în starea finală.
 
+## Regula de bază: poveste liberă, cumpărare convențională
+
+Scenele pot fi editoriale. Tot ce ține de cumpărare arată și se comportă la fel peste tot:
+`components/scenes/SceneBuy.tsx` (scop, nume, o propoziție, preț, „Adaugă în coș”, „Vezi produsul”),
+zona de cumpărare de pe pagina de produs, coșul și checkout-ul. Butonul roșu înseamnă mereu „cumpără”.
+
 ## Plăți
 
 Checkout-ul colectează datele de livrare pe site, apoi trimite cumpărătorul pe pagina de plată Stripe (Stripe Checkout). Prețurile sunt citite pe server din catalog; clientul trimite doar id-uri și cantități.

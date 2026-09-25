@@ -249,11 +249,11 @@ function CheckoutForm({ lines }: { lines: ResolvedLine[] }) {
               'Se deschide plata…'
             ) : (
               <>
-                <Lock /> Continuă spre plată
+                <Lock /> Mergi la plata cu cardul
               </>
             )}
           </button>
-          <p className="mt-3 text-center text-[13px] text-muted">Plătești cu cardul pe pagina securizată Stripe.</p>
+          <p className="mt-3 text-center text-[14px] text-text">Următorul pas: plătești cu cardul, pe pagina securizată Stripe. Apoi primești confirmarea pe email.</p>
 
           {laterLines.length > 0 && (
             <div className="mt-6 border-t border-mist-2 pt-4">

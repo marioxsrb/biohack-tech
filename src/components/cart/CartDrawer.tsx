@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { useEffect, useRef } from 'react'
 import { ProductShot } from '@/components/product/ProductShot'
-import { Arrow, Close } from '@/components/ui/icons'
+import { Arrow, Check, Close } from '@/components/ui/icons'
 import { productHref, products } from '@/content/catalog'
 import { terms } from '@/config/site'
 import { formatMoney } from '@/lib/money'
@@ -15,7 +15,8 @@ import { QuantityStepper } from './QuantityStepper'
  * from the platform. Opens after every add so the buyer sees what happened.
  */
 export function CartDrawer() {
-  const { isOpen, close, lines, count, totals, setQuantity, remove } = useCart()
+  const { isOpen, close, lines, count, totals, setQuantity, remove, lastAdded } = useCart()
+  const added = lines.find((l) => l.key === lastAdded)
   const ref = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -54,8 +55,10 @@ export function CartDrawer() {
 
         {lines.length === 0 ? (
           <div className="flex flex-1 flex-col overflow-y-auto px-6 py-10">
-            <p className="text-[19px] tracking-[-0.015em] text-ink">Coșul este gol.</p>
-            <p className="mt-1 text-muted">Alege unul dintre produse ca să începi.</p>
+            <p className="text-[22px] tracking-[-0.02em] text-ink">Coșul tău este gol.</p>
+            <Link href="/products" onClick={close} className="cta mt-5 self-start">
+              Vezi produsele <Arrow />
+            </Link>
             <ul className="mt-8 divide-y divide-mist-2">
               {products.map((p) => (
                 <li key={p.id}>
@@ -75,9 +78,20 @@ export function CartDrawer() {
           </div>
         ) : (
           <>
+            {added && (
+              <p className="flex flex-none items-center gap-3 bg-cyan-50 px-6 py-3.5 text-[15.5px] text-ink">
+                <span aria-hidden className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-cyan-700 text-white">
+                  <Check className="h-3.5 w-3.5" />
+                </span>
+                <span>
+                  <strong className="font-semibold">Adăugat în coș:</strong> {added.product.name}
+                  {added.variantLabel ? `, ${added.variantLabel}` : ''}
+                </span>
+              </p>
+            )}
             <ul className="flex-1 divide-y divide-mist-2 overflow-y-auto px-6">
               {lines.map((l) => (
-                <li key={l.key} className="grid grid-cols-[88px_1fr] gap-4 py-5">
+                <li key={l.key} className={`grid grid-cols-[88px_1fr] gap-4 py-5 transition-colors duration-500 ${l.key === lastAdded ? 'cart-line-new' : ''}`}>
                   <Link
                     href={productHref(l.product)}
                     onClick={close}
@@ -93,7 +107,8 @@ export function CartDrawer() {
                         <Link href={productHref(l.product)} onClick={close} className="font-medium text-ink hover:underline">
                           {l.product.name}
                         </Link>
-                        {l.variantLabel && <p className="text-[14px] text-muted">{l.variantLabel}</p>}
+                        {l.variantLabel && <p className="text-[15px] text-text">{l.variantLabel}</p>}
+                        {l.quantity > 1 && <p className="text-[14px] text-muted tabular-nums">{formatMoney(l.unit)} / buc.</p>}
                       </div>
                       <p className="flex-none text-[15px] font-medium tabular-nums text-ink">
                         {formatMoney({ ...l.unit, amount: l.unit.amount * l.quantity })}
@@ -109,7 +124,8 @@ export function CartDrawer() {
                       <button
                         type="button"
                         onClick={() => remove(l.key)}
-                        className="rounded px-1 text-[14px] text-muted underline-offset-4 hover:text-ink hover:underline"
+                        className="-mr-2 flex min-h-11 items-center rounded px-2 text-[15px] text-muted underline underline-offset-4 hover:text-ink"
+                        aria-label={`Elimină ${l.product.name}${l.variantLabel ? `, ${l.variantLabel}` : ''} din coș`}
                       >
                         Elimină
                       </button>
@@ -120,7 +136,7 @@ export function CartDrawer() {
             </ul>
 
             <footer className="flex-none border-t border-mist-2 bg-paper px-6 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]">
-              <dl className="space-y-1.5 text-[15px]">
+              <dl className="space-y-1.5 text-[15.5px]">
                 <div className="flex justify-between">
                   <dt className="text-muted">Livrare</dt>
                   <dd className="text-ink">Gratuită</dd>
@@ -139,7 +155,7 @@ export function CartDrawer() {
                 </p>
               )}
               <Link href="/checkout" onClick={close} className="cta mt-4 w-full">
-                Finalizează comanda <Arrow />
+                Continuă către plată <Arrow />
               </Link>
               <button
                 type="button"

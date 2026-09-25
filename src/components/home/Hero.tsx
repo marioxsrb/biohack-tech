@@ -60,7 +60,6 @@ export function Hero() {
               href="/products/balancewave"
               className="hotspot group absolute"
               style={{ left: spot.x, top: spot.y }}
-              aria-label="Balance Wave, dispozitivul din fotografie"
             >
               <span className="hotspot-dot" aria-hidden />
               <span className="hotspot-line" aria-hidden />
@@ -86,18 +85,18 @@ export function Hero() {
             <span>Minte limpede.</span>
           </span>
           <span className="line-mask">
-            <span className="[animation-delay:.12s]">Corp relaxat.</span>
+            <span className="[animation-delay:.1s]">Corp relaxat.</span>
           </span>
         </h1>
         <div className="hero-rise mt-7 flex flex-wrap items-center gap-x-8 gap-y-5 [animation-delay:.45s] max-sm:mt-5">
-          <a href="#descopera" className="cta">
+          <a href="#produse" className="cta">
             Vezi produsele <Arrow />
           </a>
           <p className="max-w-[17em] text-[16px] leading-snug text-white/85">Trei produse simple, pentru fiecare zi.</p>
         </div>
       </div>
 
-      <a href="#descopera" className="scroll-cue absolute right-[max(var(--gut),calc((100vw-1152px)/2+var(--gut)))] bottom-10 flex flex-col items-center gap-3 max-md:hidden" aria-label="Derulează la produse">
+      <a href="#produse" className="scroll-cue absolute right-[max(var(--gut),calc((100vw-1152px)/2+var(--gut)))] bottom-10 flex flex-col items-center gap-3 max-md:hidden" aria-label="Derulează la produse">
         <span className="font-mono text-[11.5px] tracking-[0.14em] text-white/80 uppercase [writing-mode:vertical-rl]">Derulează</span>
         <span className="scroll-cue-line" aria-hidden />
       </a>

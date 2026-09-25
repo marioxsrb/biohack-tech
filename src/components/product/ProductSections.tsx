@@ -167,7 +167,7 @@ function BuyAgain({ product }: { product: Product }) {
   const img = product.cutout
   const bleed = img.bleed === 'bottom'
   return (
-    <section aria-label={`Cumpără ${product.name}`} className="overflow-hidden bg-mist">
+    <section id="buy-again" aria-label={`Cumpără ${product.name}`} className="overflow-hidden bg-mist">
       <div className="wrap grid grid-cols-1 md:grid-cols-12 md:gap-x-6">
         <div className={`relative aspect-[16/10] md:col-span-6 ${bleed ? 'order-2 self-end md:order-1 md:mt-16' : 'my-12 md:my-16'}`}>
           <Image

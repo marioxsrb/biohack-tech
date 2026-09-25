@@ -361,12 +361,10 @@ html:has(dialog[open]) { overflow: hidden; }
   border-radius: 50%;
   background: rgb(255 255 255 / 0.92);
   color: var(--color-ink);
-  box-shadow: 0 8px 24px -12px rgb(8 17 19 / 0.4);
-  opacity: 0;
-  transition: opacity 0.2s, background 0.2s, color 0.2s;
+  box-shadow: 0 8px 24px -12px rgb(8 17 19 / 0.4), inset 0 0 0 1px rgb(8 17 19 / 0.08);
+  transition: background 0.15s, color 0.15s, transform 0.15s;
 }
-.group:hover .gal-arrow,
-.gal-arrow:focus-visible { opacity: 1; }
+.gal-arrow:active { transform: scale(0.94); }
 .gal-arrow:hover { background: var(--color-ink); color: #fff; }
 @media (hover: none) {
   .gal-arrow { display: none; }
@@ -413,10 +411,23 @@ textarea.field { resize: vertical; }
   transform: translate3d(0, calc(var(--out, 0) * 18%), 0) scale(calc(1 + var(--out, 0) * 0.05));
   will-change: transform;
 }
-.hero-settle { animation: settle 2.4s var(--ease-brand) both; }
+.hero-settle { animation: settle 2.2s var(--ease-brand) both; }
 @keyframes settle {
-  from { transform: scale(1.08); filter: brightness(0.6); }
-  to { transform: none; filter: none; }
+  from { transform: scale(1.06); }
+  to { transform: none; }
+}
+/* The photo comes up from dark with an overlay fade: opacity is cheap, a filter on a full-screen image is not. */
+.hero-settle::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-dark);
+  pointer-events: none;
+  animation: lift 1.4s var(--ease-brand) both;
+}
+@keyframes lift {
+  from { opacity: 0.45; }
+  to { opacity: 0; }
 }
 .hero-copy {
   transform: translate3d(0, calc(var(--out, 0) * -90px), 0);
@@ -425,10 +436,10 @@ textarea.field { resize: vertical; }
 
 /* Headline lines rise out of a mask. */
 .line-mask { display: block; overflow: hidden; padding-bottom: 0.08em; margin-bottom: -0.08em; }
-.line-mask > span { display: block; animation: line-up 1.1s var(--ease-brand) 0.25s both; }
+.line-mask > span { display: block; animation: line-up 0.9s var(--ease-brand) both; }
 @keyframes line-up {
-  from { transform: translateY(105%); }
-  to { transform: none; }
+  from { transform: translateY(38%); opacity: 0.35; }
+  to { transform: none; opacity: 1; }
 }
 
 /* Hotspot: a dot on the device, a hairline, a small label. */
@@ -490,10 +501,19 @@ textarea.field { resize: vertical; }
   from { opacity: 0; }
   to { opacity: 1; }
 }
-/* Phones: the label would cover the device, so only the pulsing dot remains. */
+/* Phones: the label would cover the device, so only the pulsing dot shows.
+   The label stays in the accessibility tree, so the link keeps its name. */
 @media (max-width: 640px) {
-  .hotspot-line,
-  .hotspot-label { display: none; }
+  .hotspot-line { display: none; }
+  .hotspot-label {
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .hotspot::before { content: ''; position: absolute; inset: -16px; }
 }
 
 /* Scroll cue: a hairline with a travelling segment. */
@@ -531,52 +551,45 @@ textarea.field { resize: vertical; }
 }
 .discover-fg { color: var(--color-muted); }
 .discover-word { color: var(--color-ink); transition: color 0.3s var(--ease-brand); }
-.discover-word > span:first-child > span:last-child {
-  display: inline-block;
-  transition: transform 0.45s var(--ease-brand);
-}
+.discover-word .discover-term { transition: transform 0.3s var(--ease-brand); }
 @media (min-width: 768px) {
   .discover-word[data-active='false'] { color: var(--color-muted); }
-  .discover-word[data-active='true'] > span:first-child > span:last-child { transform: translateX(14px); }
+  .discover-word[data-active='true'] .discover-term { transform: translateX(10px); }
 }
 .discover-product {
   opacity: 0;
-  transform: translateY(18px) scale(0.97);
-  transition: opacity 0.45s var(--ease-brand), transform 0.6s var(--ease-brand);
+  transform: translateY(12px) scale(0.98);
+  transition: opacity 0.3s var(--ease-brand), transform 0.4s var(--ease-brand);
+  pointer-events: none;
 }
+.discover-product[data-active='true'] { pointer-events: auto; }
 .discover-product[data-active='true'] { opacity: 1; transform: none; }
 
 /* ============================================================
    SCENE 3 · BALANCE WAVE
-   --dim : mist → dark over the first fifth, back to mist over the last sixth
-   --on  : the device switches on after the room has dimmed
+   Phases (--pin across the sticky stage):
+     0.00 → 0.30  the device rises and switches on
+     0.28 → 0.45  notes draw in
+     0.45 → 1.00  still: read, buy, scroll on
+   The stage is always dark: only opacity and transform change, never colour or filters.
    ============================================================ */
 .bw-scene {
-  --dim: min(clamp(0, calc(var(--pin, 0.5) * 7), 1), clamp(0, calc((1 - var(--pin, 0.5)) * 9), 1));
-  --on: clamp(0, calc((var(--pin, 0.5) - 0.12) * 3.6), 1);
-  --rise: clamp(0, calc(var(--pin, 0.5) * 4.5), 1);
-  --note: clamp(0, calc((var(--on) - 0.72) * 4), 1);
+  --on: clamp(0, calc((var(--pin, 1) - 0.02) * 3.4), 1);
+  --rise: clamp(0, calc(var(--pin, 1) * 4), 1);
+  --note: clamp(0, calc((var(--pin, 1) - 0.28) * 6), 1);
 }
-.bw-stage { background: color-mix(in oklab, var(--color-dark) calc(var(--dim) * 100%), var(--color-mist)); }
 .bw-bloom {
-  background: radial-gradient(ellipse 46% 42% at 50% 80%, rgb(230 69 69 / 0.34), rgb(230 69 69 / 0.08) 55%, transparent 75%);
-  opacity: calc(var(--on) * var(--dim));
+  background: radial-gradient(ellipse 46% 42% at 50% 82%, rgb(230 69 69 / 0.34), rgb(230 69 69 / 0.08) 55%, transparent 75%);
+  opacity: var(--on);
 }
 .bw-giant {
   font-size: clamp(96px, 21vw, 330px);
-  color: rgb(255 255 255 / 0.055);
-  opacity: var(--dim);
-  transform: translate3d(calc((0.5 - var(--pin, 0.5)) * 10%), 0, 0);
+  color: rgb(255 255 255 / 0.05);
+  transform: translate3d(calc((0.5 - min(var(--pin, 1), 0.5)) * 6%), 0, 0);
 }
-/* Copy is always readable: ink on mist before the room dims, white once it's dark. */
-.bw-copy { --ink: color-mix(in oklab, #fff calc(var(--dim) * 100%), var(--color-ink)); color: var(--ink); }
-.bw-copy .bw-soft { color: color-mix(in oklab, rgb(255 255 255 / 0.8) calc(var(--dim) * 100%), var(--color-muted)); }
-.bw-device { transform: translate3d(0, calc((1 - var(--rise)) * 22%), 0); }
-.bw-device-img {
-  filter: saturate(var(--on)) brightness(calc(0.8 + var(--on) * 0.2)) drop-shadow(0 30px 60px rgb(0 0 0 / calc(var(--dim) * 0.35)));
-}
-
-.bw-note { position: absolute; height: 0; opacity: calc(var(--note) * var(--dim)); }
+.bw-device { transform: translate3d(0, calc((1 - var(--rise)) * 20%), 0); }
+.bw-lit { opacity: var(--on); }
+.bw-note { position: absolute; height: 0; opacity: var(--note); }
 .bw-note-dot {
   position: absolute;
   top: -3.5px;
@@ -669,7 +682,7 @@ textarea.field { resize: vertical; }
   filter: blur(6px);
 }
 .gl-frame {
-  transition: transform 0.55s var(--ease-brand), opacity 0.4s var(--ease-brand);
+  transition: transform 0.4s var(--ease-brand), opacity 0.3s var(--ease-brand);
 }
 .gl-frame[data-state='before'] { opacity: 0; transform: translateX(-9%) rotate(-2deg); }
 .gl-frame[data-state='after'] { opacity: 0; transform: translateX(9%) rotate(2deg); }
@@ -707,4 +720,16 @@ textarea.field { resize: vertical; }
   0% { transform: scale(0.6); }
   50% { transform: scale(1.25); }
   100% { transform: scale(1); }
+}
+
+/* Room for the mobile purchase bar at the end of product pages. */
+@media (max-width: 1023px) {
+  html[data-buybar] body { padding-bottom: 76px; }
+}
+
+/* The line that was just added fades from highlighted to normal. */
+.cart-line-new { animation: line-new 2.4s var(--ease-brand); }
+@keyframes line-new {
+  0%, 40% { background: var(--color-cyan-50); box-shadow: -24px 0 0 var(--color-cyan-50), 24px 0 0 var(--color-cyan-50); }
+  100% { background: transparent; box-shadow: none; }
 }

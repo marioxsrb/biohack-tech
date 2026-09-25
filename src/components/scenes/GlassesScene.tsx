@@ -1,12 +1,11 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
 import { useRef, useState } from 'react'
 import { useScrollVars } from '@/components/motion/scroll-vars'
-import { Arrow } from '@/components/ui/icons'
-import { getProduct, productHref, variantLabel } from '@/content/catalog'
-import { formatMoney } from '@/lib/money'
+import { Check } from '@/components/ui/icons'
+import { getProduct, variantLabel } from '@/content/catalog'
+import { SceneBuy } from './SceneBuy'
 import portrait from '@/assets/img/glasses/result-stil.webp'
 
 /**
@@ -32,7 +31,7 @@ export function GlassesScene({ mode = 'home' }: { mode?: 'home' | 'page' }) {
   const label = variantLabel(product, v)
 
   return (
-    <section ref={ref} id="ochelari" aria-labelledby="gl-title" className="gl-scene relative overflow-hidden bg-paper py-[var(--sec)]">
+    <section ref={ref} id="ochelari" aria-labelledby="gl-title" className="gl-scene relative scroll-mt-[var(--nav-h)] overflow-hidden bg-paper py-[var(--sec)]">
       <div className="wrap grid grid-cols-1 items-center gap-y-12 md:grid-cols-12 md:gap-x-6">
         {/* Portrait, bleeding off the left edge */}
         <figure className="gl-portrait relative aspect-[4/5] md:col-span-5 md:-ml-[calc((100vw-min(100vw,1152px))/2+var(--gut))] max-md:-mx-[var(--gut)] max-md:aspect-[5/4]">
@@ -43,11 +42,7 @@ export function GlassesScene({ mode = 'home' }: { mode?: 'home' | 'page' }) {
         </figure>
 
         <div className="md:col-span-7 md:pl-6">
-          <p className="font-mono text-[11.5px] tracking-[0.14em] text-muted uppercase">Pentru ecrane</p>
-          <h2 id="gl-title" className="mt-3 text-[clamp(36px,4vw,56px)] leading-[1] tracking-[-0.045em]">
-            Ochelari Biohack
-          </h2>
-          <p className="mt-3 max-w-[26em] text-[17px] leading-relaxed text-text">Filtrează lumina albastră a ecranelor. Patru rame, un singur filtru.</p>
+          <SceneBuy productId="ochelari-biohack" headingId="gl-title" part="head" line="Filtrează lumina albastră a ecranelor. Alege rama care îți place." />
 
           {/* Stage */}
           <div
@@ -83,7 +78,7 @@ export function GlassesScene({ mode = 'home' }: { mode?: 'home' | 'page' }) {
           <div
             role="radiogroup"
             aria-label="Alege rama"
-            className="mt-6 grid grid-cols-4 gap-2"
+            className="mt-6 grid grid-cols-4 gap-2 max-sm:grid-cols-2"
             onKeyDown={(e) => {
               if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
                 e.preventDefault()
@@ -99,24 +94,30 @@ export function GlassesScene({ mode = 'home' }: { mode?: 'home' | 'page' }) {
                 aria-checked={i === index}
                 tabIndex={i === index ? 0 : -1}
                 onClick={() => go(i)}
-                className="gl-pick group text-left"
+                className="gl-pick group relative rounded-[12px] p-2 text-left transition-[background-color,box-shadow] duration-200 hover:bg-mist aria-checked:bg-mist aria-checked:shadow-[inset_0_0_0_2px_var(--color-ink)]"
               >
-                <span className="relative block aspect-[16/9]">
-                  <Image src={vv.images[0].src} alt="" fill sizes="120px" className="object-contain p-[8%] transition-transform duration-300 group-hover:-translate-y-0.5" />
+                <span aria-hidden className="absolute top-2 right-2 hidden h-5 w-5 items-center justify-center rounded-full bg-ink text-white group-aria-checked:flex">
+                  <Check className="h-3 w-3" />
                 </span>
-                <span className="mt-2 block border-t border-line pt-2 text-[13px] leading-tight text-muted transition-colors group-aria-checked:border-ink group-aria-checked:text-ink">
+                <span className="relative block aspect-[16/9]">
+                  <Image src={vv.images[0].src} alt="" fill sizes="120px" className="object-contain p-[6%]" />
+                </span>
+                <span className="mt-1 block text-[14px] leading-tight text-text group-aria-checked:font-semibold group-aria-checked:text-ink">
                   {variantLabel(product, vv)}
                 </span>
               </button>
             ))}
           </div>
 
-          <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
-            <span className="text-[19px] font-medium text-ink tabular-nums">{formatMoney(product.price)}</span>
-            {/* On the product page the buy area listens for this hash and selects the frame. */}
-            <Link href={mode === 'home' ? `${productHref(product)}#${v.id}` : `#${v.id}`} className="cta">
-              Alege {label} <Arrow />
-            </Link>
+          <div className="mt-8">
+            <SceneBuy
+              productId="ochelari-biohack"
+              headingId="gl-title"
+              part="action"
+              variantId={v.id}
+              note={`Rama aleasă: ${label}`}
+              showLink={mode === 'home'}
+            />
           </div>
         </div>
       </div>

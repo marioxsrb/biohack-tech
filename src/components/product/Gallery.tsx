@@ -10,7 +10,8 @@ import type { ProductImage } from '@/content/catalog'
  * devices with no gesture code; thumbnails and arrows drive the same track.
  * Cutouts sit whole on the stage, photos fill it.
  */
-export function Gallery({ images, label }: { images: ProductImage[]; label: string }) {
+/** `frame` lets wide products (glasses) use a shallower stage on phones, keeping the buy button on the first screen. */
+export function Gallery({ images, label, frame = 'aspect-[4/3]' }: { images: ProductImage[]; label: string; frame?: string }) {
   const track = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
 
@@ -44,7 +45,7 @@ export function Gallery({ images, label }: { images: ProductImage[]; label: stri
       <div className="group relative">
         <div
           ref={track}
-          className="flex aspect-[4/3] snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-[24px] [scrollbar-width:none] max-sm:-mx-[var(--gut)] max-sm:rounded-none [&::-webkit-scrollbar]:hidden"
+          className={`flex ${frame} snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-[24px] [scrollbar-width:none] max-sm:-mx-[var(--gut)] max-sm:rounded-none [&::-webkit-scrollbar]:hidden`}
           tabIndex={0}
           aria-label={`${label}, imaginea ${active + 1} din ${images.length}. Folosește săgețile pentru a schimba imaginea.`}
           onKeyDown={(e) => {
@@ -89,7 +90,6 @@ export function Gallery({ images, label }: { images: ProductImage[]; label: stri
               onClick={() => go(active - 1)}
               className="gal-arrow left-4"
               aria-label="Imaginea anterioară"
-              tabIndex={-1}
             >
               <Arrow className="h-4 w-4 rotate-180" />
             </button>
@@ -98,11 +98,13 @@ export function Gallery({ images, label }: { images: ProductImage[]; label: stri
               onClick={() => go(active + 1)}
               className="gal-arrow right-4"
               aria-label="Imaginea următoare"
-              tabIndex={-1}
             >
               <Arrow className="h-4 w-4" />
             </button>
-            {/* Position dots on touch sizes, where thumbnails are hidden */}
+            {/* Phones: which image this is, in numbers, plus dots. Thumbnails are hidden there. */}
+            <span className="absolute top-3 right-3 rounded-full bg-paper/90 px-2.5 py-1 text-[13px] font-medium text-ink tabular-nums sm:hidden" aria-hidden>
+              {active + 1} / {images.length}
+            </span>
             <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-1.5 sm:hidden" aria-hidden>
               {images.map((img, i) => (
                 <span

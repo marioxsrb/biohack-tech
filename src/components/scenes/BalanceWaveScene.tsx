@@ -1,13 +1,10 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
 import { useRef } from 'react'
-import { AddToCartButton } from '@/components/cart/AddToCartButton'
 import { useScrollVars } from '@/components/motion/scroll-vars'
-import { Arrow } from '@/components/ui/icons'
-import { getProduct, productHref } from '@/content/catalog'
-import { formatMoney } from '@/lib/money'
+import { getProduct } from '@/content/catalog'
+import { SceneBuy } from './SceneBuy'
 
 /** Annotation anchors, as fractions of the device image (631×478). */
 const notes = [
@@ -17,77 +14,77 @@ const notes = [
 ] as const
 
 /**
- * Scene 3. The room dims, the device rises from the lower edge and switches on:
- * desaturated to red, with a soft red bloom behind it. Hairline notes draw in once
- * it's on. At the end the lights come back up into the next scene.
- * Everything follows --pin (scroll position inside the sticky stage).
+ * Scene 3. A fixed gradient takes the page from mist to dark (no animated colour, so text
+ * is never caught mid-transition). On the dark stage the device rises and switches on:
+ * a grey layer crossfades to the lit photo, a red bloom grows, notes draw in, then the
+ * scene holds still long enough to read and buy.
  */
 export function BalanceWaveScene({ mode = 'home' }: { mode?: 'home' | 'page' }) {
-  const ref = useRef<HTMLElement>(null)
+  const ref = useRef<HTMLDivElement>(null)
   const product = getProduct('balance-wave')!
   useScrollVars(ref)
 
   return (
-    <section ref={ref} id="balance-wave" aria-labelledby="bw-title" className="bw-scene relative h-[210vh] max-sm:h-[190vh]">
-      <div className="bw-stage sticky top-0 flex h-[100svh] flex-col overflow-hidden">
-        <div aria-hidden className="bw-bloom pointer-events-none absolute inset-0" />
-        <p aria-hidden className="bw-giant pointer-events-none absolute inset-x-0 top-[14%] text-center leading-none font-medium tracking-[-0.06em] whitespace-nowrap select-none max-md:top-[30%]">
-          Balance Wave
-        </p>
+    <section id="balance-wave" aria-labelledby="bw-title" className="relative bg-dark">
+      {/* Anchor target: lands on the lit, readable state rather than the start of the scene. */}
+      <span id="balance-wave-buy" aria-hidden className="absolute top-[calc(28vh+56vh)] left-0" />
+      <div
+        aria-hidden
+        className={`h-[28vh] ${
+          mode === 'home'
+            ? 'bg-[linear-gradient(180deg,var(--color-mist),#9aa6ab_40%,#2a383c_78%,var(--color-dark))]'
+            : 'bg-[linear-gradient(180deg,var(--color-paper),#9aa6ab_40%,#2a383c_78%,var(--color-dark))]'
+        }`}
+      />
 
-        <div className="bw-copy wrap relative z-10 w-full pt-[calc(var(--nav-h)+clamp(28px,6vh,72px))]">
-          <div className="max-w-[26rem]">
-            <p className="bw-soft font-mono text-[11.5px] tracking-[0.14em] uppercase">Pentru relaxare</p>
-            <h2 id="bw-title" className="mt-3 text-[clamp(36px,4vw,56px)] leading-[1] tracking-[-0.045em] ![color:var(--ink)]">
-              Câteva minute de lumină, la gât.
-            </h2>
-            <p className="bw-soft mt-4 text-[16.5px] leading-relaxed max-sm:text-[15.5px]">
-              Îl așezi, alegi durata și te relaxezi. Se oprește singur.
-            </p>
-            <p className="bw-soft mt-4 font-mono text-[11.5px] tracking-[0.12em] uppercase md:hidden">Lumină roșie · 5–20 min · Oprire automată</p>
-            {mode === 'home' && (
-              <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
-                <span className="text-[19px] font-medium tabular-nums">{formatMoney(product.price)}</span>
-                <Link href={productHref(product)} className="tlink ![color:var(--ink)]">
-                  Vezi Balance Wave <Arrow />
-                </Link>
-              </div>
-            )}
+      <div ref={ref} className="bw-scene relative h-[200vh] max-sm:h-[180vh]">
+        <div className="bw-stage sticky top-0 flex h-[100svh] flex-col overflow-hidden bg-dark">
+          <div aria-hidden className="bw-bloom pointer-events-none absolute inset-0" />
+          <p
+            aria-hidden
+            className="bw-giant pointer-events-none absolute inset-x-0 top-[16%] text-center leading-none font-medium tracking-[-0.06em] whitespace-nowrap select-none max-md:top-[34%]"
+          >
+            Balance Wave
+          </p>
+
+          <div className="bw-copy wrap relative z-10 w-full pt-[calc(var(--nav-h)+clamp(24px,5vh,64px))]">
+            <SceneBuy
+              productId="balance-wave"
+              headingId="bw-title"
+              tone="dark"
+              line="Se poartă la gât. Câteva minute de lumină roșie, apoi se oprește singur."
+              showLink={mode === 'home'}
+            />
           </div>
-        </div>
 
-        {/* The device, anchored to the lower edge: its cable is cropped in the source photo. */}
-        <div className="bw-device relative z-0 mx-auto mt-auto w-[min(760px,92vw)]">
-          <div className="relative aspect-[631/478]">
-            <Image src={product.cutout.src} alt={product.cutout.alt} fill sizes="(min-width: 768px) 760px, 92vw" className="bw-device-img object-contain object-bottom" />
-            {/* Hairline notes reach past the device's edge, so the text never sits on the white device. Hidden on phones. */}
-            {notes.map((n) => (
-              <span
-                key={n.title}
-                aria-hidden
-                className={`bw-note bw-note-${n.side} max-md:hidden`}
-                style={
-                  n.side === 'left'
-                    ? { right: `${(1 - n.x) * 100}%`, top: `${n.y * 100}%`, width: `calc(${n.x * 100}% + 40px)` }
-                    : { left: `${n.x * 100}%`, top: `${n.y * 100}%`, width: `calc(${(1 - n.x) * 100}% + 40px)` }
-                }
-              >
-                <span className="bw-note-dot" />
-                <span className="bw-note-line" />
-                <span className="bw-note-text">
-                  <span className="block text-[14px] font-medium text-white">{n.title}</span>
-                  <span className="block font-mono text-[11.5px] tracking-[0.1em] text-white/70 uppercase">{n.detail}</span>
+          {/* The device, anchored to the lower edge: its cable is cropped in the source photo. */}
+          <div className="bw-device relative z-0 mx-auto mt-auto w-[min(700px,90vw)] max-sm:w-[82vw]">
+            <div className="relative aspect-[631/478]">
+              {/* Off: a static grey copy. On: the lit photo fades in over it. Opacity only, no animated filters. */}
+              <Image src={product.cutout.src} alt="" aria-hidden fill sizes="(min-width: 768px) 700px, 82vw" className="object-contain object-bottom brightness-[.82] grayscale" />
+              <Image src={product.cutout.src} alt={product.cutout.alt} fill sizes="(min-width: 768px) 700px, 82vw" className="bw-lit object-contain object-bottom" />
+              {notes.map((n) => (
+                <span
+                  key={n.title}
+                  aria-hidden
+                  className={`bw-note bw-note-${n.side} max-md:hidden`}
+                  style={
+                    n.side === 'left'
+                      ? { right: `${(1 - n.x) * 100}%`, top: `${n.y * 100}%`, width: `calc(${n.x * 100}% + 40px)` }
+                      : { left: `${n.x * 100}%`, top: `${n.y * 100}%`, width: `calc(${(1 - n.x) * 100}% + 40px)` }
+                  }
+                >
+                  <span className="bw-note-dot" />
+                  <span className="bw-note-line" />
+                  <span className="bw-note-text">
+                    <span className="block text-[15px] font-medium text-white">{n.title}</span>
+                    <span className="block font-mono text-[11.5px] tracking-[0.1em] text-white/70 uppercase">{n.detail}</span>
+                  </span>
                 </span>
-              </span>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
-
-        {mode === 'page' && (
-          <div className="absolute right-[var(--gut)] bottom-8 z-10 max-md:hidden">
-            <AddToCartButton productId={product.id} size="sm" />
-          </div>
-        )}
       </div>
     </section>
   )

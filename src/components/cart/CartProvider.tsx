@@ -20,6 +20,8 @@ type CartUI = {
   close: () => void
   /** Short message for the screen-reader live region. */
   announcement: string
+  /** Line key of the most recent add, for the drawer's confirmation. Cleared when the drawer closes. */
+  lastAdded: string | null
   add: (productId: ProductId, variantId?: string, quantity?: number) => void
 }
 
@@ -28,20 +30,25 @@ const CartUIContext = createContext<CartUI | null>(null)
 export function CartProvider({ children }: { children: ReactNode }) {
   const [isOpen, setOpen] = useState(false)
   const [announcement, setAnnouncement] = useState('')
+  const [lastAdded, setLastAdded] = useState<string | null>(null)
 
   const open = useCallback(() => setOpen(true), [])
-  const close = useCallback(() => setOpen(false), [])
+  const close = useCallback(() => {
+    setOpen(false)
+    setLastAdded(null)
+  }, [])
 
   const add = useCallback((productId: ProductId, variantId?: string, quantity = 1) => {
     const resolved = resolveLine(productId, variantId)
     if (!resolved) return
     cartStore.add(productId, variantId, quantity)
+    setLastAdded(lineKey({ productId, variantId }))
     const label = resolved.variant ? `${resolved.product.name}, ${variantLabel(resolved.product, resolved.variant)}` : resolved.product.name
     setAnnouncement(`${label} a fost adăugat în coș.`)
     setOpen(true)
   }, [])
 
-  const value = useMemo(() => ({ isOpen, open, close, announcement, add }), [isOpen, open, close, announcement, add])
+  const value = useMemo(() => ({ isOpen, open, close, announcement, lastAdded, add }), [isOpen, open, close, announcement, lastAdded, add])
 
   return (
     <CartUIContext.Provider value={value}>
