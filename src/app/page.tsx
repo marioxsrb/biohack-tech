@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
-import { BrandStory } from '@/components/home/BrandStory'
+import { Discover } from '@/components/home/Discover'
 import { Hero } from '@/components/home/Hero'
-import { ProductShowcase } from '@/components/home/ProductShowcase'
-import { Assurance } from '@/components/site/Assurance'
+import { BalanceWaveScene } from '@/components/scenes/BalanceWaveScene'
+import { BrainLinkScene } from '@/components/scenes/BrainLinkScene'
+import { GlassesScene } from '@/components/scenes/GlassesScene'
+import { Lineup } from '@/components/site/Lineup'
 import { site } from '@/config/site'
 import { pageMetadata } from '@/lib/seo'
 import og from '@/assets/img/balance-wave/lifestyle-canapea.webp'
@@ -18,13 +20,16 @@ export const metadata: Metadata = {
   title: { absolute: `${site.name}: Balance Wave, BrainLink Pro și Ochelari Biohack` },
 }
 
+/** Six scenes: campaign, discovery, one moment per product, and the shelf. */
 export default function Home() {
   return (
     <>
       <Hero />
-      <ProductShowcase />
-      <BrandStory />
-      <Assurance />
+      <Discover />
+      <BalanceWaveScene />
+      <BrainLinkScene />
+      <GlassesScene />
+      <Lineup />
     </>
   )
 }

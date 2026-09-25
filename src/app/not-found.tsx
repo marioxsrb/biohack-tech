@@ -14,7 +14,7 @@ export default function NotFound() {
             <li key={p.id} className="border-b border-mist-2">
               <Link href={productHref(p)} className="group flex items-center justify-between py-4 text-[18px] text-ink">
                 {p.name}
-                <Arrow className="h-4 w-4 text-faint transition-transform group-hover:translate-x-1 group-hover:text-ink" />
+                <Arrow className="h-4 w-4 text-muted transition-transform group-hover:translate-x-1 group-hover:text-ink" />
               </Link>
             </li>
           ))}

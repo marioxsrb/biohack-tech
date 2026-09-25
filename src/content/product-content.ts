@@ -10,7 +10,6 @@ import type { ProductId, ProductImage } from './catalog'
 
 import glResFocus from '@/assets/img/glasses/result-focus.webp'
 import glResSeara from '@/assets/img/glasses/result-seara.webp'
-import glResStil from '@/assets/img/glasses/result-stil.webp'
 
 import bwResCalm from '@/assets/img/balance-wave/result-calm.webp'
 import bwResSomn from '@/assets/img/balance-wave/result-somn.webp'
@@ -57,7 +56,7 @@ export const productContent: Record<ProductId, ProductContent> = {
     benefits: ['Te poate ajuta să te relaxezi', '5–20 de minute pe ședință', 'Se oprește singur', 'Ghidaj de la un specialist'],
     stories: [
       {
-        title: 'Câteva minute doar pentru tine.',
+        title: 'Un moment doar pentru tine.',
         text: 'Îl așezi la gât, alegi durata și te relaxezi. Mulți utilizatori simt gâtul și umerii mai relaxați încă din primele ședințe.',
         image: photo(bwResCalm, 'Femeie relaxată pe canapea, purtând Balance Wave'),
       },
@@ -168,11 +167,6 @@ export const productContent: Record<ProductId, ProductContent> = {
         title: 'Și pentru serile cu telefonul în mână.',
         text: 'Seara, lumina ecranelor devine mai blândă. Un obicei simplu înainte de somn.',
         image: photo(glResSeara, 'Femeie în pat, seara, citind pe tabletă cu Ochelari Biohack'),
-      },
-      {
-        title: 'Un accesoriu pe care îl porți cu plăcere.',
-        text: 'Cat eye sau unisex pătrat, în negru, bej sau maro.',
-        image: photo(glResStil, 'Femeie purtând Ochelari Biohack cat eye bej, în lumină naturală'),
       },
     ],
     specs: [

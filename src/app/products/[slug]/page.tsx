@@ -2,6 +2,16 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ProductHero } from '@/components/product/ProductHero'
 import { ProductSections } from '@/components/product/ProductSections'
+import { BalanceWaveScene } from '@/components/scenes/BalanceWaveScene'
+import { BrainLinkScene } from '@/components/scenes/BrainLinkScene'
+import { GlassesScene } from '@/components/scenes/GlassesScene'
+
+/** Each product keeps its own signature moment from the homepage, right after the buy area. */
+const scenes = {
+  'balance-wave': <BalanceWaveScene mode="page" />,
+  'brainlink-pro': <BrainLinkScene mode="page" />,
+  'ochelari-biohack': <GlassesScene mode="page" />,
+}
 import { getProductBySlug, productHref, products } from '@/content/catalog'
 import { productContent } from '@/content/product-content'
 import { absolute, breadcrumbJsonLd, JsonLd, pageMetadata, productJsonLd } from '@/lib/seo'
@@ -43,9 +53,9 @@ export default async function ProductPage({ params }: PageProps<'/products/[slug
         </div>
       </section>
 
-      <ProductSections product={product} content={content} />
+      <ProductSections product={product} content={content} scene={scenes[product.id]} />
 
-      <p className="wrap py-8 text-[13px] leading-relaxed text-faint">
+      <p className="wrap py-8 text-[13px] leading-relaxed text-muted">
         {product.name} este un produs de wellness. Nu înlocuiește sfatul medicului. Rezultatele diferă de la o persoană la alta.
       </p>
 

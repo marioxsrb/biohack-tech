@@ -38,10 +38,23 @@ def cutout(rel_src, rel_out, max_w=1200, bottom=True):
     im = Image.open(os.path.join(SRC, rel_src)).convert('RGBA')
     save(trim(im, bottom=bottom), rel_out, max_w, quality=88)
 
+def white_to_alpha(im):
+    """Colour-to-alpha against white (the GIMP method): the white studio background becomes
+    transparent, anti-aliased edges keep their true colour. Lets studio shots sit on any
+    surface without mix-blend-mode, which breaks under transforms."""
+    import numpy as np
+    a = np.asarray(im.convert('RGB')).astype(np.float32) / 255.0
+    alpha = np.clip((1.0 - a).max(axis=2), 0, 1)
+    # Lift near-white noise to fully transparent, keep the product fully opaque.
+    alpha = np.clip((alpha - 0.02) / 0.98, 0, 1)
+    safe = np.where(alpha > 1e-4, alpha, 1)[..., None]
+    rgb = np.clip((a - (1 - alpha[..., None])) / safe, 0, 1)
+    out = np.dstack([rgb, alpha]) * 255
+    return Image.fromarray(out.astype(np.uint8), 'RGBA')
+
 def studio(rel_src, rel_out, max_w=1200):
-    # White-background studio shot: kept opaque, shown with mix-blend-mode: multiply.
     im = Image.open(os.path.join(SRC, rel_src)).convert('RGB')
-    save(trim(im), rel_out, max_w, quality=86)
+    save(trim(white_to_alpha(trim(im))), rel_out, max_w, quality=90)
 
 def photo(rel_src, rel_out, max_w=1600):
     im = Image.open(os.path.join(SRC, rel_src)).convert('RGB')

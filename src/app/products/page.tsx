@@ -1,6 +1,5 @@
 import type { Metadata } from 'next'
-import { ProductShowcase } from '@/components/home/ProductShowcase'
-import { Assurance } from '@/components/site/Assurance'
+import { Lineup } from '@/components/site/Lineup'
 import { pageMetadata } from '@/lib/seo'
 
 export const metadata: Metadata = pageMetadata({
@@ -12,9 +11,8 @@ export const metadata: Metadata = pageMetadata({
 
 export default function ProductsPage() {
   return (
-    <div className="pt-[calc(var(--nav-h)-var(--sec)*0.3)]">
-      <ProductShowcase title="Produse" headingLevel={1} />
-      <Assurance />
+    <div className="bg-mist pt-[var(--nav-h)]">
+      <Lineup title="Produse" headingLevel={1} />
     </div>
   )
 }

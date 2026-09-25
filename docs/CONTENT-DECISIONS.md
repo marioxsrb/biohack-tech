@@ -1,5 +1,13 @@
 # Decizii de conținut
 
+## Scene (26 septembrie 2026, a doua iterație)
+
+Pagina principală e o succesiune de șase scene, cu foarte puțin text: campania (hero), „Ce vrei să îmbunătățești?”,
+Balance Wave (camera se întunecă, dispozitivul se aprinde), BrainLink (un semnal care se liniștește când ții apăsat,
+marcat „Ilustrație”), Ochelarii (selector de rame, ca într-un magazin de modă) și raftul cu toate trei.
+Contrastul a fost măsurat pe pixelii reali ai fotografiilor, nu estimat: meniul și textul din hero trec pragul WCAG.
+Butonul roșu a trecut de la #E64545 (3,96:1) la #D23B3B (4,74:1).
+
 ## Direcția (26 septembrie 2026)
 
 Site-ul e un magazin cu trei produse, nu o pagină de vânzare lungă. Pagina principală are cinci momente: o fotografie mare cu un singur mesaj, cele trei produse, o frază despre brand, livrare/retur/garanție și, în footer, drumul înapoi spre produse. Detaliile tehnice stau pe paginile de produs, mai jos, explicate o singură dată.

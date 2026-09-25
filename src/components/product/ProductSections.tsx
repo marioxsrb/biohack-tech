@@ -7,25 +7,44 @@ import { productHref, type Product } from '@/content/catalog'
 import type { ProductContent } from '@/content/product-content'
 import { formatMoney } from '@/lib/money'
 
-type Props = { product: Product; content: ProductContent }
+type Props = { product: Product; content: ProductContent; scene?: React.ReactNode }
 
 /**
  * Below the buy area: large pictures with a line or two each, how it's used,
  * one plain explanation of the technology, the details, and a way to buy again.
  */
-export function ProductSections({ product, content: c }: Props) {
+export function ProductSections({ product, content: c, scene }: Props) {
+  const [first, ...rest] = c.stories
   return (
     <>
-      <div className="pt-[calc(var(--sec)*0.4)]">
-        {c.stories.map((s, i) => (
-          <Story key={s.title} story={s} flip={i % 2 === 1} />
-        ))}
-      </div>
+      {scene}
+      <Cinematic story={first} />
+      {rest.length > 0 && (
+        <div className="py-[calc(var(--sec)*0.5)]">
+          {rest.map((s, i) => (
+            <Story key={s.title} story={s} flip={i % 2 === 0} />
+          ))}
+        </div>
+      )}
       {c.steps && <Steps steps={c.steps} />}
       {c.detail && <Detail detail={c.detail} />}
       <Details content={c} />
       <BuyAgain product={product} />
     </>
+  )
+}
+
+/** The first story fills the screen: photograph edge to edge, headline set into its darkest corner. */
+function Cinematic({ story }: { story: ProductContent['stories'][number] }) {
+  return (
+    <section className="relative isolate flex min-h-[560px] h-[88svh] items-end overflow-hidden text-white">
+      <Image src={story.image.src} alt={story.image.alt} fill placeholder="blur" sizes="100vw" className="-z-10 object-cover" />
+      <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-[60%] bg-[linear-gradient(0deg,rgba(8,17,19,.78),rgba(8,17,19,0))]" />
+      <div className="wrap w-full pb-[clamp(40px,8vh,88px)]">
+        <h2 className="rev max-w-[12em] text-[clamp(36px,5vw,72px)] leading-[0.98] tracking-[-0.045em] !text-white">{story.title}</h2>
+        <p className="rev mt-4 max-w-[30em] text-[17px] leading-relaxed text-white/85">{story.text}</p>
+      </div>
+    </section>
   )
 }
 
@@ -98,7 +117,7 @@ function Detail({ detail }: { detail: NonNullable<ProductContent['detail']> }) {
                   {detail.studies.map((s) => (
                     <li key={s.href}>
                       <a href={s.href} target="_blank" rel="noopener noreferrer" className="group/l inline-flex items-center gap-2 py-2 text-[15px] text-text hover:text-ink">
-                        <External className="h-4 w-4 flex-none text-faint group-hover/l:text-cyan-700" />
+                        <External className="h-4 w-4 flex-none text-muted group-hover/l:text-cyan-700" />
                         <span className="underline decoration-line underline-offset-4">{s.label}</span>
                         <span className="sr-only"> (se deschide într-o filă nouă)</span>
                       </a>

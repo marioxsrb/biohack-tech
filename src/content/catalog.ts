@@ -43,7 +43,8 @@ import blLucru from '@/assets/img/brainlink/audience-lucru.webp'
 
 /**
  * `cutout`: transparent product shot, shown whole on a neutral stage.
- * `studio`: product on a white studio background, blended onto the stage.
+ * `studio`: product on a white studio background (kept for completeness; the current
+ *   studio shots are keyed to transparency by scripts/prepare-assets.py and listed as cutouts).
  * `photo`: lifestyle photography, fills its frame.
  */
 export type ImageKind = 'cutout' | 'studio' | 'photo'
@@ -121,12 +122,12 @@ export const products: Product[] = [
     purpose: 'Pentru focus',
     tagline: 'O cască ușoară și jocuri pe tabletă pe care le controlezi cu atenția.',
     price: { amount: 249000, currency: 'RON' },
-    cutout: { src: blCasca, alt: 'Casca BrainLink Pro, vedere din unghi', kind: 'studio' },
+    cutout: { src: blCasca, alt: 'Casca BrainLink Pro, vedere din unghi', kind: 'cutout' },
     lifestyle: { src: blRelaxare, alt: 'Femeie relaxată, cu ochii închiși, purtând casca BrainLink Pro', kind: 'photo' },
     images: [
-      { src: blCasca, alt: 'Casca BrainLink Pro, vedere din unghi', kind: 'studio' },
-      { src: blLateral, alt: 'Casca BrainLink Pro, vedere laterală cu senzorul de ureche', kind: 'studio' },
-      { src: blGeanta, alt: 'Casca BrainLink Pro lângă geanta de transport', kind: 'studio' },
+      { src: blCasca, alt: 'Casca BrainLink Pro, vedere din unghi', kind: 'cutout' },
+      { src: blLateral, alt: 'Casca BrainLink Pro, vedere laterală cu senzorul de ureche', kind: 'cutout' },
+      { src: blGeanta, alt: 'Casca BrainLink Pro lângă geanta de transport', kind: 'cutout' },
       { src: blRelaxare, alt: 'Femeie relaxată purtând casca BrainLink Pro', kind: 'photo' },
       { src: blLucru, alt: 'Bărbat la laptop purtând casca BrainLink Pro', kind: 'photo' },
     ],

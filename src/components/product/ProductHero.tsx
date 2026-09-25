@@ -34,6 +34,20 @@ export function ProductHero({ productId, intro, benefits }: Props) {
     return () => io.disconnect()
   }, [])
 
+  // A frame chosen elsewhere (homepage, the scene below) arrives as #variant-id.
+  useEffect(() => {
+    const apply = () => {
+      const v = product.variants?.find((x) => x.id === window.location.hash.slice(1))
+      if (!v) return
+      setSelected(v.options)
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      document.getElementById('cumpara')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' })
+    }
+    apply()
+    window.addEventListener('hashchange', apply)
+    return () => window.removeEventListener('hashchange', apply)
+  }, [product])
+
   useEffect(() => {
     if (!added) return
     const t = setTimeout(() => setAdded(false), 1800)

@@ -67,7 +67,7 @@ export function CartDrawer() {
                       <span className="block font-medium text-ink">{p.name}</span>
                       <span className="block text-[14px] text-muted">{formatMoney(p.price)}</span>
                     </span>
-                    <Arrow className="h-4 w-4 text-faint transition-transform group-hover:translate-x-1 group-hover:text-ink" />
+                    <Arrow className="h-4 w-4 text-muted transition-transform group-hover:translate-x-1 group-hover:text-ink" />
                   </Link>
                 </li>
               ))}

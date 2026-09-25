@@ -26,8 +26,11 @@ src/
   components/
     cart/                     coșul: store în localStorage, drawer pe <dialog>, buton, stepper
     product/                  galerie, zona de cumpărare cu variante, secțiunile paginii de produs
-    home/                     pagina principală: hero, cele trei produse, povestea brandului
-    site/                     header, footer, livrare/retur/garanție
+    home/                     hero (parallax, hotspot pe dispozitiv) și scena „Ce vrei să îmbunătățești?”
+    scenes/                   momentul fiecărui produs, folosit pe home și pe pagina lui:
+                              Balance Wave (se aprinde la scroll), BrainLink (semnal interactiv), Ochelari (selector de rame)
+    motion/scroll-vars.ts     un singur listener de scroll care scrie --in / --pin / --out; animațiile sunt CSS
+    site/                     header, footer, raftul cu cele trei produse
   lib/
     money.ts                  prețuri în unități mici (bani/cenți), formatare ro-RO
     checkout.ts               validare comună client + server
@@ -43,6 +46,12 @@ URL-urile sunt identice cu site-ul actual (`/products/glasses`, `/products/balan
 1. Pune imaginile în ZIP-ul sursă și adaugă o linie în `scripts/prepare-assets.py`, apoi `npm run assets`.
 2. Adaugă produsul în `content/catalog.ts` (preț în unități mici: 60 EUR = `6000`).
 3. Adaugă conținutul paginii în `content/product-content.ts`. Secțiunile opționale (`steps`, `detail`) apar doar dacă există.
+
+## Mișcare
+
+Toate animațiile folosesc doar `transform`, `opacity`, `filter` și culoare, citite din variabile CSS scrise de
+`motion/scroll-vars.ts` (un listener pasiv, `requestAnimationFrame`, nicio bibliotecă). Semnalul BrainLink rulează
+doar cât scena e vizibilă. Cu `prefers-reduced-motion`, fiecare scenă apare direct în starea finală.
 
 ## Plăți
 

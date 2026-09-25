@@ -40,7 +40,7 @@ export function Gallery({ images, label }: { images: ProductImage[]; label: stri
   }
 
   return (
-    <div role="region" aria-roledescription="galerie" aria-label={label}>
+    <div role="region" aria-roledescription="galerie" aria-label={label} className="gallery-in">
       <div className="group relative">
         <div
           ref={track}

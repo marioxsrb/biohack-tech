@@ -97,7 +97,7 @@ export function Header() {
               <Bag className="h-[22px] w-[22px]" />
               <span className="hidden text-[15px] font-medium sm:inline">Coș</span>
               {count > 0 && (
-                <span className="absolute top-1 left-[26px] flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red px-1 text-[11px] font-semibold tabular-nums text-white sm:static sm:h-5 sm:min-w-5">
+                <span key={count} className="cart-bump absolute top-1 left-[26px] flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-red px-1 text-[11px] font-semibold tabular-nums text-white sm:static sm:h-5 sm:min-w-5">
                   {count}
                 </span>
               )}
