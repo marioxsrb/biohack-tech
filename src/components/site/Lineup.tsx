@@ -1,24 +1,18 @@
-'use client'
-
 import Image from 'next/image'
 import Link from 'next/link'
-import { useRef } from 'react'
-import { useScrollVars } from '@/components/motion/scroll-vars'
 import { Arrow } from '@/components/ui/icons'
 import { productHref, products } from '@/content/catalog'
 import { terms } from '@/config/site'
 import { formatMoney } from '@/lib/money'
 
 /**
- * The resolution: the three things you just met, rising onto one shelf in turn.
- * Hover lifts a product off the shelf. On phones the shelf swipes.
+ * The three products side by side on one shelf line. Hover lifts a product and softens its
+ * shadow. On phones the shelf swipes.
  */
 export function Lineup({ title = 'Toate trei.', headingLevel = 2 }: { title?: string; headingLevel?: 1 | 2 }) {
-  const ref = useRef<HTMLElement>(null)
-  useScrollVars(ref)
   const H = headingLevel === 1 ? 'h1' : 'h2'
   return (
-    <section ref={ref} aria-labelledby="lineup-title" className="lineup pt-[var(--sec)] pb-[calc(var(--sec)*0.6)]">
+    <section aria-labelledby="lineup-title" className="pt-[var(--sec)] pb-[calc(var(--sec)*0.6)]">
       <div className="wrap">
         <H id="lineup-title" className="text-[clamp(44px,6vw,88px)] leading-[0.95] tracking-[-0.05em]">
           {title}
@@ -26,15 +20,13 @@ export function Lineup({ title = 'Toate trei.', headingLevel = 2 }: { title?: st
       </div>
 
       <ul className="wrap mt-12 grid grid-cols-3 gap-6 max-md:mr-0 max-md:flex max-md:snap-x max-md:snap-mandatory max-md:scroll-px-[var(--gut)] max-md:gap-4 max-md:overflow-x-auto max-md:pr-[var(--gut)] max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden">
-        {products.map((p, i) => (
+        {products.map((p) => (
           <li key={p.id} className="max-md:w-[72%] max-md:flex-none max-md:snap-start">
-            <Link href={productHref(p)} className="lineup-item group block">
+            <Link href={productHref(p)} className="group block">
               <span className="relative block aspect-[5/4] border-b border-line">
-                <span className="lineup-object absolute inset-x-[6%] top-[8%] bottom-[12%]" style={{ ['--start' as string]: 24 + i * 5 }}>
-                  <span className="lineup-lift absolute inset-0">
-                    <Image src={p.cutout.src} alt={p.cutout.alt} fill sizes="(min-width: 768px) 340px, 72vw" className="object-contain object-bottom" />
-                  </span>
-                  <span aria-hidden className="lineup-shadow" />
+                <span aria-hidden className="shade absolute bottom-[4%] left-[18%] h-4 w-[64%] rounded-[50%]" />
+                <span className="lift absolute inset-x-[6%] top-[8%] bottom-[8%]">
+                  <Image src={p.cutout.src} alt={p.cutout.alt} fill sizes="(min-width: 768px) 340px, 72vw" className="object-contain object-bottom" />
                 </span>
               </span>
               <span className="mt-5 flex items-baseline justify-between gap-4">

@@ -26,11 +26,9 @@ src/
   components/
     cart/                     coșul: store în localStorage, drawer pe <dialog>, buton, stepper
     product/                  galerie, zona de cumpărare cu variante, secțiunile paginii de produs
-    home/Opening.tsx          actul întunecat, un singur cadru fixat: fotografia → camera spre dispozitiv →
-                              „Ce vrei să îmbunătățești?” → Balance Wave se aprinde → lumina revine
-    scenes/                   BrainLink (casca plutind), Ochelari (selector de rame), Balance Wave pe pagina lui,
-                              SceneBuy (blocul de cumpărare comun tuturor scenelor)
-    motion/scroll-vars.ts     un singur listener de scroll care scrie --in / --pin și stările data-*; animațiile sunt CSS
+    home/                     pagina principală, secțiuni simple: Hero, Discover (cele trei panouri peste fotografie),
+                              BalanceWaveFeature (secțiunea întunecată), BrainLinkFeature
+    scenes/                   GlassesScene (selectorul de rame) și SceneBuy (blocul de cumpărare comun)
     site/                     header, footer, raftul cu cele trei produse
   lib/
     money.ts                  prețuri în unități mici (bani/cenți), formatare ro-RO
@@ -48,17 +46,12 @@ URL-urile sunt identice cu site-ul actual (`/products/glasses`, `/products/balan
 2. Adaugă produsul în `content/catalog.ts` (preț în unități mici: 60 EUR = `6000`).
 3. Adaugă conținutul paginii în `content/product-content.ts`. Secțiunile opționale (`steps`, `detail`) apar doar dacă există.
 
-## Continuitate
-
-Tot site-ul stă pe o singură suprafață (mist). Nicio secțiune nu are fundal propriu. Singurele momente întunecate sunt
-cadre fixate (sticky): lumina scade și revine cât timp scena umple ecranul, deci nu există benzi de culoare sau margini
-de secțiune. Header-ul citește `data-theme` al elementului de sub el și își schimbă culorile singur.
-
 ## Mișcare
 
-Toate animațiile folosesc doar `transform`, `opacity`, `filter` și culoare, citite din variabile CSS scrise de
-`motion/scroll-vars.ts` (un listener pasiv, `requestAnimationFrame`, nicio bibliotecă). Semnalul BrainLink rulează
-doar cât scena e vizibilă. Cu `prefers-reduced-motion`, fiecare scenă apare direct în starea finală.
+Pagina se derulează nativ. Nicio secțiune nu depinde de poziția de scroll și nimic nu e ascuns în așteptarea
+JavaScript-ului: tot conținutul e randat de server și rămâne vizibil chiar fără script.
+Mișcarea există doar ca răspuns la vizitator (hover, alegerea ramei, adăugarea în coș) și ca un singur efect
+la încărcare (fotografia din hero), totul în CSS. Header-ul are două stări, alese de un IntersectionObserver.
 
 ## Regula de bază: poveste liberă, cumpărare convențională
 

@@ -6,19 +6,17 @@ import { Arrow, External } from '@/components/ui/icons'
 import { productHref, type Product } from '@/content/catalog'
 import type { ProductContent } from '@/content/product-content'
 import { formatMoney } from '@/lib/money'
-import { Cinematic } from './Cinematic'
 
-type Props = { product: Product; content: ProductContent; scene?: React.ReactNode }
+type Props = { product: Product; content: ProductContent }
 
 /**
  * Below the buy area: large pictures with a line or two each, how it's used,
  * one plain explanation of the technology, the details, and a way to buy again.
  */
-export function ProductSections({ product, content: c, scene }: Props) {
+export function ProductSections({ product, content: c }: Props) {
   const [first, ...rest] = c.stories
   return (
     <>
-      {scene}
       <Cinematic story={first} />
       {rest.length > 0 && (
         <div className="py-[calc(var(--sec)*0.5)]">
@@ -32,6 +30,22 @@ export function ProductSections({ product, content: c, scene }: Props) {
       <Details content={c} />
       <BuyAgain product={product} />
     </>
+  )
+}
+
+/** The first story: a large, inset photograph with its headline set into the darkest corner. */
+function Cinematic({ story }: { story: ProductContent['stories'][number] }) {
+  return (
+    <section className="wrap max-sm:px-0">
+      <div className="relative isolate flex min-h-[520px] items-end overflow-hidden rounded-[24px] text-white h-[80svh] max-h-[820px] max-sm:rounded-none">
+        <Image src={story.image.src} alt={story.image.alt} fill placeholder="blur" sizes="(min-width: 1152px) 1104px, 100vw" className="-z-10 object-cover" />
+        <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-[66%] bg-[linear-gradient(0deg,rgba(8,17,19,.86),rgba(8,17,19,.4)_45%,rgba(8,17,19,0))]" />
+        <div className="w-full p-[clamp(24px,5vw,56px)]">
+          <h2 className="max-w-[12em] text-[clamp(34px,4.6vw,64px)] leading-[0.98] tracking-[-0.045em] !text-white">{story.title}</h2>
+          <p className="mt-4 max-w-[30em] text-[17px] leading-relaxed text-white/85">{story.text}</p>
+        </div>
+      </div>
+    </section>
   )
 }
 

@@ -9,44 +9,26 @@ import { productHref, products } from '@/content/catalog'
 import { formatMoney } from '@/lib/money'
 import { Wordmark } from './Wordmark'
 
-type Theme = 'dark' | 'light'
-
 /**
  * Three products need no mega-menu: Produse (a short list), Despre noi, Coș.
- * The bar belongs to whatever is underneath it: it reads the data-theme of the element
- * just below its lower edge and takes the matching colours (transparent over the opening
- * photograph, dark over dark scenes, light over the page surface).
+ * Two predictable states: over the homepage photograph (transparent, white text; a dark
+ * translucent bar on phones) and everywhere else (solid light bar). One IntersectionObserver.
  */
 export function Header() {
   const { count, open: openCart } = useCart()
   const pathname = usePathname()
-  const [theme, setTheme] = useState<Theme>('light')
-  const [atTop, setAtTop] = useState(true) // bare (transparent) only at the very top, and only on wide screens
+  const [overHero, setOverHero] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const navRef = useRef<HTMLElement>(null)
   const sheetRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
-    let frame = 0
-    const read = () => {
-      frame = 0
-      const nav = navRef.current?.firstElementChild as HTMLElement | undefined
-      const y = (nav?.offsetHeight ?? 64) + 1
-      const under = document.elementFromPoint(window.innerWidth / 2, y)
-      setTheme((under?.closest('[data-theme]')?.getAttribute('data-theme') as Theme) ?? 'light')
-      setAtTop(window.scrollY < 24 && window.innerWidth >= 768)
-    }
-    const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(read)
-    }
-    schedule()
-    window.addEventListener('scroll', schedule, { passive: true })
-    window.addEventListener('resize', schedule)
-    return () => {
-      cancelAnimationFrame(frame)
-      window.removeEventListener('scroll', schedule)
-      window.removeEventListener('resize', schedule)
-    }
+    const end = document.getElementById('hero-end')
+    if (!end) return
+    // Over the photograph until the point where the product panels start has passed under the bar.
+    const io = new IntersectionObserver(([e]) => setOverHero(e.boundingClientRect.top > 64))
+    io.observe(end)
+    return () => io.disconnect()
   }, [pathname])
 
   useEffect(() => {
@@ -63,8 +45,8 @@ export function Header() {
     }
   }, [menuOpen])
 
-  const dark = theme === 'dark'
-  const bare = dark && atTop && !menuOpen
+  // Only the homepage has the photograph; elsewhere the bar is always the light one.
+  const dark = overHero && pathname === '/' && !menuOpen
   const closeSheet = () => sheetRef.current?.close()
 
   return (
@@ -77,14 +59,11 @@ export function Header() {
       </a>
       <header
         ref={navRef}
-        data-tone={dark ? 'dark' : 'light'}
         onMouseLeave={() => setMenuOpen(false)}
-        className={`site-header fixed inset-x-0 top-0 z-[250] transition-[background-color,color,box-shadow] duration-300 ${
-          bare
-            ? 'bg-transparent text-white'
-            : dark
-              ? 'bg-dark/92 text-white shadow-[0_1px_0_var(--color-dark-line)] backdrop-blur-[14px]'
-              : 'bg-mist/92 text-ink shadow-[0_1px_0_rgb(8_17_19/0.06)] backdrop-blur-[14px]'
+        className={`fixed inset-x-0 top-0 z-[250] transition-[background-color,color,box-shadow] duration-300 ${
+          dark
+            ? 'text-white max-md:bg-dark/70 max-md:backdrop-blur-[10px] md:bg-transparent'
+            : 'bg-mist/95 text-ink shadow-[0_1px_0_rgb(8_17_19/0.07)] backdrop-blur-[14px]'
         }`}
       >
         <nav aria-label="Principal" className="wrap flex h-[var(--nav-h)] items-center gap-8">

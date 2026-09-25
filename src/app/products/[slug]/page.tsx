@@ -2,18 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ProductHero } from '@/components/product/ProductHero'
 import { ProductSections } from '@/components/product/ProductSections'
-import { BalanceWaveShot } from '@/components/scenes/BalanceWaveShot'
-import { GlassesScene } from '@/components/scenes/GlassesScene'
 
-/**
- * Signature moments after the buy area. BrainLink's buy area already is its
- * floating-headset image, so it goes straight to the photographs.
- */
-const scenes = {
-  'balance-wave': <BalanceWaveShot />,
-  'brainlink-pro': null,
-  'ochelari-biohack': <GlassesScene mode="page" />,
-}
 import { getProductBySlug, productHref, products } from '@/content/catalog'
 import { productContent } from '@/content/product-content'
 import { absolute, breadcrumbJsonLd, JsonLd, pageMetadata, productJsonLd } from '@/lib/seo'
@@ -55,7 +44,7 @@ export default async function ProductPage({ params }: PageProps<'/products/[slug
         </div>
       </section>
 
-      <ProductSections product={product} content={content} scene={scenes[product.id]} />
+      <ProductSections product={product} content={content} />
 
       <p className="wrap py-8 text-[13px] leading-relaxed text-muted">
         {product.name} este un produs de wellness. Nu înlocuiește sfatul medicului. Rezultatele diferă de la o persoană la alta.

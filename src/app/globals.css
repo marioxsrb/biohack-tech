@@ -363,250 +363,46 @@ select.field {
 textarea.field { resize: vertical; }
 
 /* ============================================================
-   ENTRANCES (once, on load)
-   ============================================================ */
-@keyframes rise {
-  from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: none; }
-}
-.hero-rise { animation: rise 0.9s var(--ease-brand) both; }
-/* Headline lines rise inside a mask; they start partly visible so the first paint has text. */
-.line-mask { display: block; overflow: hidden; padding-bottom: 0.08em; margin-bottom: -0.08em; }
-.line-mask > span { display: block; animation: line-up 0.9s var(--ease-brand) both; }
-@keyframes line-up {
-  from { transform: translateY(38%); opacity: 0.35; }
-  to { transform: none; opacity: 1; }
-}
-@keyframes fade-in {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-.scroll-cue-line {
-  position: relative;
-  width: 1px;
-  height: 56px;
-  overflow: hidden;
-  background: rgb(255 255 255 / 0.25);
-}
-.scroll-cue-line::after {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  height: 18px;
-  background: #fff;
-  animation: travel 2.2s var(--ease-brand) infinite;
-}
-@keyframes travel {
-  from { transform: translateY(-18px); }
-  to { transform: translateY(56px); }
-}
-
-/* ============================================================
-   RAMPS
-   Scroll-driven values are written as ramps over a scene-local unit --u:
-   ramp(a, b) = clamp(0, (u − a) / (b − a), 1). One formula everywhere.
+   MOTION
+   Everything below is CSS, triggered by load or by the visitor (hover, focus,
+   choice). Nothing hides content: at worst, an effect doesn't play.
    ============================================================ */
 
-/* ============================================================
-   OPENING · one pinned shot, 460 units long (1 unit ≈ 1vh on desktop)
-       0– 50  photograph, headline readable
-      40– 80  headline leaves
-      50–140  camera pushes toward the device, the room goes dark
-     120–160  three words arrive · 160–215 readable · 215–245 they leave
-     200–250  the photograph is gone
-     230–290  the device rises · 260–310 it switches on
-     300–330  its copy arrives · 330–390 readable · 390–410 leaves
-     400–460  lights up (the stage turns transparent onto the page surface)
-   ============================================================ */
-.opening, .bw-shot { --bwx: 66vw; }
-@media (max-width: 767px) {
-  .opening, .bw-shot { --bwx: 50vw; }
-}
-.opening {
-  --len: 460;
-  height: calc(100svh + 460vh);
-  --u: calc(var(--pin, 0) * var(--len));
-  --headOut: clamp(0, calc((var(--u) - 40) / 40), 1);
-  --push: clamp(0, calc((var(--u) - 50) / 90), 1);
-  --wordsIn: clamp(0, calc((var(--u) - 120) / 40), 1);
-  --wordsOut: clamp(0, calc((var(--u) - 215) / 30), 1);
-  --photoOut: clamp(0, calc((var(--u) - 200) / 50), 1);
-  --rise: clamp(0, calc((var(--u) - 230) / 60), 1);
-  --on: clamp(0, calc((var(--u) - 260) / 50), 1);
-  --copyIn: clamp(0, calc((var(--u) - 300) / 30), 1);
-  --copyOut: clamp(0, calc((var(--u) - 390) / 20), 1);
-  --light: clamp(0, calc((var(--u) - 400) / 60), 1);
-  --gone: clamp(0, calc((var(--u) - 395) / 60), 1);
-}
-@media (max-width: 767px) {
-  .opening { height: calc(100svh + 360vh); }
-}
-/* Anchors inside the pinned shot: --at is a unit on the 460 scale. */
-.opening-anchor {
-  position: absolute;
-  left: 0;
-  top: calc(var(--at) / 460 * (100% - 100svh));
-  scroll-margin-top: 0;
-}
-/* Lights up as a soft pool opening from the lower centre (where BrainLink rises), never a flat grey. */
-.opening-night {
-  --r: calc(var(--light) * 180% - 30%);
-  mask-image: radial-gradient(ellipse 120% 90% at 50% 110%, transparent var(--r), #000 calc(var(--r) + 28%));
-  -webkit-mask-image: radial-gradient(ellipse 120% 90% at 50% 110%, transparent var(--r), #000 calc(var(--r) + 28%));
-}
-.opening-photo {
-  transform-origin: var(--dx, 70%) var(--dy, 50%);
-  transform:
-    translate3d(calc((var(--bwx) - var(--dx, 70vw)) * var(--push) * 0.55), calc((74svh - var(--dy, 50svh)) * var(--push) * 0.55), 0)
-    scale(calc(1 + var(--push) * 0.55));
-  opacity: calc(1 - var(--photoOut));
-}
-.opening-settle { animation: settle 2.2s var(--ease-brand) both; }
+/* Hero photograph settles once on load. Transform only; the image is visible throughout. */
+.hero-img { animation: settle 1.8s var(--ease-brand) both; }
 @keyframes settle {
-  from { transform: scale(1.06); }
+  from { transform: scale(1.05); }
   to { transform: none; }
 }
-.opening-settle::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--color-dark);
-  animation: lift 1.4s var(--ease-brand) both;
+.hero-copy { animation: nudge 0.9s var(--ease-brand) both; }
+@keyframes nudge {
+  from { transform: translateY(14px); }
+  to { transform: none; }
 }
-@keyframes lift {
-  from { opacity: 0.45; }
-  to { opacity: 0; }
-}
-.opening-dusk { opacity: calc(var(--push) * 0.82); }
-.opening-hero {
-  opacity: calc(1 - var(--headOut));
-  transform: translate3d(0, calc(var(--headOut) * -60px), 0);
-  visibility: visible;
-}
-.opening-words {
-  opacity: calc(var(--wordsIn) * (1 - var(--wordsOut)));
-  transform: translate3d(0, calc(-50% + (1 - var(--wordsIn)) * 40px - var(--wordsOut) * 60px), 0);
-  pointer-events: none;
-}
-.opening-bw { pointer-events: none; }
-.opening-bw-copy {
-  opacity: calc(var(--copyIn) * (1 - var(--copyOut)));
-  transform: translate3d(0, calc((1 - var(--copyIn)) * 24px - var(--copyOut) * 30px), 0);
-}
-.opening-cue { opacity: calc(1 - var(--headOut) * 3); animation: fade-in 1s ease 1.8s both; }
-/* Only the layer you can see is focusable and clickable. */
-.opening[data-words] .opening-words,
-.opening[data-bwcopy] .opening-bw-copy { pointer-events: auto; }
-.opening:not([data-hero]) .opening-hero,
-.opening:not([data-hero]) .opening-cue,
-.opening:not([data-words]) .opening-words,
-.opening:not([data-bwcopy]) .opening-bw-copy { visibility: hidden; }
 
-/* ---------- Balance Wave visual, driven by --rise, --on, --gone ---------- */
-.bwv-bloom {
-  background: radial-gradient(ellipse 40% 44% at var(--bwx, 50vw) 86%, rgb(230 69 69 / 0.36), rgb(230 69 69 / 0.08) 55%, transparent 75%);
-  opacity: calc(var(--on, 1) * (1 - var(--gone, 0)));
-}
-.bwv-device {
-  left: var(--bwx, 50vw);
-  /* Leaves as a solid object (up and out of frame), fading only at the very end. */
-  transform: translate3d(-50%, calc((1 - var(--rise, 1)) * 30% - var(--gone, 0) * 120%), 0);
-  opacity: calc(min(1, var(--rise, 1) * 3) * (1 - clamp(0, (var(--gone, 0) - 0.65) * 3, 1)));
-}
-.bwv-lit { opacity: var(--on, 1); }
-
-/* ============================================================
-   BRAINLINK · the headset floats in over the light-up, with an out-of-focus twin behind
-   ============================================================ */
-.bl { --u: calc(var(--in, 0.5) * 100); }
-.bl-hero {
-  transform: translate3d(0, calc((50 - var(--u)) * 0.35vh), 0) rotate(calc((40 - min(var(--u), 40)) * -0.12deg));
-}
-.bl-shadow {
-  background: radial-gradient(closest-side, rgb(8 17 19 / 0.18), transparent);
-  transform: scaleX(calc(0.9 + min(var(--u), 50) / 500));
-}
-.bl-copy { opacity: clamp(0, calc((var(--u) - 22) / 14), 1); }
-
-/* ============================================================
-   GLASSES · the portrait opens from a slit, then the frame, then the choice
-   ============================================================ */
-.gl { --u: calc(var(--in, 0.5) * 100); }
-.gl-portrait { clip-path: inset(calc(clamp(0, (34 - var(--u)) / 20, 1) * 42%) 0 round 0); }
-.gl-portrait-img { transform: scale(calc(1.14 - clamp(0, (var(--u) - 14) / 40, 1) * 0.1)); }
-.gl-reveal { opacity: clamp(0, calc((var(--u) - 26) / 12), 1); transform: translate3d(0, calc(clamp(0, (38 - var(--u)) / 12, 1) * 20px), 0); }
-.gl-shadow {
-  background: radial-gradient(closest-side, rgb(8 17 19 / 0.16), transparent);
-  filter: blur(6px);
-}
-.gl-frame { transition: transform 0.4s var(--ease-brand), opacity 0.3s var(--ease-brand); }
-.gl-frame[data-state='before'] { opacity: 0; transform: translateX(-9%) rotate(-2deg); }
-.gl-frame[data-state='after'] { opacity: 0; transform: translateX(9%) rotate(2deg); }
-.gl-frame[data-state='on'] { opacity: 1; transform: none; }
-
-/* ============================================================
-   LINEUP · the three products rise onto one shelf, in turn
-   ============================================================ */
-.lineup { --u: calc(var(--in, 0.5) * 100); }
-.lineup-object {
-  transform: translate3d(0, calc(clamp(0, (var(--start) - var(--u)) / 16, 1) * 60px), 0);
-  opacity: clamp(0, calc((var(--u) - var(--start) + 16) / 12), 1);
-}
-.lineup-lift { transition: transform 0.35s var(--ease-brand); }
-.lineup-item:hover .lineup-lift,
-.lineup-item:focus-visible .lineup-lift { transform: translateY(-12px); }
-.lineup-shadow {
-  position: absolute;
-  left: 18%;
-  right: 18%;
-  bottom: -8px;
-  height: 16px;
-  border-radius: 50%;
+/* Products react to the pointer: a small lift, never more. */
+.lift { transition: transform 0.35s var(--ease-brand); }
+.group:hover .lift,
+.group:focus-visible .lift { transform: translateY(-8px) scale(1.02); }
+.glow { transition: opacity 0.35s var(--ease-brand); }
+.group:hover .glow { opacity: 1 !important; }
+.shade {
   background: radial-gradient(closest-side, rgb(8 17 19 / 0.18), transparent);
   transition: transform 0.35s var(--ease-brand), opacity 0.35s var(--ease-brand);
 }
-.lineup-item:hover .lineup-shadow,
-.lineup-item:focus-visible .lineup-shadow { transform: scaleX(0.8); opacity: 0.5; }
+.group:hover .shade { transform: scaleX(0.85); opacity: 0.6; }
 
-/* ============================================================
-   PRODUCT PAGE · Balance Wave shot (pinned; dark only while it fills the screen)
-       0– 50  lights go down · 40–110 device rises and switches on
-     100–130  copy arrives · 130–200 readable · 200–220 leaves
-     210–260  lights come up
-   ============================================================ */
-.bw-shot {
-  height: calc(100svh + 260vh);
-  --u: calc(var(--pin, 0) * 260);
-  --night: min(clamp(0, calc(var(--u) / 50), 1), 1 - clamp(0, calc((var(--u) - 210) / 50), 1));
-  --rise: clamp(0, calc((var(--u) - 40) / 50), 1);
-  --on: clamp(0, calc((var(--u) - 60) / 50), 1);
-  --copyIn: clamp(0, calc((var(--u) - 100) / 30), 1);
-  --copyOut: clamp(0, calc((var(--u) - 200) / 20), 1);
-  --gone: clamp(0, calc((var(--u) - 212) / 48), 1);
-}
-@media (max-width: 767px) {
-  .bw-shot { height: calc(100svh + 200vh); }
-}
-.bw-shot-night {
-  --r: calc((1 - var(--night)) * 180% - 30%);
-  mask-image: radial-gradient(ellipse 120% 90% at 50% 110%, transparent var(--r), #000 calc(var(--r) + 28%));
-  -webkit-mask-image: radial-gradient(ellipse 120% 90% at 50% 110%, transparent var(--r), #000 calc(var(--r) + 28%));
-}
-.bw-shot-copy { opacity: calc(var(--copyIn) * (1 - var(--copyOut))); }
-.bw-shot:not([data-bwcopy]) .bw-shot-copy { visibility: hidden; }
-
-/* ============================================================
-   CINEMATIC PHOTO · opens from an inset frame to full bleed as it rises
-   ============================================================ */
-.cine { --open: clamp(0, calc((var(--in, 1) - 0.08) / 0.34), 1); }
-.cine-frame { clip-path: inset(calc((1 - var(--open)) * 7%) calc((1 - var(--open)) * 9%) round calc((1 - var(--open)) * 28px)); }
-.cine-img { transform: scale(calc(1.08 - var(--open) * 0.08)); }
+/* Glasses: the chosen frame crossfades in from the side it came from. */
+.gl-frame { transition: transform 0.28s var(--ease-brand), opacity 0.22s var(--ease-brand); }
+.gl-frame[data-state='before'] { opacity: 0; transform: translateX(-6%); }
+.gl-frame[data-state='after'] { opacity: 0; transform: translateX(6%); }
+.gl-frame[data-state='on'] { opacity: 1; transform: none; }
 
 /* ---------- small feedback ---------- */
-.gallery-in { animation: gallery-in 0.45s var(--ease-brand) both; }
+.gallery-in { animation: gallery-in 0.3s var(--ease-brand) both; }
 @keyframes gallery-in {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
+  from { opacity: 0.4; }
+  to { opacity: 1; }
 }
 .cart-bump { animation: bump 0.45s var(--ease-brand); }
 @keyframes bump {
@@ -622,19 +418,4 @@ textarea.field { resize: vertical; }
 /* Room for the mobile purchase bar at the end of product pages. */
 @media (max-width: 1023px) {
   html[data-buybar] body { padding-bottom: 76px; }
-}
-
-/* ============================================================
-   REDUCED MOTION: scenes keep their scroll-linked fades (no movement),
-   transforms and looping animations stop.
-   ============================================================ */
-@media (prefers-reduced-motion: reduce) {
-  .opening-photo, .opening-hero, .opening-words, .opening-bw-copy, .bwv-device,
-  .bl-hero, .gl-portrait-img, .gl-reveal, .lineup-object, .cine-img { transform: none !important; }
-  .cine-frame { clip-path: none; }
-  .opening-words { transform: translateY(-50%) !important; }
-  .bwv-device { transform: translateX(-50%) !important; }
-  .opening-night { mask-image: none; -webkit-mask-image: none; opacity: calc(1 - var(--light)); }
-  .bw-shot-night { mask-image: none; -webkit-mask-image: none; opacity: var(--night); }
-  .gl-portrait { clip-path: none; }
 }

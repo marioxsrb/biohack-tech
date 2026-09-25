@@ -1,6 +1,8 @@
 import type { Metadata } from 'next'
-import { Opening } from '@/components/home/Opening'
-import { BrainLinkScene } from '@/components/scenes/BrainLinkScene'
+import { BalanceWaveFeature } from '@/components/home/BalanceWaveFeature'
+import { BrainLinkFeature } from '@/components/home/BrainLinkFeature'
+import { Discover } from '@/components/home/Discover'
+import { Hero } from '@/components/home/Hero'
 import { GlassesScene } from '@/components/scenes/GlassesScene'
 import { Lineup } from '@/components/site/Lineup'
 import { site } from '@/config/site'
@@ -18,16 +20,14 @@ export const metadata: Metadata = {
   title: { absolute: `${site.name}: Balance Wave, BrainLink Pro și Ochelari Biohack` },
 }
 
-/**
- * One continuous sequence on one surface: the opening act (photograph → dark → the three
- * words → Balance Wave → light), BrainLink floating in over the light-up, the glasses,
- * and the three products together.
- */
+/** Plain document flow: every section renders from the server and scrolls natively. */
 export default function Home() {
   return (
     <>
-      <Opening />
-      <BrainLinkScene />
+      <Hero />
+      <Discover />
+      <BalanceWaveFeature />
+      <BrainLinkFeature />
       <GlassesScene />
       <Lineup />
     </>
