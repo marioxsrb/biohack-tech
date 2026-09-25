@@ -6,6 +6,7 @@ import { Arrow, External } from '@/components/ui/icons'
 import { productHref, type Product } from '@/content/catalog'
 import type { ProductContent } from '@/content/product-content'
 import { formatMoney } from '@/lib/money'
+import { Cinematic } from './Cinematic'
 
 type Props = { product: Product; content: ProductContent; scene?: React.ReactNode }
 
@@ -34,20 +35,6 @@ export function ProductSections({ product, content: c, scene }: Props) {
   )
 }
 
-/** The first story fills the screen: photograph edge to edge, headline set into its darkest corner. */
-function Cinematic({ story }: { story: ProductContent['stories'][number] }) {
-  return (
-    <section className="relative isolate flex min-h-[560px] h-[88svh] items-end overflow-hidden text-white">
-      <Image src={story.image.src} alt={story.image.alt} fill placeholder="blur" sizes="100vw" className="-z-10 object-cover" />
-      <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-[60%] bg-[linear-gradient(0deg,rgba(8,17,19,.78),rgba(8,17,19,0))]" />
-      <div className="wrap w-full pb-[clamp(40px,8vh,88px)]">
-        <h2 className="rev max-w-[12em] text-[clamp(36px,5vw,72px)] leading-[0.98] tracking-[-0.045em] !text-white">{story.title}</h2>
-        <p className="rev mt-4 max-w-[30em] text-[17px] leading-relaxed text-white/85">{story.text}</p>
-      </div>
-    </section>
-  )
-}
-
 const bleedLeft = 'md:-ml-[calc((100vw-min(100vw,1152px))/2+var(--gut))]'
 const bleedRight = 'md:-mr-[calc((100vw-min(100vw,1152px))/2+var(--gut))]'
 
@@ -57,11 +44,11 @@ function Story({ story, flip }: { story: ProductContent['stories'][number]; flip
     <section className="overflow-hidden py-[calc(var(--sec)*0.5)]">
       <div className="wrap grid grid-cols-1 items-center gap-y-8 md:grid-cols-12 md:gap-x-6">
         <div
-          className={`rev relative aspect-[4/3] md:col-span-7 max-md:-mx-[var(--gut)] ${flip ? `md:order-2 md:col-start-6 ${bleedRight}` : bleedLeft}`}
+          className={`relative aspect-[4/3] md:col-span-7 max-md:-mx-[var(--gut)] ${flip ? `md:order-2 md:col-start-6 ${bleedRight}` : bleedLeft}`}
         >
           <Image src={story.image.src} alt={story.image.alt} fill placeholder="blur" sizes="(min-width: 768px) 62vw, 100vw" className="object-cover" />
         </div>
-        <div className={`rev md:col-span-4 ${flip ? 'md:order-1 md:col-start-1' : 'md:col-start-9'}`}>
+        <div className={`md:col-span-4 ${flip ? 'md:order-1 md:col-start-1' : 'md:col-start-9'}`}>
           <h2 className="text-[clamp(30px,3.2vw,46px)] leading-[1.03] tracking-[-0.04em]">{story.title}</h2>
           <p className="mt-5 text-[18px] leading-relaxed text-text">{story.text}</p>
         </div>
@@ -72,16 +59,16 @@ function Story({ story, flip }: { story: ProductContent['stories'][number]; flip
 
 function Steps({ steps }: { steps: string[] }) {
   return (
-    <section aria-labelledby="steps-title" className="mt-[calc(var(--sec)*0.5)] bg-dark py-[var(--sec)] text-white">
+    <section aria-labelledby="steps-title" className="py-[var(--sec)]">
       <div className="wrap">
-        <h2 id="steps-title" className="rev text-[clamp(30px,3.2vw,46px)] leading-none tracking-[-0.04em] !text-white">
+        <h2 id="steps-title" className="text-[clamp(30px,3.2vw,46px)] leading-none tracking-[-0.04em]">
           Cum îl folosești
         </h2>
         <ol className="mt-12 grid gap-8 sm:grid-cols-3 sm:gap-6 max-sm:mt-8 max-sm:gap-6">
           {steps.map((s, i) => (
-            <li key={s} className="rev max-sm:flex max-sm:items-baseline max-sm:gap-5">
-              <span className="block w-8 flex-none text-[clamp(44px,6vw,88px)] leading-none font-light tracking-[-0.04em] text-cyan">{i + 1}</span>
-              <p className="mt-4 max-w-[14em] text-[20px] leading-snug tracking-[-0.015em] text-white max-sm:mt-0">{s}</p>
+            <li key={s} className="max-sm:flex max-sm:items-baseline max-sm:gap-5">
+              <span className="block w-8 flex-none text-[clamp(44px,6vw,88px)] leading-none font-light tracking-[-0.04em] text-cyan-700">{i + 1}</span>
+              <p className="mt-4 max-w-[14em] text-[20px] leading-snug tracking-[-0.015em] text-ink max-sm:mt-0">{s}</p>
             </li>
           ))}
         </ol>
@@ -93,12 +80,12 @@ function Steps({ steps }: { steps: string[] }) {
 /** The technology, once, in plain words. */
 function Detail({ detail }: { detail: NonNullable<ProductContent['detail']> }) {
   return (
-    <section aria-labelledby="detail-title" className="bg-mist py-[var(--sec)]">
+    <section aria-labelledby="detail-title" className="py-[var(--sec)]">
       <div className="wrap grid grid-cols-1 items-center gap-y-10 md:grid-cols-12 md:gap-x-6">
-        <div className="rev relative aspect-[4/3] md:col-span-6 max-md:-mx-[var(--gut)]">
+        <div className="relative aspect-[4/3] md:col-span-6 max-md:-mx-[var(--gut)]">
           <Image src={detail.image.src} alt={detail.image.alt} fill placeholder="blur" sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
         </div>
-        <div className="rev md:col-span-5 md:col-start-8">
+        <div className="md:col-span-5 md:col-start-8">
           <h2 id="detail-title" className="text-[clamp(30px,3.2vw,46px)] leading-[1.03] tracking-[-0.04em]">
             {detail.title}
           </h2>
@@ -167,7 +154,7 @@ function BuyAgain({ product }: { product: Product }) {
   const img = product.cutout
   const bleed = img.bleed === 'bottom'
   return (
-    <section id="buy-again" aria-label={`Cumpără ${product.name}`} className="overflow-hidden bg-mist">
+    <section id="buy-again" aria-label={`Cumpără ${product.name}`} className="overflow-hidden border-t border-line">
       <div className="wrap grid grid-cols-1 md:grid-cols-12 md:gap-x-6">
         <div className={`relative aspect-[16/10] md:col-span-6 ${bleed ? 'order-2 self-end md:order-1 md:mt-16' : 'my-12 md:my-16'}`}>
           <Image

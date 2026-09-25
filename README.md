@@ -26,10 +26,11 @@ src/
   components/
     cart/                     coșul: store în localStorage, drawer pe <dialog>, buton, stepper
     product/                  galerie, zona de cumpărare cu variante, secțiunile paginii de produs
-    home/                     hero (parallax, hotspot pe dispozitiv) și scena „Ce vrei să îmbunătățești?”
-    scenes/                   momentul fiecărui produs, folosit pe home și pe pagina lui:
-                              Balance Wave (se aprinde la scroll), BrainLink (semnal interactiv), Ochelari (selector de rame)
-    motion/scroll-vars.ts     un singur listener de scroll care scrie --in / --pin / --out; animațiile sunt CSS
+    home/Opening.tsx          actul întunecat, un singur cadru fixat: fotografia → camera spre dispozitiv →
+                              „Ce vrei să îmbunătățești?” → Balance Wave se aprinde → lumina revine
+    scenes/                   BrainLink (casca plutind), Ochelari (selector de rame), Balance Wave pe pagina lui,
+                              SceneBuy (blocul de cumpărare comun tuturor scenelor)
+    motion/scroll-vars.ts     un singur listener de scroll care scrie --in / --pin și stările data-*; animațiile sunt CSS
     site/                     header, footer, raftul cu cele trei produse
   lib/
     money.ts                  prețuri în unități mici (bani/cenți), formatare ro-RO
@@ -46,6 +47,12 @@ URL-urile sunt identice cu site-ul actual (`/products/glasses`, `/products/balan
 1. Pune imaginile în ZIP-ul sursă și adaugă o linie în `scripts/prepare-assets.py`, apoi `npm run assets`.
 2. Adaugă produsul în `content/catalog.ts` (preț în unități mici: 60 EUR = `6000`).
 3. Adaugă conținutul paginii în `content/product-content.ts`. Secțiunile opționale (`steps`, `detail`) apar doar dacă există.
+
+## Continuitate
+
+Tot site-ul stă pe o singură suprafață (mist). Nicio secțiune nu are fundal propriu. Singurele momente întunecate sunt
+cadre fixate (sticky): lumina scade și revine cât timp scena umple ecranul, deci nu există benzi de culoare sau margini
+de secțiune. Header-ul citește `data-theme` al elementului de sub el și își schimbă culorile singur.
 
 ## Mișcare
 

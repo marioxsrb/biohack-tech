@@ -27,7 +27,7 @@ export default async function LegalPage({ params }: PageProps<'/[legal]'>) {
           <h1 className="text-[36px] leading-[1.06] tracking-[-0.035em] max-sm:text-[30px]">{page.title}</h1>
         </header>
         <div className="md:col-span-7 md:col-start-6">
-          <p className="rounded-[12px] bg-mist px-5 py-4 text-[15px] text-text">
+          <p className="rounded-[12px] bg-paper px-5 py-4 text-[15px] text-text">
             Aceasta este versiunea pe scurt. Textul complet va fi publicat în curând. Pentru orice întrebare, scrie-ne la{' '}
             <a href={`mailto:${site.email}`} className="font-medium text-ink underline underline-offset-4">
               {site.email}

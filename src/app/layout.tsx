@@ -4,7 +4,6 @@ import { CartDrawer } from '@/components/cart/CartDrawer'
 import { CartProvider } from '@/components/cart/CartProvider'
 import { Footer } from '@/components/site/Footer'
 import { Header } from '@/components/site/Header'
-import { RevealObserver } from '@/components/ui/RevealObserver'
 import { site } from '@/config/site'
 import { JsonLd, organizationJsonLd } from '@/lib/seo'
 import './globals.css'
@@ -29,10 +28,6 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ro" data-scroll-behavior="smooth" className={`${geist.variable} ${geistMono.variable}`} suppressHydrationWarning>
-      <head>
-        {/* Enables reveal animations only when JavaScript runs. */}
-        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js')" }} />
-      </head>
       <body>
         <CartProvider>
           <Header />
@@ -40,7 +35,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Footer />
           <CartDrawer />
         </CartProvider>
-        <RevealObserver />
         <JsonLd data={organizationJsonLd()} />
       </body>
     </html>

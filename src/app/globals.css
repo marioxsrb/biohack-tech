@@ -64,7 +64,7 @@
     -webkit-text-size-adjust: 100%;
   }
   body {
-    background: var(--color-paper);
+    background: var(--color-mist); /* one surface for the whole site */
     color: var(--color-text);
     font-family: var(--font-sans);
     font-size: 16.5px;
@@ -99,7 +99,6 @@
     margin-inline: auto;
     padding-inline: var(--gut);
   }
-  .sec { padding-block: var(--sec); }
 
   /* ---------- type ---------- */
   .h1 {
@@ -111,11 +110,6 @@
     font-size: clamp(28px, 2.9vw, 42px);
     line-height: 1.08;
     max-width: 17em;
-  }
-  .h3 {
-    font-size: 18px;
-    line-height: 1.3;
-    letter-spacing: -0.012em;
   }
   .sub {
     color: var(--color-muted);
@@ -189,28 +183,6 @@
   }
   .cta.sm svg { width: 15px; height: 15px; }
 
-  /* Secondary action: outlined, never competes with the red one. */
-  .btn2 {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    min-height: 56px;
-    padding: 0 22px;
-    border-radius: 12px;
-    color: var(--color-ink);
-    font-weight: 600;
-    font-size: 16px;
-    letter-spacing: -0.01em;
-    box-shadow: inset 0 0 0 1px var(--color-line);
-    transition: box-shadow 0.2s, background 0.2s;
-  }
-  .btn2:hover { box-shadow: inset 0 0 0 1px var(--color-ink); }
-  .btn2 svg { width: 18px; height: 18px; }
-  .on-dark .btn2 { color: #fff; box-shadow: inset 0 0 0 1px var(--color-dark-line); }
-  .on-dark .btn2:hover { box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.5); }
-  .btn2.sm { min-height: 40px; padding: 0 14px; font-size: 14px; }
-
   /* Text link with a cyan underline that draws in. */
   .tlink {
     display: inline-flex;
@@ -230,22 +202,15 @@
   .tlink:hover svg { transform: translateX(3px); }
   .on-dark .tlink { color: #fff; }
 
-  /* Neutral stage behind product shots. Studio shots on white blend into it. */
-  .stage { background: var(--color-mist); }
+  /* Product shots sit directly on the page surface; the stage only frames them. */
+  .stage { background: transparent; }
   .stage img[data-kind='studio'] { mix-blend-mode: multiply; }
 
-  /* ---------- reveal ---------- */
-  .js .rev {
-    opacity: 0;
-    transform: translateY(12px);
-    transition: opacity 0.6s var(--ease-brand), transform 0.6s var(--ease-brand);
-  }
-  .js .rev.in { opacity: 1; transform: none; }
+
 }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .js .rev { opacity: 1; transform: none; transition: none; }
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
@@ -264,7 +229,7 @@
   margin: 0;
   padding: 0;
   border: 0;
-  background: var(--color-paper);
+  background: var(--color-mist);
   color: var(--color-text);
   box-shadow: -30px 0 80px -40px rgb(8 17 19 / 0.45);
   transform: translateX(100%);
@@ -292,8 +257,9 @@
 /* ---------- navigation ---------- */
 .nav-link {
   position: relative;
-  color: var(--color-dark-muted);
-  transition: color 0.2s;
+  color: inherit;
+  opacity: 0.78;
+  transition: opacity 0.2s;
 }
 .nav-link::after {
   content: '';
@@ -307,7 +273,7 @@
   transition: transform 0.25s var(--ease-brand);
 }
 .nav-link:hover,
-.nav-link[aria-expanded='true'] { color: #fff; }
+.nav-link[aria-expanded='true'] { opacity: 1; }
 .nav-link:hover::after,
 .nav-link[aria-expanded='true']::after { transform: scaleX(1); }
 
@@ -396,128 +362,25 @@ select.field {
 .field-error { box-shadow: inset 0 0 0 1px var(--color-red); }
 textarea.field { resize: vertical; }
 
-/* ---------- hero entrance: once, on load ---------- */
+/* ============================================================
+   ENTRANCES (once, on load)
+   ============================================================ */
 @keyframes rise {
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: none; }
 }
 .hero-rise { animation: rise 0.9s var(--ease-brand) both; }
-
-/* ============================================================
-   SCENE 1 · HERO
-   ============================================================ */
-/* The photo settles in once on load, then drifts slower than the page. */
-.hero-media {
-  transform: translate3d(0, calc(var(--out, 0) * 18%), 0) scale(calc(1 + var(--out, 0) * 0.05));
-  will-change: transform;
-}
-.hero-settle { animation: settle 2.2s var(--ease-brand) both; }
-@keyframes settle {
-  from { transform: scale(1.06); }
-  to { transform: none; }
-}
-/* The photo comes up from dark with an overlay fade: opacity is cheap, a filter on a full-screen image is not. */
-.hero-settle::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: var(--color-dark);
-  pointer-events: none;
-  animation: lift 1.4s var(--ease-brand) both;
-}
-@keyframes lift {
-  from { opacity: 0.45; }
-  to { opacity: 0; }
-}
-.hero-copy {
-  transform: translate3d(0, calc(var(--out, 0) * -90px), 0);
-  opacity: calc(1 - var(--out, 0) * 1.8);
-}
-
-/* Headline lines rise out of a mask. */
+/* Headline lines rise inside a mask; they start partly visible so the first paint has text. */
 .line-mask { display: block; overflow: hidden; padding-bottom: 0.08em; margin-bottom: -0.08em; }
 .line-mask > span { display: block; animation: line-up 0.9s var(--ease-brand) both; }
 @keyframes line-up {
   from { transform: translateY(38%); opacity: 0.35; }
   to { transform: none; opacity: 1; }
 }
-
-/* Hotspot: a dot on the device, a hairline, a small label. */
-.hotspot {
-  display: block;
-  animation: fade-in 0.8s var(--ease-brand) 1.4s both;
-}
-.hotspot-dot {
-  position: absolute;
-  left: -6px;
-  top: -6px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 0 4px rgb(255 255 255 / 0.25);
-}
-.hotspot-dot::after {
-  content: '';
-  position: absolute;
-  inset: -10px;
-  border-radius: 50%;
-  border: 1px solid rgb(255 255 255 / 0.7);
-  animation: ping 2.6s var(--ease-brand) 2s infinite;
-}
-@keyframes ping {
-  0% { transform: scale(0.5); opacity: 1; }
-  70%, 100% { transform: scale(1.6); opacity: 0; }
-}
-.hotspot-line {
-  position: absolute;
-  left: 10px;
-  top: 0;
-  width: 64px;
-  height: 1px;
-  background: rgb(255 255 255 / 0.85);
-  transform-origin: left;
-  animation: draw 0.7s var(--ease-brand) 1.7s both;
-}
-@keyframes draw {
-  from { transform: scaleX(0); }
-  to { transform: none; }
-}
-.hotspot-label {
-  position: absolute;
-  left: 84px;
-  top: -20px;
-  white-space: nowrap;
-  padding: 7px 12px 8px;
-  border-radius: 10px;
-  background: rgb(8 17 19 / 0.55);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  animation: fade-in 0.6s var(--ease-brand) 2s both;
-  transition: background 0.2s;
-}
-.hotspot:hover .hotspot-label { background: rgb(8 17 19 / 0.8); }
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-/* Phones: the label would cover the device, so only the pulsing dot shows.
-   The label stays in the accessibility tree, so the link keeps its name. */
-@media (max-width: 640px) {
-  .hotspot-line { display: none; }
-  .hotspot-label {
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .hotspot::before { content: ''; position: absolute; inset: -16px; }
-}
-
-/* Scroll cue: a hairline with a travelling segment. */
-.scroll-cue { opacity: calc(1 - var(--out, 0) * 8); animation: fade-in 1s ease 1.8s both; }
 .scroll-cue-line {
   position: relative;
   width: 1px;
@@ -528,9 +391,7 @@ textarea.field { resize: vertical; }
 .scroll-cue-line::after {
   content: '';
   position: absolute;
-  left: 0;
-  top: 0;
-  width: 1px;
+  inset: 0 0 auto;
   height: 18px;
   background: #fff;
   animation: travel 2.2s var(--ease-brand) infinite;
@@ -541,173 +402,205 @@ textarea.field { resize: vertical; }
 }
 
 /* ============================================================
-   SCENE 2 · DISCOVER
-   Background travels dark → mist as the section rises, continuing the hero.
+   RAMPS
+   Scroll-driven values are written as ramps over a scene-local unit --u:
+   ramp(a, b) = clamp(0, (u − a) / (b − a), 1). One formula everywhere.
    ============================================================ */
-/* A fixed gradient, not a timed colour change: the hero's dark flows down into mist
-   as the section scrolls up, with no flat grey in between. */
-.discover {
-  background: linear-gradient(180deg, var(--color-dark) 0, var(--color-dark) 4%, #1c2a2e 12%, #6f7c81 22%, #cdd5d8 30%, var(--color-mist) 38%);
-}
-.discover-fg { color: var(--color-muted); }
-.discover-word { color: var(--color-ink); transition: color 0.3s var(--ease-brand); }
-.discover-word .discover-term { transition: transform 0.3s var(--ease-brand); }
-@media (min-width: 768px) {
-  .discover-word[data-active='false'] { color: var(--color-muted); }
-  .discover-word[data-active='true'] .discover-term { transform: translateX(10px); }
-}
-.discover-product {
-  opacity: 0;
-  transform: translateY(12px) scale(0.98);
-  transition: opacity 0.3s var(--ease-brand), transform 0.4s var(--ease-brand);
-  pointer-events: none;
-}
-.discover-product[data-active='true'] { pointer-events: auto; }
-.discover-product[data-active='true'] { opacity: 1; transform: none; }
 
 /* ============================================================
-   SCENE 3 · BALANCE WAVE
-   Phases (--pin across the sticky stage):
-     0.00 → 0.30  the device rises and switches on
-     0.28 → 0.45  notes draw in
-     0.45 → 1.00  still: read, buy, scroll on
-   The stage is always dark: only opacity and transform change, never colour or filters.
+   OPENING · one pinned shot, 460 units long (1 unit ≈ 1vh on desktop)
+       0– 50  photograph, headline readable
+      40– 80  headline leaves
+      50–140  camera pushes toward the device, the room goes dark
+     120–160  three words arrive · 160–215 readable · 215–245 they leave
+     200–250  the photograph is gone
+     230–290  the device rises · 260–310 it switches on
+     300–330  its copy arrives · 330–390 readable · 390–410 leaves
+     400–460  lights up (the stage turns transparent onto the page surface)
    ============================================================ */
-.bw-scene {
-  --on: clamp(0, calc((var(--pin, 1) - 0.02) * 3.4), 1);
-  --rise: clamp(0, calc(var(--pin, 1) * 4), 1);
-  --note: clamp(0, calc((var(--pin, 1) - 0.28) * 6), 1);
+.opening, .bw-shot { --bwx: 66vw; }
+@media (max-width: 767px) {
+  .opening, .bw-shot { --bwx: 50vw; }
 }
-.bw-bloom {
-  background: radial-gradient(ellipse 46% 42% at 50% 82%, rgb(230 69 69 / 0.34), rgb(230 69 69 / 0.08) 55%, transparent 75%);
-  opacity: var(--on);
+.opening {
+  --len: 460;
+  height: calc(100svh + 460vh);
+  --u: calc(var(--pin, 0) * var(--len));
+  --headOut: clamp(0, calc((var(--u) - 40) / 40), 1);
+  --push: clamp(0, calc((var(--u) - 50) / 90), 1);
+  --wordsIn: clamp(0, calc((var(--u) - 120) / 40), 1);
+  --wordsOut: clamp(0, calc((var(--u) - 215) / 30), 1);
+  --photoOut: clamp(0, calc((var(--u) - 200) / 50), 1);
+  --rise: clamp(0, calc((var(--u) - 230) / 60), 1);
+  --on: clamp(0, calc((var(--u) - 260) / 50), 1);
+  --copyIn: clamp(0, calc((var(--u) - 300) / 30), 1);
+  --copyOut: clamp(0, calc((var(--u) - 390) / 20), 1);
+  --light: clamp(0, calc((var(--u) - 400) / 60), 1);
+  --gone: clamp(0, calc((var(--u) - 395) / 60), 1);
 }
-.bw-giant {
-  font-size: clamp(96px, 21vw, 330px);
-  color: rgb(255 255 255 / 0.05);
-  transform: translate3d(calc((0.5 - min(var(--pin, 1), 0.5)) * 6%), 0, 0);
+@media (max-width: 767px) {
+  .opening { height: calc(100svh + 360vh); }
 }
-.bw-device { transform: translate3d(0, calc((1 - var(--rise)) * 20%), 0); }
-.bw-lit { opacity: var(--on); }
-.bw-note { position: absolute; height: 0; opacity: var(--note); }
-.bw-note-dot {
+/* Anchors inside the pinned shot: --at is a unit on the 460 scale. */
+.opening-anchor {
   position: absolute;
-  top: -3.5px;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgb(255 255 255 / 0.2);
+  left: 0;
+  top: calc(var(--at) / 460 * (100% - 100svh));
+  scroll-margin-top: 0;
 }
-.bw-note-line {
-  position: absolute;
-  top: 0;
-  height: 1px;
-  background: rgb(255 255 255 / 0.75);
-  transform: scaleX(var(--note));
+/* Lights up as a soft pool opening from the lower centre (where BrainLink rises), never a flat grey. */
+.opening-night {
+  --r: calc(var(--light) * 180% - 30%);
+  mask-image: radial-gradient(ellipse 120% 90% at 50% 110%, transparent var(--r), #000 calc(var(--r) + 28%));
+  -webkit-mask-image: radial-gradient(ellipse 120% 90% at 50% 110%, transparent var(--r), #000 calc(var(--r) + 28%));
 }
-.bw-note-text { position: absolute; top: -20px; white-space: nowrap; }
-/* Right-hand notes run from the anchor past the device's right edge. */
-.bw-note-right .bw-note-dot { left: -3.5px; }
-.bw-note-right .bw-note-line { left: 8px; right: 0; transform-origin: left; }
-.bw-note-right .bw-note-text { left: calc(100% + 14px); }
-/* Left-hand notes mirror it. */
-.bw-note-left .bw-note-dot { right: -3.5px; }
-.bw-note-left .bw-note-line { left: 0; right: 8px; transform-origin: right; }
-.bw-note-left .bw-note-text { right: calc(100% + 14px); text-align: right; }
-
-/* ============================================================
-   SCENE 4 · BRAINLINK
-   --f : focus 0 → 1, written by the scene each frame
-   ============================================================ */
-.bl-axis { stroke: var(--color-line); stroke-width: 1px; stroke-dasharray: 2 6; vector-effect: non-scaling-stroke; }
-.bl-signal {
-  stroke: color-mix(in oklab, var(--color-cyan-700) calc(var(--f, 0.2) * 100%), var(--color-faint));
-  stroke-width: calc(1.2px + var(--f, 0.2) * 1px);
+.opening-photo {
+  transform-origin: var(--dx, 70%) var(--dy, 50%);
+  transform:
+    translate3d(calc((var(--bwx) - var(--dx, 70vw)) * var(--push) * 0.55), calc((74svh - var(--dy, 50svh)) * var(--push) * 0.55), 0)
+    scale(calc(1 + var(--push) * 0.55));
+  opacity: calc(1 - var(--photoOut));
 }
-.bl-product { transform: translate3d(0, calc(var(--f, 0.2) * -8px), 0); transition: transform 0.2s linear; }
-.bl-hold {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 56px;
-  padding: 0 24px 0 16px;
-  border-radius: 999px;
-  background: var(--color-ink);
-  color: #fff;
-  font-weight: 600;
-  font-size: 15.5px;
-  user-select: none;
-  -webkit-user-select: none;
-  touch-action: none;
-  transition: background 0.2s, transform 0.18s var(--ease-brand);
+.opening-settle { animation: settle 2.2s var(--ease-brand) both; }
+@keyframes settle {
+  from { transform: scale(1.06); }
+  to { transform: none; }
 }
-.bl-hold:hover { background: #16252a; }
-.bl-hold:active { transform: scale(0.98); }
-.bl-hold-ring {
-  position: relative;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  box-shadow: inset 0 0 0 1.5px rgb(255 255 255 / 0.35);
-}
-.bl-hold-ring::after {
+.opening-settle::after {
   content: '';
   position: absolute;
-  inset: 6px;
-  border-radius: 50%;
-  background: var(--color-cyan);
-  transform: scale(calc(0.3 + var(--f, 0.2) * 0.7));
-  transition: transform 0.12s linear;
+  inset: 0;
+  background: var(--color-dark);
+  animation: lift 1.4s var(--ease-brand) both;
 }
+@keyframes lift {
+  from { opacity: 0.45; }
+  to { opacity: 0; }
+}
+.opening-dusk { opacity: calc(var(--push) * 0.82); }
+.opening-hero {
+  opacity: calc(1 - var(--headOut));
+  transform: translate3d(0, calc(var(--headOut) * -60px), 0);
+  visibility: visible;
+}
+.opening-words {
+  opacity: calc(var(--wordsIn) * (1 - var(--wordsOut)));
+  transform: translate3d(0, calc(-50% + (1 - var(--wordsIn)) * 40px - var(--wordsOut) * 60px), 0);
+  pointer-events: none;
+}
+.opening-bw { pointer-events: none; }
+.opening-bw-copy {
+  opacity: calc(var(--copyIn) * (1 - var(--copyOut)));
+  transform: translate3d(0, calc((1 - var(--copyIn)) * 24px - var(--copyOut) * 30px), 0);
+}
+.opening-cue { opacity: calc(1 - var(--headOut) * 3); animation: fade-in 1s ease 1.8s both; }
+/* Only the layer you can see is focusable and clickable. */
+.opening[data-words] .opening-words,
+.opening[data-bwcopy] .opening-bw-copy { pointer-events: auto; }
+.opening:not([data-hero]) .opening-hero,
+.opening:not([data-hero]) .opening-cue,
+.opening:not([data-words]) .opening-words,
+.opening:not([data-bwcopy]) .opening-bw-copy { visibility: hidden; }
+
+/* ---------- Balance Wave visual, driven by --rise, --on, --gone ---------- */
+.bwv-bloom {
+  background: radial-gradient(ellipse 40% 44% at var(--bwx, 50vw) 86%, rgb(230 69 69 / 0.36), rgb(230 69 69 / 0.08) 55%, transparent 75%);
+  opacity: calc(var(--on, 1) * (1 - var(--gone, 0)));
+}
+.bwv-device {
+  left: var(--bwx, 50vw);
+  /* Leaves as a solid object (up and out of frame), fading only at the very end. */
+  transform: translate3d(-50%, calc((1 - var(--rise, 1)) * 30% - var(--gone, 0) * 120%), 0);
+  opacity: calc(min(1, var(--rise, 1) * 3) * (1 - clamp(0, (var(--gone, 0) - 0.65) * 3, 1)));
+}
+.bwv-lit { opacity: var(--on, 1); }
 
 /* ============================================================
-   SCENE 5 · GLASSES
+   BRAINLINK · the headset floats in over the light-up, with an out-of-focus twin behind
    ============================================================ */
-.gl-portrait { overflow: hidden; }
-.gl-portrait-img { transform: translate3d(0, calc((0.5 - var(--in, 0.5)) * 8%), 0) scale(1.1); }
-.gl-giant {
-  font-size: clamp(72px, 9vw, 150px);
-  color: var(--color-mist);
-  text-align: left;
+.bl { --u: calc(var(--in, 0.5) * 100); }
+.bl-hero {
+  transform: translate3d(0, calc((50 - var(--u)) * 0.35vh), 0) rotate(calc((40 - min(var(--u), 40)) * -0.12deg));
 }
-.gl-giant-word { animation: giant-in 0.6s var(--ease-brand) both; }
-@keyframes giant-in {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: none; }
+.bl-shadow {
+  background: radial-gradient(closest-side, rgb(8 17 19 / 0.18), transparent);
+  transform: scaleX(calc(0.9 + min(var(--u), 50) / 500));
 }
+.bl-copy { opacity: clamp(0, calc((var(--u) - 22) / 14), 1); }
+
+/* ============================================================
+   GLASSES · the portrait opens from a slit, then the frame, then the choice
+   ============================================================ */
+.gl { --u: calc(var(--in, 0.5) * 100); }
+.gl-portrait { clip-path: inset(calc(clamp(0, (34 - var(--u)) / 20, 1) * 42%) 0 round 0); }
+.gl-portrait-img { transform: scale(calc(1.14 - clamp(0, (var(--u) - 14) / 40, 1) * 0.1)); }
+.gl-reveal { opacity: clamp(0, calc((var(--u) - 26) / 12), 1); transform: translate3d(0, calc(clamp(0, (38 - var(--u)) / 12, 1) * 20px), 0); }
 .gl-shadow {
   background: radial-gradient(closest-side, rgb(8 17 19 / 0.16), transparent);
   filter: blur(6px);
 }
-.gl-frame {
-  transition: transform 0.4s var(--ease-brand), opacity 0.3s var(--ease-brand);
-}
+.gl-frame { transition: transform 0.4s var(--ease-brand), opacity 0.3s var(--ease-brand); }
 .gl-frame[data-state='before'] { opacity: 0; transform: translateX(-9%) rotate(-2deg); }
 .gl-frame[data-state='after'] { opacity: 0; transform: translateX(9%) rotate(2deg); }
 .gl-frame[data-state='on'] { opacity: 1; transform: none; }
-.gl-pick:focus-visible { outline-offset: 4px; }
 
 /* ============================================================
-   SCENE 6 · LINEUP
+   LINEUP · the three products rise onto one shelf, in turn
    ============================================================ */
-.lineup-stage { border-bottom: 1px solid var(--color-line); }
-.lineup-object { transition: transform 0.45s var(--ease-brand); }
+.lineup { --u: calc(var(--in, 0.5) * 100); }
+.lineup-object {
+  transform: translate3d(0, calc(clamp(0, (var(--start) - var(--u)) / 16, 1) * 60px), 0);
+  opacity: clamp(0, calc((var(--u) - var(--start) + 16) / 12), 1);
+}
+.lineup-lift { transition: transform 0.35s var(--ease-brand); }
+.lineup-item:hover .lineup-lift,
+.lineup-item:focus-visible .lineup-lift { transform: translateY(-12px); }
 .lineup-shadow {
   position: absolute;
   left: 18%;
   right: 18%;
-  bottom: 10%;
+  bottom: -8px;
   height: 16px;
   border-radius: 50%;
   background: radial-gradient(closest-side, rgb(8 17 19 / 0.18), transparent);
-  transition: transform 0.45s var(--ease-brand), opacity 0.45s var(--ease-brand);
+  transition: transform 0.35s var(--ease-brand), opacity 0.35s var(--ease-brand);
 }
-.lineup-item:hover .lineup-object,
-.lineup-item:focus-visible .lineup-object { transform: translateY(-14px); }
 .lineup-item:hover .lineup-shadow,
-.lineup-item:focus-visible .lineup-shadow { transform: scaleX(0.8); opacity: 0.55; }
+.lineup-item:focus-visible .lineup-shadow { transform: scaleX(0.8); opacity: 0.5; }
+
+/* ============================================================
+   PRODUCT PAGE · Balance Wave shot (pinned; dark only while it fills the screen)
+       0– 50  lights go down · 40–110 device rises and switches on
+     100–130  copy arrives · 130–200 readable · 200–220 leaves
+     210–260  lights come up
+   ============================================================ */
+.bw-shot {
+  height: calc(100svh + 260vh);
+  --u: calc(var(--pin, 0) * 260);
+  --night: min(clamp(0, calc(var(--u) / 50), 1), 1 - clamp(0, calc((var(--u) - 210) / 50), 1));
+  --rise: clamp(0, calc((var(--u) - 40) / 50), 1);
+  --on: clamp(0, calc((var(--u) - 60) / 50), 1);
+  --copyIn: clamp(0, calc((var(--u) - 100) / 30), 1);
+  --copyOut: clamp(0, calc((var(--u) - 200) / 20), 1);
+  --gone: clamp(0, calc((var(--u) - 212) / 48), 1);
+}
+@media (max-width: 767px) {
+  .bw-shot { height: calc(100svh + 200vh); }
+}
+.bw-shot-night {
+  --r: calc((1 - var(--night)) * 180% - 30%);
+  mask-image: radial-gradient(ellipse 120% 90% at 50% 110%, transparent var(--r), #000 calc(var(--r) + 28%));
+  -webkit-mask-image: radial-gradient(ellipse 120% 90% at 50% 110%, transparent var(--r), #000 calc(var(--r) + 28%));
+}
+.bw-shot-copy { opacity: calc(var(--copyIn) * (1 - var(--copyOut))); }
+.bw-shot:not([data-bwcopy]) .bw-shot-copy { visibility: hidden; }
+
+/* ============================================================
+   CINEMATIC PHOTO · opens from an inset frame to full bleed as it rises
+   ============================================================ */
+.cine { --open: clamp(0, calc((var(--in, 1) - 0.08) / 0.34), 1); }
+.cine-frame { clip-path: inset(calc((1 - var(--open)) * 7%) calc((1 - var(--open)) * 9%) round calc((1 - var(--open)) * 28px)); }
+.cine-img { transform: scale(calc(1.08 - var(--open) * 0.08)); }
 
 /* ---------- small feedback ---------- */
 .gallery-in { animation: gallery-in 0.45s var(--ease-brand) both; }
@@ -721,15 +614,27 @@ textarea.field { resize: vertical; }
   50% { transform: scale(1.25); }
   100% { transform: scale(1); }
 }
-
+.cart-line-new { animation: line-new 2.4s var(--ease-brand); }
+@keyframes line-new {
+  0%, 40% { background: var(--color-cyan-50); box-shadow: -24px 0 0 var(--color-cyan-50), 24px 0 0 var(--color-cyan-50); }
+  100% { background: transparent; box-shadow: none; }
+}
 /* Room for the mobile purchase bar at the end of product pages. */
 @media (max-width: 1023px) {
   html[data-buybar] body { padding-bottom: 76px; }
 }
 
-/* The line that was just added fades from highlighted to normal. */
-.cart-line-new { animation: line-new 2.4s var(--ease-brand); }
-@keyframes line-new {
-  0%, 40% { background: var(--color-cyan-50); box-shadow: -24px 0 0 var(--color-cyan-50), 24px 0 0 var(--color-cyan-50); }
-  100% { background: transparent; box-shadow: none; }
+/* ============================================================
+   REDUCED MOTION: scenes keep their scroll-linked fades (no movement),
+   transforms and looping animations stop.
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .opening-photo, .opening-hero, .opening-words, .opening-bw-copy, .bwv-device,
+  .bl-hero, .gl-portrait-img, .gl-reveal, .lineup-object, .cine-img { transform: none !important; }
+  .cine-frame { clip-path: none; }
+  .opening-words { transform: translateY(-50%) !important; }
+  .bwv-device { transform: translateX(-50%) !important; }
+  .opening-night { mask-image: none; -webkit-mask-image: none; opacity: calc(1 - var(--light)); }
+  .bw-shot-night { mask-image: none; -webkit-mask-image: none; opacity: var(--night); }
+  .gl-portrait { clip-path: none; }
 }

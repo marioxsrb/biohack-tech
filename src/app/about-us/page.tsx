@@ -21,7 +21,7 @@ const values = [
 export default function AboutPage() {
   return (
     <>
-      <section className="relative isolate flex h-[78svh] min-h-[520px] items-end overflow-hidden bg-dark text-white">
+      <section data-theme="dark" className="relative isolate flex h-[78svh] min-h-[520px] items-end overflow-hidden bg-dark text-white">
         <Image src={cover} alt="Bărbat relaxat, cu ochii închiși, purtând casca BrainLink Pro" fill priority placeholder="blur" sizes="100vw" className="-z-10 object-cover object-[60%_center]" />
         <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(0deg,rgba(8,17,19,.7)_0%,rgba(8,17,19,0)_55%)]" />
         <div className="wrap w-full pb-[clamp(48px,9vh,96px)]">
@@ -33,12 +33,12 @@ export default function AboutPage() {
 
       <section className="py-[var(--sec)]">
         <div className="wrap grid grid-cols-1 gap-y-12 md:grid-cols-12 md:gap-x-6">
-          <p className="rev text-[clamp(22px,2.2vw,30px)] leading-snug tracking-[-0.02em] text-ink md:col-span-6">
+          <p className="text-[clamp(22px,2.2vw,30px)] leading-snug tracking-[-0.02em] text-ink md:col-span-6">
             Biohack Tech aduce acasă idei din neuroștiință. Le transformăm în obiecte simple, pe care oricine le poate folosi ca să se simtă mai bine.
           </p>
           <ul className="space-y-10 md:col-span-5 md:col-start-8">
             {values.map((v) => (
-              <li key={v.title} className="rev">
+              <li key={v.title} >
                 <h2 className="text-[22px] tracking-[-0.025em]">{v.title}</h2>
                 <p className="mt-2 text-[17px] leading-relaxed text-text">{v.text}</p>
               </li>

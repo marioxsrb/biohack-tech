@@ -9,24 +9,45 @@ import { productHref, products } from '@/content/catalog'
 import { formatMoney } from '@/lib/money'
 import { Wordmark } from './Wordmark'
 
+type Theme = 'dark' | 'light'
+
 /**
  * Three products need no mega-menu: Produse (a short list), Despre noi, Coș.
- * On the homepage the bar is transparent over the hero photograph until you scroll.
+ * The bar belongs to whatever is underneath it: it reads the data-theme of the element
+ * just below its lower edge and takes the matching colours (transparent over the opening
+ * photograph, dark over dark scenes, light over the page surface).
  */
 export function Header() {
   const { count, open: openCart } = useCart()
   const pathname = usePathname()
-  const [scrolled, setScrolled] = useState(false)
+  const [theme, setTheme] = useState<Theme>('light')
+  const [atTop, setAtTop] = useState(true) // bare (transparent) only at the very top, and only on wide screens
   const [menuOpen, setMenuOpen] = useState(false)
   const navRef = useRef<HTMLElement>(null)
   const sheetRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 24)
-    onScroll()
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+    let frame = 0
+    const read = () => {
+      frame = 0
+      const nav = navRef.current?.firstElementChild as HTMLElement | undefined
+      const y = (nav?.offsetHeight ?? 64) + 1
+      const under = document.elementFromPoint(window.innerWidth / 2, y)
+      setTheme((under?.closest('[data-theme]')?.getAttribute('data-theme') as Theme) ?? 'light')
+      setAtTop(window.scrollY < 24 && window.innerWidth >= 768)
+    }
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(read)
+    }
+    schedule()
+    window.addEventListener('scroll', schedule, { passive: true })
+    window.addEventListener('resize', schedule)
+    return () => {
+      cancelAnimationFrame(frame)
+      window.removeEventListener('scroll', schedule)
+      window.removeEventListener('resize', schedule)
+    }
+  }, [pathname])
 
   useEffect(() => {
     if (!menuOpen) return
@@ -42,7 +63,8 @@ export function Header() {
     }
   }, [menuOpen])
 
-  const overHero = pathname === '/' && !scrolled && !menuOpen
+  const dark = theme === 'dark'
+  const bare = dark && atTop && !menuOpen
   const closeSheet = () => sheetRef.current?.close()
 
   return (
@@ -55,14 +77,19 @@ export function Header() {
       </a>
       <header
         ref={navRef}
+        data-tone={dark ? 'dark' : 'light'}
         onMouseLeave={() => setMenuOpen(false)}
-        className={`fixed inset-x-0 top-0 z-[250] transition-[background-color,backdrop-filter] duration-300 ${
-          overHero ? 'bg-transparent' : 'bg-dark/95 backdrop-blur-[14px]'
+        className={`site-header fixed inset-x-0 top-0 z-[250] transition-[background-color,color,box-shadow] duration-300 ${
+          bare
+            ? 'bg-transparent text-white'
+            : dark
+              ? 'bg-dark/92 text-white shadow-[0_1px_0_var(--color-dark-line)] backdrop-blur-[14px]'
+              : 'bg-mist/92 text-ink shadow-[0_1px_0_rgb(8_17_19/0.06)] backdrop-blur-[14px]'
         }`}
       >
         <nav aria-label="Principal" className="wrap flex h-[var(--nav-h)] items-center gap-8">
           <Link href="/" className="flex h-11 flex-none items-center">
-            <Wordmark />
+            <Wordmark tone={dark ? 'dark' : 'light'} />
           </Link>
 
           <ul className="ml-auto hidden items-center gap-8 text-[15px] font-medium md:flex">
@@ -90,7 +117,7 @@ export function Header() {
             <button
               type="button"
               onClick={openCart}
-              className="relative flex h-11 items-center gap-2 rounded-full px-3 text-white transition-colors hover:bg-white/10"
+              className={`relative flex h-11 items-center gap-2 rounded-full px-3 transition-colors ${dark ? 'hover:bg-white/10' : 'hover:bg-ink/5'}`}
               aria-label={count ? `Coș, ${count} ${count === 1 ? 'produs' : 'produse'}` : 'Coș, gol'}
             >
               <Bag className="h-[22px] w-[22px]" />
@@ -104,7 +131,7 @@ export function Header() {
             <button
               type="button"
               onClick={() => sheetRef.current?.showModal()}
-              className="-mr-2.5 flex h-11 w-11 items-center justify-center text-white md:hidden"
+              className="-mr-2.5 flex h-11 w-11 items-center justify-center md:hidden"
               aria-label="Deschide meniul"
             >
               <Menu className="h-6 w-6" />
@@ -112,14 +139,14 @@ export function Header() {
           </div>
         </nav>
 
-        {/* Product list: three lines of type, nothing more */}
-        <div id="product-menu" hidden={!menuOpen} className="border-t border-dark-line max-md:hidden">
+        {/* Product list: three lines of type, in the bar's own colours */}
+        <div id="product-menu" hidden={!menuOpen} className={`max-md:hidden ${dark ? 'shadow-[0_-1px_0_var(--color-dark-line)]' : 'shadow-[0_-1px_0_rgb(8_17_19/0.06)]'}`}>
           <ul className="wrap grid grid-cols-3 gap-6 py-8">
             {products.map((p) => (
               <li key={p.id}>
                 <Link href={productHref(p)} onClick={() => setMenuOpen(false)} className="group block">
-                  <span className="block text-[22px] font-medium tracking-[-0.025em] text-white group-hover:text-cyan">{p.name}</span>
-                  <span className="mt-1 block text-[14.5px] text-dark-muted">
+                  <span className={`block text-[22px] font-medium tracking-[-0.025em] ${dark ? 'group-hover:text-cyan' : 'group-hover:text-cyan-700'}`}>{p.name}</span>
+                  <span className={`mt-1 block text-[15px] ${dark ? 'text-dark-muted' : 'text-muted'}`}>
                     {p.purpose} · {formatMoney(p.price)}
                   </span>
                 </Link>
@@ -133,7 +160,7 @@ export function Header() {
         <div className="flex h-full flex-col">
           <div className="wrap flex h-[var(--nav-h)] w-full flex-none items-center justify-between">
             <Link href="/" onClick={closeSheet} className="flex h-11 items-center">
-              <Wordmark />
+              <Wordmark tone="dark" />
             </Link>
             <button type="button" onClick={closeSheet} className="-mr-2.5 flex h-11 w-11 items-center justify-center text-white" aria-label="Închide meniul">
               <Close className="h-6 w-6" />

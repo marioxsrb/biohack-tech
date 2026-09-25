@@ -119,7 +119,7 @@ function CheckoutForm({ lines }: { lines: ResolvedLine[] }) {
         <h1 className="text-[36px] leading-tight tracking-[-0.035em] max-sm:text-[30px]">Finalizează comanda</h1>
 
         {cancelled && (
-          <p role="status" className="mt-6 rounded-[12px] bg-mist px-5 py-4 text-[15px]">
+          <p role="status" className="mt-6 rounded-[12px] bg-paper px-5 py-4 text-[15px]">
             Plata a fost anulată și nu ți s-a retras nimic. Produsele sunt tot în coș.
           </p>
         )}
@@ -195,7 +195,7 @@ function CheckoutForm({ lines }: { lines: ResolvedLine[] }) {
       </div>
 
       <aside className="md:col-span-5" aria-label="Sumarul comenzii">
-        <div className="rounded-[16px] bg-mist p-6 md:sticky md:top-[calc(var(--nav-h)+24px)] max-sm:-mx-2 max-sm:p-5">
+        <div className="rounded-[16px] bg-paper p-6 md:sticky md:top-[calc(var(--nav-h)+24px)] max-sm:-mx-2 max-sm:p-5">
           <h2 className="text-[19px] tracking-[-0.015em]">Comanda ta</h2>
 
           {groups.length > 1 && (
@@ -207,7 +207,7 @@ function CheckoutForm({ lines }: { lines: ResolvedLine[] }) {
                 {groups.map((g) => (
                   <label
                     key={g.currency}
-                    className={`cursor-pointer rounded-[10px] bg-paper px-3 py-2.5 text-[14px] transition-shadow ${
+                    className={`cursor-pointer rounded-[10px] bg-mist px-3 py-2.5 text-[14px] transition-shadow ${
                       g.currency === activeCurrency ? 'shadow-[inset_0_0_0_2px_var(--color-ink)]' : 'shadow-[inset_0_0_0_1px_var(--color-line)]'
                     }`}
                   >
@@ -280,7 +280,7 @@ function SummaryLine({ line: l }: { line: ResolvedLine }) {
   return (
     <li className="grid grid-cols-[64px_1fr_auto] items-center gap-3 py-3">
       <Link href={productHref(l.product)} className="relative block h-12 overflow-hidden rounded-[8px]" tabIndex={-1} aria-hidden>
-        <ProductShot image={l.variant?.images[0] ?? l.product.cutout} sizes="64px" inset="sm" className="!bg-paper" />
+        <ProductShot image={l.variant?.images[0] ?? l.product.cutout} sizes="64px" inset="sm" className="" />
         <span className="absolute -top-0 right-0 flex h-5 min-w-5 items-center justify-center rounded-bl-[8px] bg-ink px-1 text-[11px] font-semibold text-white">
           {l.quantity}
         </span>

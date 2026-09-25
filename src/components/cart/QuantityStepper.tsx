@@ -22,7 +22,7 @@ export function QuantityStepper({ value, onChange, label, size = 'md' }: Props) 
     >
       <button
         type="button"
-        className={`${w} flex h-full items-center justify-center rounded-l-[10px] text-ink transition-colors hover:bg-mist disabled:text-muted disabled:hover:bg-transparent`}
+        className={`${w} flex h-full items-center justify-center rounded-l-[10px] text-ink transition-colors hover:bg-paper disabled:text-muted disabled:hover:bg-transparent`}
         onClick={() => onChange(value - 1)}
         disabled={value <= 1}
         aria-label="Scade cantitatea"
@@ -34,7 +34,7 @@ export function QuantityStepper({ value, onChange, label, size = 'md' }: Props) 
       </span>
       <button
         type="button"
-        className={`${w} flex h-full items-center justify-center rounded-r-[10px] text-ink transition-colors hover:bg-mist disabled:text-muted disabled:hover:bg-transparent`}
+        className={`${w} flex h-full items-center justify-center rounded-r-[10px] text-ink transition-colors hover:bg-paper disabled:text-muted disabled:hover:bg-transparent`}
         onClick={() => onChange(value + 1)}
         disabled={value >= MAX_QTY}
         aria-label="Crește cantitatea"

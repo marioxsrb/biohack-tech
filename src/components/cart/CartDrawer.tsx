@@ -39,14 +39,14 @@ export function CartDrawer() {
       className="cart-drawer"
     >
       <div className="flex h-full flex-col">
-        <header className="flex h-16 flex-none items-center justify-between border-b border-mist-2 px-6">
+        <header className="flex h-16 flex-none items-center justify-between border-b border-line px-6">
           <h2 id="cart-title" className="text-[18px] tracking-[-0.015em]">
             Coșul tău {count > 0 && <span className="text-muted">({count})</span>}
           </h2>
           <button
             type="button"
             onClick={close}
-            className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-ink transition-colors hover:bg-mist"
+            className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-ink transition-colors hover:bg-paper"
             aria-label="Închide coșul"
           >
             <Close className="h-5 w-5" />
@@ -59,7 +59,7 @@ export function CartDrawer() {
             <Link href="/products" onClick={close} className="cta mt-5 self-start">
               Vezi produsele <Arrow />
             </Link>
-            <ul className="mt-8 divide-y divide-mist-2">
+            <ul className="mt-8 divide-y divide-line">
               {products.map((p) => (
                 <li key={p.id}>
                   <Link href={productHref(p)} onClick={close} className="group flex items-center gap-4 py-3">
@@ -89,7 +89,7 @@ export function CartDrawer() {
                 </span>
               </p>
             )}
-            <ul className="flex-1 divide-y divide-mist-2 overflow-y-auto px-6">
+            <ul className="flex-1 divide-y divide-line overflow-y-auto px-6">
               {lines.map((l) => (
                 <li key={l.key} className={`grid grid-cols-[88px_1fr] gap-4 py-5 transition-colors duration-500 ${l.key === lastAdded ? 'cart-line-new' : ''}`}>
                   <Link
@@ -135,7 +135,7 @@ export function CartDrawer() {
               ))}
             </ul>
 
-            <footer className="flex-none border-t border-mist-2 bg-paper px-6 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]">
+            <footer className="flex-none border-t border-line bg-mist px-6 pt-5 pb-[max(20px,env(safe-area-inset-bottom))]">
               <dl className="space-y-1.5 text-[15.5px]">
                 <div className="flex justify-between">
                   <dt className="text-muted">Livrare</dt>
@@ -150,7 +150,7 @@ export function CartDrawer() {
               </dl>
               <p className="mt-1 text-right text-[13px] text-muted">{terms.vat}</p>
               {mixed && (
-                <p className="mt-3 rounded-[10px] bg-mist px-3.5 py-2.5 text-[13.5px] leading-snug text-text">
+                <p className="mt-3 rounded-[10px] bg-paper px-3.5 py-2.5 text-[13.5px] leading-snug text-text">
                   Produsele din coș au prețuri în monede diferite. La plată, fiecare monedă se achită separat.
                 </p>
               )}

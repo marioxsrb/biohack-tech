@@ -2,14 +2,16 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ProductHero } from '@/components/product/ProductHero'
 import { ProductSections } from '@/components/product/ProductSections'
-import { BalanceWaveScene } from '@/components/scenes/BalanceWaveScene'
-import { BrainLinkScene } from '@/components/scenes/BrainLinkScene'
+import { BalanceWaveShot } from '@/components/scenes/BalanceWaveShot'
 import { GlassesScene } from '@/components/scenes/GlassesScene'
 
-/** Each product keeps its own signature moment from the homepage, right after the buy area. */
+/**
+ * Signature moments after the buy area. BrainLink's buy area already is its
+ * floating-headset image, so it goes straight to the photographs.
+ */
 const scenes = {
-  'balance-wave': <BalanceWaveScene mode="page" />,
-  'brainlink-pro': <BrainLinkScene mode="page" />,
+  'balance-wave': <BalanceWaveShot />,
+  'brainlink-pro': null,
   'ochelari-biohack': <GlassesScene mode="page" />,
 }
 import { getProductBySlug, productHref, products } from '@/content/catalog'
