@@ -21,14 +21,13 @@ src/
   config/site.ts              contact, URL, termeni comerciali (livrare, retur, garanție)
   content/
     catalog.ts                produsele: preț, variante, imagini (tot ce trebuie coșului)
-    product-content.ts        conținutul paginilor de produs: public, cum funcționează, pași, specificații, FAQ
-    home.ts                   tabelul de comparație, pașii de comandă, FAQ-ul general
+    product-content.ts        paginile de produs: intro, beneficii, povești foto, pași, explicație, detalii, FAQ
     legal.ts                  paginile de informații (versiuni scurte, vezi docs/OPEN-POINTS.md)
   components/
     cart/                     coșul: store în localStorage, drawer pe <dialog>, buton, stepper
     product/                  galerie, zona de cumpărare cu variante, secțiunile paginii de produs
-    home/                     secțiunile paginii principale
-    site/                     header, footer, blocul de contact
+    home/                     pagina principală: hero, cele trei produse, povestea brandului
+    site/                     header, footer, livrare/retur/garanție
   lib/
     money.ts                  prețuri în unități mici (bani/cenți), formatare ro-RO
     checkout.ts               validare comună client + server
@@ -43,7 +42,7 @@ URL-urile sunt identice cu site-ul actual (`/products/glasses`, `/products/balan
 
 1. Pune imaginile în ZIP-ul sursă și adaugă o linie în `scripts/prepare-assets.py`, apoi `npm run assets`.
 2. Adaugă produsul în `content/catalog.ts` (preț în unități mici: 60 EUR = `6000`).
-3. Adaugă conținutul paginii în `content/product-content.ts`. Secțiunile opționale (`explainer`, `steps`, `studies`, `specImage`) apar doar dacă există.
+3. Adaugă conținutul paginii în `content/product-content.ts`. Secțiunile opționale (`steps`, `detail`) apar doar dacă există.
 
 ## Plăți
 

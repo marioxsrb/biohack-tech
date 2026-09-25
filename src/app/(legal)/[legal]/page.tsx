@@ -21,13 +21,9 @@ export default async function LegalPage({ params }: PageProps<'/[legal]'>) {
   if (!page) notFound()
 
   return (
-    <article className="pt-[calc(var(--nav-h)+64px)] pb-[var(--sec)] max-sm:pt-[calc(var(--nav-h)+32px)]">
+    <article className="pt-[calc(var(--nav-h)+var(--sec))] pb-[var(--sec)] max-sm:pt-[calc(var(--nav-h)+32px)]">
       <div className="wrap grid gap-y-8 md:grid-cols-12 md:gap-x-6">
         <header className="md:col-span-4">
-          <p className="idx" data-n="Informații">
-            <i aria-hidden />
-            {site.name}
-          </p>
           <h1 className="text-[36px] leading-[1.06] tracking-[-0.035em] max-sm:text-[30px]">{page.title}</h1>
         </header>
         <div className="md:col-span-7 md:col-start-6">
@@ -39,10 +35,9 @@ export default async function LegalPage({ params }: PageProps<'/[legal]'>) {
             .
           </p>
           <div className="mt-10 space-y-9">
-            {page.sections.map((s, i) => (
+            {page.sections.map((s) => (
               <section key={s.heading}>
                 <h2 className="text-[20px] tracking-[-0.02em]">
-                  <span className="mr-3 font-mono text-[13px] text-cyan-700">{String(i + 1).padStart(2, '0')}</span>
                   {s.heading}
                 </h2>
                 {s.body.map((b) => (

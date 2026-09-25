@@ -1,5 +1,20 @@
 # Decizii de conținut
 
+## Direcția (26 septembrie 2026)
+
+Site-ul e un magazin cu trei produse, nu o pagină de vânzare lungă. Pagina principală are cinci momente: o fotografie mare cu un singur mesaj, cele trei produse, o frază despre brand, livrare/retur/garanție și, în footer, drumul înapoi spre produse. Detaliile tehnice stau pe paginile de produs, mai jos, explicate o singură dată.
+
+Copy-ul din ZIP e materie primă. A fost rescris pentru cineva care vede produsul prima dată: ce e, ce face pentru tine, cum îl folosești, cât costă. Faptele și limitele afirmațiilor au rămas aceleași. Exemple:
+
+| Înainte | Acum |
+| --- | --- |
+| Stimularea nervului vag prin photobiomodulare duală | Se poartă la gât. Câteva minute de lumină roșie, când ai nevoie de liniște. |
+| Neuromodulare EEG · 3 electrozi · 10+ jocuri | O cască ușoară și jocuri pe tabletă pe care le controlezi cu atenția. |
+| Antrenament mental EEG | Pentru focus |
+
+Scoase de pe pagina principală: tabelul de comparație, „Cum comanzi”, FAQ-ul general, secțiunea „Abordare”, numerotarea 01/02/03, faptele tehnice din fiecare rând de produs. De pe paginile de produs: diagrama explodată (etichete ilizibile), blocul de contact repetat, lista de studii desfășurată (acum ascunsă sub „Vezi studiile”).
+
+
 Sursa: `Biohack-Tech_Structura_si_Copy.docx` și folderul `poze/` din ZIP. Copy-ul a fost scurtat și reorganizat; sensul a rămas același. Nicio afirmație nouă despre produse.
 
 ## Scos, și de ce

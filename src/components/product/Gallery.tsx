@@ -64,7 +64,7 @@ export function Gallery({ images, label }: { images: ProductImage[]; label: stri
               className="stage relative h-full w-full flex-none snap-center"
               aria-hidden={i !== active}
             >
-              <div className={`absolute inset-0 ${img.kind === 'photo' ? '' : 'p-[9%]'}`}>
+              <div className={`absolute inset-0 ${img.kind === 'photo' ? '' : img.bleed === 'bottom' ? 'px-[7%] pt-[7%]' : 'p-[7%]'}`}>
                 <div className="relative h-full w-full">
                   <Image
                     src={img.src}
@@ -74,7 +74,7 @@ export function Gallery({ images, label }: { images: ProductImage[]; label: stri
                     priority={i === 0}
                     data-kind={img.kind}
                     placeholder={img.kind === 'photo' ? 'blur' : 'empty'}
-                    className={img.kind === 'photo' ? 'object-cover' : 'object-contain'}
+                    className={img.kind === 'photo' ? 'object-cover' : `object-contain ${img.bleed === 'bottom' ? 'object-bottom' : ''}`}
                   />
                 </div>
               </div>
@@ -129,7 +129,7 @@ export function Gallery({ images, label }: { images: ProductImage[]; label: stri
                 }`}
               >
                 <span className="stage relative block h-full w-full">
-                  <span className={`absolute inset-0 ${img.kind === 'photo' ? '' : 'p-[10%]'}`}>
+                  <span className={`absolute inset-0 ${img.kind === 'photo' ? '' : img.bleed === 'bottom' ? 'px-[10%] pt-[10%]' : 'p-[10%]'}`}>
                     <span className="relative block h-full w-full">
                       <Image
                         src={img.src}
@@ -137,7 +137,7 @@ export function Gallery({ images, label }: { images: ProductImage[]; label: stri
                         fill
                         sizes="84px"
                         data-kind={img.kind}
-                        className={img.kind === 'photo' ? 'object-cover' : 'object-contain'}
+                        className={img.kind === 'photo' ? 'object-cover' : `object-contain ${img.bleed === 'bottom' ? 'object-bottom' : ''}`}
                       />
                     </span>
                   </span>

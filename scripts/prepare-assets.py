@@ -23,7 +23,7 @@ def save(im, rel, max_w, quality=82):
     im.save(path, 'WEBP', quality=quality, method=6)
     print(f'{rel:48s} {im.width}x{im.height} {os.path.getsize(path)//1024}K')
 
-def trim(im, pad=0.06):
+def trim(im, pad=0.06, bottom=True):
     """Crop to the visible product: alpha for cutouts, non-white for studio shots."""
     if im.mode == 'RGBA':
         box = im.getchannel('A').point(lambda a: 255 if a > 10 else 0).getbbox()
@@ -32,11 +32,11 @@ def trim(im, pad=0.06):
         box = g.getbbox()
     x0, y0, x1, y1 = box
     p = round(max(x1 - x0, y1 - y0) * pad)
-    return im.crop((max(0, x0 - p), max(0, y0 - p), min(im.width, x1 + p), min(im.height, y1 + p)))
+    return im.crop((max(0, x0 - p), max(0, y0 - p), min(im.width, x1 + p), min(im.height, y1 + p) if bottom else y1))
 
-def cutout(rel_src, rel_out, max_w=1200):
+def cutout(rel_src, rel_out, max_w=1200, bottom=True):
     im = Image.open(os.path.join(SRC, rel_src)).convert('RGBA')
-    save(trim(im), rel_out, max_w, quality=88)
+    save(trim(im, bottom=bottom), rel_out, max_w, quality=88)
 
 def studio(rel_src, rel_out, max_w=1200):
     # White-background studio shot: kept opaque, shown with mix-blend-mode: multiply.
@@ -79,9 +79,10 @@ for n in ['audience-birou', 'audience-seara', 'audience-stil', 'result-focus', '
 # ---------- Balance Wave ----------
 B = '06_Balance-Wave/neck-joy_'
 cutout('01_Acasa/neck-joy_04.png', 'balance-wave/cutie.webp')
-cutout(f'{B}01.png', 'balance-wave/dispozitiv-activ.webp')
+# The cable is cropped in the source; no bottom padding so it can run off a panel edge.
+cutout(f'{B}01.png', 'balance-wave/dispozitiv-activ.webp', bottom=False)
 cutout(f'{B}02.png', 'balance-wave/dispozitiv.webp')
-photo('01_Acasa/neck-joy_hero-nervul-vag.png', 'balance-wave/lifestyle-canapea.webp')
+photo('01_Acasa/neck-joy_hero-nervul-vag.png', 'balance-wave/lifestyle-canapea.webp', 1819)
 photo('01_Acasa/neck-joy_neck-joy-woman.webp', 'balance-wave/lifestyle-birou.webp')
 for n in ['audience-stres', 'audience-birou', 'audience-somn', 'pillar-nerv-vag', 'pillar-calm',
           'result-calm', 'result-somn', 'result-echilibru']:

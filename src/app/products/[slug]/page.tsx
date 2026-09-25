@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { Breadcrumb, ProductHero } from '@/components/product/ProductHero'
+import { ProductHero } from '@/components/product/ProductHero'
 import { ProductSections } from '@/components/product/ProductSections'
-import { ContactBlock } from '@/components/site/ContactBlock'
 import { getProductBySlug, productHref, products } from '@/content/catalog'
 import { productContent } from '@/content/product-content'
 import { absolute, breadcrumbJsonLd, JsonLd, pageMetadata, productJsonLd } from '@/lib/seo'
@@ -38,32 +37,17 @@ export default async function ProductPage({ params }: PageProps<'/products/[slug
 
   return (
     <>
-      <section className="pt-[calc(var(--nav-h)+40px)] pb-[var(--sec)] max-sm:pt-[calc(var(--nav-h)+20px)]">
+      <section id="cumpara" className="scroll-mt-[var(--nav-h)] pt-[calc(var(--nav-h)+48px)] pb-[var(--sec)] max-sm:pt-[var(--nav-h)]">
         <div className="wrap">
-          <Breadcrumb name={product.name} />
-          <ProductHero productId={product.id} highlights={content.highlights} />
+          <ProductHero productId={product.id} intro={content.intro} benefits={content.benefits} />
         </div>
       </section>
 
-      <div className="border-t border-mist-2" />
       <ProductSections product={product} content={content} />
 
-      <section className="pb-[var(--sec)]">
-        <div className="wrap">
-          <ContactBlock
-            title={`Întrebări despre ${product.name}?`}
-            text={
-              product.guidance
-                ? 'Spune-ne ce vrei să obții și îți recomandăm protocolul potrivit.'
-                : 'Spune-ne ce model te interesează și cum îl vei folosi.'
-            }
-          />
-          <p className="mt-8 max-w-[60em] text-[13px] leading-relaxed text-faint">
-            {product.name} este un produs pentru starea generală de bine. Informațiile de pe această pagină au caracter general și nu
-            înlocuiesc sfatul medicului. Rezultatele variază de la o persoană la alta.
-          </p>
-        </div>
-      </section>
+      <p className="wrap py-8 text-[13px] leading-relaxed text-faint">
+        {product.name} este un produs de wellness. Nu înlocuiește sfatul medicului. Rezultatele diferă de la o persoană la alta.
+      </p>
 
       <JsonLd data={productJsonLd(product, content.seo.description, imageUrls)} />
       <JsonLd

@@ -50,7 +50,7 @@ export function productJsonLd(p: Product, description: string, imageUrls: string
     description,
     image: imageUrls,
     brand: { '@type': 'Brand', name: site.name },
-    category: p.category,
+    category: p.purpose,
     url: absolute(productHref(p)),
     offers: {
       '@type': 'Offer',

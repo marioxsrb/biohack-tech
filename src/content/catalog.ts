@@ -47,7 +47,13 @@ import blLucru from '@/assets/img/brainlink/audience-lucru.webp'
  * `photo`: lifestyle photography, fills its frame.
  */
 export type ImageKind = 'cutout' | 'studio' | 'photo'
-export type ProductImage = { src: StaticImageData; alt: string; kind: ImageKind }
+export type ProductImage = {
+  src: StaticImageData
+  alt: string
+  kind: ImageKind
+  /** The product is cropped at this edge in the source photo; frames anchor it there so the crop reads as intentional. */
+  bleed?: 'bottom'
+}
 
 export type Variant = {
   id: string
@@ -69,12 +75,10 @@ export type Product = {
   /** URL segment. Kept identical to the live site so existing links and rankings survive. */
   slug: string
   name: string
-  /** Short category label, shown above the name. */
-  category: string
-  /** One line, under the name. */
+  /** What it's for, in two or three words ("Pentru relaxare"). */
+  purpose: string
+  /** One plain sentence: what it is and what it does for you. */
   tagline: string
-  /** Two short sentences for listings. */
-  summary: string
   price: Money
   /** The product on its own, used on listings, the cart and the menu. */
   cutout: ProductImage
@@ -96,14 +100,13 @@ export const products: Product[] = [
     id: 'balance-wave',
     slug: 'balancewave',
     name: 'Balance Wave',
-    category: 'Stimularea nervului vag',
-    tagline: 'Legătura dintre corp și minte, la gâtul tău.',
-    summary: 'Photobiomodulare duală în zona cervicală, pe traseul nervului vag. Ședințe de 5–20 de minute.',
+    purpose: 'Pentru relaxare',
+    tagline: 'Se poartă la gât. Câteva minute de lumină roșie, când ai nevoie de liniște.',
     price: { amount: 121000, currency: 'EUR' },
-    cutout: { src: bwActiv, alt: 'Dispozitivul Balance Wave cu luminile roșii aprinse', kind: 'cutout' },
+    cutout: { src: bwActiv, alt: 'Dispozitivul Balance Wave cu luminile roșii aprinse', kind: 'cutout', bleed: 'bottom' },
     lifestyle: { src: bwCanapea, alt: 'Femeie relaxată pe canapea, purtând Balance Wave la gât', kind: 'photo' },
     images: [
-      { src: bwActiv, alt: 'Dispozitivul Balance Wave cu luminile roșii aprinse', kind: 'cutout' },
+      { src: bwActiv, alt: 'Dispozitivul Balance Wave cu luminile roșii aprinse', kind: 'cutout', bleed: 'bottom' },
       { src: bwCutie, alt: 'Balance Wave lângă cutia produsului', kind: 'cutout' },
       { src: bwDispozitiv, alt: 'Balance Wave, partea exterioară a dispozitivului', kind: 'cutout' },
       { src: bwCanapea, alt: 'Femeie relaxată pe canapea, purtând Balance Wave', kind: 'photo' },
@@ -115,9 +118,8 @@ export const products: Product[] = [
     id: 'brainlink-pro',
     slug: 'brainlink',
     name: 'BrainLink Pro',
-    category: 'Antrenament mental EEG',
-    tagline: 'Cască EEG pentru antrenamentul minții, acasă.',
-    summary: 'Trei electrozi EEG și peste 10 jocuri în Neuros Game. Îți vezi focusul și relaxarea în timp real.',
+    purpose: 'Pentru focus',
+    tagline: 'O cască ușoară și jocuri pe tabletă pe care le controlezi cu atenția.',
     price: { amount: 249000, currency: 'RON' },
     cutout: { src: blCasca, alt: 'Casca BrainLink Pro, vedere din unghi', kind: 'studio' },
     lifestyle: { src: blRelaxare, alt: 'Femeie relaxată, cu ochii închiși, purtând casca BrainLink Pro', kind: 'photo' },
@@ -134,9 +136,8 @@ export const products: Product[] = [
     id: 'ochelari-biohack',
     slug: 'glasses',
     name: 'Ochelari Biohack',
-    category: 'Filtru lumină albastră',
-    tagline: 'Filtru pentru lumina albastră, în patru modele.',
-    summary: 'Pentru ore lungi la ecran și seri mai liniștite. Unisex pătrat sau cat eye.',
+    purpose: 'Pentru ecrane',
+    tagline: 'Filtrează lumina albastră a ecranelor. Pentru zile lungi și seri liniștite.',
     price: { amount: 6000, currency: 'EUR' },
     cutout: glasses(glCatNegru1, 'Ochelari Biohack cat eye, ramă neagră, lentile galbene'),
     lifestyle: { src: glTerasa, alt: 'Femeie pe o terasă, purtând Ochelari Biohack', kind: 'photo' },
