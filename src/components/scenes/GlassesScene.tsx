@@ -27,7 +27,7 @@ export function GlassesScene() {
       <div className="wrap grid grid-cols-1 items-center gap-y-12 md:grid-cols-12 md:gap-x-6">
         {/* Portrait, bleeding off the left edge */}
         <figure className="relative aspect-[4/5] overflow-hidden md:col-span-5 md:-ml-[calc((100vw-min(100vw,1152px))/2+var(--gut))] max-md:-mx-[var(--gut)] max-md:aspect-[5/4]">
-          <Image src={portrait} alt="Femeie purtând Ochelari Biohack cat eye bej, în lumină naturală" fill placeholder="blur" sizes="(min-width: 768px) 46vw, 100vw" className="object-cover object-[50%_30%]" />
+          <Image src={portrait} alt="Femeie purtând NEUROS Amber cat eye bej, în lumină naturală" fill placeholder="blur" sizes="(min-width: 768px) 46vw, 100vw" className="object-cover object-[50%_30%]" />
           <figcaption className="absolute right-4 bottom-4 rounded-full bg-paper/90 px-3 py-1.5 font-mono text-[11.5px] tracking-[0.1em] text-ink uppercase">
             Cat eye · Bej
           </figcaption>

@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { Arrow } from '@/components/ui/icons'
 import { productHref, products } from '@/content/catalog'
 import { terms } from '@/config/site'
-import { formatMoney } from '@/lib/money'
+import { Price } from '@/components/cart/Price'
 
 /**
  * The three products side by side on one shelf line. Hover lifts a product and softens its
@@ -29,9 +29,11 @@ export function Lineup({ title = 'Toate trei.', headingLevel = 2 }: { title?: st
                   <Image src={p.cutout.src} alt={p.cutout.alt} fill sizes="(min-width: 768px) 340px, 72vw" className="object-contain object-bottom" />
                 </span>
               </span>
-              <span className="mt-5 flex items-baseline justify-between gap-4">
+              <span className="mt-5 flex items-baseline justify-between gap-x-4 max-md:flex-col">
                 <span className="text-[clamp(22px,2vw,28px)] leading-tight font-medium tracking-[-0.03em] text-ink">{p.name}</span>
-                <span className="text-[17px] text-ink tabular-nums">{formatMoney(p.price)}</span>
+                <span className="text-[17px] whitespace-nowrap text-ink tabular-nums max-md:mt-0.5">
+                  <Price productId={p.id} />
+                </span>
               </span>
               <span className="mt-1 flex items-center justify-between text-[15.5px] text-muted">
                 {p.purpose}
@@ -48,7 +50,7 @@ export function Lineup({ title = 'Toate trei.', headingLevel = 2 }: { title?: st
         <li>✓ Livrare gratuită în România</li>
         <li>✓ Retur în {terms.returnDays} zile</li>
         <li>✓ Garanție {terms.warrantyYears} ani</li>
-        <li>✓ Plată cu cardul</li>
+        <li>✓ Îți răspundem {terms.responseTime}</li>
       </ul>
     </section>
   )

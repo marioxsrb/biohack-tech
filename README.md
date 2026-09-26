@@ -1,50 +1,54 @@
 # Biohack Tech
 
-Magazin online pentru Balance Wave, BrainLink Pro și Ochelari Biohack. Face parte din același univers vizual ca [curs.neuros.ro](https://curs.neuros.ro): aceleași culori, tipografie (Geist / Geist Mono), raze, buton roșu și ierarhie a marginilor, cu o arhitectură gândită pentru vânzare.
+Magazin online pentru NEUROS Calm, NEUROS Focus și NEUROS Amber. Face parte din același univers vizual ca [curs.neuros.ro](https://curs.neuros.ro): aceleași culori, tipografie (Geist / Geist Mono), raze, buton roșu și ierarhie a marginilor, cu o arhitectură gândită pentru vânzare.
 
 ## Pornire
 
 ```bash
 npm install
-cp .env.example .env.local   # completează STRIPE_SECRET_KEY pentru plăți
+cp .env.example .env.local   # cheile de plată, datele bancare, webhook-ul de comenzi
 npm run dev                  # http://localhost:3000
 ```
 
-Alte comenzi: `npm run build`, `npm start`, `npm run lint`, `npm run typecheck`.
+Alte comenzi: `npm run build`, `npm start` (port 3000), `npm run lint`, `npm run typecheck`, `npm test` (vitest).
 
-Stack: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4. Nicio altă dependență de runtime.
+Stack: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4. Nicio altă dependență de runtime în afară de `server-only`.
 
 ## Structura
 
 ```
 src/
-  config/site.ts              contact, URL, termeni comerciali (livrare, retur, garanție)
+  config/
+    prices.ts                 SINGURUL loc cu prețuri (bani, RON). null = „Preț în curând”
+    bank.ts                   datele pentru transfer și webhook-ul de comenzi, doar din variabile de mediu
+    site.ts                   contact, URL, termeni comerciali (livrare, retur, garanție)
   content/
-    catalog.ts                produsele: preț, variante, imagini (tot ce trebuie coșului)
-    product-content.ts        paginile de produs: intro, beneficii, povești foto, pași, explicație, detalii, FAQ
+    catalog.ts                produsele: nume, variante, imagini, galerii
+    product-content.ts        paginile de produs: intro, beneficii, utilizare, explicație, momente, detalii, FAQ
     legal.ts                  paginile de informații (versiuni scurte, vezi docs/OPEN-POINTS.md)
   components/
-    cart/                     coșul: store în localStorage, drawer pe <dialog>, buton, stepper
+    cart/                     store în localStorage, confirmarea compactă, coșul pe <dialog>, buton, preț
     product/                  galerie, zona de cumpărare cu variante, secțiunile paginii de produs
-    home/                     pagina principală, secțiuni simple: Hero, Discover (cele trei panouri peste fotografie),
-                              BalanceWaveFeature (secțiunea întunecată), BrainLinkFeature
+    home/                     Hero, Discover, CalmFeature (secțiunea întunecată), FocusFeature
     scenes/                   GlassesScene (selectorul de rame) și SceneBuy (blocul de cumpărare comun)
     site/                     header, footer, raftul cu cele trei produse
   lib/
-    money.ts                  prețuri în unități mici (bani/cenți), formatare ro-RO
-    checkout.ts               validare comună client + server
+    money.ts                  RON în bani, formatare „2.490 lei”
+    checkout.ts               formularul (PF/PJ, CUI, adrese, metodă de plată), validare comună client + server
+    orders/                   rezolvarea liniilor pe server, referința comenzii, notificarea
     payments/                 interfața PaymentProvider + implementarea Stripe
     seo.tsx                   metadata, JSON-LD (Organization, Product, BreadcrumbList)
   assets/img/                 imaginile optimizate (generate de scripts/prepare-assets.py)
+tests/                        vitest: bani, coș, validare, comenzi, IBAN
 ```
 
-URL-urile sunt identice cu site-ul actual (`/products/glasses`, `/products/balancewave`, `/products/brainlink`, `/about-us`, `/contact-us`, paginile legale), ca linkurile existente și indexarea să nu se piardă.
+Produsele au slug-uri noi (`/products/calm`, `/products/focus`, `/products/amber`). Adresele vechi (`/products/balancewave`, `/brainlink`, `/glasses`) redirecționează permanent (301/308, `next.config.ts`). Restul URL-urilor sunt cele de pe site-ul actual.
 
 ## Cum adaugi sau modifici un produs
 
 1. Pune imaginile în ZIP-ul sursă și adaugă o linie în `scripts/prepare-assets.py`, apoi `npm run assets`.
-2. Adaugă produsul în `content/catalog.ts` (preț în unități mici: 60 EUR = `6000`).
-3. Adaugă conținutul paginii în `content/product-content.ts`. Secțiunile opționale (`steps`, `detail`) apar doar dacă există.
+2. Adaugă produsul în `content/catalog.ts` și prețul în `config/prices.ts` (în bani: 299 lei = `29900`).
+3. Adaugă conținutul paginii în `content/product-content.ts`. Secțiunile opționale (`use`, `lookbook`, `explain`) apar doar dacă există.
 
 ## Mișcare
 
@@ -57,18 +61,20 @@ la încărcare (fotografia din hero), totul în CSS. Header-ul are două stări,
 
 Scenele pot fi editoriale. Tot ce ține de cumpărare arată și se comportă la fel peste tot:
 `components/scenes/SceneBuy.tsx` (scop, nume, o propoziție, preț, „Adaugă în coș”, „Vezi produsul”),
-zona de cumpărare de pe pagina de produs, coșul și checkout-ul. Butonul roșu înseamnă mereu „cumpără”.
+zona de cumpărare de pe pagina de produs, confirmarea compactă, coșul și checkout-ul. Butonul roșu înseamnă mereu „cumpără”.
+După „Adaugă în coș” coșul nu se deschide singur: apare o confirmare mică, cu „Finalizează comanda” și „Continuă cumpărăturile”.
 
-## Plăți
+## Comenzi și plăți
 
-Checkout-ul colectează datele de livrare pe site, apoi trimite cumpărătorul pe pagina de plată Stripe (Stripe Checkout). Prețurile sunt citite pe server din catalog; clientul trimite doar id-uri și cantități.
+Browserul trimite doar id-ul produsului, id-ul variantei și cantitatea. Serverul (`lib/orders/resolve.ts`) citește numele și prețul din catalog, calculează totalul în lei și respinge orice produs necunoscut, fără preț sau cu cantitate invalidă.
 
-- Fără `STRIPE_SECRET_KEY`, `/api/checkout` răspunde 503, iar formularul îi spune cumpărătorului că plata online nu e activă și cum poate comanda. Nu se simulează nicio comandă.
-- `/checkout/success` confirmă doar ce confirmă Stripe (`payment_status = paid`) și abia atunci scoate din coș produsele plătite.
-- Datele de livrare ajung în `metadata` pe sesiunea și pe PaymentIntent-ul Stripe.
+- **Card:** o sesiune Stripe Checkout în RON. `/checkout/success` confirmă doar ce confirmă Stripe (`payment_status = paid`) și abia atunci scoate produsele din coș. Datele de livrare și facturare (inclusiv firmă, CUI) sunt în `metadata`.
+- **Transfer bancar:** comanda pleacă la `ORDER_WEBHOOK_URL` cu statusul `awaiting_payment` și o referință `BT-XXXXXX`; clientul vede pe `/checkout/transfer` datele contului (citite pe server) și suma. Comanda nu e marcată niciodată ca plătită de site.
+- O metodă apare activă doar când e configurată complet; altfel e „în curând”. Fără nicio metodă, checkout-ul trimite clientul la email / telefon și nu colectează date degeaba.
+- Dublul click nu creează două comenzi: fiecare încercare are un id, iar referința și cheia de idempotență Stripe derivă din el și din conținutul comenzii.
 - Pentru alt procesator: o nouă implementare a interfeței din `lib/payments/types.ts`.
 
-Înainte de lansare mai e nevoie de un webhook `checkout.session.completed` pentru notificarea echipei și facturare (vezi docs/OPEN-POINTS.md).
+Ce mai trebuie înainte de lansare: docs/OPEN-POINTS.md.
 
 ## Documente
 

@@ -25,7 +25,7 @@ export const legalPages: LegalPage[] = [
     title: 'Politica de livrare',
     shortTitle: 'Livrare',
     description:
-      'Politica de livrare Biohack Tech: livrare gratuită în România, procesare în 1–3 zile, transport în 2–5 zile, urmărire prin AWB.',
+      'Politica de livrare Biohack Tech: livrare gratuită în România, procesare în 1-3 zile, transport în 2-5 zile, urmărire prin AWB.',
     sections: [
       { heading: 'Zona de livrare', body: ['Livrăm în toată România.'] },
       {
@@ -79,12 +79,12 @@ export const legalPages: LegalPage[] = [
       {
         heading: 'Ce date colectăm',
         body: [
-          'La comandă ne dai numele, adresa de email, telefonul și adresa de livrare. Le folosim ca să procesăm, să livrăm și să te informăm despre comandă.',
+          'La comandă ne dai numele, adresa de email, telefonul, adresa de facturare și, dacă e alta, adresa de livrare. Pentru firme, și denumirea, codul fiscal și numărul de înregistrare. Le folosim ca să procesăm, să facturăm, să livrăm și să te informăm despre comandă.',
         ],
       },
       {
         heading: 'Plata',
-        body: ['Plata cu cardul este procesată de Stripe. Datele cardului nu ajung la noi.'],
+        body: ['Plata cu cardul este procesată de Stripe. Datele cardului nu ajung la noi. La plata prin transfer bancar, vedem doar informațiile din extrasul de cont: numele plătitorului, suma și detaliile plății.'],
       },
       {
         heading: 'Ce stocăm în browser',
@@ -106,12 +106,12 @@ export const legalPages: LegalPage[] = [
     title: 'Termeni și condiții',
     shortTitle: 'Termeni și condiții',
     description:
-      'Termenii și condițiile biohack-tech.ro: comenzi online, plăți prin Stripe, livrare, retur, garanție și informații despre utilizarea produselor.',
+      'Termenii și condițiile biohack-tech.ro: comenzi online, plata cu cardul sau prin transfer bancar, livrare, retur, garanție și informații despre utilizarea produselor.',
     sections: [
       {
         heading: 'Comenzi și plăți',
         body: [
-          'Comanda se plasează pe site și se plătește online, cu cardul, prin Stripe. Contractul se încheie la confirmarea plății, pe care o primești pe email.',
+          'Comanda se plasează pe site, ca persoană fizică sau juridică. Plătești cu cardul, prin Stripe, sau prin transfer bancar. La plata cu cardul, comanda este confirmată când plata reușește. La transfer bancar, comanda rămâne în așteptarea plății și o pregătim după ce suma ajunge în cont.',
         ],
       },
       {

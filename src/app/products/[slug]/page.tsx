@@ -40,7 +40,7 @@ export default async function ProductPage({ params }: PageProps<'/products/[slug
     <>
       <section id="cumpara" className="scroll-mt-[var(--nav-h)] pt-[calc(var(--nav-h)+48px)] pb-[var(--sec)] max-sm:pt-[var(--nav-h)]">
         <div className="wrap">
-          <ProductHero productId={product.id} intro={content.intro} benefits={content.benefits} />
+          <ProductHero productId={product.id} intro={content.intro} />
         </div>
       </section>
 

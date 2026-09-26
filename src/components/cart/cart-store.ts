@@ -1,8 +1,10 @@
 /**
  * Cart persistence. Only ids and quantities are stored; names, images and prices
  * are always read from the catalog, so a stored cart can never carry a stale price.
+ * Whatever comes back from storage is validated: unknown products, unknown variants,
+ * products without an approved price, bad quantities and duplicates are dropped or fixed.
  */
-import { resolveLine, type ProductId } from '@/content/catalog'
+import { isPurchasable, resolveLine, type ProductId } from '@/content/catalog'
 
 export type CartLine = { productId: ProductId; variantId?: string; quantity: number }
 
@@ -16,19 +18,22 @@ const listeners = new Set<() => void>()
 
 export const lineKey = (l: Pick<CartLine, 'productId' | 'variantId'>) => `${l.productId}:${l.variantId ?? ''}`
 
-function sanitize(raw: unknown): CartLine[] {
+export function sanitize(raw: unknown): CartLine[] {
   if (!Array.isArray(raw)) return EMPTY
-  const out: CartLine[] = []
+  const byKey = new Map<string, CartLine>()
   for (const item of raw) {
     if (!item || typeof item !== 'object') continue
     const { productId, variantId, quantity } = item as Record<string, unknown>
     if (typeof productId !== 'string') continue
     const v = typeof variantId === 'string' ? variantId : undefined
-    if (!resolveLine(productId, v)) continue
+    const r = resolveLine(productId, v)
+    if (!r || !isPurchasable(r.product)) continue
     const q = Math.min(MAX_QTY, Math.max(1, Math.floor(Number(quantity) || 1)))
-    out.push({ productId: productId as ProductId, variantId: v, quantity: q })
+    const key = lineKey({ productId: r.product.id, variantId: v })
+    const prev = byKey.get(key)
+    byKey.set(key, { productId: r.product.id, variantId: v, quantity: Math.min(MAX_QTY, (prev?.quantity ?? 0) + q) })
   }
-  return out
+  return [...byKey.values()]
 }
 
 function read(): CartLine[] {
@@ -75,6 +80,8 @@ export const cartStore = {
     return EMPTY
   },
   add(productId: ProductId, variantId: string | undefined, quantity = 1) {
+    const r = resolveLine(productId, variantId)
+    if (!r || !isPurchasable(r.product)) return
     const key = lineKey({ productId, variantId })
     const current = cartStore.getSnapshot()
     const existing = current.find((l) => lineKey(l) === key)

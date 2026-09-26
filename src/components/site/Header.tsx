@@ -1,12 +1,13 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useCart } from '@/components/cart/CartProvider'
 import { Bag, Chevron, Close, Menu } from '@/components/ui/icons'
 import { productHref, products } from '@/content/catalog'
-import { formatMoney } from '@/lib/money'
+import { Price } from '@/components/cart/Price'
 import { Wordmark } from './Wordmark'
 
 /**
@@ -90,6 +91,11 @@ export function Header() {
                 Despre noi
               </Link>
             </li>
+            <li>
+              <Link href="/contact-us" className="nav-link inline-block py-2.5">
+                Contact
+              </Link>
+            </li>
           </ul>
 
           <div className="ml-auto flex items-center gap-1 md:ml-0">
@@ -120,13 +126,24 @@ export function Header() {
 
         {/* Product list: three lines of type, in the bar's own colours */}
         <div id="product-menu" hidden={!menuOpen} className={`max-md:hidden ${dark ? 'shadow-[0_-1px_0_var(--color-dark-line)]' : 'shadow-[0_-1px_0_rgb(8_17_19/0.06)]'}`}>
-          <ul className="wrap grid grid-cols-3 gap-6 py-8">
+          <ul className="wrap grid grid-cols-3 gap-6 py-6">
             {products.map((p) => (
               <li key={p.id}>
-                <Link href={productHref(p)} onClick={() => setMenuOpen(false)} className="group block">
-                  <span className={`block text-[22px] font-medium tracking-[-0.025em] ${dark ? 'group-hover:text-cyan' : 'group-hover:text-cyan-700'}`}>{p.name}</span>
-                  <span className={`mt-1 block text-[15px] ${dark ? 'text-dark-muted' : 'text-muted'}`}>
-                    {p.purpose} · {formatMoney(p.price)}
+                <Link href={productHref(p)} onClick={() => setMenuOpen(false)} className="group flex items-center gap-4 rounded-[16px] p-2 transition-colors hover:bg-paper">
+                  <span className="relative block h-[72px] w-[92px] flex-none overflow-hidden rounded-[12px] bg-paper">
+                    <Image
+                      src={p.cutout.src}
+                      alt=""
+                      fill
+                      sizes="92px"
+                      className={`object-contain p-2 ${p.cutout.bleed === 'bottom' ? 'object-bottom pb-0' : ''}`}
+                    />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[19px] font-medium tracking-[-0.02em] group-hover:text-cyan-700">{p.name}</span>
+                    <span className="mt-0.5 block text-[14.5px] text-muted">
+                      {p.purpose} · <Price productId={p.id} />
+                    </span>
                   </span>
                 </Link>
               </li>
@@ -152,7 +169,7 @@ export function Header() {
                   <Link href={productHref(p)} onClick={closeSheet} className="block">
                     <span className="block text-[34px] leading-none font-medium tracking-[-0.035em] text-white">{p.name}</span>
                     <span className="mt-2 block text-[15px] text-dark-muted">
-                      {p.purpose} · {formatMoney(p.price)}
+                      {p.purpose} · <Price productId={p.id} pendingClassName="" />
                     </span>
                   </Link>
                 </li>

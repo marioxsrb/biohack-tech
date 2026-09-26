@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { AddToCartButton } from '@/components/cart/AddToCartButton'
 import { Arrow } from '@/components/ui/icons'
 import { getProduct, productHref, type ProductId } from '@/content/catalog'
-import { formatMoney } from '@/lib/money'
+import { Price } from '@/components/cart/Price'
 
 type Props = {
   productId: ProductId
@@ -42,8 +42,8 @@ export function SceneBuy({ productId, line, variantId, note, tone = 'light', hea
       )}
       {part !== 'head' && (
         <>
-          <p className={`${part === 'action' ? '' : 'mt-6 '}text-[26px] font-medium tracking-[-0.02em] tabular-nums ${dark ? 'text-white' : 'text-ink'}`}>
-            {formatMoney(p.price)}
+          <p className={`${part === 'action' ? '' : 'mt-6 '}text-[26px] font-medium tracking-[-0.02em] ${dark ? 'text-white [&_.text-muted]:text-white/70' : 'text-ink'}`}>
+            <Price productId={p.id} />
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
             <AddToCartButton productId={p.id} variantId={variantId} />

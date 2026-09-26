@@ -1,27 +1,22 @@
-import type { Customer } from '@/lib/checkout'
-import type { Currency, Money } from '@/lib/money'
+import type { OrderForm } from '@/lib/checkout'
+import type { OrderLine } from '@/lib/orders/resolve'
 
-export type OrderLine = {
-  /** Cart line key, so paid lines can be removed from the cart afterwards. */
-  key: string
-  name: string
-  description?: string
-  quantity: number
-  unitAmount: number
-}
+export type { OrderLine }
 
 export type CheckoutRequest = {
-  currency: Currency
   lines: OrderLine[]
-  customer: Customer
+  order: OrderForm
   successUrl: string
   cancelUrl: string
+  /** Same key for the same submission, so a double click opens one payment session. */
+  idempotencyKey: string
 }
 
 export type CheckoutStatus = {
   status: 'paid' | 'unpaid' | 'expired'
   email?: string
-  total?: Money
+  /** Amount paid, in bani. */
+  total?: number
   lineKeys: string[]
 }
 

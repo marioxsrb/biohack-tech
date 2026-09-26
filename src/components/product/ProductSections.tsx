@@ -1,45 +1,50 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { AddToCartButton } from '@/components/cart/AddToCartButton'
+import { Price } from '@/components/cart/Price'
 import { Faq } from '@/components/ui/Faq'
 import { Arrow, External } from '@/components/ui/icons'
-import { productHref, type Product } from '@/content/catalog'
-import type { ProductContent } from '@/content/product-content'
-import { formatMoney } from '@/lib/money'
+import { isPurchasable, type Product } from '@/content/catalog'
+import type { ProductContent, Story } from '@/content/product-content'
+import { terms } from '@/config/site'
 
 type Props = { product: Product; content: ProductContent }
 
 /**
- * Below the buy area: large pictures with a line or two each, how it's used,
- * one plain explanation of the technology, the details, and a way to buy again.
+ * Below the buy area, in one fixed rhythm for all three products: a large photograph,
+ * three short benefits, how it's used, (Amber) the four frames, the technology once,
+ * a moment or two from real life, the details, and the product again with its button.
  */
 export function ProductSections({ product, content: c }: Props) {
-  const [first, ...rest] = c.stories
   return (
     <>
-      <Cinematic story={first} />
-      {rest.length > 0 && (
+      <Cinematic story={c.scene} />
+      <Benefits items={c.benefits} />
+      {c.use && <Use use={c.use} />}
+      {c.lookbook && <Lookbook lookbook={c.lookbook} />}
+      {c.explain && <Explain explain={c.explain} />}
+      {c.moments.length > 0 && (
         <div className="py-[calc(var(--sec)*0.5)]">
-          {rest.map((s, i) => (
-            <Story key={s.title} story={s} flip={i % 2 === 0} />
+          {c.moments.map((s, i) => (
+            <Moment key={s.title} story={s} flip={i % 2 === 1} />
           ))}
         </div>
       )}
-      {c.steps && <Steps steps={c.steps} />}
-      {c.detail && <Detail detail={c.detail} />}
       <Details content={c} />
       <BuyAgain product={product} />
     </>
   )
 }
 
-/** The first story: a large, inset photograph with its headline set into the darkest corner. */
-function Cinematic({ story }: { story: ProductContent['stories'][number] }) {
+const h2 = 'text-[clamp(30px,3.2vw,46px)] leading-[1.03] tracking-[-0.04em]'
+
+/** The first photograph: large and inset, its headline set into the darkest part. */
+function Cinematic({ story }: { story: Story }) {
   return (
     <section className="wrap max-sm:px-0">
-      <div className="relative isolate flex min-h-[520px] items-end overflow-hidden rounded-[24px] text-white h-[80svh] max-h-[820px] max-sm:rounded-none">
+      <div className="relative isolate flex h-[78svh] max-h-[780px] min-h-[480px] items-end overflow-hidden rounded-[24px] text-white max-sm:h-[72svh] max-sm:rounded-none">
         <Image src={story.image.src} alt={story.image.alt} fill placeholder="blur" sizes="(min-width: 1152px) 1104px, 100vw" className="-z-10 object-cover" />
-        <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-[66%] bg-[linear-gradient(0deg,rgba(8,17,19,.86),rgba(8,17,19,.4)_45%,rgba(8,17,19,0))]" />
+        <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-[72%] bg-[linear-gradient(0deg,rgba(8,17,19,.88),rgba(8,17,19,.62)_45%,rgba(8,17,19,0))]" />
         <div className="w-full p-[clamp(24px,5vw,56px)]">
           <h2 className="max-w-[12em] text-[clamp(34px,4.6vw,64px)] leading-[0.98] tracking-[-0.045em] !text-white">{story.title}</h2>
           <p className="mt-4 max-w-[30em] text-[17px] leading-relaxed text-white/85">{story.text}</p>
@@ -49,75 +54,108 @@ function Cinematic({ story }: { story: ProductContent['stories'][number] }) {
   )
 }
 
-const bleedLeft = 'md:-ml-[calc((100vw-min(100vw,1152px))/2+var(--gut))]'
-const bleedRight = 'md:-mr-[calc((100vw-min(100vw,1152px))/2+var(--gut))]'
-
-/** A photograph that runs to the edge of the screen, with a headline and one or two sentences beside it. */
-function Story({ story, flip }: { story: ProductContent['stories'][number]; flip: boolean }) {
+/** Three short benefits, each with a check. Nothing else. */
+function Benefits({ items }: { items: ProductContent['benefits'] }) {
   return (
-    <section className="overflow-hidden py-[calc(var(--sec)*0.5)]">
-      <div className="wrap grid grid-cols-1 items-center gap-y-8 md:grid-cols-12 md:gap-x-6">
+    <section aria-label="Pe scurt" className="wrap pt-[calc(var(--sec)*0.6)] pb-[calc(var(--sec)*0.3)]">
+      <ul className="grid gap-x-6 gap-y-6 sm:grid-cols-3">
+        {items.map((b) => (
+          <li key={b.title} className="border-t border-line pt-5 max-sm:pt-4">
+            <p className="text-[21px] leading-snug font-medium tracking-[-0.02em] text-ink">{b.title}</p>
+            <p className="mt-1.5 max-w-[22em] text-[16.5px] leading-relaxed text-text">{b.text}</p>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/** How it's used: the product on a white panel beside three numbered steps. */
+function Use({ use }: { use: NonNullable<ProductContent['use']> }) {
+  return (
+    <section aria-labelledby="use-title" className="wrap py-[calc(var(--sec)*0.5)]">
+      <div className="grid grid-cols-1 items-center overflow-hidden rounded-[28px] bg-paper md:grid-cols-12">
+        <div className="relative aspect-[4/3] md:col-span-6 md:aspect-auto md:h-full md:min-h-[440px]">
+          <Image src={use.image.src} alt={use.image.alt} fill sizes="(min-width: 1152px) 552px, (min-width: 768px) 50vw, 100vw" className="object-contain p-[12%] md:p-[14%]" />
+        </div>
+        <div className="p-[clamp(24px,5vw,64px)] md:col-span-6 max-md:pt-0">
+          <h2 id="use-title" className={h2}>
+            {use.title}
+          </h2>
+          <ol className="mt-8 space-y-5">
+            {use.steps.map((s, i) => (
+              <li key={s} className="flex items-baseline gap-4">
+                <span aria-hidden className="flex h-9 w-9 flex-none translate-y-[-2px] items-center justify-center self-start rounded-full bg-mist text-[15px] font-semibold text-ink tabular-nums">
+                  {i + 1}
+                </span>
+                <span className="pt-1 text-[19px] leading-snug tracking-[-0.01em] text-ink">{s}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/** Amber: the four frames together, large, with one line. */
+function Lookbook({ lookbook }: { lookbook: NonNullable<ProductContent['lookbook']> }) {
+  return (
+    <section aria-labelledby="lookbook-title" className="wrap py-[calc(var(--sec)*0.5)]">
+      <div className="grid grid-cols-1 items-center gap-y-6 md:grid-cols-12 md:gap-x-6">
+        <div className="md:col-span-4">
+          <h2 id="lookbook-title" className={h2}>
+            {lookbook.title}
+          </h2>
+          <p className="mt-4 max-w-[24em] text-[17px] leading-relaxed text-text">{lookbook.text}</p>
+          <Link href="#cumpara" className="tlink mt-6">
+            Alege rama <Arrow />
+          </Link>
+        </div>
+        <div className="relative aspect-[4/3] overflow-hidden rounded-[24px] md:col-span-8 max-sm:-mx-[var(--gut)] max-sm:rounded-none">
+          <Image src={lookbook.image.src} alt={lookbook.image.alt} fill placeholder="blur" sizes="(min-width: 1152px) 736px, (min-width: 768px) 66vw, 100vw" className="object-cover" />
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/** The technology, once, in plain words. The image sits on its own background colour. */
+function Explain({ explain }: { explain: NonNullable<ProductContent['explain']> }) {
+  return (
+    <section aria-labelledby="explain-title" className="wrap py-[calc(var(--sec)*0.5)]">
+      <div className="grid grid-cols-1 items-center gap-y-8 md:grid-cols-12 md:gap-x-6">
         <div
-          className={`relative aspect-[4/3] md:col-span-7 max-md:-mx-[var(--gut)] ${flip ? `md:order-2 md:col-start-6 ${bleedRight}` : bleedLeft}`}
+          className="relative aspect-[4/3] overflow-hidden rounded-[24px] md:col-span-7 max-sm:-mx-[var(--gut)] max-sm:rounded-none"
+          style={explain.imageBg ? { background: explain.imageBg } : undefined}
         >
-          <Image src={story.image.src} alt={story.image.alt} fill placeholder="blur" sizes="(min-width: 768px) 62vw, 100vw" className="object-cover" />
+          <Image
+            src={explain.image.src}
+            alt={explain.image.alt}
+            fill
+            sizes="(min-width: 1152px) 640px, (min-width: 768px) 58vw, 100vw"
+            className={explain.imageBg ? 'object-contain p-[4%]' : 'object-cover'}
+          />
         </div>
-        <div className={`md:col-span-4 ${flip ? 'md:order-1 md:col-start-1' : 'md:col-start-9'}`}>
-          <h2 className="text-[clamp(30px,3.2vw,46px)] leading-[1.03] tracking-[-0.04em]">{story.title}</h2>
-          <p className="mt-5 text-[18px] leading-relaxed text-text">{story.text}</p>
-        </div>
-      </div>
-    </section>
-  )
-}
-
-function Steps({ steps }: { steps: string[] }) {
-  return (
-    <section aria-labelledby="steps-title" className="py-[var(--sec)]">
-      <div className="wrap">
-        <h2 id="steps-title" className="text-[clamp(30px,3.2vw,46px)] leading-none tracking-[-0.04em]">
-          Cum îl folosești
-        </h2>
-        <ol className="mt-12 grid gap-8 sm:grid-cols-3 sm:gap-6 max-sm:mt-8 max-sm:gap-6">
-          {steps.map((s, i) => (
-            <li key={s} className="max-sm:flex max-sm:items-baseline max-sm:gap-5">
-              <span className="block w-8 flex-none text-[clamp(44px,6vw,88px)] leading-none font-light tracking-[-0.04em] text-cyan-700">{i + 1}</span>
-              <p className="mt-4 max-w-[14em] text-[20px] leading-snug tracking-[-0.015em] text-ink max-sm:mt-0">{s}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  )
-}
-
-/** The technology, once, in plain words. */
-function Detail({ detail }: { detail: NonNullable<ProductContent['detail']> }) {
-  return (
-    <section aria-labelledby="detail-title" className="py-[var(--sec)]">
-      <div className="wrap grid grid-cols-1 items-center gap-y-10 md:grid-cols-12 md:gap-x-6">
-        <div className="relative aspect-[4/3] md:col-span-6 max-md:-mx-[var(--gut)]">
-          <Image src={detail.image.src} alt={detail.image.alt} fill placeholder="blur" sizes="(min-width: 768px) 50vw, 100vw" className="object-cover" />
-        </div>
-        <div className="md:col-span-5 md:col-start-8">
-          <h2 id="detail-title" className="text-[clamp(30px,3.2vw,46px)] leading-[1.03] tracking-[-0.04em]">
-            {detail.title}
+        <div className="md:col-span-5 md:pl-6">
+          <h2 id="explain-title" className={h2}>
+            {explain.title}
           </h2>
           <div className="mt-5 space-y-4 text-[17px] leading-relaxed text-text">
-            {detail.paragraphs.map((p) => (
+            {explain.paragraphs.map((p) => (
               <p key={p}>{p}</p>
             ))}
           </div>
-          {detail.studies && (
+          {explain.studies && (
             <details className="faq group mt-4">
-              <summary className="tlink cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+              <summary className="tlink min-h-11 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
                 Vezi studiile <Arrow className="transition-transform duration-200 group-open:rotate-90" />
               </summary>
               <div className="faq-body">
                 <ul className="pb-1">
-                  {detail.studies.map((s) => (
+                  {explain.studies.map((s) => (
                     <li key={s.href}>
-                      <a href={s.href} target="_blank" rel="noopener noreferrer" className="group/l inline-flex items-center gap-2 py-2 text-[15px] text-text hover:text-ink">
+                      <a href={s.href} target="_blank" rel="noopener noreferrer" className="group/l inline-flex min-h-11 items-center gap-2 py-1 text-[15px] text-text hover:text-ink">
                         <External className="h-4 w-4 flex-none text-muted group-hover/l:text-cyan-700" />
                         <span className="underline decoration-line underline-offset-4">{s.label}</span>
                         <span className="sr-only"> (se deschide într-o filă nouă)</span>
@@ -134,11 +172,28 @@ function Detail({ detail }: { detail: NonNullable<ProductContent['detail']> }) {
   )
 }
 
+/** A photograph with a headline and one or two sentences beside it. */
+function Moment({ story, flip }: { story: Story; flip: boolean }) {
+  return (
+    <section className="wrap py-[calc(var(--sec)*0.5)]">
+      <div className="grid grid-cols-1 items-center gap-y-7 md:grid-cols-12 md:gap-x-6">
+        <div className={`relative aspect-[4/3] overflow-hidden rounded-[24px] md:col-span-7 max-sm:-mx-[var(--gut)] max-sm:rounded-none ${flip ? 'md:order-2 md:col-start-6' : ''}`}>
+          <Image src={story.image.src} alt={story.image.alt} fill placeholder="blur" sizes="(min-width: 1152px) 640px, (min-width: 768px) 58vw, 100vw" className="object-cover" />
+        </div>
+        <div className={`md:col-span-5 ${flip ? 'md:order-1 md:col-start-1 md:pr-6' : 'md:col-start-8 md:pl-6'}`}>
+          <h2 className={`${h2} max-w-[11em]`}>{story.title}</h2>
+          <p className="mt-5 text-[18px] leading-relaxed text-text">{story.text}</p>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 /** Specifications and a short FAQ, side by side: reference material, set quietly. */
 function Details({ content: c }: { content: ProductContent }) {
   return (
-    <section aria-labelledby="specs-title" className="py-[var(--sec)]">
-      <div className="wrap grid grid-cols-1 gap-y-16 md:grid-cols-12 md:gap-x-6">
+    <section aria-labelledby="specs-title" className="py-[calc(var(--sec)*0.8)]">
+      <div className="wrap grid grid-cols-1 gap-y-14 md:grid-cols-12 md:gap-x-6">
         <div className="md:col-span-5">
           <h2 id="specs-title" className="text-[26px] tracking-[-0.03em]">
             Detalii
@@ -153,7 +208,7 @@ function Details({ content: c }: { content: ProductContent }) {
           </dl>
         </div>
         <div className="md:col-span-6 md:col-start-7">
-          <h2 className="text-[26px] tracking-[-0.03em]">Întrebări</h2>
+          <h2 className="text-[26px] tracking-[-0.03em]">Întrebări frecvente</h2>
           <div className="mt-6">
             <Faq items={c.faqs} />
           </div>
@@ -163,35 +218,38 @@ function Details({ content: c }: { content: ProductContent }) {
   )
 }
 
-/** Closing purchase: the product, large, with its price and one button. */
+/** Closing purchase: the product, large, on a white panel, with its price and one button. */
 function BuyAgain({ product }: { product: Product }) {
   const img = product.cutout
   const bleed = img.bleed === 'bottom'
+  const purchasable = isPurchasable(product)
   return (
-    <section id="buy-again" aria-label={`Cumpără ${product.name}`} className="overflow-hidden border-t border-line">
-      <div className="wrap grid grid-cols-1 md:grid-cols-12 md:gap-x-6">
-        <div className={`relative aspect-[16/10] md:col-span-6 ${bleed ? 'order-2 self-end md:order-1 md:mt-16' : 'my-12 md:my-16'}`}>
-          <Image
-            src={img.src}
-            alt={img.alt}
-            fill
-            sizes="(min-width: 768px) 50vw, 90vw"
-            data-kind={img.kind}
-            className={`object-contain ${bleed ? 'object-bottom' : ''} ${img.kind === 'studio' ? 'mix-blend-multiply' : ''}`}
-          />
+    <section id="buy-again" aria-labelledby="buy-again-title" className="wrap pb-[var(--sec)]">
+      <div className="grid grid-cols-1 items-center overflow-hidden rounded-[28px] bg-paper md:grid-cols-12">
+        <div className={`relative aspect-[16/10] md:col-span-7 ${bleed ? 'order-2 mx-[8%] mt-2 md:order-1 md:mt-12 md:self-end' : 'm-[6%]'}`}>
+          <Image src={img.src} alt={img.alt} fill sizes="(min-width: 1152px) 560px, (min-width: 768px) 50vw, 90vw" className={`object-contain ${bleed ? 'object-bottom' : ''}`} />
         </div>
-        <div className={`self-center md:col-span-5 md:col-start-8 ${bleed ? 'order-1 pt-12 pb-8 md:order-2 md:py-16' : 'pb-12 md:py-16'}`}>
-          <p className="text-[clamp(32px,3.4vw,48px)] leading-none font-medium tracking-[-0.04em] text-ink">{product.name}</p>
-          <p className="mt-3 text-[19px] text-ink tabular-nums">{formatMoney(product.price)}</p>
-          <div className="mt-7">
-            {product.variants ? (
-              <Link href={`${productHref(product)}#cumpara`} className="cta">
-                Alege modelul <Arrow />
+        <div className={`p-[clamp(24px,5vw,56px)] md:col-span-5 ${bleed ? 'order-1 md:order-2' : 'max-md:pt-0'}`}>
+          <p className="text-[16px] font-medium text-cyan-700">{product.purpose}</p>
+          <h2 id="buy-again-title" className="mt-1 text-[clamp(32px,3.4vw,48px)] leading-none tracking-[-0.04em]">
+            {product.name}
+          </h2>
+          <p className="mt-4 text-[24px] font-medium tracking-[-0.02em] text-ink">
+            <Price productId={product.id} />
+            {purchasable && <span className="ml-3 align-middle text-[14px] font-normal tracking-normal text-muted">{terms.vat}</span>}
+          </p>
+          <div className="mt-6">
+            {product.variants && purchasable ? (
+              <Link href="#cumpara" className="cta">
+                Alege rama <Arrow />
               </Link>
             ) : (
               <AddToCartButton productId={product.id} />
             )}
           </div>
+          <p className="mt-4 text-[15px] text-text">
+            Livrare gratuită · Retur în {terms.returnDays} zile
+          </p>
         </div>
       </div>
     </section>

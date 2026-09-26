@@ -4,7 +4,8 @@
  */
 import type { CheckoutRequest, CheckoutStatus, PaymentProvider } from './types'
 import { PaymentError } from './types'
-import type { Currency } from '@/lib/money'
+import { billingAddress, shippingAddress } from '@/lib/checkout'
+import { CURRENCY } from '@/lib/money'
 
 const API = 'https://api.stripe.com/v1'
 
@@ -40,32 +41,38 @@ export function createStripeProvider(secretKey: string): PaymentProvider {
     id: 'stripe',
 
     async createCheckout(req: CheckoutRequest) {
-      const c = req.customer
+      const o = req.order
+      // Everything the shop needs to ship and invoice, visible on the payment in the Stripe dashboard.
       const metadata = {
-        customer_name: c.name,
-        customer_phone: c.phone,
-        shipping_address: `${c.address}, ${c.city}, jud. ${c.county}, ${c.postalCode}`,
-        notes: c.notes,
+        customer_name: o.name,
+        customer_phone: o.phone,
+        buyer_type: o.buyerType === 'pj' ? 'persoana juridica' : 'persoana fizica',
+        company: o.buyerType === 'pj' ? o.company : undefined,
+        cui: o.buyerType === 'pj' ? o.cui : undefined,
+        reg_com: o.buyerType === 'pj' ? o.regCom : undefined,
+        billing_address: billingAddress(o),
+        shipping_address: shippingAddress(o),
+        notes: o.notes,
         line_keys: req.lines.map((l) => `${l.key}*${l.quantity}`).join(','),
       }
       const body = encode({
         mode: 'payment',
         locale: 'ro',
-        customer_email: c.email,
+        customer_email: o.email,
         success_url: req.successUrl,
         cancel_url: req.cancelUrl,
         line_items: req.lines.map((l) => ({
           quantity: l.quantity,
           price_data: {
-            currency: req.currency.toLowerCase(),
+            currency: CURRENCY.toLowerCase(),
             unit_amount: l.unitAmount,
             product_data: { name: l.name, description: l.description },
           },
         })),
         metadata,
-        payment_intent_data: { metadata, receipt_email: c.email },
+        payment_intent_data: { metadata, receipt_email: o.email },
       })
-      const session = await call('/checkout/sessions', { body, idempotencyKey: crypto.randomUUID() })
+      const session = await call('/checkout/sessions', { body, idempotencyKey: req.idempotencyKey })
       return { redirectUrl: session.url as string, reference: session.id as string }
     },
 
@@ -80,7 +87,7 @@ export function createStripeProvider(secretKey: string): PaymentProvider {
         return {
           status: s.payment_status === 'paid' ? 'paid' : s.status === 'expired' ? 'expired' : 'unpaid',
           email: s.customer_details?.email ?? s.customer_email ?? undefined,
-          total: s.amount_total != null ? { amount: s.amount_total, currency: String(s.currency).toUpperCase() as Currency } : undefined,
+          total: s.amount_total != null && String(s.currency).toUpperCase() === CURRENCY ? Number(s.amount_total) : undefined,
           lineKeys: keys,
         }
       } catch {

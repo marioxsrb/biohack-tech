@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
-import { BalanceWaveFeature } from '@/components/home/BalanceWaveFeature'
-import { BrainLinkFeature } from '@/components/home/BrainLinkFeature'
+import { CalmFeature } from '@/components/home/CalmFeature'
 import { Discover } from '@/components/home/Discover'
+import { FocusFeature } from '@/components/home/FocusFeature'
 import { Hero } from '@/components/home/Hero'
 import { GlassesScene } from '@/components/scenes/GlassesScene'
 import { Lineup } from '@/components/site/Lineup'
@@ -11,13 +11,13 @@ import og from '@/assets/img/balance-wave/lifestyle-canapea.webp'
 
 export const metadata: Metadata = {
   ...pageMetadata({
-    title: `${site.name}: Balance Wave, BrainLink Pro și Ochelari Biohack`,
+    title: `${site.name}: NEUROS Calm, Focus și Amber`,
     description:
-      'Trei produse simple pentru fiecare zi: Balance Wave pentru relaxare, BrainLink Pro pentru focus și Ochelari Biohack pentru ecrane. Livrare gratuită în România.',
+      'Trei produse NEUROS pentru fiecare zi: Calm pentru relaxare, Focus pentru concentrare și Amber pentru ecrane. Livrare gratuită în România.',
     path: '/',
-    image: { url: og.src, width: og.width, height: og.height, alt: 'Femeie relaxată pe canapea, purtând Balance Wave' },
+    image: { url: og.src, width: og.width, height: og.height, alt: 'Femeie relaxată pe canapea, purtând NEUROS Calm' },
   }),
-  title: { absolute: `${site.name}: Balance Wave, BrainLink Pro și Ochelari Biohack` },
+  title: { absolute: `${site.name}: NEUROS Calm, Focus și Amber` },
 }
 
 /** Plain document flow: every section renders from the server and scrolls natively. */
@@ -26,8 +26,8 @@ export default function Home() {
     <>
       <Hero />
       <Discover />
-      <BalanceWaveFeature />
-      <BrainLinkFeature />
+      <CalmFeature />
+      <FocusFeature />
       <GlassesScene />
       <Lineup />
     </>

@@ -1,12 +1,16 @@
 # Decizii de conținut
 
+## Nume și prețuri (26 septembrie 2026, versiunea finală)
+
+- **Numele.** Produsele au primit nume sub marca NEUROS, care apare deja pe dispozitivul de gât și în aplicația Neuros Game: **NEUROS Calm** (fostul Balance Wave), **NEUROS Focus** (fostul BrainLink Pro) și **NEUROS Amber** (foștii Ochelari Biohack, după culoarea lentilelor). Biohack Tech rămâne numele magazinului. Denumirea hardware „BrainLink Pro” apare o singură dată, în specificațiile NEUROS Focus. Id-urile interne nu s-au schimbat, așa că un coș salvat rămâne valid; adresele vechi redirecționează permanent.
+- **Prețurile** sunt doar în lei, într-un singur fișier (`src/config/prices.ts`). Unde materialele dau doar euro, produsul arată „Preț în curând” până la un preț aprobat. Niciun curs de schimb.
+- **Galeriile** sunt ordonate intenționat: produsul, produsul în folosire, unghiuri, detalii. Fiecare ramă NEUROS Amber are galeria ei și, unde există, fotografia de lifestyle cu exact rama aceea.
+- **NEUROS Focus** e prezentat ca hardware plus tabletă (fotografia cu jocul pe tabletă), fără grafice de semnal EEG.
+
 ## Scene (26 septembrie 2026, a doua iterație)
 
-Pagina principală e o succesiune de șase scene, cu foarte puțin text: campania (hero), „Ce vrei să îmbunătățești?”,
-Balance Wave (camera se întunecă, dispozitivul se aprinde), BrainLink (un semnal care se liniștește când ții apăsat,
-marcat „Ilustrație”), Ochelarii (selector de rame, ca într-un magazin de modă) și raftul cu toate trei.
-Contrastul a fost măsurat pe pixelii reali ai fotografiilor, nu estimat: meniul și textul din hero trec pragul WCAG.
-Butonul roșu a trecut de la #E64545 (3,96:1) la #D23B3B (4,74:1).
+Scroll-ul animat din această iterație a fost scos ulterior; paginile se derulează nativ. A rămas măsurarea contrastului
+pe pixelii reali ai fotografiilor și butonul roșu mai închis: #E64545 (3,96:1) a devenit #D23B3B (4,74:1).
 
 ## Direcția (26 septembrie 2026)
 
@@ -38,13 +42,13 @@ Sursa: `Biohack-Tech_Structura_si_Copy.docx` și folderul `poze/` din ZIP. Copy-
 | BrainLink: „de ultimă generație”, „unul dintre cele mai mici dispozitive EEG din lume”, „100% privat” | Superlative fără sursă. Rămâne faptul: detectează stări mentale, nu gânduri. |
 | Video-ul Balance Wave (`neck-joy_unknown.mp4`) | În engleză, menționează migrene și digestie și un „Seal of Approval” neverificat. |
 | Slider-ul din hero | Carusel automat cu un singur mesaj vizibil. Înlocuit cu toate trei produsele vizibile deodată. |
-| „Cere ofertă personalizată” lângă prețuri | Prețul e fix și afișat; al doilea buton concura cu „Adaugă în coș”. Recomandarea de specialist a rămas ca link de contact. |
+| „Cere ofertă personalizată” lângă prețuri | Prețul e fix și afișat; al doilea buton concura cu „Adaugă în coș”. Excepție: produsele fără preț aprobat în lei au „Întreabă de preț”. |
 
 ## Păstrat, cu grijă
 
-- Studiile de pe pagina BrainLink Pro (linkuri reale, verificabile), cu mențiunea explicită că nu testează BrainLink Pro direct.
+- Studiile de pe pagina NEUROS Focus (linkuri reale, verificabile), cu mențiunea explicită că privesc metoda în general, nu acest produs.
 - „Rezultatele variază de la o persoană la alta” și „nu înlocuiește sfatul medicului”, pe fiecare pagină de produs.
-- Specificațiile BrainLink Pro au fost transcrise din imaginea cu componentele, ca să fie text citibil și indexabil.
+- Specificațiile NEUROS Focus au fost transcrise din imaginea cu componentele, ca să fie text citibil și indexabil.
 
 ## Imagini
 

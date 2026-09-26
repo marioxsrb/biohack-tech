@@ -1,8 +1,8 @@
 'use client'
 
 import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { resolveLine, variantLabel, type Product, type ProductId, type Variant } from '@/content/catalog'
-import { totalsByCurrency, type Money } from '@/lib/money'
+import { isPurchasable, resolveLine, variantLabel, type Product, type ProductId, type Variant } from '@/content/catalog'
+import { orderTotal } from '@/lib/money'
 import { cartStore, lineKey } from './cart-store'
 
 export type ResolvedLine = {
@@ -11,18 +11,22 @@ export type ResolvedLine = {
   variant?: Variant
   variantLabel?: string
   quantity: number
-  unit: Money
+  /** Unit price in bani, read from the catalog. */
+  unit: number
 }
+
+/** What was just added: shown in the compact confirmation, not in the full cart. */
+export type Confirmation = { key: string; quantity: number; at: number }
 
 type CartUI = {
   isOpen: boolean
   open: () => void
   close: () => void
+  confirmation: Confirmation | null
+  dismissConfirmation: () => void
   /** Short message for the screen-reader live region. */
   announcement: string
-  /** Line key of the most recent add, for the drawer's confirmation. Cleared when the drawer closes. */
-  lastAdded: string | null
-  add: (productId: ProductId, variantId?: string, quantity?: number) => void
+  add: (productId: ProductId, variantId?: string, quantity?: number) => boolean
 }
 
 const CartUIContext = createContext<CartUI | null>(null)
@@ -30,25 +34,29 @@ const CartUIContext = createContext<CartUI | null>(null)
 export function CartProvider({ children }: { children: ReactNode }) {
   const [isOpen, setOpen] = useState(false)
   const [announcement, setAnnouncement] = useState('')
-  const [lastAdded, setLastAdded] = useState<string | null>(null)
+  const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
 
-  const open = useCallback(() => setOpen(true), [])
-  const close = useCallback(() => {
-    setOpen(false)
-    setLastAdded(null)
+  const open = useCallback(() => {
+    setConfirmation(null)
+    setOpen(true)
   }, [])
+  const close = useCallback(() => setOpen(false), [])
+  const dismissConfirmation = useCallback(() => setConfirmation(null), [])
 
   const add = useCallback((productId: ProductId, variantId?: string, quantity = 1) => {
     const resolved = resolveLine(productId, variantId)
-    if (!resolved) return
+    if (!resolved || !isPurchasable(resolved.product)) return false
     cartStore.add(productId, variantId, quantity)
-    setLastAdded(lineKey({ productId, variantId }))
+    setConfirmation({ key: lineKey({ productId, variantId }), quantity, at: Date.now() })
     const label = resolved.variant ? `${resolved.product.name}, ${variantLabel(resolved.product, resolved.variant)}` : resolved.product.name
     setAnnouncement(`${label} a fost adăugat în coș.`)
-    setOpen(true)
+    return true
   }, [])
 
-  const value = useMemo(() => ({ isOpen, open, close, announcement, lastAdded, add }), [isOpen, open, close, announcement, lastAdded, add])
+  const value = useMemo(
+    () => ({ isOpen, open, close, confirmation, dismissConfirmation, announcement, add }),
+    [isOpen, open, close, confirmation, dismissConfirmation, announcement, add],
+  )
 
   return (
     <CartUIContext.Provider value={value}>
@@ -70,7 +78,7 @@ export function useCart() {
     () =>
       stored.flatMap((l) => {
         const r = resolveLine(l.productId, l.variantId)
-        if (!r) return []
+        if (!r || !isPurchasable(r.product)) return []
         return [
           {
             key: lineKey(l),
@@ -86,13 +94,13 @@ export function useCart() {
   )
 
   const count = lines.reduce((n, l) => n + l.quantity, 0)
-  const totals = useMemo(() => totalsByCurrency(lines), [lines])
+  const total = orderTotal(lines)
 
   return {
     ...ui,
     lines,
     count,
-    totals,
+    total,
     setQuantity: cartStore.setQuantity,
     remove: cartStore.remove,
     clear: cartStore.clear,

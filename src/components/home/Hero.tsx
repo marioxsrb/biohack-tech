@@ -8,7 +8,7 @@ export function Hero() {
     <section className="relative isolate flex h-[92svh] max-h-[960px] min-h-[600px] items-end overflow-hidden bg-dark text-white">
       <Image
         src={hero}
-        alt="Femeie relaxată pe canapea, cu Balance Wave la gât"
+        alt="Femeie relaxată pe canapea, cu NEUROS Calm la gât"
         fill
         priority
         placeholder="blur"

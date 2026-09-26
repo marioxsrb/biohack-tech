@@ -1,15 +1,13 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { Arrow } from '@/components/ui/icons'
-import { productHref, products, type ProductId } from '@/content/catalog'
-import { formatMoney } from '@/lib/money'
-
-const words: Record<ProductId, string> = { 'balance-wave': 'Relaxare', 'brainlink-pro': 'Focus', 'ochelari-biohack': 'Ecrane' }
+import { Price } from '@/components/cart/Price'
+import { productHref, products } from '@/content/catalog'
 
 /**
  * The three products, straight after the photograph. The panels rise over the hero's lower
  * edge (a static overlap, no scroll code), the middle one set lower for rhythm. Hovering a
- * panel lifts its product and moves the arrow; Balance Wave's red light brightens.
+ * panel lifts its product and moves the arrow; Calm's red light brightens.
  */
 export function Discover() {
   return (
@@ -22,10 +20,13 @@ export function Discover() {
               className="group relative flex h-full flex-col overflow-hidden rounded-[20px] bg-paper p-6 shadow-[0_30px_60px_-40px_rgba(8,17,19,.45)] transition-shadow duration-300 hover:shadow-[0_36px_70px_-36px_rgba(8,17,19,.5)] md:p-7"
             >
               <span className="flex items-baseline justify-between">
-                <span className="font-mono text-[12px] tracking-[0.12em] text-cyan-700">0{i + 1}</span>
-                <span className="text-[15px] text-muted">{p.name}</span>
+                <span className="text-[15px] font-medium text-cyan-700">{p.purpose}</span>
+                <span className="font-mono text-[12px] tracking-[0.12em] text-muted">0{i + 1}</span>
               </span>
-              <span className="mt-2 block text-[clamp(44px,4.6vw,68px)] leading-[0.95] font-medium tracking-[-0.05em] text-ink">{words[p.id]}</span>
+              <span className="mt-3 block">
+                <span className="block text-[13px] font-semibold tracking-[0.18em] text-muted">{p.brand}</span>
+                <span className="block text-[clamp(44px,4.6vw,68px)] leading-[0.95] font-medium tracking-[-0.05em] text-ink">{p.model}</span>
+              </span>
 
               <span className="relative mt-auto block aspect-[4/3] pt-4">
                 {p.id === 'balance-wave' && (
@@ -44,7 +45,9 @@ export function Discover() {
               </span>
 
               <span className="flex items-center justify-between border-t border-line pt-4">
-                <span className="text-[18px] font-medium tracking-[-0.015em] text-ink tabular-nums">{formatMoney(p.price)}</span>
+                <span className="text-[18px] font-medium tracking-[-0.015em] text-ink tabular-nums">
+                  <Price productId={p.id} />
+                </span>
                 <span className="flex items-center gap-2 text-[15px] font-medium text-ink">
                   Vezi produsul <Arrow className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </span>

@@ -1,71 +1,90 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { lineKey } from '@/components/cart/cart-store'
-import { resolveLine, variantLabel } from '@/content/catalog'
-import { normalizeCustomer, validateCustomer } from '@/lib/checkout'
-import { getPaymentProvider, PaymentError, type OrderLine } from '@/lib/payments'
+import { getBankDetails } from '@/config/bank'
 import { site } from '@/config/site'
+import { normalizeOrder, validateOrder } from '@/lib/checkout'
+import { CURRENCY } from '@/lib/money'
+import { notifyOrder } from '@/lib/orders/notify'
+import { orderReference, resolveOrderLines } from '@/lib/orders/resolve'
+import { availablePaymentMethods, getPaymentProvider, PaymentError } from '@/lib/payments'
 
-const fail = (status: number, code: string, message: string, extra?: object) =>
-  NextResponse.json({ error: code, message, ...extra }, { status })
+const fail = (status: number, code: string, message: string, extra?: object) => NextResponse.json({ error: code, message, ...extra }, { status })
+
+const contactLine = `Scrie-ne la ${site.email} sau sună la ${site.phone} și te ajutăm să comanzi.`
 
 /**
- * Creates a hosted payment session for one currency's worth of cart lines.
- * Prices come from the catalog on the server; the client only sends ids and quantities.
+ * Places an order. The browser sends only product ids, variant ids and quantities, plus the
+ * customer's details; prices, names and the total are resolved here from the catalog.
+ *   card     → a Stripe Checkout session; the order is paid only when Stripe says so.
+ *   transfer → the order is sent to the shop as "awaiting payment" and the customer gets
+ *              the bank details. It is never marked paid here.
  */
 export async function POST(req: NextRequest) {
   let body: Record<string, unknown>
   try {
     body = await req.json()
   } catch {
-    return fail(400, 'BAD_REQUEST', 'Cererea nu este validă.')
+    return fail(400, 'BAD_REQUEST', 'Cererea nu este validă. Reîncarcă pagina și încearcă din nou.')
   }
 
-  const currency = body.currency
-  if (currency !== 'EUR' && currency !== 'RON') return fail(400, 'BAD_CURRENCY', 'Moneda nu este validă.')
+  const resolved = resolveOrderLines(body.lines)
+  if (!resolved.ok) {
+    return resolved.reason === 'EMPTY'
+      ? fail(400, 'EMPTY', 'Coșul este gol.')
+      : fail(409, 'BAD_LINE', 'Un produs din coș s-a schimbat între timp. Reîncarcă pagina și verifică din nou coșul.')
+  }
 
-  const rawLines = Array.isArray(body.lines) ? body.lines.slice(0, 20) : []
-  const lines: OrderLine[] = []
-  for (const raw of rawLines) {
-    const { productId, variantId, quantity } = (raw ?? {}) as Record<string, unknown>
-    const r = resolveLine(String(productId), typeof variantId === 'string' ? variantId : undefined)
-    const q = Number(quantity)
-    if (!r || !Number.isInteger(q) || q < 1 || q > 10) return fail(400, 'BAD_LINE', 'Un produs din coș nu mai este disponibil. Reîncarcă pagina.')
-    if (r.product.price.currency !== currency) continue
-    lines.push({
-      key: lineKey({ productId: r.product.id, variantId: r.variant?.id }),
-      name: r.product.name,
-      description: r.variant ? variantLabel(r.product, r.variant) : undefined,
-      quantity: q,
-      unitAmount: r.product.price.amount,
+  const available = availablePaymentMethods()
+  const order = normalizeOrder(body.order)
+  const errors = validateOrder(order, body.acceptedTerms === true, available)
+  if (Object.keys(errors).length) {
+    if (errors.paymentMethod && !available.card && !available.transfer) {
+      return fail(503, 'PAYMENTS_DISABLED', `Comenzile online nu sunt active încă, așa că nu am înregistrat nimic. ${contactLine}`)
+    }
+    return fail(422, 'INVALID', 'Verifică datele marcate în formular.', { fields: errors })
+  }
+
+  const attemptId = typeof body.attemptId === 'string' && /^[\w-]{8,64}$/.test(body.attemptId) ? body.attemptId : crypto.randomUUID()
+  const fingerprint = JSON.stringify({ attemptId, lines: resolved.lines.map((l) => [l.key, l.quantity]), order })
+  const reference = await orderReference(fingerprint)
+
+  if (order.paymentMethod === 'transfer') {
+    const bank = getBankDetails()!
+    const delivered = await notifyOrder({
+      reference,
+      createdAt: new Date().toISOString(),
+      status: 'awaiting_payment',
+      paymentMethod: 'transfer',
+      currency: CURRENCY,
+      total: resolved.total,
+      lines: resolved.lines.map((l) => ({ productId: l.productId, variantId: l.variantId, name: l.name, description: l.description, quantity: l.quantity, unitAmount: l.unitAmount })),
+      customer: order,
+    })
+    if (!delivered) {
+      return fail(502, 'ORDER_NOT_SAVED', `Nu am putut înregistra comanda. Nu ai de plătit nimic. Încearcă din nou în câteva minute sau ${contactLine.charAt(0).toLowerCase()}${contactLine.slice(1)}`)
+    }
+    return NextResponse.json({
+      method: 'transfer',
+      reference,
+      total: resolved.total,
+      email: order.email,
+      lineKeys: resolved.lines.map((l) => l.key),
+      bank,
     })
   }
-  if (lines.length === 0) return fail(400, 'EMPTY', 'Coșul este gol.')
 
-  const customer = normalizeCustomer(body.customer)
-  const errors = validateCustomer(customer, body.acceptedTerms === true)
-  if (Object.keys(errors).length) return fail(422, 'INVALID', 'Verifică datele din formular.', { fields: errors })
-
-  const provider = getPaymentProvider()
-  if (!provider) {
-    return fail(
-      503,
-      'PAYMENTS_DISABLED',
-      `Plata online nu este activă încă, așa că nu am înregistrat nicio comandă. Scrie-ne la ${site.email} sau sună la ${site.phone} și te ajutăm să comanzi.`,
-    )
-  }
-
+  const provider = getPaymentProvider()!
   const origin = process.env.NEXT_PUBLIC_SITE_URL ? site.url : req.nextUrl.origin
   try {
     const { redirectUrl } = await provider.createCheckout({
-      currency,
-      lines,
-      customer,
+      lines: resolved.lines,
+      order,
       successUrl: `${origin}/checkout/success?ref={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${origin}/checkout?anulat=1`,
+      idempotencyKey: `checkout-${attemptId}-${reference}`,
     })
-    return NextResponse.json({ url: redirectUrl })
+    return NextResponse.json({ method: 'card', url: redirectUrl })
   } catch (e) {
     console.error('[checkout] provider error', e instanceof PaymentError ? e.message : e)
-    return fail(502, 'PROVIDER', 'Nu am putut deschide pagina de plată. Încearcă din nou în câteva minute.')
+    return fail(502, 'PROVIDER', 'Nu am putut deschide pagina de plată. Nu ți s-a retras nimic. Încearcă din nou în câteva minute.')
   }
 }

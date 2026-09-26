@@ -1,13 +1,13 @@
 import Image from 'next/image'
 import { SceneBuy } from '@/components/scenes/SceneBuy'
 import { getProduct } from '@/content/catalog'
-import lucru from '@/assets/img/brainlink/audience-lucru.webp'
+import tableta from '@/assets/img/brainlink/pillar-games.webp'
 
 /**
- * BrainLink as a hardware campaign: the headset large on the light surface with a soft
- * shadow, one photograph of it in use overlapping from below. Hover lifts the headset.
+ * NEUROS Focus as a hardware campaign: the headset large on the light surface with a soft
+ * shadow, and the tablet it plays on, in one photograph overlapping from below.
  */
-export function BrainLinkFeature() {
+export function FocusFeature() {
   const p = getProduct('brainlink-pro')!
   return (
     <section aria-labelledby="bl-title" className="relative py-[var(--sec)]">
@@ -26,9 +26,9 @@ export function BrainLinkFeature() {
         {/* In use: overlapping photograph, set off to the left under the copy */}
         <figure className="relative md:col-span-5 md:col-start-2 md:-mt-10 max-md:-mx-[var(--gut)]">
           <div className="relative aspect-[4/3] overflow-hidden md:rounded-[16px]">
-            <Image src={lucru} alt="Bărbat la laptop, concentrat, purtând BrainLink Pro" fill placeholder="blur" sizes="(min-width: 768px) 460px, 100vw" className="object-cover" />
+            <Image src={tableta} alt="Tânăr pe canapea, purtând NEUROS Focus și jucând pe tabletă" fill placeholder="blur" sizes="(min-width: 768px) 460px, 100vw" className="object-cover" />
           </div>
-          <figcaption className="mt-3 font-mono text-[12px] tracking-[0.12em] text-muted uppercase max-md:px-[var(--gut)]">Focus, la birou sau la studiu</figcaption>
+          <figcaption className="mt-3 font-mono text-[12px] tracking-[0.12em] text-muted uppercase max-md:px-[var(--gut)]">Jocuri pe tabletă, controlate prin atenție</figcaption>
         </figure>
       </div>
     </section>

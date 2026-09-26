@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { Arrow, Check } from '@/components/ui/icons'
 import { site, terms } from '@/config/site'
-import { formatMoney } from '@/lib/money'
+import { formatLei } from '@/lib/money'
 import { getPaymentProvider } from '@/lib/payments'
 import { ClearPaidLines } from './ClearPaidLines'
 
@@ -32,14 +32,14 @@ export default async function SuccessPage({ searchParams }: PageProps<'/checkout
             </span>
             <h1 className="mt-6 text-[36px] leading-tight tracking-[-0.035em] max-sm:text-[30px]">Mulțumim, comanda e confirmată.</h1>
             <p className="sub mt-4">
-              {result.total && <>Am primit plata de {formatMoney(result.total)}. </>}
+              {result.total != null && <>Am primit plata de {formatLei(result.total)}. </>}
               Confirmarea a plecat pe {result.email ?? 'email'}.
             </p>
             <ol className="mt-10 border-t border-mist-2">
               {[
                 ['Pregătim comanda', `În ${terms.processingDays}.`],
                 ['O predăm curierului', `Primești AWB-ul pe email. Livrarea durează ${terms.transitDays}.`],
-                ['Te contactăm', 'Pentru Balance Wave și BrainLink Pro, programăm consultația inițială cu un specialist.'],
+                ['Te contactăm', 'Pentru NEUROS Calm și NEUROS Focus, un specialist te sună ca să stabiliți împreună primii pași.'],
               ].map(([t, d], i) => (
                 <li key={t} className="grid grid-cols-[48px_1fr] gap-4 border-b border-mist-2 py-4">
                   <span className="pt-0.5 font-mono text-[12px] text-cyan-700">0{i + 1}</span>
