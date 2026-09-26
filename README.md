@@ -6,43 +6,37 @@ Magazin online pentru NEUROS Calm, NEUROS Focus și NEUROS Amber. Face parte din
 
 ```bash
 npm install
-cp .env.example .env.local   # cheile de plată, datele bancare, webhook-ul de comenzi
 npm run dev                  # http://localhost:3000
 ```
 
-Alte comenzi: `npm run build`, `npm start` (port 3000), `npm run lint`, `npm run typecheck`, `npm test` (vitest).
+Fără nicio variabilă de mediu, site-ul rulează cu o bază de date locală (PGlite în `.data/`) și emailurile se scriu în `.data/emails/`. Metodele de plată apar „în curând” până le configurezi (`.env.example`).
 
-Stack: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4. Nicio altă dependență de runtime în afară de `server-only`.
+Comenzi: `npm run build`, `npm start` (port `$PORT` sau 3000), `npm run lint`, `npm run typecheck`, `npm test` (vitest; cu `TEST_DATABASE_URL` rulează și testele pe PostgreSQL), `npm run db:migrate`.
+
+Stack: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, PostgreSQL (`pg`; PGlite local), Stripe Payment Element. Node 22.18+.
 
 ## Structura
 
 ```
 src/
-  config/
-    prices.ts                 SINGURUL loc cu prețuri (bani, RON). null = „Preț în curând”
-    bank.ts                   datele pentru transfer și webhook-ul de comenzi, doar din variabile de mediu
-    site.ts                   contact, URL, termeni comerciali (livrare, retur, garanție)
-  content/
-    catalog.ts                produsele: nume, variante, imagini, galerii
-    product-content.ts        paginile de produs: intro, beneficii, utilizare, explicație, momente, detalii, FAQ
-    legal.ts                  paginile de informații (versiuni scurte, vezi docs/OPEN-POINTS.md)
-  components/
-    cart/                     store în localStorage, confirmarea compactă, coșul pe <dialog>, buton, preț
-    product/                  galerie, zona de cumpărare cu variante, secțiunile paginii de produs
-    home/                     Hero, Discover, CalmFeature (secțiunea întunecată), FocusFeature
-    scenes/                   GlassesScene (selectorul de rame) și SceneBuy (blocul de cumpărare comun)
-    site/                     header, footer, raftul cu cele trei produse
-  lib/
-    money.ts                  RON în bani, formatare „2.490 lei”
-    checkout.ts               formularul (PF/PJ, CUI, adrese, metodă de plată), validare comună client + server
-    orders/                   rezolvarea liniilor pe server, referința comenzii, notificarea
-    payments/                 interfața PaymentProvider + implementarea Stripe
-    seo.tsx                   metadata, JSON-LD (Organization, Product, BreadcrumbList)
-  assets/img/                 imaginile optimizate (generate de scripts/prepare-assets.py)
-tests/                        vitest: bani, coș, validare, comenzi, IBAN
+  config/        prices.ts (SINGURUL loc cu prețuri), site.ts (contact, termeni comerciali)
+  content/       catalog (produse, variante, galerii), conținutul paginilor de produs, texte legale
+  components/    cart (store, confirmare compactă, buton, preț), product, home, site (header, footer)
+  lib/           money (RON), checkout (formular + validare comună), orders/resolve (prețuri pe server), analytics
+  server/        doar pe server:
+    config.ts    variabile de mediu, validate; ce metode de plată sunt active
+    db/          PostgreSQL / PGlite + migrații
+    orders/      comanda canonică: model, mașina de stări, numere BT-AAAA-NNNNNN, operații idempotente
+    jobs/        outbox: sincronizări cu reîncercare (CRM, factură, email)
+    integrations/stripe, fgo, ghl, email (șabloane + trimitere)
+  app/
+    cart/, checkout/, comanda/[token]/     coș, checkout, pagina comenzii
+    admin/                                 operațiuni (Basic Auth)
+    api/checkout, api/webhooks/stripe, api/jobs/run, api/health
+tests/           vitest
 ```
 
-Produsele au slug-uri noi (`/products/calm`, `/products/focus`, `/products/amber`). Adresele vechi (`/products/balancewave`, `/brainlink`, `/glasses`) redirecționează permanent (301/308, `next.config.ts`). Restul URL-urilor sunt cele de pe site-ul actual.
+Arhitectura, integrările și pașii de lansare: **docs/PRODUCTION-LAUNCH.md**.
 
 ## Cum adaugi sau modifici un produs
 
@@ -60,23 +54,16 @@ la încărcare (fotografia din hero), totul în CSS. Header-ul are două stări,
 ## Regula de bază: poveste liberă, cumpărare convențională
 
 Scenele pot fi editoriale. Tot ce ține de cumpărare arată și se comportă la fel peste tot:
-`components/scenes/SceneBuy.tsx` (scop, nume, o propoziție, preț, „Adaugă în coș”, „Vezi produsul”),
+`components/home/SceneBuy.tsx` (scop, nume, o propoziție, preț, „Adaugă în coș”, „Vezi produsul”),
 zona de cumpărare de pe pagina de produs, confirmarea compactă, coșul și checkout-ul. Butonul roșu înseamnă mereu „cumpără”.
 După „Adaugă în coș” coșul nu se deschide singur: apare o confirmare mică, cu „Finalizează comanda” și „Continuă cumpărăturile”.
 
-## Comenzi și plăți
+## Comenzi și plăți, pe scurt
 
-Browserul trimite doar id-ul produsului, id-ul variantei și cantitatea. Serverul (`lib/orders/resolve.ts`) citește numele și prețul din catalog, calculează totalul în lei și respinge orice produs necunoscut, fără preț sau cu cantitate invalidă.
-
-- **Card:** o sesiune Stripe Checkout în RON. `/checkout/success` confirmă doar ce confirmă Stripe (`payment_status = paid`) și abia atunci scoate produsele din coș. Datele de livrare și facturare (inclusiv firmă, CUI) sunt în `metadata`.
-- **Transfer bancar:** comanda pleacă la `ORDER_WEBHOOK_URL` cu statusul `awaiting_payment` și o referință `BT-XXXXXX`; clientul vede pe `/checkout/transfer` datele contului (citite pe server) și suma. Comanda nu e marcată niciodată ca plătită de site.
-- O metodă apare activă doar când e configurată complet; altfel e „în curând”. Fără nicio metodă, checkout-ul trimite clientul la email / telefon și nu colectează date degeaba.
-- Dublul click nu creează două comenzi: fiecare încercare are un id, iar referința și cheia de idempotență Stripe derivă din el și din conținutul comenzii.
-- Pentru alt procesator: o nouă implementare a interfeței din `lib/payments/types.ts`.
-
-Ce mai trebuie înainte de lansare: docs/OPEN-POINTS.md.
+Browserul trimite id-uri, cantități și formularul. Serverul calculează prețurile, salvează comanda (`BT-2026-000123`) și, pentru card, creează un PaymentIntent Stripe exact pe total. Comanda devine plătită doar când Stripe confirmă (webhook semnat sau verificare pe server). Transferul bancar devine plătit doar când cineva confirmă extrasul în `/admin`. Factura (FGO), CRM-ul (GoHighLevel) și emailurile pleacă din outbox, o singură dată, cu reîncercări. Detalii: docs/PRODUCTION-LAUNCH.md.
 
 ## Documente
 
-- `docs/OPEN-POINTS.md`: ce lipsește din materiale și trebuie decis de client înainte de lansare.
+- `docs/PRODUCTION-LAUNCH.md`: runbook de lansare (conturi, chei, Stripe, FGO, GoHighLevel, email, DNS, teste, go-live).
+- `docs/OPEN-POINTS.md`: doar ce trebuie să furnizeze sau să decidă clientul.
 - `docs/CONTENT-DECISIONS.md`: ce s-a păstrat, ce s-a schimbat și ce s-a scos din materialele primite, și de ce.

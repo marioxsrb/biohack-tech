@@ -54,15 +54,3 @@ export function resolveOrderLines(raw: unknown): ResolvedOrder {
   const lines = [...byKey.values()]
   return { ok: true, lines, total: orderTotal(lines.map((l) => ({ unit: l.unitAmount, quantity: l.quantity }))) }
 }
-
-/**
- * A short, readable order reference (BT-7K2Q9M) derived from the attempt id and the order
- * contents: the same submission twice gives the same reference, so duplicates are obvious.
- */
-export async function orderReference(seed: string): Promise<string> {
-  const bytes = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(seed)))
-  const alphabet = '23456789ABCDEFGHJKMNPQRSTUVWXYZ' // no 0/O, 1/I/L
-  let out = ''
-  for (let i = 0; i < 6; i++) out += alphabet[bytes[i] % alphabet.length]
-  return `BT-${out}`
-}

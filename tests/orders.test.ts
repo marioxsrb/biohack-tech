@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { TEST_PRICES } from './fixtures'
 
 vi.mock('@/config/prices', () => ({ PRICES_RON: TEST_PRICES }))
-const { resolveOrderLines, orderReference } = await import('@/lib/orders/resolve')
+const { resolveOrderLines } = await import('@/lib/orders/resolve')
 
 describe('resolveOrderLines (server side)', () => {
   it('prices lines from the catalog and ignores anything else the browser sends', () => {
@@ -42,14 +42,5 @@ describe('resolveOrderLines (server side)', () => {
     [Array.from({ length: 21 }, () => ({ productId: 'brainlink-pro', quantity: 1 }))],
   ])('rejects an unknown, unpriced or out-of-range line (%#)', (lines) => {
     expect(resolveOrderLines(lines)).toEqual({ ok: false, reason: 'BAD_LINE' })
-  })
-})
-
-describe('orderReference', () => {
-  it('is short, readable and stable for the same submission', async () => {
-    const a = await orderReference('attempt-1|lines|form')
-    expect(a).toMatch(/^BT-[2-9A-HJKMNP-Z]{6}$/)
-    expect(await orderReference('attempt-1|lines|form')).toBe(a)
-    expect(await orderReference('attempt-2|lines|form')).not.toBe(a)
   })
 })

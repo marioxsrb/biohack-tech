@@ -1,10 +1,8 @@
 import type { Metadata } from 'next'
+import { BrandIdea } from '@/components/home/BrandIdea'
 import { CalmFeature } from '@/components/home/CalmFeature'
 import { Discover } from '@/components/home/Discover'
-import { FocusFeature } from '@/components/home/FocusFeature'
 import { Hero } from '@/components/home/Hero'
-import { GlassesScene } from '@/components/scenes/GlassesScene'
-import { Lineup } from '@/components/site/Lineup'
 import { site } from '@/config/site'
 import { pageMetadata } from '@/lib/seo'
 import og from '@/assets/img/balance-wave/lifestyle-canapea.webp'
@@ -27,9 +25,7 @@ export default function Home() {
       <Hero />
       <Discover />
       <CalmFeature />
-      <FocusFeature />
-      <GlassesScene />
-      <Lineup />
+      <BrandIdea />
     </>
   )
 }

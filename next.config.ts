@@ -3,6 +3,9 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  turbopack: { root: process.cwd() },
+  // Database drivers load native/wasm code at runtime; keep them out of the server bundle.
+  serverExternalPackages: ['pg', '@electric-sql/pglite'],
   images: {
     formats: ['image/avif', 'image/webp'],
     qualities: [75, 85],

@@ -1,9 +1,11 @@
 # Decizii de conținut
 
-## Nume și prețuri (26 septembrie 2026, versiunea finală)
+## Nume și prețuri (26 septembrie 2026)
+
+- **Pagina principală** nu mai explică produsele (secțiunile cu instrucțiuni și imagini mici au fost scoase). Are: fotografia, cele trei produse, un moment NEUROS Calm, ideea de brand cu trei fotografii din viața reală. Explicațiile stau pe paginile de produs.
 
 - **Numele.** Produsele au primit nume sub marca NEUROS, care apare deja pe dispozitivul de gât și în aplicația Neuros Game: **NEUROS Calm** (fostul Balance Wave), **NEUROS Focus** (fostul BrainLink Pro) și **NEUROS Amber** (foștii Ochelari Biohack, după culoarea lentilelor). Biohack Tech rămâne numele magazinului. Denumirea hardware „BrainLink Pro” apare o singură dată, în specificațiile NEUROS Focus. Id-urile interne nu s-au schimbat, așa că un coș salvat rămâne valid; adresele vechi redirecționează permanent.
-- **Prețurile** sunt doar în lei, într-un singur fișier (`src/config/prices.ts`). Unde materialele dau doar euro, produsul arată „Preț în curând” până la un preț aprobat. Niciun curs de schimb.
+- **Prețurile** sunt doar în lei, într-un singur fișier (`src/config/prices.ts`). Aprobate pe 26.09.2026: NEUROS Calm 6.380 lei, NEUROS Amber 315 lei. NEUROS Focus: 2.490 lei, din materiale. Niciun curs de schimb.
 - **Galeriile** sunt ordonate intenționat: produsul, produsul în folosire, unghiuri, detalii. Fiecare ramă NEUROS Amber are galeria ei și, unde există, fotografia de lifestyle cu exact rama aceea.
 - **NEUROS Focus** e prezentat ca hardware plus tabletă (fotografia cu jocul pe tabletă), fără grafice de semnal EEG.
 

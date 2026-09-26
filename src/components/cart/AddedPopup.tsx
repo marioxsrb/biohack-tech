@@ -2,6 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { Arrow, Check, Close } from '@/components/ui/icons'
 import { formatLei } from '@/lib/money'
@@ -19,6 +20,14 @@ export function AddedPopup() {
   const line = confirmation ? lines.find((l) => l.key === confirmation.key) : undefined
   const [hold, setHold] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const pathname = usePathname()
+  const shownOn = useRef(pathname)
+
+  // Leaving the page (to the cart, checkout or anywhere else) closes the confirmation.
+  useEffect(() => {
+    if (confirmation && pathname !== shownOn.current) dismissConfirmation()
+    shownOn.current = pathname
+  }, [pathname, confirmation, dismissConfirmation])
 
   useEffect(() => {
     if (!confirmation || hold) return

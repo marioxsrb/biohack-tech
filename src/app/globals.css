@@ -411,12 +411,6 @@ textarea.field { resize: vertical; }
 }
 .group:hover .shade { transform: scaleX(0.85); opacity: 0.6; }
 
-/* Glasses: the chosen frame crossfades in from the side it came from. */
-.gl-frame { transition: transform 0.28s var(--ease-brand), opacity 0.22s var(--ease-brand); }
-.gl-frame[data-state='before'] { opacity: 0; transform: translateX(-6%); }
-.gl-frame[data-state='after'] { opacity: 0; transform: translateX(6%); }
-.gl-frame[data-state='on'] { opacity: 1; transform: none; }
-
 /* ---------- purchase feedback ---------- */
 .check-pop { animation: check-pop 0.28s var(--ease-brand) both; }
 @keyframes check-pop {

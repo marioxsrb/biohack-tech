@@ -84,7 +84,15 @@ export const legalPages: LegalPage[] = [
       },
       {
         heading: 'Plata',
-        body: ['Plata cu cardul este procesată de Stripe. Datele cardului nu ajung la noi. La plata prin transfer bancar, vedem doar informațiile din extrasul de cont: numele plătitorului, suma și detaliile plății.'],
+        body: [
+          'Plata cu cardul este procesată de Stripe. Datele cardului merg direct la Stripe; noi vedem doar rezultatul plății. La plata prin transfer bancar, vedem informațiile din extrasul de cont: numele plătitorului, suma și detaliile plății.',
+        ],
+      },
+      {
+        heading: 'Cine ne ajută să procesăm comanda',
+        body: [
+          'Folosim furnizori pentru plăți (Stripe), facturare (FGO), comunicarea cu clienții și emailurile despre comandă (GoHighLevel) și livrare (firma de curierat). Fiecare primește doar datele necesare pentru rolul lui.',
+        ],
       },
       {
         heading: 'Ce stocăm în browser',

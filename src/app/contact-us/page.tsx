@@ -14,7 +14,7 @@ export default function ContactPage() {
       <div className="wrap">
         <h1 className="max-w-[10em] text-[clamp(40px,5.4vw,78px)] leading-[0.98] tracking-[-0.045em]">Hai să vorbim.</h1>
         <p className="mt-6 max-w-[30em] text-[19px] leading-relaxed text-text">
-          Nu știi ce produs ți se potrivește, ai o întrebare despre comandă sau ai nevoie de ajutor după ce l-ai primit? Îți răspundem {terms.responseTime}.
+          Vrei o recomandare, ai o întrebare despre comandă sau ai nevoie de ajutor după ce ai primit produsul? Îți răspundem {terms.responseTime}.
         </p>
         <div className="mt-14 grid gap-10 border-t border-mist-2 pt-10 sm:grid-cols-2">
           <a href={`mailto:${site.email}`} className="group block">

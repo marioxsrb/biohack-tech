@@ -1,0 +1,94 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { TEST_PRICES } from '../fixtures'
+
+vi.mock('@/config/prices', () => ({ PRICES_RON: { ...TEST_PRICES, 'balance-wave': 638000 } }))
+
+const { freshDb, person, company, lines } = await import('./helpers')
+const { getConfig } = await import('@/server/config')
+const { fgoCounty, fgoHash, invoicePayload } = await import('@/server/integrations/fgo')
+const { contactPayload, stageFor, tagsFor } = await import('@/server/integrations/ghl')
+const { renderEmail } = await import('@/server/integrations/email/templates')
+const { placeOrder, confirmPayment } = await import('@/server/orders/service')
+
+beforeEach(async () => {
+  await freshDb()
+})
+
+describe('FGO mapping', () => {
+  it('computes the hash exactly like the FGO spec example', () => {
+    expect(fgoHash('2864518', '1234567890', 'Ionescu Popescu')).toBe('8C3A7726804C121C6933F7D68494B439463996E2')
+  })
+  it('strips diacritics from counties to match FGO nomenclature', () => {
+    expect(fgoCounty('București')).toBe('Bucuresti')
+    expect(fgoCounty('Bistrița-Năsăud')).toBe('Bistrita-Nasaud')
+    expect(fgoCounty('Timiș')).toBe('Timis')
+  })
+  it('invoices a person with VAT-inclusive line totals and the order number as external id', async () => {
+    const { order } = await placeOrder({ lines: lines([{ productId: 'balance-wave', quantity: 1 }, { productId: 'ochelari-biohack', variantId: 'patrat-maro', quantity: 2 }]), form: person, attemptId: 'a-fgo-1' })
+    const p = invoicePayload(getConfig().fgo!, order)
+    expect(p.IdExtern).toBe(order.orderNumber)
+    expect(p.VerificareDuplicat).toBe(true)
+    expect(p.Valuta).toBe('RON')
+    expect(p.Client).toMatchObject({ Denumire: 'Ana Popescu', Tip: 'PF', Tara: 'RO', Judet: 'Cluj', Localitate: 'Cluj-Napoca' })
+    expect(p.Client).not.toHaveProperty('CodUnic')
+    expect(p.Continut).toEqual([
+      { Denumire: 'NEUROS Calm', CodArticol: 'balance-wave', UM: 'BUC', NrProduse: 1, CotaTVA: 21, PretTotal: 6380 },
+      { Denumire: 'NEUROS Amber (Unisex pătrat · Maro)', CodArticol: 'ochelari-biohack/patrat-maro', UM: 'BUC', NrProduse: 2, CotaTVA: 21, PretTotal: 399 },
+    ])
+    expect(p.Hash).toBe(fgoHash('2864518', '1234567890', 'Ana Popescu'))
+  })
+  it('invoices a company on its name and CUI', async () => {
+    const { order } = await placeOrder({ lines: lines([{ productId: 'brainlink-pro', quantity: 1 }]), form: company, attemptId: 'a-fgo-2' })
+    const p = invoicePayload(getConfig().fgo!, order)
+    expect(p.Client).toMatchObject({ Denumire: 'Exemplu SRL', Tip: 'PJ', CodUnic: 'RO14399840', NrRegCom: 'J12/345/2020' })
+    expect(p.Hash).toBe(fgoHash('2864518', '1234567890', 'Exemplu SRL'))
+  })
+})
+
+describe('GoHighLevel mapping', () => {
+  it('maps order and payment state to exactly one pipeline stage', () => {
+    expect(stageFor({ status: 'pending', paymentStatus: 'awaiting_transfer' }).stage).toBe('awaitingTransfer')
+    expect(stageFor({ status: 'abandoned', paymentStatus: 'pending' })).toEqual({ stage: 'abandoned', status: 'abandoned' })
+    expect(stageFor({ status: 'confirmed', paymentStatus: 'paid' })).toEqual({ stage: 'paid', status: 'won' })
+    expect(stageFor({ status: 'shipped', paymentStatus: 'paid' }).stage).toBe('shipped')
+    expect(stageFor({ status: 'delivered', paymentStatus: 'paid' }).stage).toBe('delivered')
+    expect(stageFor({ status: 'cancelled', paymentStatus: 'awaiting_transfer' })).toEqual({ stage: 'cancelled', status: 'lost' })
+    expect(stageFor({ status: 'delivered', paymentStatus: 'refunded' }).stage).toBe('refunded')
+  })
+  it('tags only paying customers, per product', async () => {
+    const { order } = await placeOrder({ lines: lines([{ productId: 'brainlink-pro', quantity: 1 }, { productId: 'ochelari-biohack', variantId: 'cat-eye-bej', quantity: 1 }]), form: { ...person, paymentMethod: 'transfer' }, attemptId: 'a-ghl-1' })
+    expect(tagsFor(order)).toEqual([])
+    const paid = (await confirmPayment(order.id, 'admin')).order!
+    expect(tagsFor(paid)).toEqual(['client', 'cumparat-focus', 'cumparat-amber'])
+  })
+  it('builds the contact with last-order fields', async () => {
+    const { order } = await placeOrder({ lines: lines([{ productId: 'brainlink-pro', quantity: 2 }]), form: company, attemptId: 'a-ghl-2' })
+    const c = contactPayload(getConfig().ghl!, order, { orders: 3, valueMinor: 1234500 })
+    expect(c).toMatchObject({ locationId: 'loc1', firstName: 'Ana', lastName: 'Popescu', email: 'ana@exemplu.ro', companyName: 'Exemplu SRL', country: 'RO' })
+    const f = Object.fromEntries(c.customFields.map((x) => [x.key, x.fieldValue]))
+    expect(f['contact.bt_last_order_number']).toBe(order.orderNumber)
+    expect(f['contact.bt_last_order_value']).toBe('4980.00')
+    expect(f['contact.bt_last_order_products']).toBe('2 x NEUROS Focus')
+    expect(f['contact.bt_customer_type']).toBe('Persoană juridică')
+    expect(f['contact.bt_lifetime_value']).toBe('12345.00')
+  })
+})
+
+describe('transactional emails', () => {
+  it('render every template with real data and no placeholders or em dashes', async () => {
+    const { order } = await placeOrder({ lines: lines([{ productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 1 }]), form: { ...person, paymentMethod: 'transfer' }, attemptId: 'a-mail-1' })
+    const ctx = { siteUrl: 'https://test.biohack-tech.ro', bank: getConfig().bank }
+    for (const t of ['order_confirmed', 'transfer_instructions', 'payment_received', 'invoice_issued', 'order_shipped', 'order_cancelled', 'refund_issued'] as const) {
+      const m = renderEmail(t, { ...order, courier: 'Curier', trackingNumber: 'AWB1', fgoInvoiceSeries: 'BT', fgoInvoiceNumber: '7', fgoInvoiceLink: 'https://fgo/f.pdf' }, ctx)
+      expect(m.subject).toContain(order.orderNumber)
+      for (const s of [m.html, m.text]) {
+        expect(s).not.toMatch(/undefined|null|NaN|\{\{|—/)
+        expect(s).toContain(order.orderNumber)
+      }
+    }
+    const bank = renderEmail('transfer_instructions', order, ctx)
+    expect(bank.text).toContain('RO49 AAAA 1B31 0075 9384 0000')
+    expect(bank.text).toContain('199,50 lei')
+    expect(bank.html).toContain(`/comanda/${order.publicToken}`)
+  })
+})

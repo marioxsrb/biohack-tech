@@ -13,8 +13,8 @@ export const metadata: Metadata = pageMetadata({
 
 // From the source "Despre noi" page, rewritten short.
 const values = [
-  { title: 'Simplu de folosit', text: 'Dacă un produs e complicat, nu ajunge să fie folosit. Le alegem pe cele pe care le folosești câteva minute pe zi.' },
-  { title: 'Bazat pe cercetare', text: 'Fiecare produs pornește de la studii despre creier și corp. Îți spunem deschis ce știm și ce nu.' },
+  { title: 'Simplu de folosit', text: 'Un produs simplu ajunge să fie folosit zilnic. Alegem produse pe care le folosești câteva minute pe zi.' },
+  { title: 'Bazat pe cercetare', text: 'Fiecare produs pornește de la studii despre creier și corp. Îți spunem deschis ce știm și unde se opresc studiile.' },
   { title: 'Adaptat ție', text: 'Un specialist te ajută să începi și îți potrivește programul după ce vrei să obții.' },
 ]
 
@@ -34,7 +34,7 @@ export default function AboutPage() {
       <section className="py-[var(--sec)]">
         <div className="wrap grid grid-cols-1 gap-y-12 md:grid-cols-12 md:gap-x-6">
           <p className="text-[clamp(22px,2.2vw,30px)] leading-snug tracking-[-0.02em] text-ink md:col-span-6">
-            Biohack Tech aduce acasă idei din neuroștiință. Le transformăm în obiecte simple, pe care oricine le poate folosi ca să se simtă mai bine.
+            Biohack Tech aduce acasă idei din neuroștiință, în obiecte simple. Le folosești zilnic, câteva minute.
           </p>
           <ul className="space-y-10 md:col-span-5 md:col-start-8">
             {values.map((v) => (

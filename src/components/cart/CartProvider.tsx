@@ -19,9 +19,6 @@ export type ResolvedLine = {
 export type Confirmation = { key: string; quantity: number; at: number }
 
 type CartUI = {
-  isOpen: boolean
-  open: () => void
-  close: () => void
   confirmation: Confirmation | null
   dismissConfirmation: () => void
   /** Short message for the screen-reader live region. */
@@ -32,15 +29,9 @@ type CartUI = {
 const CartUIContext = createContext<CartUI | null>(null)
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [isOpen, setOpen] = useState(false)
   const [announcement, setAnnouncement] = useState('')
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
 
-  const open = useCallback(() => {
-    setConfirmation(null)
-    setOpen(true)
-  }, [])
-  const close = useCallback(() => setOpen(false), [])
   const dismissConfirmation = useCallback(() => setConfirmation(null), [])
 
   const add = useCallback((productId: ProductId, variantId?: string, quantity = 1) => {
@@ -54,8 +45,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const value = useMemo(
-    () => ({ isOpen, open, close, confirmation, dismissConfirmation, announcement, add }),
-    [isOpen, open, close, confirmation, dismissConfirmation, announcement, add],
+    () => ({ confirmation, dismissConfirmation, announcement, add }),
+    [confirmation, dismissConfirmation, announcement, add],
   )
 
   return (

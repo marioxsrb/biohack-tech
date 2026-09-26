@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { AddedPopup } from '@/components/cart/AddedPopup'
-import { CartDrawer } from '@/components/cart/CartDrawer'
 import { CartProvider } from '@/components/cart/CartProvider'
 import { Footer } from '@/components/site/Footer'
 import { Header } from '@/components/site/Header'
@@ -34,7 +33,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Header />
           <main id="main">{children}</main>
           <Footer />
-          <CartDrawer />
           <AddedPopup />
         </CartProvider>
         <JsonLd data={organizationJsonLd()} />

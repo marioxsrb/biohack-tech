@@ -11,16 +11,14 @@ export const COUNTIES = [
   'Vâlcea', 'Vrancea',
 ] as const
 
-/** sessionStorage keys: the unfinished form, and the last bank-transfer order (for its confirmation page). */
-export const DRAFT_KEY = 'biohack-checkout-draft'
-export const TRANSFER_KEY = 'biohack-transfer-order'
 
 export type BuyerType = 'pf' | 'pj'
 export type PaymentMethod = 'card' | 'transfer'
 
 /** Every text field of the form, flat, so the form can bind them uniformly. */
 export type OrderFields = {
-  name: string
+  firstName: string
+  lastName: string
   email: string
   phone: string
   /** Company (persoană juridică) only. */
@@ -42,6 +40,8 @@ export type OrderFields = {
 
 export type OrderForm = OrderFields & {
   buyerType: BuyerType
+  /** Optional, unticked by default: product news and usage tips by email. */
+  marketingConsent: boolean
   /** Deliver to the billing address. */
   sameAddress: boolean
   paymentMethod: PaymentMethod
@@ -58,12 +58,17 @@ export type CheckoutPayload = {
   attemptId: string
 }
 
+/** The unfinished checkout form, in sessionStorage only (gone when the tab closes). */
+export const DRAFT_KEY = 'biohack-checkout-draft'
+
 export type FieldName = keyof OrderFields | 'acceptedTerms' | 'paymentMethod'
 export type FieldErrors = Partial<Record<FieldName, string>>
 
 export const emptyOrder: OrderForm = {
   buyerType: 'pf',
-  name: '',
+  marketingConsent: false,
+  firstName: '',
+  lastName: '',
   email: '',
   phone: '',
   company: '',
@@ -83,7 +88,8 @@ export const emptyOrder: OrderForm = {
 }
 
 const LIMITS: Record<keyof OrderFields, number> = {
-  name: 120,
+  firstName: 60,
+  lastName: 60,
   email: 160,
   phone: 30,
   company: 160,
@@ -112,6 +118,7 @@ export function normalizeOrder(raw: unknown): OrderForm {
   out.buyerType = r.buyerType === 'pj' ? 'pj' : 'pf'
   out.sameAddress = r.sameAddress !== false
   out.paymentMethod = r.paymentMethod === 'transfer' ? 'transfer' : 'card'
+  out.marketingConsent = r.marketingConsent === true
   return out
 }
 
@@ -135,35 +142,34 @@ const isCounty = (c: string) => (COUNTIES as readonly string[]).includes(c)
 
 export function validateOrder(o: OrderForm, acceptedTerms: boolean, available?: Record<PaymentMethod, boolean>): FieldErrors {
   const e: FieldErrors = {}
-  if (o.name.split(' ').filter(Boolean).length < 2) e.name = 'Scrie numele și prenumele.'
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(o.email)) e.email = 'Adresa de email nu pare corectă. Exemplu: nume@exemplu.ro'
+  if (o.firstName.length < 1) e.firstName = 'Completează prenumele.'
+  if (o.lastName.length < 1) e.lastName = 'Completează numele.'
+  if (!o.email) e.email = 'Completează adresa de email.'
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(o.email)) e.email = 'Verifică adresa de email. Exemplu: nume@exemplu.ro'
   const digits = o.phone.replace(/\D/g, '')
-  if (digits.length < 9 || digits.length > 15) e.phone = 'Scrie un număr de telefon valid, ca să te poată suna curierul.'
+  if (!digits) e.phone = 'Completează numărul de telefon, pentru curier.'
+  else if (digits.length < 9 || digits.length > 15) e.phone = 'Verifică numărul de telefon. Exemplu: 0722 123 456'
 
   if (o.buyerType === 'pj') {
-    if (o.company.length < 2) e.company = 'Scrie denumirea firmei.'
-    if (!isValidCui(o.cui)) e.cui = 'Codul fiscal nu pare corect. Verifică cifrele (poate începe cu RO).'
+    if (o.company.length < 2) e.company = 'Completează denumirea firmei.'
+    if (!o.cui) e.cui = 'Completează codul fiscal (CUI).'
+    else if (!isValidCui(o.cui)) e.cui = 'Verifică codul fiscal. Poate începe cu RO, urmat de cifre.'
   }
 
   const office = o.buyerType === 'pj'
-  if (o.address.length < 5) e.address = office ? 'Scrie adresa sediului.' : 'Scrie strada și numărul.'
-  if (o.city.length < 2) e.city = 'Scrie localitatea.'
+  if (o.address.length < 5) e.address = office ? 'Completează adresa sediului: strada și numărul.' : 'Completează adresa: strada și numărul.'
+  if (o.city.length < 2) e.city = 'Completează localitatea.'
   if (!isCounty(o.county)) e.county = 'Alege județul.'
   if (!/^\d{6}$/.test(o.postalCode)) e.postalCode = 'Codul poștal are 6 cifre.'
 
   if (!o.sameAddress) {
-    if (o.shipAddress.length < 5) e.shipAddress = 'Scrie strada și numărul pentru livrare.'
-    if (o.shipCity.length < 2) e.shipCity = 'Scrie localitatea.'
+    if (o.shipAddress.length < 5) e.shipAddress = 'Completează adresa de livrare: strada și numărul.'
+    if (o.shipCity.length < 2) e.shipCity = 'Completează localitatea.'
     if (!isCounty(o.shipCounty)) e.shipCounty = 'Alege județul.'
     if (!/^\d{6}$/.test(o.shipPostalCode)) e.shipPostalCode = 'Codul poștal are 6 cifre.'
   }
 
   if (available && !available[o.paymentMethod]) e.paymentMethod = 'Această metodă de plată nu este disponibilă încă. Alege alta.'
-  if (!acceptedTerms) e.acceptedTerms = 'Ca să continui, bifează că accepți termenii.'
+  if (!acceptedTerms) e.acceptedTerms = 'Bifează acordul cu termenii ca să plasezi comanda.'
   return e
 }
-
-/** One-line addresses, for payment metadata and order notifications. */
-export const billingAddress = (o: OrderForm) => `${o.address}, ${o.city}, jud. ${o.county}, ${o.postalCode}`
-export const shippingAddress = (o: OrderForm) =>
-  o.sameAddress ? billingAddress(o) : `${o.shipAddress}, ${o.shipCity}, jud. ${o.shipCounty}, ${o.shipPostalCode}`

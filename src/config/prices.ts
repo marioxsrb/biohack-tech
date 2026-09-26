@@ -1,21 +1,20 @@
 /**
  * THE ONLY PLACE PRICES LIVE.
  *
- * Amounts are in bani (1 leu = 100 bani), VAT included, as integers so money is never
- * a floating-point number. The homepage, product pages, cart, checkout, the server-side
- * order total and structured data all read from here.
+ * Amounts are in bani (1 leu = 100 bani), VAT included, as integers so money is never a
+ * floating-point number. Homepage, product pages, cart, checkout, the server-side order
+ * total, Stripe, FGO invoice lines, GoHighLevel values and structured data all read from here.
  *
- * `null` means "no approved price in lei yet": the product is shown with "Preț în curând"
- * and cannot be added to the cart. No exchange rate is applied anywhere on purpose.
- * See docs/OPEN-POINTS.md.
+ * `null` would mean "no approved price in lei": the product shows "Preț în curând" and
+ * cannot be bought. No exchange rate is applied anywhere.
  */
 import type { ProductId } from '@/content/catalog'
 
 export const PRICES_RON: Record<ProductId, number | null> = {
-  // Source material: 1.210 EUR. Approved price in lei still to be confirmed.
-  'balance-wave': null,
-  // Source material: 2.490 RON.
+  // NEUROS Calm. Approved 26.09.2026: 6.380 lei.
+  'balance-wave': 638000,
+  // NEUROS Focus. Source material: 2.490 RON (the only price given in lei in the source).
   'brainlink-pro': 249000,
-  // Source material: 60 EUR. Approved price in lei still to be confirmed.
-  'ochelari-biohack': null,
+  // NEUROS Amber, all four frames. Approved 26.09.2026: 315 lei.
+  'ochelari-biohack': 31500,
 }

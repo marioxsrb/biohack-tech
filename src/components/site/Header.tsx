@@ -16,7 +16,7 @@ import { Wordmark } from './Wordmark'
  * translucent bar on phones) and everywhere else (solid light bar). One IntersectionObserver.
  */
 export function Header() {
-  const { count, open: openCart } = useCart()
+  const { count } = useCart()
   const pathname = usePathname()
   const [overHero, setOverHero] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
@@ -99,10 +99,9 @@ export function Header() {
           </ul>
 
           <div className="ml-auto flex items-center gap-1 md:ml-0">
-            <button
-              type="button"
-              onClick={openCart}
-              className={`relative flex h-11 items-center gap-2 rounded-full px-3 transition-colors ${dark ? 'hover:bg-white/10' : 'hover:bg-ink/5'}`}
+            <Link
+              href="/cart"
+              className={`relative -mr-3 flex h-11 items-center gap-2 rounded-full px-3 transition-colors max-md:mr-0 ${dark ? 'hover:bg-white/10' : 'hover:bg-ink/5'}`}
               aria-label={count ? `Coș, ${count} ${count === 1 ? 'produs' : 'produse'}` : 'Coș, gol'}
             >
               <Bag className="h-[22px] w-[22px]" />
@@ -112,7 +111,7 @@ export function Header() {
                   {count}
                 </span>
               )}
-            </button>
+            </Link>
             <button
               type="button"
               onClick={() => sheetRef.current?.showModal()}

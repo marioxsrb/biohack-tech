@@ -3,7 +3,8 @@ import { emptyOrder, isValidCui, normalizeOrder, validateOrder, type OrderForm }
 
 const person: OrderForm = {
   ...emptyOrder,
-  name: 'Ana Popescu',
+  firstName: 'Ana',
+  lastName: 'Popescu',
   email: 'ana@exemplu.ro',
   phone: '0722 123 456',
   address: 'Str. Lalelelor 10',
@@ -31,9 +32,9 @@ describe('validateOrder', () => {
   it('passes a complete individual order', () => {
     expect(validateOrder(person, true, both)).toEqual({})
   })
-  it('requires terms, a full name, a real email, a phone and a 6-digit postal code', () => {
-    const e = validateOrder({ ...person, name: 'Ana', email: 'ana@', phone: '123', postalCode: '4000' }, false, both)
-    expect(Object.keys(e).sort()).toEqual(['acceptedTerms', 'email', 'name', 'phone', 'postalCode'])
+  it('requires terms, a first name, a real email, a phone and a 6-digit postal code', () => {
+    const e = validateOrder({ ...person, firstName: '', email: 'ana@', phone: '123', postalCode: '4000' }, false, both)
+    expect(Object.keys(e).sort()).toEqual(['acceptedTerms', 'email', 'firstName', 'phone', 'postalCode'])
   })
   it('requires company name and a valid CUI for companies, Reg. Com. stays optional', () => {
     expect(Object.keys(validateOrder({ ...person, buyerType: 'pj' }, true, both)).sort()).toEqual(['company', 'cui'])
@@ -54,8 +55,9 @@ describe('validateOrder', () => {
 
 describe('normalizeOrder', () => {
   it('trims, bounds and coerces untrusted input', () => {
-    const o = normalizeOrder({ name: '  Ana   Popescu ', email: 'ANA@EXEMPLU.RO', buyerType: 'hacker', paymentMethod: 'crypto', cui: 'ro 123', notes: 'x'.repeat(1000), extra: 1 })
-    expect(o.name).toBe('Ana Popescu')
+    const o = normalizeOrder({ firstName: '  Ana   Maria ', email: 'ANA@EXEMPLU.RO', buyerType: 'hacker', paymentMethod: 'crypto', cui: 'ro 123', notes: 'x'.repeat(1000), extra: 1 })
+    expect(o.firstName).toBe('Ana Maria')
+    expect(o.marketingConsent).toBe(false)
     expect(o.email).toBe('ana@exemplu.ro')
     expect(o.buyerType).toBe('pf')
     expect(o.paymentMethod).toBe('card')

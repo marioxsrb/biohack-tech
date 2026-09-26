@@ -1,23 +1,46 @@
-# De decis înainte de lansare
+# Open points: what only you can provide
 
-Doar informații de business care lipsesc din materialele primite (ZIP, 25 septembrie 2026). Nimic de aici nu a fost inventat pe site: unde lipsește o valoare, site-ul spune deschis că urmează sau oprește funcția respectivă.
+Short on purpose. The full runbook is `docs/PRODUCTION-LAUNCH.md`.
 
-## Blocante
+### NEUROS Focus price
+- **Needed:** confirmation of 2.490 lei (taken from the source material, the only price given in lei there).
+- **Used in:** `src/config/prices.ts` → site, cart, checkout, Stripe, FGO, GHL.
+- **If missing:** the product sells at 2.490 lei.
 
-1. **Prețurile în lei pentru NEUROS Calm și NEUROS Amber.** Materialele au doar 1.210 EUR (Calm) și 60 EUR (Amber). Nu am aplicat niciun curs de schimb. Până la un preț aprobat în lei, cele două produse afișează „Preț în curând” și „Întreabă de preț” și nu pot fi puse în coș. Prețul se completează într-un singur loc: `src/config/prices.ts` (în bani, TVA inclus: 1.990 lei = `199000`). NEUROS Focus are 2.490 lei, din materiale.
-2. **Plata cu cardul: cheia Stripe.** `STRIPE_SECRET_KEY` (sk_live_… / sk_test_…). Fără ea, opțiunea „Card bancar” apare ca „în curând”. Testat: toate căile de eroare (inclusiv o cheie invalidă). Netestat: o plată reală în modul test Stripe, care are nevoie de cheie.
-3. **Transfer bancar: datele contului.** `BANK_BENEFICIARY`, `BANK_NAME`, `BANK_IBAN` și, opțional, `BANK_SWIFT`. IBAN-ul este verificat automat (cifra de control); un IBAN greșit oprește transferul în loc să fie afișat clienților.
-4. **Unde ajung comenzile.** Comenzile prin transfer sunt trimise ca JSON la `ORDER_WEBHOOK_URL` (Make, Zapier, n8n sau sistemul vostru), cu `status: awaiting_payment`, referința `BT-XXXXXX` în header-ul `Idempotency-Key` și, opțional, `Authorization: Bearer ORDER_WEBHOOK_SECRET`. Fără webhook, transferul bancar rămâne oprit: o comandă nu are voie să se piardă. Tot acolo trebuie hotărât cine trimite clientului emailul de confirmare și cine marchează comanda plătită după extras. Site-ul nu marchează niciodată o comandă prin transfer ca plătită.
-5. **Plățile cu cardul, după plată.** Comanda există în Stripe (cu datele de livrare și facturare în `metadata`). Pentru notificarea echipei și factură e nevoie de un webhook Stripe `checkout.session.completed` spre același sistem.
-6. **Datele firmei vânzătoare.** Denumirea legală, CUI, nr. Registrul Comerțului și sediul nu apar în materiale. Sunt obligatorii în footer, în termeni și pe factură.
-7. **Textele legale complete.** ZIP-ul are doar titlurile secțiunilor. Paginile publicate conțin doar faptele confirmate (livrare 1-3 + 2-5 zile, AWB, retur 14 zile, garanție 2 ani, card sau transfer) și spun deschis că textul complet urmează.
+### Bank details
+- **Needed:** beneficiary, IBAN (RON), bank name, SWIFT (optional).
+- **Used in:** checkout, order page, transfer email (`BANK_*`).
+- **If missing:** “Transfer bancar” shows “În curând”.
 
-## De confirmat
+### Stripe live account
+- **Needed:** activated account, live keys, webhook secret (§8 of the runbook).
+- **Used in:** card payments.
+- **If missing:** “Card bancar” shows “În curând”.
 
-8. **Termenul de plată pentru transfer.** Cât timp rezervăm o comandă neplătită? Nu apare în materiale, așa că pagina de confirmare nu promite niciun termen.
-9. **Certificările CE și FCC** pentru NEUROS Focus apar în specificații. Păstrate, dar trebuie documentele înainte de publicare.
-10. **Numele NEUROS Calm / Focus / Amber.** Propunere (vezi `docs/CONTENT-DECISIONS.md`). Dacă se aleg alte nume, se schimbă în `src/content/catalog.ts`; slug-urile vechi (`/products/balancewave`, `/brainlink`, `/glasses`) redirecționează deja permanent.
-11. **Ce conține cutia** fiecărui produs. Nu apare în materiale, așa că secțiunea lipsește. O fotografie arată casca lângă o geantă de transport, dar nu scrie că e inclusă.
-12. **Tableta pentru NEUROS Focus.** Aplicația Neuros Game rulează pe tabletă. Nu reiese dacă tableta e inclusă; site-ul spune „ai nevoie de o tabletă”.
-13. **Adresa de email** este `contact@neuros.ro` (din materiale). Dacă Biohack Tech are adresă proprie, se schimbă în `src/config/site.ts`.
-14. **Logo.** Nu există fișier de logo în ZIP; header-ul folosește wordmark-ul text „BIOHACK TECH”.
+### Database
+- **Needed:** a PostgreSQL database (Railway recommended) → `DATABASE_URL`.
+- **Used in:** every order.
+- **If missing:** checkout offers email/phone ordering only.
+
+### FGO
+- **Needed:** PRO/PREMIUM subscription, API user private key, invoice series, VAT rate (accountant), e-Factura setting.
+- **Used in:** automatic invoices after payment.
+- **If missing:** paid orders show “Factură: Manual” in /admin; invoice by hand.
+
+### GoHighLevel
+- **Needed:** Private Integration token, location id, pipeline with 8 stages, 11 custom fields, verified sending domain + `EMAIL_FROM`.
+- **Used in:** CRM, pipeline, **all customer emails**.
+- **If missing:** no confirmation emails (launch blocker).
+
+### Company identification and legal texts
+- **Needed:** legal name, CUI, Reg. Com., registered office, VAT status, return address; full terms, privacy, cookies, shipping, returns + withdrawal form, reviewed by your lawyer.
+- **Used in:** footer, legal pages, invoices.
+- **If missing:** not legally ready to sell.
+
+### Decisions
+- **Courier** and whether shipping stays free for all orders (today: free, from the current site).
+- **Unpaid transfer orders:** after how many days to cancel (today: reminder at 2 days, task at 5 days).
+- **Marketing consent:** may checkout recovery and usage emails go to customers who did not tick the box?
+- **Analytics:** GA4 / GTM / Meta ids, and a consent banner.
+- **Support contact:** keep `contact@neuros.ro` and `+40 757 890 707` (from the source) or use Biohack Tech’s own.
+- **What’s in the box** for each product.

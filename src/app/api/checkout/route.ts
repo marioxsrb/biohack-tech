@@ -1,24 +1,34 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { getBankDetails } from '@/config/bank'
 import { site } from '@/config/site'
 import { normalizeOrder, validateOrder } from '@/lib/checkout'
-import { CURRENCY } from '@/lib/money'
-import { notifyOrder } from '@/lib/orders/notify'
-import { orderReference, resolveOrderLines } from '@/lib/orders/resolve'
-import { availablePaymentMethods, getPaymentProvider, PaymentError } from '@/lib/payments'
+import { resolveOrderLines } from '@/lib/orders/resolve'
+import { getConfig, paymentMethods } from '@/server/config'
+import { StripeError, stripe } from '@/server/integrations/stripe'
+import { kickJobs } from '@/server/jobs/runner'
+import { errText, log } from '@/server/log'
+import { attachPaymentIntent, placeOrder } from '@/server/orders/service'
+import { clientIp, rateLimit } from '@/server/rate-limit'
 
-const fail = (status: number, code: string, message: string, extra?: object) => NextResponse.json({ error: code, message, ...extra }, { status })
+export const runtime = 'nodejs'
 
-const contactLine = `Scrie-ne la ${site.email} sau sună la ${site.phone} și te ajutăm să comanzi.`
+type ErrorCode = 'BAD_REQUEST' | 'RATE_LIMIT' | 'EMPTY' | 'BAD_LINE' | 'INVALID' | 'UNAVAILABLE' | 'PAYMENT_PROVIDER' | 'SERVER'
+
+/** One error shape: a code for the client, a human sentence for the customer. */
+const fail = (status: number, error: ErrorCode, message: string, extra?: object) => NextResponse.json({ error, message, ...extra }, { status })
+const contact = `Scrie-ne la ${site.email} sau sună la ${site.phone}.`
 
 /**
- * Places an order. The browser sends only product ids, variant ids and quantities, plus the
- * customer's details; prices, names and the total are resolved here from the catalog.
- *   card     → a Stripe Checkout session; the order is paid only when Stripe says so.
- *   transfer → the order is sent to the shop as "awaiting payment" and the customer gets
- *              the bank details. It is never marked paid here.
+ * Places an order. The browser sends product ids, variant ids, quantities and the form.
+ * Prices, names and totals are resolved here, the order is written to our database, and:
+ *   card     → a Stripe PaymentIntent for exactly the order total; the browser confirms it
+ *              with Stripe, and the order becomes paid only when Stripe says so;
+ *   transfer → the order waits for payment; the bank details are on the order page.
+ * The same attempt submitted twice returns the same order.
  */
 export async function POST(req: NextRequest) {
+  if (!rateLimit(`checkout:${clientIp(req.headers)}`, 12, 10 * 60_000)) {
+    return fail(429, 'RATE_LIMIT', 'Prea multe încercări într-un timp scurt. Încearcă din nou în câteva minute.')
+  }
   let body: Record<string, unknown>
   try {
     body = await req.json()
@@ -33,58 +43,40 @@ export async function POST(req: NextRequest) {
       : fail(409, 'BAD_LINE', 'Un produs din coș s-a schimbat între timp. Reîncarcă pagina și verifică din nou coșul.')
   }
 
-  const available = availablePaymentMethods()
-  const order = normalizeOrder(body.order)
-  const errors = validateOrder(order, body.acceptedTerms === true, available)
-  if (Object.keys(errors).length) {
-    if (errors.paymentMethod && !available.card && !available.transfer) {
-      return fail(503, 'PAYMENTS_DISABLED', `Comenzile online nu sunt active încă, așa că nu am înregistrat nimic. ${contactLine}`)
-    }
-    return fail(422, 'INVALID', 'Verifică datele marcate în formular.', { fields: errors })
-  }
+  const available = paymentMethods()
+  if (!available.card && !available.transfer) return fail(503, 'UNAVAILABLE', `Comenzile online nu sunt active încă. ${contact}`)
+
+  const form = normalizeOrder(body.order)
+  const errors = validateOrder(form, body.acceptedTerms === true, available)
+  if (Object.keys(errors).length) return fail(422, 'INVALID', 'Verifică câmpurile marcate în formular.', { fields: errors })
 
   const attemptId = typeof body.attemptId === 'string' && /^[\w-]{8,64}$/.test(body.attemptId) ? body.attemptId : crypto.randomUUID()
-  const fingerprint = JSON.stringify({ attemptId, lines: resolved.lines.map((l) => [l.key, l.quantity]), order })
-  const reference = await orderReference(fingerprint)
 
-  if (order.paymentMethod === 'transfer') {
-    const bank = getBankDetails()!
-    const delivered = await notifyOrder({
-      reference,
-      createdAt: new Date().toISOString(),
-      status: 'awaiting_payment',
-      paymentMethod: 'transfer',
-      currency: CURRENCY,
-      total: resolved.total,
-      lines: resolved.lines.map((l) => ({ productId: l.productId, variantId: l.variantId, name: l.name, description: l.description, quantity: l.quantity, unitAmount: l.unitAmount })),
-      customer: order,
-    })
-    if (!delivered) {
-      return fail(502, 'ORDER_NOT_SAVED', `Nu am putut înregistra comanda. Nu ai de plătit nimic. Încearcă din nou în câteva minute sau ${contactLine.charAt(0).toLowerCase()}${contactLine.slice(1)}`)
-    }
-    return NextResponse.json({
-      method: 'transfer',
-      reference,
-      total: resolved.total,
-      email: order.email,
-      lineKeys: resolved.lines.map((l) => l.key),
-      bank,
-    })
+  let order
+  try {
+    ;({ order } = await placeOrder({ lines: resolved.lines, form, attemptId }))
+  } catch (e) {
+    log.error('checkout.order_failed', { error: errText(e) })
+    return fail(500, 'SERVER', `Nu am putut înregistra comanda. Nu ți s-a retras nimic. Încearcă din nou sau ${contact.charAt(0).toLowerCase()}${contact.slice(1)}`)
+  }
+  kickJobs()
+
+  if (order.paymentMethod === 'bank_transfer') {
+    return NextResponse.json({ method: 'transfer', orderNumber: order.orderNumber, token: order.publicToken })
   }
 
-  const provider = getPaymentProvider()!
-  const origin = process.env.NEXT_PUBLIC_SITE_URL ? site.url : req.nextUrl.origin
+  if (order.paymentStatus === 'paid') return NextResponse.json({ method: 'card', paid: true, orderNumber: order.orderNumber, token: order.publicToken })
+
+  const c = getConfig()
   try {
-    const { redirectUrl } = await provider.createCheckout({
-      lines: resolved.lines,
-      order,
-      successUrl: `${origin}/checkout/success?ref={CHECKOUT_SESSION_ID}`,
-      cancelUrl: `${origin}/checkout?anulat=1`,
-      idempotencyKey: `checkout-${attemptId}-${reference}`,
-    })
-    return NextResponse.json({ method: 'card', url: redirectUrl })
+    const pi = order.stripePaymentIntentId
+      ? await stripe.retrievePaymentIntent(c.stripe!, order.stripePaymentIntentId)
+      : await stripe.createPaymentIntent(c.stripe!, order)
+    if (!order.stripePaymentIntentId) await attachPaymentIntent(order.id, pi.id)
+    if (pi.amount !== order.totalMinor) throw new Error('payment intent amount differs from order total')
+    return NextResponse.json({ method: 'card', orderNumber: order.orderNumber, token: order.publicToken, clientSecret: pi.client_secret })
   } catch (e) {
-    console.error('[checkout] provider error', e instanceof PaymentError ? e.message : e)
-    return fail(502, 'PROVIDER', 'Nu am putut deschide pagina de plată. Nu ți s-a retras nimic. Încearcă din nou în câteva minute.')
+    log.error('checkout.stripe_failed', { orderId: order.id, orderNumber: order.orderNumber, error: errText(e), status: e instanceof StripeError ? e.status : undefined })
+    return fail(502, 'PAYMENT_PROVIDER', 'Nu am putut porni plata cu cardul. Nu ți s-a retras nimic. Încearcă din nou în câteva minute.')
   }
 }

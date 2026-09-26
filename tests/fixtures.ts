@@ -3,7 +3,7 @@
  * They are fixtures, never shown to customers; the real values live in src/config/prices.ts.
  */
 export const TEST_PRICES = {
-  'balance-wave': null,
+  'balance-wave': null as number | null,
   'brainlink-pro': 249000,
   'ochelari-biohack': 19950,
 }
