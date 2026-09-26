@@ -7,7 +7,7 @@ Magazin online pentru Balance Wave, BrainLink Pro și Ochelari Biohack. Face par
 ```bash
 npm install
 cp .env.example .env.local   # completează STRIPE_SECRET_KEY pentru plăți
-npm run dev                  # http://localhost:3004
+npm run dev                  # http://localhost:3000
 ```
 
 Alte comenzi: `npm run build`, `npm start`, `npm run lint`, `npm run typecheck`.
