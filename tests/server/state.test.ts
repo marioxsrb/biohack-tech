@@ -3,12 +3,19 @@ import { formatOrderNumber, ORDER_NUMBER_RE } from '@/server/orders/number'
 import { canMoveOrder, canMovePayment, isPaid } from '@/server/orders/state'
 
 describe('order numbers', () => {
-  it('are BT-year-sequence, zero padded, in Romanian time', () => {
-    expect(formatOrderNumber(123, new Date('2026-09-27T10:00:00Z'))).toBe('BT-2026-000123')
-    // 31 Dec 23:30 UTC is already 1 January in Bucharest.
-    expect(formatOrderNumber(1, new Date('2026-12-31T23:30:00Z'))).toBe('BT-2027-000001')
-    expect(formatOrderNumber(1234567, new Date('2026-06-01T00:00:00Z'))).toBe('BT-2026-1234567')
-    expect(ORDER_NUMBER_RE.test('BT-2026-000123')).toBe(true)
+  it('are BHT-day-sequence, zero padded to 4, in Romanian time', () => {
+    expect(formatOrderNumber(7, new Date('2026-09-27T10:00:00Z'))).toBe('BHT-20260927-0007')
+    // 31 Dec 23:30 UTC is already 1 January in Bucharest; 22:30 UTC on 28 Sep is 29 Sep (summer time).
+    expect(formatOrderNumber(1, new Date('2026-12-31T23:30:00Z'))).toBe('BHT-20270101-0001')
+    expect(formatOrderNumber(1, new Date('2026-09-28T22:30:00Z'))).toBe('BHT-20260929-0001')
+    expect(formatOrderNumber(12345, new Date('2026-06-01T10:00:00Z'))).toBe('BHT-20260601-12345')
+    expect(ORDER_NUMBER_RE.test('BHT-20260927-0007')).toBe(true)
+    expect(ORDER_NUMBER_RE.test('BT-2026-000123')).toBe(false)
+  })
+  it('use only characters safe for Stripe, FGO, GHL and email subjects, and sort by day', () => {
+    expect(formatOrderNumber(9999, new Date('2026-09-27T10:00:00Z'))).toMatch(/^[A-Z0-9-]+$/)
+    const list = [formatOrderNumber(2, new Date('2026-10-01T10:00:00Z')), formatOrderNumber(9, new Date('2026-09-30T10:00:00Z')), formatOrderNumber(1, new Date('2026-10-01T10:00:00Z'))]
+    expect([...list].sort()).toEqual(['BHT-20260930-0009', 'BHT-20261001-0001', 'BHT-20261001-0002'])
   })
   it('refuse invalid sequences', () => {
     expect(() => formatOrderNumber(0, new Date())).toThrow()

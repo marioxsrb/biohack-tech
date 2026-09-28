@@ -85,6 +85,7 @@ const PAYMENT_STATUS_RO: Record<Order['paymentStatus'], string> = {
   pending: 'în curs',
   awaiting_transfer: 'așteaptă transferul',
   failed: 'eșuată',
+  cancelled: 'anulată',
   paid: 'plătită',
   partially_refunded: 'rambursată parțial',
   refunded: 'rambursată',

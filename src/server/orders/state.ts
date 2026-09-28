@@ -15,12 +15,13 @@ const ORDER_FLOW: Record<OrderStatus, OrderStatus[]> = {
 }
 
 const PAYMENT_FLOW: Record<PaymentStatus, PaymentStatus[]> = {
-  pending: ['paid', 'failed'],
-  failed: ['paid', 'pending'],
+  pending: ['paid', 'failed', 'cancelled'],
+  failed: ['paid', 'pending', 'cancelled'],
   awaiting_transfer: ['paid'],
   paid: ['partially_refunded', 'refunded'],
   partially_refunded: ['partially_refunded', 'refunded'],
   refunded: [],
+  cancelled: [],
 }
 
 export const canMoveOrder = (from: OrderStatus, to: OrderStatus) => ORDER_FLOW[from].includes(to)

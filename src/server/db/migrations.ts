@@ -110,4 +110,17 @@ create table if not exists webhook_events (
 );
 `,
   },
+  {
+    // Order numbers BHT-YYYYMMDD-XXXX: one counter per calendar day (Romanian time).
+    // Webhook events also keep what processing decided, for support and audits.
+    id: '002_day_order_numbers_webhook_outcome',
+    sql: `
+create table if not exists order_day_counters (
+  day date primary key,
+  last_value integer not null check (last_value > 0)
+);
+
+alter table webhook_events add column if not exists outcome text;
+`,
+  },
 ]

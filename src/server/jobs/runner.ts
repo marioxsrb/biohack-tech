@@ -14,6 +14,7 @@ import { renderEmail, type EmailTemplate } from '@/server/integrations/email/tem
 import { deliver } from '@/server/integrations/email/transport'
 import { errText, log } from '@/server/log'
 import { orders } from '@/server/orders/repository'
+import { reconcileCardPayment } from '@/server/orders/reconcile'
 import { markAbandonedIfUnpaid } from '@/server/orders/service'
 import { jobs, type Job } from './outbox'
 
@@ -90,7 +91,13 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     await orders.event(db, o.id, 'invoice.storno', 'system', s)
   },
 
-  'order.abandon_check': async (j) => void (await markAbandonedIfUnpaid(j.orderId!)),
+  'stripe.reconcile': async (j) => reconcileCardPayment(j.orderId!),
+  // Ask Stripe first: a payment whose webhook was lost must never be marked abandoned.
+  'order.abandon_check': async (j) => {
+    const reconciled = await reconcileCardPayment(j.orderId!)
+    const r = await markAbandonedIfUnpaid(j.orderId!)
+    return `${reconciled}; ${r.changed ? r.order?.status : (r.reason ?? 'unchanged')}`
+  },
 }
 
 let running: Promise<number> | null = null

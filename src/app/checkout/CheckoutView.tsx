@@ -154,7 +154,7 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
       if (!res.ok) throw new Error(data.message ?? 'Ceva nu a funcționat. Încearcă din nou.')
 
       const orderUrl = `/comanda/${data.token}`
-      if (data.method === 'transfer' || data.paid) {
+      if (data.method === 'transfer' || data.paid || data.submitted) {
         router.push(orderUrl)
         return
       }

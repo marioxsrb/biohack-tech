@@ -91,8 +91,18 @@ export const orders = {
     return withItems(q, rows)
   },
 
-  async nextSeq(q: Queryable): Promise<number> {
-    const { rows } = await q.query<{ n: string }>("select nextval('order_seq') as n")
+  /**
+   * Next sequence for the order's day. Must run inside the order transaction: the upsert row-locks
+   * that day's counter until commit, so concurrent checkouts get distinct numbers, and a rolled-back
+   * order releases its number. The unique index on order_number is the final guarantee.
+   */
+  async nextSeq(q: Queryable, day: string): Promise<number> {
+    const { rows } = await q.query<{ n: number }>(
+      `insert into order_day_counters (day, last_value) values ($1::date, 1)
+       on conflict (day) do update set last_value = order_day_counters.last_value + 1
+       returning last_value as n`,
+      [day],
+    )
     return Number(rows[0].n)
   },
 

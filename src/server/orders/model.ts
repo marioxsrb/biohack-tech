@@ -21,6 +21,7 @@ export const PAYMENT_STATUS = {
   pending: 'pending', // card payment started, not confirmed by Stripe
   awaitingTransfer: 'awaiting_transfer',
   failed: 'failed', // last card attempt failed; the customer can retry
+  cancelled: 'cancelled', // the card payment was cancelled in Stripe before any money moved
   paid: 'paid',
   partiallyRefunded: 'partially_refunded',
   refunded: 'refunded',

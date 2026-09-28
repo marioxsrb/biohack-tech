@@ -27,7 +27,7 @@ Written 26 September 2026 against commit “Launch pass”. Everything below ref
 - Cart: `/cart` page (no drawer). Add to cart → check + “Adăugat în coș” → compact confirmation top right (desktop) / bottom card (phone), with “Finalizează comanda” and “Continuă cumpărăturile”. The cart persists in localStorage as ids + quantities only and is re-priced from the catalog on every load.
 - Checkout: contact, billing (persoană fizică / juridică with CUI check digit), delivery (same address by default), payment (card or bank transfer), order summary, terms + optional marketing consent. The draft survives a refresh (sessionStorage only).
 - Server: the browser sends ids, quantities and the form; the server prices the order, stores a snapshot, and creates the Stripe PaymentIntent for exactly that total.
-- Payment truth: only Stripe (signed webhook, or a server-side retrieve on the order page) can mark a card order paid. Bank transfers become paid only when a person confirms the statement in /admin.
+- Payment truth: only Stripe can mark a card order paid: the signed webhook, or the `stripe.reconcile` job (server-side retrieve, 10 minutes after the order and again before an order is marked abandoned) if the webhook was lost. The order page only reads; it never marks payments or starts workflows. Bank transfers become paid only when a person confirms the statement in /admin.
 - Side effects (CRM, invoice, email) go through a database outbox with unique keys: retried with backoff, never duplicated, visible in /admin when they fail.
 - Transactional emails are rendered by the site (HTML + text) and delivered through GoHighLevel.
 - 69 automated tests (money, cart, validation, order state machine, idempotency, webhook signatures, FGO/GHL mapping, email rendering, outbox, concurrency on PostgreSQL) + an HTTP integration run + 34 browser journeys.
@@ -98,7 +98,7 @@ Full, commented list: `.env.example`.
 
 ## 8. Stripe setup
 
-**Architecture.** Our checkout embeds Stripe’s Payment Element (card fields in a Stripe iframe; card data never touches our server). On “Plătește”, the browser validates the card fields, our server creates the order and a PaymentIntent (amount = order total, currency RON, metadata `order_id` + `order_number`, idempotency key per order), the browser confirms it (3-D Secure included), and Stripe returns to `/comanda/<token>`. The order becomes paid on `payment_intent.succeeded` (webhook) or when the order page retrieves the PaymentIntent server-side; both use the same idempotent transition.
+**Architecture.** Our checkout embeds Stripe’s Payment Element (card fields in a Stripe iframe; card data never touches our server). On “Plătește”, the browser validates the card fields, our server creates the order and a PaymentIntent (amount = order total, currency RON, metadata `order_id` + `order_number`, idempotency key per order), the browser confirms it (3-D Secure included), and Stripe returns to `/comanda/<token>`. The PaymentIntent is **card only** (`payment_method_types: card`; Apple Pay / Google Pay count as cards). The order becomes paid on `payment_intent.succeeded` (webhook), or, if the webhook never arrives, when the `stripe.reconcile` job retrieves the PaymentIntent server-side; both use the same idempotent transition. The order page (`/comanda/<token>`) only displays the database state and refreshes itself while the payment is being confirmed; a customer who closes the browser right after paying still gets a paid order. Reusing an attempt never offers a second payment: a PaymentIntent that is already `succeeded`/`processing` sends the customer to the order page, and one that does not match the order (amount, currency, `metadata.order_id`) is refused.
 
 **Checklist (YOU):**
 1. Stripe account activated (business details, bank account for payouts, identity verification). Settlement currency: RON.
@@ -107,9 +107,10 @@ Full, commented list: `.env.example`.
 4. Developers → Webhooks → Add endpoint `https://biohack-tech.ro/api/webhooks/stripe`, events **exactly**:
    - `payment_intent.succeeded`
    - `payment_intent.payment_failed`
+   - `payment_intent.canceled`
    - `charge.refunded`
-   Copy its signing secret → `STRIPE_WEBHOOK_SECRET`.
-5. Developers → API keys → `STRIPE_SECRET_KEY` (secret) and `STRIPE_PUBLISHABLE_KEY`. A restricted key works too if it can write PaymentIntents and read PaymentIntents/Charges.
+   Copy its signing secret → `STRIPE_WEBHOOK_SECRET`. Each processed event is stored in `webhook_events` with its outcome (`paid`, `failed`, `cancelled`, `refunded`, `amount_mismatch`, `intent_mismatch`, `order_not_found`, ...).
+5. Developers → API keys → `STRIPE_SECRET_KEY` (secret) and `STRIPE_PUBLISHABLE_KEY` (the name `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` is also accepted). A restricted key works too if it can write PaymentIntents and read PaymentIntents/Charges.
 6. Repeat 4-5 in **test mode** for staging (separate endpoint on the staging URL, separate secret).
 7. Settings → Emails: turn **off** Stripe’s own “successful payment” receipts (our confirmation already includes everything; avoids two emails).
 8. Branding: logo/colours for the 3-D Secure screens (Settings → Branding).
@@ -166,7 +167,7 @@ Create it with these stages **in this order and with these exact names** (the si
 | 7 | `Anulată` | Cancelled | Cancelled in /admin | – | – | Refund if it was paid | cancelled | any | “Comanda #… a fost anulată” (transfer or paid orders) |
 | 8 | `Rambursată` | Fully refunded | Full refund in Stripe (webhook) or recorded in /admin | – | – | Storno in FGO | any | refunded | “Rambursare pentru comanda #…” |
 
-Opportunity: name `BT-2026-000123 · Prenume Nume`, value = order total in lei (minus refunds), status `open` (waiting), `won` (paid and later), `lost` (cancelled/refunded), `abandoned`. One opportunity per order: its id is stored on the order, and a lost id is recovered by searching the order number, so retries never duplicate it. Copy the pipeline id → `GHL_PIPELINE_ID`.
+Opportunity: name `BHT-20260929-0007 · Prenume Nume`, value = order total in lei (minus refunds), status `open` (waiting), `won` (paid and later), `lost` (cancelled/refunded), `abandoned`. One opportunity per order: its id is stored on the order, and a lost id is recovered by searching the order number, so retries never duplicate it. Copy the pipeline id → `GHL_PIPELINE_ID`.
 
 ### 10.3 Contact custom fields
 Settings → Custom Fields → Contact. Create them so the **field keys** are exactly these (GHL derives the key from the name; name them `bt_customer_type` etc., then rename the label if you like; the key stays):
@@ -174,7 +175,7 @@ Settings → Custom Fields → Contact. Create them so the **field keys** are ex
 | Key | Type | Purpose | Source | Example |
 |---|---|---|---|---|
 | `contact.bt_customer_type` | Single line | PF / PJ | Checkout | Persoană juridică |
-| `contact.bt_last_order_number` | Single line | Support, email merge | Order | BT-2026-000123 |
+| `contact.bt_last_order_number` | Single line | Support, email merge | Order | BHT-20260929-0007 |
 | `contact.bt_last_order_date` | Date (YYYY-MM-DD) | Timing of flows | Order | 2026-09-27 |
 | `contact.bt_last_order_value` | Monetary / number | Value | Order total (lei) | 7010.00 |
 | `contact.bt_last_order_products` | Multi-line | Segmentation, merge | Order lines | 1 x NEUROS Calm, 2 x NEUROS Amber (Unisex pătrat · Maro) |
@@ -299,7 +300,7 @@ Railway: New project → Deploy from GitHub repo → add PostgreSQL → set vari
 
 | From | URL | Events | Secret |
 |---|---|---|---|
-| Stripe (live) | `https://biohack-tech.ro/api/webhooks/stripe` | `payment_intent.succeeded`, `payment_intent.payment_failed`, `charge.refunded` | `STRIPE_WEBHOOK_SECRET` |
+| Stripe (live) | `https://biohack-tech.ro/api/webhooks/stripe` | `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.refunded` | `STRIPE_WEBHOOK_SECRET` |
 | Stripe (test, staging) | `https://<staging-host>/api/webhooks/stripe` | same | staging `STRIPE_WEBHOOK_SECRET` |
 | External cron (only if serverless) | `https://biohack-tech.ro/api/jobs/run` (POST) | every minute | `Authorization: Bearer $CRON_SECRET` |
 | GoHighLevel | none needed | – | – |
@@ -324,6 +325,8 @@ Use a staging deployment with `APP_ENV=staging`, Stripe **test** keys, the **FGO
 | 10 | Cancel | Transfer order → /admin → Anulează | Email “anulată”, stage “Anulată” |
 | 11 | Abandoned card | Start a card checkout, stop before paying, wait 60 min | Stage “Plată nefinalizată”; W2 only if consent |
 | 12 | Phone | Repeat flow 1 and 6 on an iPhone and an Android | Popup at the bottom, Payment Element, Apple/Google Pay if enabled |
+
+**Automated check (test mode):** with the app running on PostgreSQL and `stripe listen --forward-to <app>/api/webhooks/stripe` feeding it, `E2E_BASE_URL=<app> DATABASE_URL=<same db> node scripts/stripe-e2e.mjs` runs flows 1, 3, 4 and more against real Stripe test payments: paid with the browser gone, decline then retry, 3-D Secure pending, cancellation, double submit, invalid signature, bank transfer. It refuses live keys.
 
 **Cleanup:** cancel test orders in /admin (production DB: none should exist; staging has its own DB), delete test contacts/opportunities in GHL, test invoices stay in the FGO test account only.
 
@@ -359,7 +362,7 @@ The ordered sequence:
 |---|---|---|
 | New deploy broken | – | Railway → Deployments → previous deployment → Redeploy. The database schema only grows; old code runs on it |
 | Stripe down / Payment Element does not load | Checkout shows “Formularul pentru card nu s-a putut încărca. … alege transferul bancar” | Nothing; orders continue by transfer |
-| Stripe webhook delayed | The order page asks Stripe directly and confirms the payment | Nothing |
+| Stripe webhook delayed or lost | The order page keeps showing “Se verifică plata”; the `stripe.reconcile` job asks Stripe after 10 minutes (and again before marking the order abandoned) and confirms the payment | Check the webhook endpoint in the Stripe Dashboard |
 | Webhook endpoint failing | Stripe retries for 3 days; payments stay safe in Stripe | Fix, then Stripe → Resend failed events |
 | FGO down or refusing | Order stays paid; invoice retried 8 times; then “Factură: Eroare” | /admin → Reîncearcă, or issue the invoice in FGO by hand with the order number in the text |
 | GHL down | Order is saved; CRM/email jobs retry for hours | /admin → Reîncearcă tot. If emails failed permanently, email the customer from GHL by hand |

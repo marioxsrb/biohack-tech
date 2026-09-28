@@ -123,6 +123,6 @@ describe('downstream integrations', () => {
     await svc.confirmPayment(second.order.id, 'stripe.webhook')
     await svc.markAbandonedIfUnpaid(first.order.id)
     expect((await orders.byId(db, first.order.id))!.status).toBe('cancelled')
-    expect((await jobs.forOrder(db, first.order.id)).map((j) => j.kind)).toEqual(['order.abandon_check'])
+    expect((await jobs.forOrder(db, first.order.id)).map((j) => j.kind).sort()).toEqual(['order.abandon_check', 'stripe.reconcile'])
   })
 })

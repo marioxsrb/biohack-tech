@@ -60,7 +60,8 @@ export const stripe = {
       body: {
         amount: o.totalMinor,
         currency: 'ron',
-        automatic_payment_methods: { enabled: true },
+        // Card only (Apple Pay / Google Pay count as cards). Bank transfer is handled by us, not Stripe.
+        payment_method_types: ['card'],
         description: `Biohack Tech ${o.orderNumber}`,
         metadata: { order_id: o.id, order_number: o.orderNumber },
       },

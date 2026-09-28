@@ -20,7 +20,7 @@ describe('placing orders', () => {
   it('stores a snapshot with server-side totals and a readable number', async () => {
     const { order, created } = await svc.placeOrder({ lines: cart(), form: person, attemptId: 'attempt-1' })
     expect(created).toBe(true)
-    expect(order.orderNumber).toMatch(/^BT-\d{4}-000001$/)
+    expect(order.orderNumber).toMatch(/^BHT-\d{8}-0001$/)
     expect(order.totalMinor).toBe(638000 + 2 * 19950)
     expect(order.shippingMinor).toBe(0)
     expect(order.items.map((i) => [i.productName, i.variantName, i.quantity, i.unitPriceMinor])).toEqual([
@@ -48,20 +48,20 @@ describe('placing orders', () => {
     const a = await svc.placeOrder({ lines: cart(), form: person, attemptId: 'attempt-1' })
     const b = await svc.placeOrder({ lines: cart(), form: { ...person, phone: '0733000000' }, attemptId: 'attempt-1' })
     expect(b.order.id).not.toBe(a.order.id)
-    expect(b.order.orderNumber).toMatch(/000002$/)
+    expect(b.order.orderNumber).toMatch(/-0002$/)
   })
 
-  it('queues the transfer email and CRM sync for a bank transfer, and only an abandonment check for a card', async () => {
+  it('queues the transfer email and CRM sync for a bank transfer, and only a Stripe reconciliation and an abandonment check for a card', async () => {
     const t = await svc.placeOrder({ lines: cart(), form: { ...person, paymentMethod: 'transfer' }, attemptId: 'attempt-t' })
     expect(t.order.paymentStatus).toBe('awaiting_transfer')
     expect(await jobKeys(t.order.id)).toEqual(['email:transfer_instructions', 'ghl.sync:' + t.order.id])
     const c = await svc.placeOrder({ lines: cart(), form: person, attemptId: 'attempt-c' })
-    expect(await jobKeys(c.order.id)).toEqual(['abandon:' + c.order.id])
+    expect((await jobKeys(c.order.id)).sort()).toEqual(['abandon:' + c.order.id, 'reconcile:' + c.order.id])
   })
 })
 
 describe('payment', () => {
-  it('confirms once, whatever replays happen (webhook + success page + retry)', async () => {
+  it('confirms once, whatever replays happen (webhook + reconciliation job + retry)', async () => {
     const { order } = await svc.placeOrder({ lines: cart(), form: person, attemptId: 'attempt-1' })
     const reported = { amountMinor: order.totalMinor, currency: 'ron', paymentIntentId: undefined }
     const results = await Promise.all([svc.confirmPayment(order.id, 'stripe.webhook', reported), svc.confirmPayment(order.id, 'stripe.reconcile', reported)])

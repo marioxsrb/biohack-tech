@@ -9,15 +9,24 @@ import { DRAFT_KEY } from '@/lib/checkout'
 
 type PurchaseItem = { item_id: string; item_name: string; item_variant?: string; price: number; quantity: number }
 
-/** Once an order is placed: take its lines out of the cart, forget the form, report the purchase once. */
-export function OrderEffects({ clearKeys, purchase }: { clearKeys: string[]; purchase: { orderNumber: string; value: number; items: PurchaseItem[] } | null }) {
+/**
+ * Once an order is placed: take its lines out of the cart (once per order, so reopening an old order
+ * page never empties a new cart), forget the form, report the purchase once.
+ * A convenience only: payment state never depends on it, and it tolerates unavailable storage.
+ */
+export function OrderEffects({ orderNumber, clearKeys, purchase }: { orderNumber: string; clearKeys: string[]; purchase: { orderNumber: string; value: number; items: PurchaseItem[] } | null }) {
   useEffect(() => {
     if (!clearKeys.length) return
+    const key = `bt-cart-cleared-${orderNumber}`
+    try {
+      if (localStorage.getItem(key)) return
+      localStorage.setItem(key, '1')
+    } catch {}
     clearKeys.forEach((k) => cartStore.remove(k))
     try {
       sessionStorage.removeItem(DRAFT_KEY)
     } catch {}
-  }, [clearKeys])
+  }, [orderNumber, clearKeys])
 
   useEffect(() => {
     if (!purchase) return

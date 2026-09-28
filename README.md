@@ -26,7 +26,7 @@ src/
   server/        doar pe server:
     config.ts    variabile de mediu, validate; ce metode de plată sunt active
     db/          PostgreSQL / PGlite + migrații
-    orders/      comanda canonică: model, mașina de stări, numere BT-AAAA-NNNNNN, operații idempotente
+    orders/      comanda canonică: model, mașina de stări, numere BHT-AAAALLZZ-NNNN, operații idempotente, reconciliere Stripe
     jobs/        outbox: sincronizări cu reîncercare (CRM, factură, email)
     integrations/stripe, fgo, ghl, email (șabloane + trimitere)
   app/
@@ -60,7 +60,7 @@ După „Adaugă în coș” coșul nu se deschide singur: apare o confirmare mi
 
 ## Comenzi și plăți, pe scurt
 
-Browserul trimite id-uri, cantități și formularul. Serverul calculează prețurile, salvează comanda (`BT-2026-000123`) și, pentru card, creează un PaymentIntent Stripe exact pe total. Comanda devine plătită doar când Stripe confirmă (webhook semnat sau verificare pe server). Transferul bancar devine plătit doar când cineva confirmă extrasul în `/admin`. Factura (FGO), CRM-ul (GoHighLevel) și emailurile pleacă din outbox, o singură dată, cu reîncercări. Detalii: docs/PRODUCTION-LAUNCH.md.
+Browserul trimite id-uri, cantități și formularul. Serverul calculează prețurile, salvează comanda (`BHT-20260929-0007`) și, pentru card, creează un PaymentIntent Stripe doar pentru card, exact pe total. Comanda devine plătită doar când Stripe confirmă: webhook semnat sau, dacă webhook-ul se pierde, job-ul `stripe.reconcile`. Pagina comenzii doar afișează starea din baza de date; plata rămâne valabilă chiar dacă clientul închide browserul imediat după plată. Test cu Stripe (mod test): `scripts/stripe-e2e.mjs`. Transferul bancar devine plătit doar când cineva confirmă extrasul în `/admin`. Factura (FGO), CRM-ul (GoHighLevel) și emailurile pleacă din outbox, o singură dată, cu reîncercări. Detalii: docs/PRODUCTION-LAUNCH.md.
 
 ## Documente
 

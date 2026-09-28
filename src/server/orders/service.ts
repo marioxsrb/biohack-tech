@@ -13,7 +13,7 @@ import { log } from '@/server/log'
 import type { OrderForm } from '@/lib/checkout'
 import type { OrderLine } from '@/lib/orders/resolve'
 import { canMoveOrder, canMovePayment, isPaid } from './state'
-import { formatOrderNumber } from './number'
+import { formatOrderNumber, orderDay } from './number'
 import type { Address, Order, OrderStatus, PaymentMethod } from './model'
 import { orders } from './repository'
 
@@ -57,7 +57,7 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
     const order = await db.tx(async (t) => {
       const now = new Date()
       const id = randomUUID()
-      const orderNumber = formatOrderNumber(await orders.nextSeq(t), now)
+      const orderNumber = formatOrderNumber(await orders.nextSeq(t, orderDay(now).iso), now)
       await orders.insert(
         t,
         {
@@ -179,10 +179,31 @@ export function confirmPayment(orderId: string, source: Source, reported?: { amo
   })
 }
 
-export function recordPaymentFailure(orderId: string, source: Source, reason: string) {
+/** Reject a provider event that refers to a different PaymentIntent than the one on the order. */
+const intentMismatch = (o: Order, paymentIntentId?: string) => !!paymentIntentId && !!o.stripePaymentIntentId && paymentIntentId !== o.stripePaymentIntentId
+
+export function recordPaymentFailure(orderId: string, source: Source, reason: string, paymentIntentId?: string) {
   return transition(orderId, source, async (o) => {
+    if (intentMismatch(o, paymentIntentId)) return { skip: 'intent_mismatch' }
     if (!canMovePayment(o.paymentStatus, 'failed')) return { skip: `payment_${o.paymentStatus}` }
     return { patch: { payment_status: 'failed' }, event: 'payment.failed', data: { reason: reason.slice(0, 200) } }
+  })
+}
+
+/**
+ * The PaymentIntent was cancelled in Stripe (by us, by an operator, or by Stripe) before any money moved.
+ * The attempt can no longer be paid, so an unpaid order is closed. History stays; nothing is deleted.
+ */
+export function recordPaymentCancelled(orderId: string, source: Source, paymentIntentId?: string) {
+  return transition(orderId, source, async (o) => {
+    if (intentMismatch(o, paymentIntentId)) return { skip: 'intent_mismatch' }
+    if (!canMovePayment(o.paymentStatus, 'cancelled')) return { skip: `payment_${o.paymentStatus}` }
+    const close = canMoveOrder(o.status, 'cancelled')
+    return {
+      patch: { payment_status: 'cancelled', ...(close ? { status: 'cancelled', cancelled_at: new Date(), cancel_reason: 'plata cu cardul a fost anulată în Stripe' } : {}) },
+      event: 'payment.cancelled',
+      data: { closedOrder: close },
+    }
   })
 }
 
@@ -264,7 +285,11 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
     case 'created':
       return o.paymentMethod === 'bank_transfer'
         ? [...crm(), ...email('transfer_instructions')]
-        : [{ kind: 'order.abandon_check', orderId: o.id, dedupeKey: `abandon:${o.id}`, runAt: new Date(Date.now() + c.abandonAfterMinutes * 60_000) }]
+        : [
+            // Safety net if Stripe's webhook never arrives; the webhook normally confirms within seconds.
+            { kind: 'stripe.reconcile', orderId: o.id, dedupeKey: `reconcile:${o.id}`, runAt: new Date(Date.now() + 10 * 60_000) },
+            { kind: 'order.abandon_check', orderId: o.id, dedupeKey: `abandon:${o.id}`, runAt: new Date(Date.now() + c.abandonAfterMinutes * 60_000) },
+          ]
     case 'payment.confirmed':
       return [
         ...crm(),
@@ -277,6 +302,9 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
       return crm()
     case 'order.shipped':
       return [...crm(), ...email('order_shipped')]
+    case 'payment.cancelled':
+      // Never confirmed to the customer: only keep an existing CRM record in step.
+      return o.ghlOpportunityId ? crm() : []
     case 'order.cancelled': {
       // An unpaid card attempt was never confirmed to the customer: no email, and no CRM record unless one exists.
       const known = o.paymentMethod === 'bank_transfer' || !!data.wasPaid

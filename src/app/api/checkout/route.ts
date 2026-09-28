@@ -73,7 +73,15 @@ export async function POST(req: NextRequest) {
       ? await stripe.retrievePaymentIntent(c.stripe!, order.stripePaymentIntentId)
       : await stripe.createPaymentIntent(c.stripe!, order)
     if (!order.stripePaymentIntentId) await attachPaymentIntent(order.id, pi.id)
-    if (pi.amount !== order.totalMinor) throw new Error('payment intent amount differs from order total')
+    // Never hand out a PaymentIntent that does not belong to this order exactly.
+    if (pi.amount !== order.totalMinor || pi.currency !== 'ron' || pi.metadata?.order_id !== order.id) throw new Error('payment intent does not match the order')
+    // Already paid, or being processed: show the order instead of offering a second payment.
+    if (pi.status === 'succeeded' || pi.status === 'processing' || pi.status === 'requires_capture') {
+      return NextResponse.json({ method: 'card', submitted: true, orderNumber: order.orderNumber, token: order.publicToken })
+    }
+    if (pi.status === 'canceled') {
+      return fail(409, 'BAD_LINE', 'Plata pentru această încercare a fost anulată. Reîncarcă pagina și plasează comanda din nou.')
+    }
     return NextResponse.json({ method: 'card', orderNumber: order.orderNumber, token: order.publicToken, clientSecret: pi.client_secret })
   } catch (e) {
     log.error('checkout.stripe_failed', { orderId: order.id, orderNumber: order.orderNumber, error: errText(e), status: e instanceof StripeError ? e.status : undefined })

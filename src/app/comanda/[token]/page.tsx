@@ -8,35 +8,12 @@ import { lineKey } from '@/components/cart/cart-store'
 import { formatLei } from '@/lib/money'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
-import { stripe } from '@/server/integrations/stripe'
-import { kickJobs } from '@/server/jobs/runner'
-import { errText, log } from '@/server/log'
 import { customerName, formatAddress, type Order } from '@/server/orders/model'
 import { orders } from '@/server/orders/repository'
-import { confirmPayment } from '@/server/orders/service'
 import { isPaid } from '@/server/orders/state'
 import { CopyButton, OrderEffects, WaitForPayment } from './OrderClient'
 
 export const metadata: Metadata = { title: 'Comanda ta', robots: { index: false, follow: false } }
-
-/**
- * Card payments: if the webhook hasn't arrived yet, ask Stripe directly (server-side, with the
- * secret key). Same idempotent transition as the webhook, so whichever comes first wins once.
- */
-async function reconcile(o: Order): Promise<Order> {
-  const c = getConfig()
-  if (o.paymentMethod !== 'card' || isPaid(o.paymentStatus) || !o.stripePaymentIntentId || !c.stripe) return o
-  try {
-    const pi = await stripe.retrievePaymentIntent(c.stripe, o.stripePaymentIntentId)
-    if (pi.status !== 'succeeded') return o
-    const r = await confirmPayment(o.id, 'stripe.reconcile', { amountMinor: pi.amount_received, currency: pi.currency, paymentIntentId: pi.id })
-    if (r.changed) kickJobs()
-    return r.order ?? o
-  } catch (e) {
-    log.warn('order.reconcile_failed', { orderId: o.id, error: errText(e) })
-    return o
-  }
-}
 
 export default async function OrderPage({ params, searchParams }: PageProps<'/comanda/[token]'>) {
   await connection()
@@ -50,14 +27,17 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/co
     notFound()
   }
   if (!order) notFound()
-  order = await reconcile(order)
+  // Read-only: this page never marks a payment or starts a workflow. Card payments are confirmed by
+  // the Stripe webhook (and, if it is ever lost, by the stripe.reconcile job), not by a page view.
 
   const c = getConfig()
   const paid = isPaid(order.paymentStatus)
   const transfer = order.paymentMethod === 'bank_transfer' && order.paymentStatus === 'awaiting_transfer' && order.status !== 'cancelled'
+  // Stripe's redirect parameter only tells us the attempt failed in the browser; success is never taken from it.
   const redirectFailed = sp.redirect_status === 'failed'
-  const cardPending = order.paymentMethod === 'card' && !paid && order.status !== 'cancelled' && !redirectFailed && order.paymentStatus !== 'failed' && sp.redirect_status === 'succeeded'
-  const cardFailed = order.paymentMethod === 'card' && !paid && order.status !== 'cancelled' && !cardPending
+  const cardOpen = order.paymentMethod === 'card' && !paid && order.status !== 'cancelled' && order.paymentStatus !== 'cancelled'
+  const cardPending = cardOpen && order.paymentStatus === 'pending' && !!order.stripePaymentIntentId && !redirectFailed
+  const cardFailed = cardOpen && !cardPending
 
   const placed = paid || transfer
   const items = order.items.map((i) => lineKey({ productId: i.productId as never, variantId: i.variantId ?? undefined }))
@@ -66,6 +46,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/co
     <section className="pt-[calc(var(--nav-h)+48px)] pb-[var(--sec)] max-sm:pt-[calc(var(--nav-h)+24px)]">
       <div className="wrap max-w-[820px]">
         <OrderEffects
+          orderNumber={order.orderNumber}
           clearKeys={placed ? items : []}
           purchase={paid ? { orderNumber: order.orderNumber, value: order.totalMinor, items: order.items.map((i) => ({ item_id: i.variantId ? `${i.productId}/${i.variantId}` : i.productId, item_name: i.productName, item_variant: i.variantName ?? undefined, price: i.unitPriceMinor / 100, quantity: i.quantity })) } : null}
         />

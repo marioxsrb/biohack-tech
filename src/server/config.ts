@@ -65,7 +65,8 @@ export type ConfigIssue = { area: string; level: 'error' | 'warn'; message: stri
 
 function readStripe(appEnv: AppEnv, issues: ConfigIssue[]): StripeConfig | null {
   const secretKey = str('STRIPE_SECRET_KEY')
-  const publishableKey = str('STRIPE_PUBLISHABLE_KEY')
+  // Either name works; NEXT_PUBLIC_ is the conventional one for a browser-visible key.
+  const publishableKey = str('STRIPE_PUBLISHABLE_KEY') ?? str('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY')
   const webhookSecret = str('STRIPE_WEBHOOK_SECRET')
   if (!secretKey && !publishableKey && !webhookSecret) {
     issues.push({ area: 'stripe', level: 'warn', message: 'Stripe nu este configurat: plata cu cardul este oprită.' })

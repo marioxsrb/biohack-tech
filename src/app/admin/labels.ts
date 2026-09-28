@@ -13,6 +13,7 @@ export const PAYMENT_LABEL: Record<Order['paymentStatus'], string> = {
   pending: 'Card în curs',
   awaiting_transfer: 'Așteaptă transferul',
   failed: 'Card eșuat',
+  cancelled: 'Plată anulată',
   paid: 'Plătită',
   partially_refunded: 'Rambursată parțial',
   refunded: 'Rambursată',
