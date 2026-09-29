@@ -1,11 +1,11 @@
 import type { Metadata } from 'next'
 import { ContactSection } from '@/components/home/ContactSection'
-import { Chooser } from '@/components/home/Chooser'
 import { Discover } from '@/components/home/Discover'
 import { Hero } from '@/components/home/Hero'
 import { HomeFaq } from '@/components/home/HomeFaq'
 import { Offers } from '@/components/home/Offers'
 import { Rhythm } from '@/components/home/Rhythm'
+import { Why } from '@/components/home/Why'
 import { site } from '@/config/site'
 import { pageMetadata } from '@/lib/seo'
 import og from '@/assets/img/balance-wave/lifestyle-canapea.webp'
@@ -23,17 +23,17 @@ export const metadata: Metadata = {
 
 /**
  * Plain document flow: every section renders from the server and scrolls natively.
- * Built around three decisions: I know what I want (the product row, one action per card), I want to
- * compare (what do you want to change, then the offers), I am not sure (questions, then a person).
+ * Hero, the four products (once), why buy here, the same day with and without the products, the offers
+ * (to close a decision, not to open it), questions, a person to write to.
  */
 export default function Home() {
   return (
     <>
       <Hero />
       <Discover />
-      <Chooser />
-      <Offers />
+      <Why />
       <Rhythm />
+      <Offers />
       <HomeFaq />
       <ContactSection />
     </>

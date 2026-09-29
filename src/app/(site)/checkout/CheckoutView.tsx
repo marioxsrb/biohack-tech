@@ -7,7 +7,8 @@ import { useCart, type ResolvedLine } from '@/components/cart/CartProvider'
 import { cartStore, type CartLine } from '@/components/cart/cart-store'
 import { Price } from '@/components/cart/Price'
 import { Thumb } from '@/components/cart/Thumb'
-import { PromotionHints, Totals } from '@/components/cart/Totals'
+import { OfferProgress } from '@/components/cart/OfferProgress'
+import { Totals } from '@/components/cart/Totals'
 import { Arrow, Bank, CardIcon, Lock, Mail } from '@/components/ui/icons'
 import { productHref, products, resolveLine } from '@/content/catalog'
 import { attributionParams } from '@/lib/attribution'
@@ -111,7 +112,7 @@ function readDraft(methods: Methods): OrderForm {
 
 function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; methods: Methods; stripeKey: string | null }) {
   const router = useRouter()
-  const { total, pricing, hints } = useCart()
+  const { total, pricing, progress } = useCart()
   const anyMethod = methods.card || methods.transfer
 
   const [form, setForm] = useState<OrderForm>(() => readDraft(methods))
@@ -396,7 +397,7 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
               <Totals pricing={pricing} />
             </div>
             <p className="text-right text-[13px] text-muted">{terms.vat}</p>
-            <PromotionHints hints={hints} applied={pricing.promotions} className="mt-3" />
+            <OfferProgress progress={progress} lines={lines} actions={false} className="mt-4" />
 
             {anyMethod && (
               <>

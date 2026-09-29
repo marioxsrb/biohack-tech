@@ -118,3 +118,42 @@ export function promotionHints(lines: Pick<PricedLine, 'productId' | 'quantity'>
 
 /** Which promotion a product takes part in (for badges). */
 export const promotionFor = (productId: string, promotions: Promotion[] = PROMOTIONS) => promotions.find((p) => (p.products as string[]).includes(productId))
+
+/**
+ * Where the cart stands for each promotion, for the progress UI:
+ *   active  the promotion applies now (with what it saves);
+ *   close   one more unit unlocks it (or, for 2+1, the next free unit);
+ *   far     the customer has started but needs more than one unit.
+ * A promotion the cart has nothing to do with is left out. Same rules as priceLines.
+ */
+export type PromotionProgress = {
+  id: string
+  kind: Promotion['kind']
+  label: string
+  products: string[]
+  /** Eligible units in the cart. */
+  units: number
+  /** Units still needed for the next reward (0 when nothing more is needed). */
+  missing: number
+  /** The target the progress counts towards (3 for both current rules). */
+  target: number
+  active: boolean
+  savedMinor: number
+  state: 'active' | 'close' | 'far'
+}
+
+export function promotionProgress(lines: PricedLine[], promotions: Promotion[] = PROMOTIONS): PromotionProgress[] {
+  const pricing = priceLines(lines, promotions)
+  const out: PromotionProgress[] = []
+  for (const p of promotions) {
+    const units = lines.filter((l) => (p.products as string[]).includes(l.productId)).reduce((n, l) => n + l.quantity, 0)
+    if (!units) continue
+    const saved = pricing.promotions.find((a) => a.id === p.id)?.amountMinor ?? 0
+    const target = p.kind === 'bundle_percent' ? p.minUnits : p.group
+    const missing = p.kind === 'bundle_percent' ? Math.max(0, p.minUnits - units) : units % p.group >= p.pay ? p.group - (units % p.group) : 0
+    const active = saved > 0
+    const state = missing === 1 ? 'close' : active ? 'active' : 'far'
+    out.push({ id: p.id, kind: p.kind, label: p.label, products: p.products, units, missing: missing || (active ? 0 : target - (units % target)), target, active, savedMinor: saved, state })
+  }
+  return out
+}

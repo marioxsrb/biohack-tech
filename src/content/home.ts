@@ -1,5 +1,5 @@
 /**
- * Homepage copy beyond the hero and the product cards: the need chooser, the daily-rhythm comparison,
+ * Homepage copy beyond the hero and the product shelf: why Biohack Tech, the daily-rhythm comparison,
  * the FAQ (short on the homepage, complete on /intrebari-frecvente). Only facts that are already on the
  * product pages, the legal pages or config/site.ts. No testimonials: the source material's six were
  * unverifiable (docs/CONTENT-DECISIONS.md); real ones can be added to `testimonials` with consent.
@@ -8,36 +8,36 @@ import type { ProductId, ProductImage } from './catalog'
 import { company } from '@/config/company'
 import { site, terms } from '@/config/site'
 
-import blTableta from '@/assets/img/brainlink/pillar-games.webp'
+import glSeara from '@/assets/img/glasses/result-seara.webp'
 
 const photo = (src: ProductImage['src'], alt: string): ProductImage => ({ src, alt, kind: 'photo' })
 
-/** "Ce vrei să schimbi?": one need per product, in the customer's words, with how it is used. */
-export type Need = { need: string; how: string; productId: ProductId }
-
-export const chooser = {
-  title: 'Ce vrei să schimbi?',
-  intro: 'Alege nevoia. Îți arătăm produsul potrivit.',
-  image: photo(blTableta, 'Tânăr pe canapea, purtând NEUROS Focus și jucând pe tabletă'),
-  needs: [
-    { need: 'Vreau să mă relaxez seara', how: 'Se poartă la gât, 5-20 de minute. Se oprește singur.', productId: 'balance-wave' },
-    { need: 'Vreau să mă concentrez mai ușor', how: 'O cască ușoară și jocuri pe tabletă, controlate prin atenție.', productId: 'brainlink-pro' },
-    { need: 'Stau multe ore în fața ecranelor', how: 'Ochelari cu lentile chihlimbar, pentru birou și seară.', productId: 'ochelari-biohack' },
-    { need: 'Vreau lumină infraroșie acasă', how: 'O cască cu 1, 4 sau 13 zone, cu protocol stabilit cu un specialist.', productId: 'brain-flow' },
-  ] satisfies Need[],
+/** Why Biohack Tech: one photograph and three reasons, each a verified fact. */
+export const why = {
+  title: 'Tehnologie pe care chiar o folosești acasă.',
+  image: photo(glSeara, 'Femeie în pat, seara, citind pe tabletă cu ochelarii NEUROS Amber'),
+  points: [
+    { title: 'Câteva minute, la ora ta', text: 'NEUROS Calm și NEUROS Flow se folosesc în ședințe scurte, acasă. NEUROS Amber se poartă ca orice ochelari.' },
+    { title: 'Nu începi singur', text: 'Pentru NEUROS Calm, Focus și Flow, un specialist Biohack Tech îți recomandă programul potrivit.' },
+    { title: 'Cumperi fără grijă', text: 'Livrare gratuită în România, 14 zile să te răzgândești și garanție de 2 ani.' },
+  ],
 }
 
+/**
+ * "Aceeași zi. Alt ritm.": the same four moments of a day, without and with a deliberate tool. Contexts
+ * and uses only (what the product is and how it is used), never an outcome.
+ */
 export const rhythm = {
   title: 'Aceeași zi. Alt ritm.',
-  intro: 'Nu promitem o altă viață. Doar câteva minute, puse la locul lor în zi.',
-  before: {
-    label: 'Fără un obicei',
-    items: ['Seara trece direct de la ecran la somn.', 'Pauzele se umplu cu telefonul.', 'Relaxarea rămâne pentru „când o fi timp”.'],
-  },
-  after: {
-    label: 'Cu un obicei BiohackTech',
-    items: ['Câteva minute cu NEUROS Calm, seara, la aceeași oră.', 'O sesiune scurtă cu NEUROS Focus, în locul telefonului.', 'Ecranele de seară, prin lentilele NEUROS Amber.'],
-  },
+  intro: 'Aceleași momente din zi. Diferența e că ai un instrument făcut pentru fiecare.',
+  without: 'Fără o rutină',
+  with: 'Cu BiohackTech în rutină',
+  rows: [
+    { moment: 'Relaxare', without: 'Te oprești când se termină ziua, nu când alegi tu.', with: 'Seara, 5-20 de minute de lumină roșie cu NEUROS Calm, la aceeași oră.' },
+    { moment: 'Atenție', without: 'Concentrarea depinde de ce se întâmplă în jur.', with: 'O sesiune de joc cu NEUROS Focus, care înaintează doar când ești atent.' },
+    { moment: 'Ecrane', without: 'Lumina albastră a ecranelor te însoțește până la somn.', with: 'Lentilele chihlimbar NEUROS Amber o filtrează, la birou și seara.' },
+    { moment: 'Acasă', without: 'Nu ai un moment dedicat doar ție.', with: 'Ședința NEUROS Flow, după protocolul stabilit cu specialistul.' },
+  ],
   note: 'Fiecare om e diferit, la fel și efectele. Produsele sunt de wellness și nu înlocuiesc sfatul medicului.',
 }
 

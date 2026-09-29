@@ -2,6 +2,8 @@
  * Advertising landings: which hostnames are ours, what each one serves, which product it sells, and
  * what campaign data survives the trip to the order.
  */
+import { readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { checkoutHref } from '@/components/landing/checkout-link'
 import { getProduct, productHref } from '@/content/catalog'
@@ -46,7 +48,7 @@ describe('what a landing hostname serves', () => {
   it('its landing at "/", the checkout and order pages it needs, and a redirect to the main site for the rest', () => {
     expect(routeLanding('focus', '/')).toEqual({ action: 'rewrite', path: '/lp/focus' })
     expect(routeLanding('focus', '/lp/focus')).toEqual({ action: 'redirect', path: '/' })
-    for (const p of ['/checkout', '/comanda/abc_DEF-123', '/api/checkout', '/api/consent', '/_next/static/x.js', '/politica-retur', '/retragere', '/retragere/confirmare', '/terms-of-service']) {
+    for (const p of ['/checkout', '/comanda/abc_DEF-123', '/api/checkout', '/api/consent', '/api/contact', '/_next/static/x.js', '/politica-retur', '/retragere', '/retragere/confirmare', '/terms-of-service']) {
       expect(routeLanding('focus', p)).toEqual({ action: 'next' })
     }
     for (const p of ['/products/focus', '/admin', '/admin/orders/1', '/cart', '/lp/calm', '/api/jobs/run', '/api/webhooks/stripe', '/about-us']) {
@@ -67,11 +69,13 @@ describe('the four landings', () => {
   })
 
   it('copy: no dash punctuation, no invented social proof, urgency or health promises', () => {
-    const text = JSON.stringify(
-      landings.map((l) => [l.meta, l.hero.eyebrow, l.hero.title, l.hero.text, l.points, l.story.title, l.story.text, l.steps, l.moment.title, l.moment.text, l.offer, l.faqs]),
-    )
+    // The pages' own copy (sections) and the product FAQs.
+    const dir = join(process.cwd(), 'src/components/landing')
+    const sources = [...readdirSync(join(dir, 'pages')).map((f) => join(dir, 'pages', f)), join(dir, 'kit.tsx'), join(dir, 'LandingOffer.tsx')]
+    const text = sources.map((f) => readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')).join('\n') + JSON.stringify(landings.map((l) => [l.meta, l.faqs]))
     expect(text).not.toMatch(/[—–]/)
-    expect(text).not.toMatch(/clienți mulțumiți|recenzi|stele|stoc limitat|ultimele|doar azi|ofertă expir|reducere|vindec|garantat|tratează|anxiet|depresi|insomni/i)
+    expect(text).not.toMatch(/clienți mulțumiți|recenzi|★|stele|stoc limitat|ultimele bucăți|doar azi|ofertă expir|vindec|garantat|tratează|anxiet|depresi|insomni|studii arată|dovedit/i)
+    expect(text).not.toContain('Brain Flow')
   })
 
   it('the checkout link carries ids and campaign parameters only', () => {

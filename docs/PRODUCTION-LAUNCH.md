@@ -695,12 +695,12 @@ One landing per product, for paid traffic only. Same app, same catalog, same che
 
 **Routing.** `src/proxy.ts` + `src/lib/landing-hosts.ts`. The Host header is compared with an explicit allowlist built from `LANDING_SLUGS` and `LANDING_BASE_DOMAIN` (default `biohack-tech.ro`); nothing else is recognized (a forged or unknown host is the main site). On a landing hostname:
 - `/` is rewritten to `/lp/<slug>`;
-- `/checkout`, `/comanda/<token>`, `/api/checkout`, `/api/consent`, the legal pages, `/retragere` and framework files are served on the same host, so consent, cart and the Stripe return stay on one origin;
+- `/checkout`, `/comanda/<token>`, `/api/checkout`, `/api/consent`, `/api/contact`, the legal pages, `/retragere` and framework files are served on the same host, so consent, cart and the Stripe return stay on one origin;
 - everything else (incl. `/admin`, `/api/webhooks/*`, `/api/jobs/*`, product pages) gets a 308 to the same path on `NEXT_PUBLIC_SITE_URL`;
 - every response carries `X-Robots-Tag: noindex, nofollow`.
 Locally, `<slug>.localhost:3000` works outside production (Chrome resolves it to 127.0.0.1).
 
-**Pages.** `src/app/(landing)/lp/[slug]/page.tsx` renders `components/landing/LandingPage.tsx` with data from `content/landings.ts` (copy, theme, photographs). Names, variants and prices come only from the catalog. The main site uses the `(site)` route group (header + footer); landings have their own minimal header and a legal footer (company line, legal pages, cookie settings, ANPC, withdrawal link). Not linked from the menu, footer, product grid or sitemap.
+**Pages.** `src/app/(landing)/lp/[slug]/page.tsx` renders `components/landing/LandingPage.tsx`, which picks one page per product in `components/landing/pages/` (`CalmLanding`, `FocusLanding`, `AmberLanding`, `FlowLanding`). Each is a full sales page in the same order: hero (product, idea, price, action, above the fold) → what it is → how it works → how it is used → when / for whom → what you get (details) → offer (`LandingOffer`, `#comanda`) → questions → help (contact form, `/api/contact`) → final decision. The pages share a kit (`components/landing/kit.tsx`: shell, header, legal footer, titles, steps, specs, FAQ, help, final CTA, an empty-by-default testimonial slot) and a theme per product from `content/landings.ts` (background, ink, accent as CSS variables; FAQ and meta per product). On phones, `StickyBuy` shows a bottom bar (name, price, action) whenever neither the hero nor the offer is on screen. NEUROS Flow uses the offer's `columns` layout (1 / 4 / 13 zones side by side, catalog prices, opens on 4 zones); NEUROS Amber shows the 2+1 calculation computed by the promotion engine. Names, variants and prices come only from the catalog. The main site uses the `(site)` route group (header + footer); landings have their own minimal header and a legal footer (company line, legal pages, cookie settings, ANPC, withdrawal link). Not linked from the menu, footer, product grid or sitemap.
 
 **SEO.** `robots: noindex, nofollow`, canonical = the product page on the main domain, excluded from `sitemap.xml`, plus the header above. The main site's indexing is unchanged.
 
@@ -755,9 +755,11 @@ Add all six to the host (Railway → Networking) and the CNAME/ALIAS records it 
 3. The refund is its own step: Stripe dashboard (card; the webhook records it) or “Înregistrează rambursarea” (transfer). The stage becomes *Rambursată*, W7 creates the FGO storno task.
 Every step is idempotent (a second call changes nothing) and audited in the order history. The return address is not set (OPEN-POINTS): the withdrawal email says it will be sent to the customer.
 
-## 29a. Homepage structure (29 Sep 2026)
+## 29a. Homepage structure (29 Sep 2026, final pass)
 
-Hero → the four products (one aligned row; each card: purpose, name, what it is, price, offer, one action: “Adaugă în coș” for Calm/Focus, “Alege rama” / “Alege configurația” for Amber/Flow) → trust line → “Ce vrei să schimbi?” (need → product, one photo) → Oferte → “Aceeași zi. Alt ritm.” (text only) → 7 purchase questions (all 14 on `/intrebari-frecvente`) → compact contact. Built for three behaviours: I know what I want, I want to compare, I am not sure.
+Hero → **the four products** (one editorial shelf, the only product block: each tile states the moment, name, what it is, price, offer and one action, “Adaugă în coș” for Calm/Focus, “Alege rama” / “Alege configurația” for Amber/Flow, plus “Detalii”) → **De ce Biohack Tech** (three points, one photo) → **“Aceeași zi. Alt ritm.”** (four moments: without a routine vs. with one, typography only) → **Oferte** → 7 purchase questions (all on `/intrebari-frecvente`) → **contact** (support panel + form). The earlier “Ce vrei să schimbi?” chooser was removed (it repeated the products).
+
+**Cart and checkout offer progress.** `promotionProgress()` (`src/lib/promotions.ts`) reports, per promotion touched by the cart: units, units missing, saving, and a state. `components/cart/OfferProgress.tsx` renders it: *far* (a quiet line), *one away* (prominent: the benefit in large type and explicit buttons, “+ NEUROS Calm”, “+ NEUROS Focus”, “Alege NEUROS Flow”, or “+ Adaugă încă o pereche”), *active* (“Oferta este activă”, “Economisești X lei”). Nothing is added automatically. The checkout shows the same blocks without buttons.
 
 ## 30. Promotions (phase 3.5, built)
 
@@ -776,7 +778,7 @@ Defined once in `src/config/promotions.ts`, applied by the pure engine `src/lib/
 - **FGO.** Each invoice line sends `PretTotal = line total − line discount` (VAT-inclusive), and its name states the promotion (“NEUROS Calm, 20% la 3 produse: -3828.00 lei”). The invoice total therefore equals the amount paid. Not called against FGO production.
 - **GHL.** `bt_last_order_value` and the opportunity value are the discounted total.
 - **Emails, order page, admin** show Subtotal, each promotion with its amount, and Total.
-- **Customer-facing presentation.** Quiet badges beside prices (home cards, product listing, product page, landing offer), the offer section on the homepage, and honest progress hints in cart and checkout (“Mai adaugă un produs…”, “Mai adaugă o pereche…”), with no countdowns and no struck prices. The terms are on /plati.
+- **Customer-facing presentation.** Quiet badges beside prices (home cards, product listing, product page, landing offer), the offer section on the homepage, and the offer progress blocks in cart and checkout (§29a), with no countdowns and no struck prices. The terms are on /plati.
 
 ## 31. Post-purchase offer (phase 3.5, built)
 

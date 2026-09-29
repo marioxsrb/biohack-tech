@@ -2,20 +2,21 @@
 
 import { useRouter } from 'next/navigation'
 import { Arrow } from '@/components/ui/icons'
-import type { ProductId } from '@/content/catalog'
+import { getProduct, type ProductId } from '@/content/catalog'
 import type { LandingSlug } from '@/lib/landing-hosts'
 import { checkoutHref } from './checkout-link'
 
 /**
  * The hero's button. Products without variants go straight to the checkout; the others scroll to the
- * picker first, because the customer has to choose.
+ * picker, because the customer has to choose first.
  */
-export function HeroCta({ slug, productId, choose }: { slug: LandingSlug; productId: ProductId; choose?: string }) {
+export function HeroCta({ slug, productId, label }: { slug: LandingSlug; productId: ProductId; label: string }) {
   const router = useRouter()
-  if (choose) {
+  const hasVariants = !!getProduct(productId)?.variants?.length
+  if (hasVariants) {
     return (
       <a href="#comanda" className="cta">
-        {choose} <Arrow />
+        {label} <Arrow />
       </a>
     )
   }
@@ -29,7 +30,7 @@ export function HeroCta({ slug, productId, choose }: { slug: LandingSlug; produc
       }}
       className="cta"
     >
-      Comandă acum <Arrow />
+      {label} <Arrow />
     </a>
   )
 }

@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { resolveLine, variantLabel, type Product, type ProductId, type Variant } from '@/content/catalog'
-import { priceLines, promotionHints } from '@/lib/promotions'
+import { priceLines, promotionHints, promotionProgress } from '@/lib/promotions'
 import { cartStore, lineKey } from './cart-store'
 
 export type ResolvedLine = {
@@ -88,6 +88,7 @@ export function useCart() {
   // Same engine as the server, for display only: the server prices the order again when it is placed.
   const pricing = useMemo(() => priceLines(lines.map((l) => ({ key: l.key, productId: l.product.id, quantity: l.quantity, unitAmount: l.unit }))), [lines])
   const hints = useMemo(() => promotionHints(lines.map((l) => ({ productId: l.product.id, quantity: l.quantity }))), [lines])
+  const progress = useMemo(() => promotionProgress(lines.map((l) => ({ key: l.key, productId: l.product.id, quantity: l.quantity, unitAmount: l.unit }))), [lines])
 
   return {
     ...ui,
@@ -97,6 +98,7 @@ export function useCart() {
     total: pricing.totalMinor,
     pricing,
     hints,
+    progress,
     setQuantity: cartStore.setQuantity,
     remove: cartStore.remove,
     clear: cartStore.clear,

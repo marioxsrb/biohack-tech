@@ -34,7 +34,7 @@ export function landingForHost(hostHeader: string | null | undefined, base = lan
 const LANDING_PASSTHROUGH = [
   /^\/checkout\/?$/,
   /^\/comanda\/[\w-]+\/?$/,
-  /^\/api\/(checkout|consent)(\/|$)/,
+  /^\/api\/(checkout|consent|contact)(\/|$)/,
   /^\/_next\//,
   /^\/(terms-of-service|privacy-policy|politica-cookies|politica-livrare|politica-retur|garantie|plati)\/?$/,
   /^\/retragere(\/confirmare)?\/?$/,

@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { PromotionHints, Totals } from '@/components/cart/Totals'
+import { OfferProgress } from '@/components/cart/OfferProgress'
+import { Totals } from '@/components/cart/Totals'
 import { useEffect, useSyncExternalStore } from 'react'
 import { useCart } from '@/components/cart/CartProvider'
 import { Price } from '@/components/cart/Price'
@@ -23,7 +24,7 @@ const useHydrated = () =>
 /** The cart as its own page: every line editable, one clear way forward. */
 export function CartView() {
   const hydrated = useHydrated()
-  const { lines, count, pricing, hints, setQuantity, remove } = useCart()
+  const { lines, count, pricing, progress, setQuantity, remove } = useCart()
 
   useEffect(() => {
     if (hydrated && lines.length) track('view_cart', { value: pricing.totalMinor, items: lines })
@@ -63,6 +64,8 @@ export function CartView() {
       <h1 className="text-[clamp(30px,3.4vw,40px)] leading-tight tracking-[-0.035em]">
         Coșul tău <span className="text-muted">({count})</span>
       </h1>
+      {/* The offers first: the easiest thing to miss and the most useful to know. */}
+      <OfferProgress progress={progress} lines={lines} className="mt-6 grid gap-3 md:grid-cols-2 md:space-y-0" />
       <div className="mt-8 grid gap-y-6 md:grid-cols-12 md:gap-x-8 lg:gap-x-12">
         <ul className="rounded-[20px] bg-paper px-6 md:col-span-7 max-sm:px-4" aria-label="Produse în coș">
           {lines.map((l) => (
@@ -106,7 +109,6 @@ export function CartView() {
               <Totals pricing={pricing} />
             </div>
             <p className="text-right text-[13px] text-muted">{terms.vat}</p>
-            <PromotionHints hints={hints} applied={pricing.promotions} className="mt-4" />
             <Link href="/checkout" className="cta mt-5 w-full">
               <Lock /> Finalizează comanda
             </Link>

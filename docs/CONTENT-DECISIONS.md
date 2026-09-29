@@ -74,3 +74,14 @@ Ordinea: hero, produsele (cu oferta lor, discret), ideea de brand cu cele patru 
 - Pagina principală a fost editată, nu extinsă: au ieșit secțiunea de brand cu 4 fotografii, „O zi, patru momente” (4 fotografii), momentul NEUROS Calm și fotografia din contact. Au rămas două fotografii cu oameni (hero, „Ce vrei să schimbi?”) și imaginile produselor.
 - „Ce vrei să schimbi?” înlocuiește momentele zilei: patru nevoi, fiecare cu produsul ei și cum se folosește.
 - Întrebările: 7 pe pagina principală (cele care decid cumpărarea), toate 14 pe `/intrebari-frecvente`.
+
+## Trecerea finală pe pagina principală și landingurile refăcute (29.09.2026)
+
+- Produsele apar o singură dată pe pagina principală: un raft editorial cu patru produse (momentul, ce este, prețul, oferta, o acțiune). „Ce vrei să schimbi?” a ieșit, pentru că repeta produsele.
+- Ordinea: hero, produsele, de ce Biohack Tech (trei puncte, o fotografie), „Aceeași zi. Alt ritm.”, ofertele, întrebările, contactul.
+- „Aceeași zi. Alt ritm.” compară patru momente (relaxare, atenție, ecrane, acasă), fără o rutină și cu o rutină. Nu vorbește despre amânare și nu promite rezultate. Fără simboluri ❌/✅.
+- Contactul este un panou de suport („Nu ești sigur ce să alegi?”) lângă formular, fără fotografie.
+- În coș, progresul spre oferte are trei stări (departe, încă un produs, activă), cu butoane explicite. Nimic nu se adaugă automat.
+- Fiecare landing este o prezentare completă, cu povestea produsului: NEUROS Calm (seara, liniștit, cald), NEUROS Focus (munca și jocul care antrenează atenția, fără ton de gaming), NEUROS Amber (ecranele serii, 2+1 calculat cu prețurile reale), NEUROS Flow (cel mai explicativ, cu specialistul și cele trei configurații).
+- Nu există testimoniale, ratinguri, certificări noi sau promisiuni medicale. Locul pentru testimoniale există, dar nu se afișează gol.
+- Sunt folosite doar faptele deja prezente pe paginile de produs.

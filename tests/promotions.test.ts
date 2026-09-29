@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { resolveOrderLines } from '@/lib/orders/resolve'
-import { allocate, percentOf, priceLines, promotionHints } from '@/lib/promotions'
+import { allocate, percentOf, priceLines, promotionHints, promotionProgress } from '@/lib/promotions'
 
 const CALM = 638000
 const FOCUS = 249000
@@ -126,5 +126,24 @@ describe('hints', () => {
     expect(h(amber(2))).toEqual(['amber-2-plus-1'])
     expect(h(amber(3))).toEqual([])
     expect(h(amber(5))).toEqual(['amber-2-plus-1'])
+  })
+})
+
+describe('progress towards the offers', () => {
+  const prog = (...l: L[]) =>
+    promotionProgress(order(...l).lines.map((x) => ({ key: x.key, productId: x.productId, quantity: x.quantity, unitAmount: x.unitAmount }))).map((p) => [p.id, p.state, p.missing, p.active])
+  it('20%: far at 1, close at 2, active from 3', () => {
+    expect(prog(calm(1))).toEqual([['trei-produse-20', 'far', 2, false]])
+    expect(prog(calm(2))).toEqual([['trei-produse-20', 'close', 1, false]])
+    expect(prog(calm(2), focus(1))).toEqual([['trei-produse-20', 'active', 0, true]])
+  })
+  it('Amber 2+1: far at 1, close at 2, active at 3, active and close again at 5', () => {
+    expect(prog(amber(1))).toEqual([['amber-2-plus-1', 'far', 2, false]])
+    expect(prog(amber(2))).toEqual([['amber-2-plus-1', 'close', 1, false]])
+    expect(prog(amber(3))).toEqual([['amber-2-plus-1', 'active', 0, true]])
+    expect(prog(amber(5))).toEqual([['amber-2-plus-1', 'close', 1, true]])
+  })
+  it('only promotions the cart touches', () => {
+    expect(prog(focus(1)).map((p) => p[0])).toEqual(['trei-produse-20'])
   })
 })

@@ -19,13 +19,13 @@ export async function generateMetadata({ params }: PageProps<'/lp/[slug]'>): Pro
   const landing = getLanding((await params).slug)
   if (!landing) return {}
   const product = getProduct(landing.productId)!
-  const img = landing.hero.image.src
+  const img = product.lifestyle.src
   return {
     ...pageMetadata({
       title: landing.meta.title,
       description: landing.meta.description,
       path: productHref(product),
-      image: { url: img.src, width: img.width, height: img.height, alt: landing.hero.image.alt },
+      image: { url: img.src, width: img.width, height: img.height, alt: product.lifestyle.alt },
     }),
     title: { absolute: landing.meta.title },
     robots: { index: false, follow: false },

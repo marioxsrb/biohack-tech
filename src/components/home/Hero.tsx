@@ -20,11 +20,11 @@ export function Hero() {
       <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(8,17,19,.72)_0%,rgba(8,17,19,.25)_45%,rgba(8,17,19,0)_65%)] max-md:hidden" />
       <div aria-hidden className="absolute inset-x-0 bottom-0 -z-10 h-[55%] bg-[linear-gradient(0deg,rgba(8,17,19,.88),rgba(8,17,19,0))] max-md:h-[65%]" />
 
-      {/* Marks where the product panels begin to overlap the photo; the header turns solid here. */}
-      <span id="hero-end" aria-hidden className="absolute inset-x-0 bottom-[140px] h-px max-md:bottom-[96px]" />
+      {/* The photograph's lower edge; the header turns solid here. */}
+      <span id="hero-end" aria-hidden className="absolute inset-x-0 bottom-0 h-px" />
 
-      {/* Bottom padding leaves room for the product panels that rise over the photo's edge. */}
-      <div className="hero-copy wrap w-full pb-[clamp(150px,22vh,230px)] max-md:pb-[120px]">
+      
+      <div className="hero-copy wrap w-full pb-[clamp(64px,11vh,120px)] max-md:pb-[56px]">
         <h1 className="max-w-[9em] text-[clamp(46px,6.4vw,92px)] leading-[0.96] tracking-[-0.045em] !text-white">
           Minte limpede.
           <br />
@@ -37,7 +37,7 @@ export function Hero() {
           <a href="#produse" className="cta">
             Alege produsul <Arrow />
           </a>
-          <a href="#alege" className="tlink">
+          <a href="#contact" className="tlink">
             Nu știi ce să alegi? <Arrow />
           </a>
         </div>

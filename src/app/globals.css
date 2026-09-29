@@ -499,3 +499,9 @@ textarea.field { resize: vertical; }
 @media (prefers-reduced-motion: reduce) {
   .lp-fade { animation: none; }
 }
+
+/* Soft fields (contact form): a quiet surface until focused, then a clear ring. */
+.field.soft { background-color: var(--color-mist); box-shadow: inset 0 0 0 1px transparent; }
+.field.soft:hover { box-shadow: inset 0 0 0 1px var(--color-line); }
+.field.soft:focus { background-color: var(--color-paper); box-shadow: inset 0 0 0 2px var(--color-cyan-700), 0 0 0 4px rgb(6 182 212 / 0.14); }
+.field[aria-invalid='true'] { box-shadow: inset 0 0 0 2px var(--color-red-dark); }

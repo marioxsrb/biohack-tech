@@ -60,7 +60,7 @@ export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light
   }
 
   const dark = tone === 'dark'
-  const label = `block text-[14.5px] font-medium ${dark ? 'text-white' : 'text-ink'}`
+  const label = `block text-[14px] font-semibold tracking-[0.005em] ${dark ? 'text-white' : 'text-ink'}`
   const err = (f: EnquiryField) =>
     errors[f] ? (
       <p id={`c-${f}-err`} className={`mt-1.5 text-[14px] ${dark ? 'text-[#ffb4a8]' : 'text-red-deep'}`}>
@@ -71,12 +71,13 @@ export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light
 
   if (state === 'sent') {
     return (
-      <div role="status" className="rounded-[20px] bg-paper p-8 text-center">
-        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-cyan-50 text-cyan-700">
+      <div role="status" className="flex min-h-[320px] flex-col items-start justify-center rounded-[20px] bg-mist p-8">
+        <span className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-700 text-white">
           <Check className="h-6 w-6" />
         </span>
-        <p className="mt-4 text-[22px] tracking-[-0.02em] text-ink">Mulțumim. Am primit mesajul.</p>
-        <p className="mt-2 text-[16px] text-text">Îți răspundem pe email, de obicei în cel mult 24 de ore. Referința ta: {reply}.</p>
+        <p className="mt-5 text-[26px] leading-tight tracking-[-0.03em] text-ink">Mulțumim. Am primit mesajul.</p>
+        <p className="mt-2 max-w-[30em] text-[16px] leading-relaxed text-text">Îți răspundem pe email, în cel mult 24 de ore.</p>
+        <p className="mt-3 rounded-full bg-paper px-3 py-1 font-mono text-[13px] tracking-[0.04em] text-muted">Referința ta: {reply}</p>
         <button
           type="button"
           className="tlink mt-5"
@@ -98,28 +99,28 @@ export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light
         <label htmlFor="c-name" className={label}>
           Nume
         </label>
-        <input {...a11y('name')} className="field mt-2" autoComplete="name" value={form.name} onChange={set('name')} maxLength={ENQUIRY_LIMITS.name + 20} required />
+        <input {...a11y('name')} className="field soft mt-2" autoComplete="name" value={form.name} onChange={set('name')} maxLength={ENQUIRY_LIMITS.name + 20} required />
         {err('name')}
       </div>
       <div>
         <label htmlFor="c-email" className={label}>
           Email
         </label>
-        <input {...a11y('email')} className="field mt-2" type="email" inputMode="email" autoComplete="email" value={form.email} onChange={set('email')} required />
+        <input {...a11y('email')} className="field soft mt-2" type="email" inputMode="email" autoComplete="email" value={form.email} onChange={set('email')} required />
         {err('email')}
       </div>
       <div>
         <label htmlFor="c-phone" className={label}>
           Telefon <span className={dark ? 'font-normal text-white/70' : 'font-normal text-muted'}>(opțional)</span>
         </label>
-        <input {...a11y('phone')} className="field mt-2" type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={set('phone')} />
+        <input {...a11y('phone')} className="field soft mt-2" type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={set('phone')} />
         {err('phone')}
       </div>
       <div>
         <label htmlFor="c-topic" className={label}>
           Despre ce ne scrii
         </label>
-        <select id="c-topic" className="field mt-2" value={form.topic} onChange={set('topic')}>
+        <select id="c-topic" className="field soft mt-2" value={form.topic} onChange={set('topic')}>
           {(Object.keys(ENQUIRY_TOPICS) as EnquiryTopic[]).map((t) => (
             <option key={t} value={t}>
               {ENQUIRY_TOPICS[t]}
@@ -131,7 +132,7 @@ export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light
         <label htmlFor="c-message" className={label}>
           Mesaj
         </label>
-        <textarea {...a11y('message')} rows={compact ? 4 : 6} style={{ minHeight: compact ? 110 : 150 }} className="field mt-2 resize-y" value={form.message} onChange={set('message')} maxLength={ENQUIRY_LIMITS.message + 200} required />
+        <textarea {...a11y('message')} rows={compact ? 4 : 6} style={{ minHeight: compact ? 110 : 150 }} className="field soft mt-2 resize-y" value={form.message} onChange={set('message')} maxLength={ENQUIRY_LIMITS.message + 200} required />
         {err('message')}
       </div>
       {/* Invisible to people (and to screen readers); bots tend to fill every field. */}

@@ -1,9 +1,8 @@
-import { Check } from '@/components/ui/icons'
 import { rhythm } from '@/content/home'
 
 /**
- * Before / with, as two columns of text: the same day without a habit (muted) and with one (strong).
- * Routines, not results: nothing here promises an outcome.
+ * "Aceeași zi. Alt ritm.": four moments of the same day, read across. Left, the day as it happens (quiet
+ * type); right, the same moment with a deliberate tool (strong type on dark). Typography, no icons.
  */
 export function Rhythm() {
   return (
@@ -13,28 +12,30 @@ export function Rhythm() {
       </h2>
       <p className="mt-4 max-w-[34em] text-[18px] leading-relaxed text-text">{rhythm.intro}</p>
 
-      <div className="mt-10 grid overflow-hidden rounded-[24px] md:grid-cols-2">
-        <div className="bg-mist-2 p-[clamp(24px,3.2vw,40px)]">
-          <p className="text-[13px] font-semibold tracking-[0.12em] text-[#4a575d] uppercase">{rhythm.before.label}</p>
-          <ul className="mt-5 space-y-4">
-            {rhythm.before.items.map((t) => (
-              <li key={t} className="flex gap-3 text-[18px] leading-snug text-[#3a464b]">
-                <span aria-hidden className="mt-[10px] h-1.5 w-1.5 flex-none rounded-full bg-[#7d8a90]" />
-                {t}
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="on-dark bg-dark p-[clamp(24px,3.2vw,40px)]">
-          <p className="text-[13px] font-semibold tracking-[0.12em] text-cyan uppercase">{rhythm.after.label}</p>
-          <ul className="mt-5 space-y-4">
-            {rhythm.after.items.map((t) => (
-              <li key={t} className="flex gap-3 text-[18px] leading-snug font-medium text-white">
-                <Check className="mt-0.5 h-5 w-5 flex-none text-cyan" aria-hidden />
-                {t}
-              </li>
-            ))}
-          </ul>
+      {/* Phones: the two column names once, as a legend. */}
+      <p className="mt-8 flex flex-wrap gap-2 text-[13px] font-semibold tracking-[0.08em] uppercase md:hidden">
+        <span className="rounded-full bg-paper px-3 py-1.5 text-muted">{rhythm.without}</span>
+        <span className="rounded-full bg-dark px-3 py-1.5 text-cyan">{rhythm.with}</span>
+      </p>
+      <div className="mt-4 overflow-hidden rounded-[28px] bg-paper md:mt-10">
+        <div className="grid md:grid-cols-[150px_1fr_1fr]">
+          <span className="hidden md:block" />
+          <p className="px-6 pt-6 pb-3 text-[13px] font-semibold tracking-[0.12em] text-muted uppercase max-md:hidden md:px-8">{rhythm.without}</p>
+          <p className="bg-dark px-6 pt-6 pb-3 text-[13px] font-semibold tracking-[0.12em] text-cyan uppercase max-md:hidden md:px-8">{rhythm.with}</p>
+          {rhythm.rows.map((r, i) => (
+            <div key={r.moment} className="contents">
+              <p className={`px-6 pt-6 text-[15px] font-semibold text-ink md:px-8 md:py-6 ${i ? 'md:border-t md:border-mist-2' : ''}`}>{r.moment}</p>
+              <p className={`px-6 pt-1 pb-3 text-[17px] leading-snug text-[#5d6a70] md:px-8 md:py-6 ${i ? 'md:border-t md:border-mist-2' : ''}`}>
+                {r.without}
+              </p>
+              <p className={`on-dark bg-dark px-6 py-4 text-[17px] leading-snug font-medium text-white md:px-8 md:py-6 max-md:mx-6 max-md:rounded-[14px] ${i ? 'md:border-t md:border-white/10' : ''} ${i === rhythm.rows.length - 1 ? 'max-md:mb-6' : ''}`}>
+                {r.with}
+              </p>
+            </div>
+          ))}
+          <span className="hidden h-6 md:block" />
+          <span className="hidden h-6 md:block" />
+          <span className="hidden h-6 bg-dark md:block" />
         </div>
       </div>
       <p className="mt-4 text-[14px] text-muted">{rhythm.note}</p>
