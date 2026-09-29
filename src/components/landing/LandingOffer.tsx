@@ -27,8 +27,10 @@ type Props = {
   /** 'panel': product image beside the picker. 'columns': the variants side by side, large (configurations). */
   layout?: 'panel' | 'columns'
   defaultVariant?: string
-  /** A quantity choice (NEUROS Amber: the 2+1 needs three pairs). The total is priced by the promotion engine. */
+  /** A quantity choice. The total is priced by the promotion engine. */
   withQuantity?: boolean
+  /** "Ce primești": what arrives and the facts that decide the purchase, beside the price (no separate section). */
+  details?: [string, string][]
 }
 
 /**
@@ -36,7 +38,7 @@ type Props = {
  * one button to the checkout. Only ids travel in the link; the checkout and the server price everything
  * again. Colours come from the landing theme (--lp-*).
  */
-export function LandingOffer({ slug, productId, title, text, cta, notes, layout = 'panel', defaultVariant, withQuantity }: Props) {
+export function LandingOffer({ slug, productId, title, text, cta, notes, layout = 'panel', defaultVariant, withQuantity, details }: Props) {
   const product = getProduct(productId)!
   const variants = product.variants ?? []
   const [variantId, setVariantId] = useState<string | undefined>(() => (variants.length ? (variants.find((v) => v.id === defaultVariant) ?? variants[0]).id : undefined))
@@ -97,6 +99,19 @@ export function LandingOffer({ slug, productId, title, text, cta, notes, layout 
         <li>{terms.returnDays} zile să te răzgândești</li>
         <li>Garanție {terms.warrantyYears} ani</li>
       </ul>
+      {details && (
+        <div className="mt-8 border-t border-[var(--lp-line)] pt-5">
+          <p className="text-[15px] font-semibold text-[var(--lp-ink)]">Ce primești</p>
+          <dl className="mt-2 divide-y divide-[var(--lp-line)]">
+            {details.map(([k, v]) => (
+              <div key={k} className="grid gap-0.5 py-2.5 sm:grid-cols-[150px_1fr] sm:gap-4">
+                <dt className="text-[14.5px] text-[var(--lp-muted)]">{k}</dt>
+                <dd className="text-[15px] text-[var(--lp-ink)]">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
     </>
   )
 

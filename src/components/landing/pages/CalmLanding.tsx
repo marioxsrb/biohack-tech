@@ -6,15 +6,13 @@ import { terms } from '@/config/site'
 import { formatLei } from '@/lib/money'
 import { HeroCta } from '../HeroCta'
 import { LandingOffer } from '../LandingOffer'
-import { FinalCta, Help, Kicker, LandingFaq, LandingShell, Lead, Specs, Steps, Testimonials, Title } from '../kit'
+import { FinalCta, Help, Kicker, LandingFaq, LandingShell, Steps, Testimonials, Title } from '../kit'
 
 import somn from '@/assets/img/balance-wave/result-somn.webp'
-import activ from '@/assets/img/balance-wave/dispozitiv-activ.webp'
 import spate from '@/assets/img/balance-wave/dispozitiv.webp'
 import nervVag from '@/assets/img/balance-wave/pillar-nerv-vag.webp'
 import birou from '@/assets/img/balance-wave/audience-birou.webp'
 import canapea from '@/assets/img/balance-wave/lifestyle-canapea.webp'
-import cutie from '@/assets/img/balance-wave/cutie.webp'
 
 const CTA = 'Comandă NEUROS Calm'
 
@@ -54,39 +52,8 @@ export function CalmLanding({ landing }: { landing: Landing }) {
         </div>
       </section>
 
-      {/* What it is: the object, large, on a warm stage. */}
-      <section aria-labelledby="ce-este" className="lp-wrap pt-[var(--sec)]">
-        <div className="grid items-center gap-y-10 md:grid-cols-12 md:gap-x-12">
-          <div className="relative aspect-square overflow-hidden rounded-[32px] bg-[radial-gradient(circle_at_50%_70%,#3a1d17,#1d1512_65%)] md:col-span-6">
-            <span aria-hidden className="absolute inset-x-[15%] bottom-[10%] h-[40%] rounded-full bg-[radial-gradient(closest-side,rgb(255_90_70/.35),transparent)]" />
-            <Image src={activ} alt="NEUROS Calm, dispozitivul cu luminile roșii aprinse" fill sizes="(min-width: 768px) 520px, 100vw" className="object-contain object-bottom px-[10%] pt-[10%]" />
-          </div>
-          <div className="md:col-span-6">
-            <Kicker>Ce este</Kicker>
-            <Title id="ce-este" className="mt-3">
-              Un dispozitiv mic, purtat la gât.
-            </Title>
-            <Lead className="mt-4 max-w-[28em] text-[var(--lp-muted)]">
-              Aplică lumină roșie pe piele, din ambele părți ale gâtului. Tu alegi cât durează ședința. Restul îl face singur.
-            </Lead>
-            <dl className="mt-8 grid grid-cols-3 gap-4 border-t border-[var(--lp-line)] pt-6">
-              {[
-                ['5-20', 'minute pe ședință'],
-                ['Trepte', 'de intensitate'],
-                ['Auto', 'se oprește singur'],
-              ].map(([big, small]) => (
-                <div key={small}>
-                  <dt className="text-[clamp(26px,3vw,38px)] leading-none font-medium tracking-[-0.04em] text-white">{big}</dt>
-                  <dd className="mt-2 text-[14.5px] leading-snug text-[var(--lp-muted)]">{small}</dd>
-                </div>
-              ))}
-            </dl>
-          </div>
-        </div>
-      </section>
-
       {/* How it works: a light page inside the dark one, so the explanation reads calmly. */}
-      <section id="cum" aria-labelledby="cum-title" className="mt-[var(--sec)] scroll-mt-10 bg-[#f7efe9] py-[var(--sec)] text-[#1d1512]">
+      <section id="cum" aria-labelledby="cum-title" className="scroll-mt-10 bg-[#f7efe9] py-[var(--sec)] text-[#1d1512]">
         <div className="lp-wrap grid items-center gap-y-10 md:grid-cols-12 md:gap-x-12">
           <div className="md:col-span-6">
             <p className="text-[13px] font-semibold tracking-[0.14em] text-[#a3392b] uppercase">Cum funcționează</p>
@@ -96,7 +63,7 @@ export function CalmLanding({ landing }: { landing: Landing }) {
             <div className="mt-5 max-w-[30em] space-y-4 text-[17.5px] leading-relaxed text-[#4e3f38]">
               <p>Pe acolo trece nervul vag, cel mai lung nerv din corp. Leagă creierul de inimă, plămâni și digestie.</p>
               <p>Nervul vag are un rol în felul în care corpul trece din alertă în repaus.</p>
-              <p>NEUROS Calm folosește fotobiomodulare: lumină roșie aplicată pe piele, din ambele părți ale gâtului.</p>
+              <p>Acolo aplică NEUROS Calm lumina roșie. Metoda se numește fotobiomodulare.</p>
             </div>
           </div>
           <div className="relative aspect-[4/3] overflow-hidden rounded-[28px] md:col-span-6">
@@ -105,26 +72,27 @@ export function CalmLanding({ landing }: { landing: Landing }) {
         </div>
       </section>
 
-      {/* How you use it: three steps beside the button on the back of the device. */}
+      {/* How you use it: the back of the device (its one button) beside the three gestures. */}
       <section aria-labelledby="folosire" className="lp-wrap pt-[var(--sec)]">
-        <div className="grid gap-y-10 md:grid-cols-12 md:gap-x-12">
-          <div className="md:col-span-4">
+        <div className="grid items-center gap-y-10 md:grid-cols-12 md:gap-x-12">
+          <div className="relative aspect-square overflow-hidden rounded-[32px] bg-[radial-gradient(circle_at_50%_70%,#3a1d17,#1d1512_65%)] md:col-span-6">
+            <span aria-hidden className="absolute inset-x-[15%] bottom-[10%] h-[40%] rounded-full bg-[radial-gradient(closest-side,rgb(255_90_70/.35),transparent)]" />
+            <Image src={spate} alt="NEUROS Calm văzut din spate, cu butonul de pornire" fill sizes="(min-width: 768px) 520px, 100vw" className="object-contain p-[16%]" />
+          </div>
+          <div className="md:col-span-6">
             <Kicker>Cum îl folosești</Kicker>
             <Title id="folosire" className="mt-3">
               Trei gesturi.
             </Title>
-            <div className="relative mt-8 aspect-[4/3] rounded-[24px] bg-[var(--lp-panel)]">
-              <Image src={spate} alt="NEUROS Calm văzut din spate, cu butonul de pornire" fill sizes="360px" className="object-contain p-[12%]" />
-            </div>
+            <Steps
+              className="mt-8 text-white md:!grid-cols-1"
+              items={[
+                { title: 'Îl așezi la gât.', text: 'Luminile stau pe ambele părți ale gâtului.' },
+                { title: 'Alegi durata.', text: 'Între 5 și 20 de minute. Intensitatea se reglează pe trepte.' },
+                { title: 'Te relaxezi.', text: 'Poți citi sau medita. Se oprește singur la final.' },
+              ]}
+            />
           </div>
-          <Steps
-            className="text-white md:col-span-8 md:self-end"
-            items={[
-              { title: 'Îl așezi la gât.', text: 'Luminile stau pe ambele părți ale gâtului.' },
-              { title: 'Alegi durata.', text: 'Între 5 și 20 de minute. Intensitatea se reglează pe trepte.' },
-              { title: 'Te relaxezi.', text: 'Poți citi sau medita. Se oprește singur la final.' },
-            ]}
-          />
         </div>
       </section>
 
@@ -150,45 +118,22 @@ export function CalmLanding({ landing }: { landing: Landing }) {
         </div>
       </section>
 
-      {/* What arrives. */}
-      <section aria-labelledby="primesti" className="lp-wrap pt-[var(--sec)]">
-        <div className="grid items-start gap-y-10 md:grid-cols-12 md:gap-x-12">
-          <div className="relative aspect-[8/7] rounded-[28px] bg-[#f7efe9] md:col-span-5">
-            <Image src={cutie} alt="NEUROS Calm lângă cutia produsului" fill sizes="(min-width: 768px) 440px, 100vw" className="object-contain p-[10%]" />
-          </div>
-          <div className="md:col-span-7">
-            <Kicker>Ce primești</Kicker>
-            <Title id="primesti" className="mt-3">
-              Dispozitivul și un om care te ajută să începi.
-            </Title>
-            <Specs
-              className="mt-8"
-              rows={[
-                ['Tehnologie', 'Fotobiomodulare duală, lumină roșie'],
-                ['Unde se aplică', 'La gât, în zona nervului vag'],
-                ['Durată', '5-20 de minute, la alegere'],
-                ['Intensitate', 'Reglabilă pe trepte'],
-                ['Oprire', 'Automată'],
-                ['Ghidaj', 'Un specialist îți recomandă durata și programul'],
-                ['Garanție', `${terms.warrantyYears} ani`],
-              ]}
-            />
-          </div>
-        </div>
-      </section>
-
       <LandingOffer
         slug={landing.slug}
         productId={p.id}
         cta={CTA}
         title="NEUROS Calm, livrat acasă."
-        text="Plătești cu cardul sau prin transfer. Livrarea în România este gratuită."
+        text="Dispozitivul și un om care te ajută să începi."
+        details={[
+          ['Tehnologie', 'Fotobiomodulare duală, lumină roșie'],
+          ['Ghidaj', 'Un specialist îți recomandă durata și programul'],
+        ]}
       />
 
       <Testimonials productId={p.id} />
       <LandingFaq items={landing.faqs} />
       <Help title="Nu ești sigur că e pentru tine?" text="Spune-ne cum arată seara ta. Îți spunem sincer dacă NEUROS Calm are sens." />
-      <FinalCta productId={p.id} dark line="Câteva minute de lumină roșie, la gât. Se oprește singur." cta={CTA} />
+      <FinalCta dark title="Câteva minute pentru tine, în seara asta." cta={CTA} />
     </LandingShell>
   )
 }

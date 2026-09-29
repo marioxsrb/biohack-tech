@@ -3,12 +3,10 @@
  * section typography, steps, specifications, product FAQ, the help block and the closing decision. Each
  * landing composes its own story from these; colours come from its theme (--lp-*).
  */
-import Image from 'next/image'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 import { CookieSettingsButton } from '@/components/consent/ConsentManager'
 import { ContactForm } from '@/components/contact/ContactForm'
-import { PromoNote } from '@/components/cart/PromoNote'
 import { Wordmark } from '@/components/site/Wordmark'
 import { Arrow, Mail, Phone } from '@/components/ui/icons'
 import { getProduct, type ProductId } from '@/content/catalog'
@@ -16,7 +14,6 @@ import { testimonials } from '@/content/home'
 import type { Landing } from '@/content/landings'
 import { companyLine } from '@/config/company'
 import { site, terms } from '@/config/site'
-import { formatLei } from '@/lib/money'
 import { StickyBuy } from './StickyBuy'
 
 /** True for dark page backgrounds (relative luminance of the hex colour below 0.2). */
@@ -237,34 +234,20 @@ export function Help({ title, text }: { title: string; text: string }) {
   )
 }
 
-/** The closing decision: product, one line, price, offer, the action, reassurance. No new information. */
-export function FinalCta({ productId, line, cta, image, dark = false }: { productId: ProductId; line: string; cta: string; image?: ReactNode; dark?: boolean }) {
-  const p = getProduct(productId)!
+/**
+ * The page's last word: one sentence and the way back to the purchase block. No price, offer or trust
+ * list here: all of it is in the purchase block, one click away.
+ */
+export function FinalCta({ title, cta, dark = false }: { title: string; cta: string; dark?: boolean }) {
   return (
     <section aria-labelledby="final-title" className="lp-wrap pb-[var(--sec)]">
-      <div className={`grid items-center overflow-hidden rounded-[32px] md:grid-cols-12 ${dark ? 'on-dark bg-[#0b0908] text-white' : 'bg-[var(--lp-panel)]'}`}>
-        <div className="relative aspect-[4/3] md:col-span-6 md:aspect-auto md:h-full md:min-h-[440px]">
-          {image ?? <Image src={p.cutout.src} alt={p.cutout.alt} fill sizes="(min-width: 768px) 560px, 100vw" className={`object-contain p-[10%] ${p.cutout.bleed === 'bottom' ? 'object-bottom pb-0' : ''}`} />}
-        </div>
-        <div className="p-[clamp(24px,4.4vw,56px)] md:col-span-6">
-          <h2 id="final-title" className={`text-[clamp(32px,3.6vw,48px)] leading-[1.02] tracking-[-0.04em] ${dark ? '!text-white' : 'text-[var(--lp-ink)]'}`}>
-            {p.name}
-          </h2>
-          <p className={`mt-3 max-w-[26em] text-[18px] leading-relaxed ${dark ? 'text-white/80' : 'text-[var(--lp-muted)]'}`}>{line}</p>
-          <p className="mt-6 text-[30px] font-medium tracking-[-0.03em] tabular-nums">
-            {p.variablePrice && 'de la '}
-            {p.price !== null && formatLei(p.price)}
-          </p>
-          <div className="mt-2">
-            <PromoNote productId={p.id} />
-          </div>
-          <a href="#comanda" className="cta mt-6">
-            {cta} <Arrow />
-          </a>
-          <p className={`mt-4 text-[14.5px] ${dark ? 'text-white/70' : 'text-[var(--lp-muted)]'}`}>
-            Livrare gratuită · {terms.returnDays} zile să te răzgândești · Garanție {terms.warrantyYears} ani
-          </p>
-        </div>
+      <div className={`flex flex-col items-start justify-between gap-6 rounded-[28px] px-[clamp(24px,4vw,48px)] py-[clamp(28px,4vw,44px)] md:flex-row md:items-center ${dark ? 'on-dark bg-[#0b0908]' : 'bg-[var(--lp-panel)]'}`}>
+        <h2 id="final-title" className={`max-w-[18em] text-[clamp(26px,2.8vw,38px)] leading-[1.05] tracking-[-0.035em] ${dark ? '!text-white' : 'text-[var(--lp-ink)]'}`}>
+          {title}
+        </h2>
+        <a href="#comanda" className="cta flex-none">
+          {cta} <Arrow />
+        </a>
       </div>
     </section>
   )

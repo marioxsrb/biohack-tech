@@ -105,6 +105,19 @@ export const cartStore = {
     commit(EMPTY)
   },
   /**
+   * A selection built on a landing (e.g. several NEUROS Amber frames): each of these lines gets exactly
+   * the chosen quantity; lines not in the selection are kept. Repeating it changes nothing.
+   */
+  put(selected: CartLine[]) {
+    const next = [...cartStore.getSnapshot()]
+    for (const l of sanitize(selected)) {
+      const i = next.findIndex((x) => lineKey(x) === lineKey(l))
+      if (i === -1) next.push(l)
+      else next[i] = { ...next[i], quantity: l.quantity }
+    }
+    commit(next)
+  },
+  /**
    * Makes sure these lines are in the cart without doubling what is already there: a line that exists
    * keeps the larger quantity and its first source. Used by the landing handoff, the checkout's
    * `?item=` links and checkout recovery.

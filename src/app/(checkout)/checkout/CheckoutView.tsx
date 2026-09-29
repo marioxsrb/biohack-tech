@@ -213,12 +213,7 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
 
   return (
     <form onSubmit={submit} noValidate aria-busy={sending}>
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-[clamp(30px,3.4vw,40px)] leading-tight tracking-[-0.035em]">Finalizează comanda</h1>
-        <p className="flex items-center gap-2 text-[14.5px] text-muted">
-          <Lock className="h-4 w-4" /> Conexiune securizată
-        </p>
-      </div>
+      <h1 className="text-[clamp(30px,3.4vw,40px)] leading-tight tracking-[-0.035em]">Finalizează comanda</h1>
 
       {/* Phones: the order, folded, above the form */}
       <details className="faq group mt-5 rounded-[16px] bg-paper md:hidden">

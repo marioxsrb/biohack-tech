@@ -147,3 +147,62 @@ describe('progress towards the offers', () => {
     expect(prog(focus(1)).map((p) => p[0])).toEqual(['trei-produse-20'])
   })
 })
+
+describe('NEUROS Amber mix and match (2+1 across frames)', () => {
+  const lines = (r: ReturnType<typeof order>) => r.lines.map((l) => [l.variantId, l.quantity, l.discountMinor])
+
+  it('A: one frame, no promotion', () => {
+    const r = order(amber(1, 'cat-eye-negru'))
+    expect([r.total, r.discount]).toEqual([AMBER, 0])
+  })
+
+  it('B: two different frames, no promotion', () => {
+    const r = order(amber(1, 'cat-eye-negru'), amber(1, 'cat-eye-bej'))
+    expect([r.total, r.discount]).toEqual([2 * AMBER, 0])
+  })
+
+  it('C: three different frames: one pair free, every frame stays its own line, none at 0 lei', () => {
+    const r = order(amber(1, 'cat-eye-negru'), amber(1, 'cat-eye-bej'), amber(1, 'patrat-negru'))
+    expect([r.subtotal, r.discount, r.total]).toEqual([3 * AMBER, AMBER, 2 * AMBER])
+    expect(lines(r)).toEqual([
+      ['cat-eye-negru', 1, 10500],
+      ['cat-eye-bej', 1, 10500],
+      ['patrat-negru', 1, 10500],
+    ])
+    for (const l of r.lines) expect(l.promotionId).toBe('amber-2-plus-1')
+  })
+
+  it('D: frame A × 2 + frame B × 1: one pair free, split by line value', () => {
+    const r = order(amber(2, 'patrat-maro'), amber(1, 'cat-eye-bej'))
+    expect(r.total).toBe(2 * AMBER)
+    expect(lines(r)).toEqual([
+      ['patrat-maro', 2, 21000],
+      ['cat-eye-bej', 1, 10500],
+    ])
+  })
+
+  it('E: three of the same frame', () => {
+    const r = order(amber(3, 'cat-eye-bej'))
+    expect(lines(r)).toEqual([['cat-eye-bej', 3, AMBER]])
+  })
+
+  it('F/G: removing the third pair removes the offer; adding it back restores it', () => {
+    expect(order(amber(1, 'cat-eye-negru'), amber(1, 'cat-eye-bej')).discount).toBe(0)
+    expect(order(amber(1, 'cat-eye-negru'), amber(1, 'cat-eye-bej'), amber(1, 'patrat-maro')).discount).toBe(AMBER)
+  })
+
+  it('if frames ever cost differently, the free units are still the cheapest ones', () => {
+    const p = priceLines([
+      { key: 'a', productId: 'ochelari-biohack', quantity: 1, unitAmount: 40000 },
+      { key: 'b', productId: 'ochelari-biohack', quantity: 1, unitAmount: 30000 },
+      { key: 'c', productId: 'ochelari-biohack', quantity: 1, unitAmount: 35000 },
+    ])
+    expect(p.discountMinor).toBe(30000)
+    expect(Object.values(p.lineDiscounts).reduce((s, x) => s + x, 0)).toBe(30000)
+    const six = priceLines([
+      { key: 'a', productId: 'ochelari-biohack', quantity: 4, unitAmount: 40000 },
+      { key: 'b', productId: 'ochelari-biohack', quantity: 2, unitAmount: 30000 },
+    ])
+    expect(six.discountMinor).toBe(60000) // two free: the two cheapest units
+  })
+})

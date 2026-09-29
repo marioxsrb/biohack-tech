@@ -91,3 +91,10 @@ Ordinea: hero, produsele (cu oferta lor, discret), ideea de brand cu cele patru 
 - Landingul NEUROS Amber folosește acum suprafețele, tipografia, liniile și butonul roșu ale site-ului. Căldura vine din fotografiile cu lentile, dintr-o singură culoare de accent (chihlimbar), dintr-o lumină caldă discretă în hero și în secțiunea de seară și din panoul cald al ofertei 2+1. Nu mai are fundal crem și maro peste tot.
 - Pe landingul NEUROS Amber se poate alege și numărul de perechi. La 3 perechi, totalul arată direct reducerea 2+1, calculată de același motor ca în coș.
 - În coș, beneficiul este partea cea mai vizibilă („și primești 20% reducere.”, „și primești 2+1 gratis.”), cu suma exactă economisită. Butoanele ofertei sunt teal, ca să nu concureze cu „Finalizează comanda”.
+
+## Landinguri curățate, NEUROS Amber mix and match, checkout concentrat (29.09.2026)
+
+- Fiecare secțiune de landing are o singură treabă. Au ieșit repetițiile: la NEUROS Calm „Ce este” (titlul repeta hero-ul) s-a unit cu „Trei gesturi”, iar „Ce primești” a intrat în blocul de comandă; la NEUROS Focus au ieșit banda cu cifre și „Trei pași” (repetau hero-ul, mecanismul și specificațiile), iar detaliile au intrat în blocul de comandă; la NEUROS Flow a ieșit „Pe scurt” (repeta hero-ul) și 810 nm apare doar în hero și în fișa tehnică; la NEUROS Amber, banda cu rame, blocul 2+1, oferta pe o singură ramă și specificațiile s-au unit în selectorul de perechi.
+- Prețul apare în hero, în locul unde alegi (bloc de comandă / selector) și în bara fixă de pe telefon. Secțiunea finală are o frază și un buton, fără preț.
+- NEUROS Amber folosește exact paleta site-ului; căldura vine din fotografii și dintr-un accent chihlimbar mic (eticheta 2+1, progresul). Fără suprafețe, borduri sau texte maro.
+- Checkout-ul nu mai arată meniul și lista de produse, nici venind de pe site, nici de pe un landing.

@@ -72,7 +72,7 @@ describe('the four landings', () => {
   it('copy: no dash punctuation, no invented social proof, urgency or health promises', () => {
     // The pages' own copy (sections) and the product FAQs.
     const dir = join(process.cwd(), 'src/components/landing')
-    const sources = [...readdirSync(join(dir, 'pages')).map((f) => join(dir, 'pages', f)), join(dir, 'kit.tsx'), join(dir, 'LandingOffer.tsx')]
+    const sources = [...readdirSync(join(dir, 'pages')).map((f) => join(dir, 'pages', f)), join(dir, 'kit.tsx'), join(dir, 'LandingOffer.tsx'), join(dir, 'AmberSelector.tsx')]
     const text = sources.map((f) => readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')).join('\n') + JSON.stringify(landings.map((l) => [l.meta, l.faqs]))
     expect(text).not.toMatch(/[—–]/)
     expect(text).not.toMatch(/clienți mulțumiți|recenzi|★|stele|stoc limitat|ultimele bucăți|doar azi|ofertă expir|vindec|garantat|tratează|anxiet|depresi|insomni|studii arată|dovedit/i)

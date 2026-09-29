@@ -18,9 +18,9 @@ import telecomanda from '@/assets/img/brain-flow/casca-telecomanda.webp'
 const CTA = 'Alege configurația'
 
 /**
- * NEUROS Flow: the page that teaches most, so it teaches in layers. First three plain sentences, then the
- * person at home, then what photobiomodulation is in simple words, then how it goes with the specialist,
- * then the configurations, and only at the end the technical sheet. Only facts from the product page
+ * NEUROS Flow: the page that teaches most, so it teaches in layers, each said once. The hero says what it
+ * is (810 nm, 1/4/13 zones, a specialist); then the person at home, what photobiomodulation is in simple
+ * words, how it goes with the specialist, the configurations, and only at the end the technical sheet. Only facts from the product page
  * (810 nm, 1/4/13 zones, adjustable protocol, remote, battery, consultation); no health claims, and the
  * source's study list is not used.
  */
@@ -55,23 +55,6 @@ export function FlowLanding({ landing }: { landing: Landing }) {
         </div>
       </section>
 
-      {/* Layer 1: three plain sentences. */}
-      <section aria-labelledby="pe-scurt" className="border-y border-[var(--lp-line)] bg-[var(--lp-panel)]">
-        <h2 id="pe-scurt" className="sr-only">
-          Pe scurt
-        </h2>
-        <ol className="lp-wrap grid gap-y-6 py-12 md:grid-cols-3 md:gap-x-10">
-          {['O cască purtată pe cap, cu LED-uri în interior.', 'Lumină infraroșie la 810 nm, aplicată din exterior, prin scalp.', 'Un protocol stabilit cu un specialist, folosit acasă.'].map((t, i) => (
-            <li key={t} className="grid grid-cols-[36px_1fr] gap-x-3">
-              <span aria-hidden className="pt-1 font-mono text-[13px] tracking-[0.08em] text-[var(--lp-accent)]">
-                0{i + 1}
-              </span>
-              <span className="text-[19px] leading-snug font-medium tracking-[-0.015em]">{t}</span>
-            </li>
-          ))}
-        </ol>
-      </section>
-
       {/* The person, at home. */}
       <section aria-labelledby="acasa" className="relative mt-[var(--sec)]">
         <div className="relative aspect-[21/9] max-md:aspect-[4/3]">
@@ -99,8 +82,7 @@ export function FlowLanding({ landing }: { landing: Landing }) {
             </Title>
             <div className="mt-5 max-w-[30em] space-y-4 text-[17.5px] leading-relaxed text-[var(--lp-muted)]">
               <p>Fotobiomodulare înseamnă lumină roșie sau infraroșie aplicată din exterior.</p>
-              <p>NEUROS Flow folosește lumină infraroșie la 810 nm. LED-urile sunt montate în interiorul căștii.</p>
-              <p>Configurația aleasă stabilește câte zone poți activa în același protocol: 1, 4 sau 13.</p>
+              <p>În NEUROS Flow, LED-urile din interiorul căștii aplică lumina infraroșie prin scalp, pe zonele alese în protocol.</p>
             </div>
           </div>
           <div className="relative aspect-[3/2] rounded-[28px] bg-[var(--lp-panel)] lg:col-span-6">
@@ -183,7 +165,7 @@ export function FlowLanding({ landing }: { landing: Landing }) {
       <Testimonials productId={p.id} />
       <LandingFaq items={landing.faqs} />
       <Help title="Vorbește cu un specialist înainte să alegi." text="Spune-ne ce vrei să urmărești. Îți explicăm configurațiile și cum decurge consultația de început." />
-      <FinalCta productId={p.id} line="Lumină infraroșie la 810 nm, acasă, după protocolul tău. 1, 4 sau 13 zone." cta={CTA} />
+      <FinalCta title="Începi cu o consultație, nu singur." cta={CTA} />
     </LandingShell>
   )
 }

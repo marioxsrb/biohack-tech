@@ -102,7 +102,7 @@ describe('landing → checkout: the selection survives', () => {
   })
 
   it('the checkout reads ?item from the router, not from window.location during render', () => {
-    const src = readFileSync(join(process.cwd(), 'src/app/(site)/checkout/CheckoutView.tsx'), 'utf8')
+    const src = readFileSync(join(process.cwd(), 'src/app/(checkout)/checkout/CheckoutView.tsx'), 'utf8')
     expect(src).toContain('useSearchParams()')
     expect(src).not.toMatch(/useState\(\s*\(\)\s*=>[^)]*window\.location\.search/)
   })
@@ -160,5 +160,84 @@ describe('attribution and promotions survive the handoff', () => {
     expect(server.promotions.map((x) => x.id).sort()).toEqual(['amber-2-plus-1', 'trei-produse-20'])
     expect([server.subtotal, server.discount, server.total]).toEqual([shown.subtotalMinor, shown.discountMinor, shown.totalMinor])
     expect(server.promotions.find((x) => x.id === 'amber-2-plus-1')?.amountMinor).toBe(31500)
+  })
+})
+
+describe('NEUROS Amber selection: several frames in one handoff', () => {
+  const pick = (variantId: string, quantity: number) => ({ productId: 'ochelari-biohack' as const, variantId, quantity })
+  const set = [pick('cat-eye-negru', 1), pick('cat-eye-bej', 1), pick('patrat-maro', 2)]
+
+  it('each frame stays its own line with its quantity (not flattened into one frame × 4)', async () => {
+    const p = await page('https://amber.biohack-tech.ro/?utm_source=meta&utm_campaign=mix')
+    const push = vi.fn()
+    p.startCheckout(push, 'amber', set, { exact: true })
+    expect(p.cartStore.getSnapshot().map((l) => [l.variantId, l.quantity])).toEqual([
+      ['cat-eye-negru', 1],
+      ['cat-eye-bej', 1],
+      ['patrat-maro', 2],
+    ])
+    const url = new URL(push.mock.calls[0][0], 'https://x')
+    expect(url.searchParams.getAll('item')).toEqual(['ochelari-biohack:cat-eye-negru', 'ochelari-biohack:cat-eye-bej', 'ochelari-biohack:patrat-maro*2'])
+    expect(parseItems(url.searchParams, 'landing').map((l) => [l.variantId, l.quantity])).toEqual([
+      ['cat-eye-negru', 1],
+      ['cat-eye-bej', 1],
+      ['patrat-maro', 2],
+    ])
+    expect(Object.fromEntries(attributionParams(url.searchParams))).toMatchObject({ lp: 'amber', utm_source: 'meta', utm_campaign: 'mix' })
+
+    // The server keeps every frame as its own order line and applies 2+1 across them.
+    const order = resolveOrderLines(p.cartStore.getSnapshot())
+    expect(order.ok && [order.lines.map((l) => [l.variantId, l.quantity, l.description]), order.subtotal, order.discount, order.total]).toEqual([
+      [
+        ['cat-eye-negru', 1, 'Cat eye · Negru'],
+        ['cat-eye-bej', 1, 'Cat eye · Bej'],
+        ['patrat-maro', 2, 'Unisex pătrat · Maro'],
+      ],
+      4 * 31500,
+      31500,
+      3 * 31500,
+    ])
+  })
+
+  it('the chosen quantities are applied exactly; repeating the click, a reload or the link alone never doubles them', async () => {
+    let p = await page('https://biohack-tech.ro/lp/amber')
+    p.cartStore.add('ochelari-biohack', 'cat-eye-negru', 3, 'product') // an older cart line for a chosen frame
+    p.cartStore.add('balance-wave', undefined, 1, 'home') // another product: kept
+    p.startCheckout(vi.fn(), 'amber', set, { exact: true })
+    p.startCheckout(vi.fn(), 'amber', set, { exact: true })
+    const want = [
+      ['ochelari-biohack', 'cat-eye-negru', 1],
+      ['balance-wave', undefined, 1],
+      ['ochelari-biohack', 'cat-eye-bej', 1],
+      ['ochelari-biohack', 'patrat-maro', 2],
+    ]
+    expect(p.cartStore.getSnapshot().map((l) => [l.productId, l.variantId, l.quantity])).toEqual(want)
+    // Reload of the checkout: only storage survives, and the ?item link is applied again.
+    p = await page('https://biohack-tech.ro/checkout')
+    p.cartStore.restore(parseItems(new URL(p.checkoutHref('amber', set), 'https://x').searchParams, 'landing'))
+    expect(p.cartStore.getSnapshot().map((l) => [l.productId, l.variantId, l.quantity])).toEqual(want)
+  })
+})
+
+describe('the checkout is focused', () => {
+  const read = (f: string) => readFileSync(join(process.cwd(), f), 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')
+
+  it('has its own layout: no site header, footer, product lists or catalog links', () => {
+    const layout = read('src/app/(checkout)/layout.tsx')
+    expect(layout).not.toMatch(/components\/site\/(Header|Footer)/)
+    for (const f of ['src/components/checkout/CheckoutHeader.tsx', 'src/components/checkout/CheckoutFooter.tsx']) {
+      const src = read(f)
+      expect(src).not.toMatch(/products|productHref|\/products|Vezi produsele|NEUROS (Calm|Focus|Amber|Flow)/)
+    }
+  })
+
+  it('keeps every legal and help link a buyer needs', () => {
+    const footer = readFileSync(join(process.cwd(), 'src/components/checkout/CheckoutFooter.tsx'), 'utf8')
+    for (const href of ['/terms-of-service', '/privacy-policy', '/politica-cookies', '/politica-livrare', '/plati', '/politica-retur', '/garantie', '/retragere', 'reclamatiisal.anpc.ro', 'CookieSettingsButton', 'companyLine', 'site.email', 'site.phone'])
+      expect(footer).toContain(href)
+  })
+
+  it('from a landing, the brand leads back to that landing', () => {
+    expect(read('src/components/checkout/CheckoutHeader.tsx')).toMatch(/isLandingSlug\(lp\) \? `\/lp\/\$\{lp\}` : '\/'/)
   })
 })

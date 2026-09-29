@@ -55,19 +55,14 @@ function applyOne(p: Promotion, lines: PricedLine[]): { amount: number; perLine:
     const amount = percentOf(base.reduce((s, b) => s + b, 0), p.percent)
     return { amount, perLine: allocate(amount, base) }
   }
-  // Buy X get Y: the free units are the cheapest ones, so the customer always gets the stated deal.
+  // Buy X get Y: the free units are the cheapest ones, so the customer always gets the stated deal,
+  // whatever the frames cost. That amount is then spread over the eligible lines in proportion to their
+  // totals (like the percentage rule), so a mixed selection never leaves a line at 0 lei on the invoice.
   const free = Math.floor(units / p.group) * (p.group - p.pay)
   if (!free) return null
-  const order = own.map((l, i) => ({ i, unit: l.unitAmount, qty: l.quantity })).sort((a, b) => a.unit - b.unit || a.i - b.i)
-  const perLine = own.map(() => 0)
-  let remaining = free
-  for (const o of order) {
-    const take = Math.min(remaining, o.qty)
-    perLine[o.i] += take * o.unit
-    remaining -= take
-    if (!remaining) break
-  }
-  return { amount: perLine.reduce((s, x) => s + x, 0), perLine }
+  const cheapest = own.flatMap((l) => Array.from({ length: l.quantity }, () => l.unitAmount)).sort((a, b) => a - b)
+  const amount = cheapest.slice(0, free).reduce((s, x) => s + x, 0)
+  return { amount, perLine: allocate(amount, own.map((l) => l.unitAmount * l.quantity)) }
 }
 
 export function priceLines(lines: PricedLine[], promotions: Promotion[] = PROMOTIONS): Pricing {
