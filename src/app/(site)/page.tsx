@@ -12,13 +12,13 @@ import og from '@/assets/img/balance-wave/lifestyle-canapea.webp'
 
 export const metadata: Metadata = {
   ...pageMetadata({
-    title: `${site.name}: NEUROS Calm, Focus, Amber și NEUROS Flow`,
+    title: `${site.name}: NEUROS Calm, Focus, Amber și Flow`,
     description:
       'NEUROS Calm pentru relaxare, Focus pentru concentrare, Amber pentru ecrane și casca NEUROS Flow pentru rutina de acasă. Livrare gratuită în România.',
     path: '/',
     image: { url: og.src, width: og.width, height: og.height, alt: 'Femeie relaxată pe canapea, purtând NEUROS Calm' },
   }),
-  title: { absolute: `${site.name}: NEUROS Calm, Focus, Amber și NEUROS Flow` },
+  title: { absolute: `${site.name}: NEUROS Calm, Focus, Amber și Flow` },
 }
 
 /**
