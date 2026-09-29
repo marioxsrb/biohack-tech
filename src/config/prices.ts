@@ -22,7 +22,7 @@ export const PRICES_RON: Record<ProductId, PriceEntry> = {
   'brainlink-pro': 249000,
   // NEUROS Amber, all four frames. Approved 26.09.2026: 315 lei.
   'ochelari-biohack': 31500,
-  // Brain Flow, per configuration. Source: the product page of the previous site (docs/audit.md in
+  // NEUROS Flow, per configuration. Source: the product page of the previous site (docs/audit.md in
   // neuros-ecom, rebuild 2d1eae6): 12.900 / 14.900 / 13.900 lei. 13 zones costing less than 4 zones is
   // how the source lists it; not yet confirmed by the business (docs/OPEN-POINTS.md, NEEDS BUSINESS INPUT).
   'brain-flow': { '1-zona': 1290000, '4-zone': 1490000, '13-zone': 1390000 },

@@ -101,9 +101,21 @@ export const orders = {
   /** The post-purchase order linked to a parent, if one was created. */
   childOf: (q: Queryable, parentId: string) => one(q, 'select * from orders where parent_order_id = $1', [parentId]),
 
-  /** The address's latest order the CRM knows about (unpaid card attempts still in progress are not). */
+  /**
+   * The address's "last order" for the CRM (bt_last_order_*): the newest order the customer actually
+   * placed. Not counted: card attempts still in progress, and post-purchase additions that were never
+   * paid (declined, failed, cancelled or still pending); those never replace the order before them.
+   * Abandoned checkouts do count (the CRM shows "plată nefinalizată" on purpose).
+   */
   latestKnown: (q: Queryable, email: string) =>
-    one(q, "select * from orders where email = $1 and not (payment_method = 'card' and status = 'pending') order by created_at desc limit 1", [email]),
+    one(
+      q,
+      `select * from orders where email = $1
+         and not (payment_method = 'card' and status = 'pending')
+         and not (kind = 'upsell' and payment_status not in ('paid', 'partially_refunded', 'refunded'))
+       order by created_at desc limit 1`,
+      [email],
+    ),
 
   /** Unpaid card attempts of an address still left in `abandoned`, newest first. */
   async abandonedFor(q: Queryable, email: string) {

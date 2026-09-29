@@ -1,5 +1,5 @@
 /**
- * The real catalog (no price mocks): four products (Brain Flow priced per configuration), and checkout,
+ * The real catalog (no price mocks): four products (NEUROS Flow priced per configuration), and checkout,
  * FGO, GoHighLevel and email all carry the same names, variants and prices.
  */
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -20,12 +20,12 @@ beforeEach(async () => {
 })
 
 describe('the four-product catalog', () => {
-  it('sells NEUROS Calm, Focus, Amber and Brain Flow; Brain Flow "from" its lowest configuration', () => {
+  it('sells NEUROS Calm, Focus, Amber and NEUROS Flow; NEUROS Flow "from" its lowest configuration', () => {
     expect(products.map((p) => [p.id, p.slug, p.name, p.price])).toEqual([
       ['balance-wave', 'calm', 'NEUROS Calm', 638000],
       ['brainlink-pro', 'focus', 'NEUROS Focus', 249000],
       ['ochelari-biohack', 'amber', 'NEUROS Amber', 31500],
-      ['brain-flow', 'brain-flow', 'Brain Flow', 1290000],
+      ['brain-flow', 'brain-flow', 'NEUROS Flow', 1290000],
     ])
     expect(products.every(isPurchasable)).toBe(true)
     expect(Object.keys(PRICES_RON).sort()).toEqual(products.map((p) => p.id).sort())
@@ -37,7 +37,7 @@ describe('the four-product catalog', () => {
     }
   })
 
-  it('Brain Flow: three configurations, each with its zone count and its own canonical price', () => {
+  it('NEUROS Flow: three configurations, each with its zone count and its own canonical price', () => {
     const bf = getProduct('brain-flow')!
     expect(bf.variablePrice).toBe(true)
     expect(bf.variants!.map((v) => [v.id, v.zones, unitPrice(bf, v)])).toEqual([
@@ -54,31 +54,31 @@ describe('the four-product catalog', () => {
     expect(text).not.toMatch(/[—–]|vindec|trateaz[aă] |depresi|anxiet|garantat/i)
   })
 
-  it('the server prices every Brain Flow line from the catalog, whatever the browser sends', () => {
+  it('the server prices every NEUROS Flow line from the catalog, whatever the browser sends', () => {
     const r = resolveOrderLines([
       { productId: 'brain-flow', variantId: '13-zone', quantity: 1, unitAmount: 100, price: 1 },
       { productId: 'brain-flow', variantId: '1-zona', quantity: 2 },
     ])
-    // Three Brain Flow units also unlock the 20% promotion (every configuration counts).
+    // Three NEUROS Flow units also unlock the 20% promotion (every configuration counts).
     expect(r).toMatchObject({ ok: true, subtotal: 1390000 + 2 * 1290000, discount: 794000, total: 3176000 })
     expect(resolveOrderLines([{ productId: 'brain-flow', quantity: 1 }])).toEqual({ ok: false, reason: 'BAD_LINE' })
     expect(resolveOrderLines([{ productId: 'brain-flow', variantId: '4-zone', quantity: 11 }])).toEqual({ ok: false, reason: 'BAD_LINE' })
     expect(resolveOrderLines([{ productId: 'brain-flow', variantId: '4-zone', quantity: -1 }])).toEqual({ ok: false, reason: 'BAD_LINE' })
   })
 
-  it('a Brain Flow order carries its configuration into the order, FGO, GHL (tag + products) and email', async () => {
+  it('a NEUROS Flow order carries its configuration into the order, FGO, GHL (tag + products) and email', async () => {
     const { order } = await svc.placeOrder({ lines: lines([{ productId: 'brain-flow', variantId: '4-zone', quantity: 1 }]), form: person, attemptId: 'catalog-bf' })
     expect(order.totalMinor).toBe(1490000)
     expect(order.items.map((i) => [i.productId, i.variantId, i.productName, i.variantName, i.sku, i.unitPriceMinor])).toEqual([
-      ['brain-flow', '4-zone', 'Brain Flow', '4 zone', 'brain-flow/4-zone', 1490000],
+      ['brain-flow', '4-zone', 'NEUROS Flow', '4 zone', 'brain-flow/4-zone', 1490000],
     ])
     const c = getConfig()
-    expect(invoicePayload(c.fgo!, order).Continut.map((l) => [l.Denumire, l.CodArticol, l.NrProduse, l.PretTotal])).toEqual([['Brain Flow (4 zone)', 'brain-flow/4-zone', 1, 14900]])
+    expect(invoicePayload(c.fgo!, order).Continut.map((l) => [l.Denumire, l.CodArticol, l.NrProduse, l.PretTotal])).toEqual([['NEUROS Flow (4 zone)', 'brain-flow/4-zone', 1, 14900]])
     const fields = contactPayload(c.ghl!, order, { orders: 1, valueMinor: order.totalMinor }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, c.siteUrl).customFields
-    expect(fields.find((f) => f.key === 'contact.bt_last_order_products')!.fieldValue).toBe('1 x Brain Flow (4 zone)')
+    expect(fields.find((f) => f.key === 'contact.bt_last_order_products')!.fieldValue).toBe('1 x NEUROS Flow (4 zone)')
     expect(tagsFor({ ...order, paymentStatus: 'paid' })).toEqual(['bt-client', 'bt-cumparat-brain-flow'])
     const mail = renderEmail('order_confirmed', { ...order, paymentStatus: 'paid' }, { siteUrl: c.siteUrl, bank: c.bank })
-    for (const s of ['Brain Flow', '4 zone', '14.900 lei']) expect(mail.text).toContain(s)
+    for (const s of ['NEUROS Flow', '4 zone', '14.900 lei']) expect(mail.text).toContain(s)
   })
 
   it('carries the same lines into the order, the FGO invoice, the GHL contact and the confirmation email', async () => {

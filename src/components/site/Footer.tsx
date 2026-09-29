@@ -16,6 +16,7 @@ const help = [
   { href: `/${page('garantie').slug}`, label: 'Garanție și reclamații' },
   // OUG 34/2014 art. 11^1: the online withdrawal function, reachable from every page.
   { href: '/retragere', label: 'Retrage-te din contract aici' },
+  { href: '/intrebari-frecvente', label: 'Întrebări frecvente' },
   { href: '/contact-us', label: 'Contact' },
   { href: '/about-us', label: 'Despre noi' },
 ]

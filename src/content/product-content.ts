@@ -219,12 +219,12 @@ export const productContent: Record<ProductId, ProductContent> = {
     ],
   },
 
-  // Brain Flow: only what the source states (810 nm, 1/4/13 zones, adjustable protocol, remote, battery,
+  // NEUROS Flow: only what the source states (810 nm, 1/4/13 zones, adjustable protocol, remote, battery,
   // initial consultation). No health outcome is claimed; the source's study list is not reused.
   'brain-flow': {
     seo: {
-      title: 'Brain Flow, cască cu lumină infraroșie 810 nm',
-      description: 'Brain Flow: cască de fotobiomodulare cu lumină infraroșie la 810 nm, în configurații cu 1, 4 sau 13 zone. Protocol stabilit cu un specialist. Livrare gratuită în România.',
+      title: 'NEUROS Flow, cască cu lumină infraroșie 810 nm',
+      description: 'NEUROS Flow: cască de fotobiomodulare cu lumină infraroșie la 810 nm, în configurații cu 1, 4 sau 13 zone. Protocol stabilit cu un specialist. Livrare gratuită în România.',
     },
     intro: 'Alegi configurația cu 1, 4 sau 13 zone. La început, un specialist Biohack Tech stabilește cu tine zonele, durata și frecvența ședințelor.',
     benefits: [
@@ -235,27 +235,27 @@ export const productContent: Record<ProductId, ProductContent> = {
     scene: {
       title: 'Ședința, în ritmul tău.',
       text: 'Pui casca, confirmi zonele pe telecomandă și pornești sesiunea. Stai relaxat până se termină.',
-      image: photo(bfBarbat, 'Bărbat relaxat pe canapea, cu casca Brain Flow pe cap'),
+      image: photo(bfBarbat, 'Bărbat relaxat pe canapea, cu casca NEUROS Flow pe cap'),
     },
     use: {
       title: 'Cum o folosești',
-      image: cut(bfTelecomanda, 'Brain Flow lângă telecomanda inclusă'),
+      image: cut(bfTelecomanda, 'NEUROS Flow lângă telecomanda inclusă'),
       steps: ['Stabilești protocolul cu specialistul, la început.', 'Pui casca și confirmi zonele pe telecomandă.', 'Pornești sesiunea. Casca se oprește la finalul timpului setat.'],
     },
     explain: {
       title: 'Ce înseamnă fotobiomodulare?',
       paragraphs: [
-        'Fotobiomodulare înseamnă lumină roșie sau infraroșie aplicată din exterior. Brain Flow folosește lumină infraroșie la 810 nm, aplicată prin scalp.',
+        'Fotobiomodulare înseamnă lumină roșie sau infraroșie aplicată din exterior. NEUROS Flow folosește lumină infraroșie la 810 nm, aplicată prin scalp.',
         'LED-urile sunt montate în interiorul căștii. Configurația aleasă stabilește câte zone poți activa în același protocol: 1, 4 sau 13.',
         'Casca și tehnologia sunt aceleași în toate configurațiile. Diferă doar numărul de zone.',
       ],
-      image: cut(bfInterior, 'Interiorul căștii Brain Flow, cu LED-urile, lângă telecomandă'),
+      image: cut(bfInterior, 'Interiorul căștii NEUROS Flow, cu LED-urile, lângă telecomandă'),
     },
     moments: [
       {
         title: 'În rutina zilei.',
         text: 'Ședințele se fac acasă, la ora aleasă de tine.',
-        image: photo(bfBirou, 'Bărbat scriind la birou, lângă casca Brain Flow'),
+        image: photo(bfBirou, 'Bărbat scriind la birou, lângă casca NEUROS Flow'),
       },
       {
         title: 'Nu începi singur.',
@@ -276,7 +276,7 @@ export const productContent: Record<ProductId, ProductContent> = {
     faqs: [
       { q: 'Ce diferă între configurații?', a: 'Casca și tehnologia sunt aceleași. Diferă câte zone poți activa în același protocol: 1, 4 sau 13.' },
       { q: 'Cine stabilește protocolul?', a: 'Un specialist Biohack Tech, la consultația de început. Împreună alegeți zonele, durata și frecvența ședințelor.' },
-      { q: 'Este un tratament medical?', a: 'Nu. Brain Flow este un produs de wellness. Dacă ai o afecțiune sau urmezi un tratament, vorbește întâi cu medicul tău.' },
+      { q: 'Este un tratament medical?', a: 'Nu. NEUROS Flow este un produs de wellness. Dacă ai o afecțiune sau urmezi un tratament, vorbește întâi cu medicul tău.' },
       { q: 'Pot să o returnez?', a: 'Da, în 14 zile de la primire, ca orice produs cumpărat online.' },
     ],
   },

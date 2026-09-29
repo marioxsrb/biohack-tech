@@ -1,4 +1,5 @@
-import type { Pricing, PromotionHint } from '@/lib/promotions'
+import { Check } from '@/components/ui/icons'
+import type { AppliedPromotion, Pricing, PromotionHint } from '@/lib/promotions'
 import { formatLei } from '@/lib/money'
 
 /** Subtotal, each promotion with its amount, shipping and total. Same rows in the cart and the checkout. */
@@ -27,11 +28,22 @@ export function Totals({ pricing, totalClassName = 'text-[26px]' }: { pricing: P
   )
 }
 
-/** What the cart can still unlock. Informational, never urgent. */
-export function PromotionHints({ hints, className = '' }: { hints: PromotionHint[]; className?: string }) {
-  if (!hints.length) return null
+/**
+ * The offers, where the customer decides: applied ones with a check and what they save, then what the
+ * cart can still unlock. Informational, never urgent.
+ */
+export function PromotionHints({ hints, applied = [], className = '' }: { hints: PromotionHint[]; applied?: AppliedPromotion[]; className?: string }) {
+  if (!hints.length && !applied.length) return null
   return (
     <ul className={`space-y-2 ${className}`} aria-live="polite">
+      {applied.map((a) => (
+        <li key={a.id} className="flex items-start gap-2.5 rounded-[12px] bg-cyan-700 px-4 py-3 text-[14.5px] leading-snug text-white">
+          <Check className="mt-0.5 h-4 w-4 flex-none" aria-hidden />
+          <span>
+            Ofertă aplicată: <strong className="font-semibold !text-white">{a.label}</strong>. Economisești {formatLei(a.amountMinor)}.
+          </span>
+        </li>
+      ))}
       {hints.map((h) => (
         <li key={h.id} className="rounded-[12px] bg-cyan-50 px-4 py-3 text-[14.5px] leading-snug text-cyan-700">
           {h.text}

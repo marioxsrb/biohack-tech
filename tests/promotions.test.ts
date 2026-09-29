@@ -1,5 +1,5 @@
 /**
- * The promotion engine on the real catalog prices: 20% for 3+ eligible units (Calm, Focus, Brain Flow),
+ * The promotion engine on the real catalog prices: 20% for 3+ eligible units (Calm, Focus, NEUROS Flow),
  * NEUROS Amber 2+1 gratis, stacking on separate products, rounding in whole bani.
  */
 import { describe, expect, it } from 'vitest'
@@ -34,8 +34,8 @@ describe('20% for 3+ eligible units', () => {
     ['3 Calm', [calm(3)], percentOf(3 * CALM, 20)],
     ['4 Calm', [calm(4)], percentOf(4 * CALM, 20)],
     ['2 Calm + 1 Focus', [calm(2), focus(1)], percentOf(2 * CALM + FOCUS, 20)],
-    ['1 Calm + 1 Focus + 1 Brain Flow 4 zone', [calm(1), focus(1), bf('4-zone')], percentOf(CALM + FOCUS + BF['4-zone'], 20)],
-    ['3 Brain Flow, one of each configuration', [bf('1-zona'), bf('4-zone'), bf('13-zone')], percentOf(BF['1-zona'] + BF['4-zone'] + BF['13-zone'], 20)],
+    ['1 Calm + 1 Focus + 1 NEUROS Flow 4 zone', [calm(1), focus(1), bf('4-zone')], percentOf(CALM + FOCUS + BF['4-zone'], 20)],
+    ['3 NEUROS Flow, one of each configuration', [bf('1-zona'), bf('4-zone'), bf('13-zone')], percentOf(BF['1-zona'] + BF['4-zone'] + BF['13-zone'], 20)],
     ['2 Calm + 1 Amber: Amber does not count', [calm(2), amber(1)], 0],
     ['3 Amber: never triggers the 20%', [amber(3)], 0],
   ])('%s', (_, lines, expected) => {

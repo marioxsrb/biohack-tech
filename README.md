@@ -44,7 +44,7 @@ Arhitectura, integrările și pașii de lansare: **docs/PRODUCTION-LAUNCH.md**.
 
 1. Pune imaginile în ZIP-ul sursă și adaugă o linie în `scripts/prepare-assets.py`, apoi `npm run assets`.
 2. Adaugă produsul în `content/catalog.ts` și prețul în `config/prices.ts` (în bani: 299 lei = `29900`).
-   Dacă variantele au prețuri diferite (Brain Flow: 1, 4, 13 zone), prețul este un obiect `{ idVariantă: bani }`;
+   Dacă variantele au prețuri diferite (NEUROS Flow: 1, 4, 13 zone), prețul este un obiect `{ idVariantă: bani }`;
    produsul apare „de la” cel mai mic preț, iar serverul încasează prețul variantei alese. Id-urile variantelor nu se mai schimbă după prima vânzare.
 3. Adaugă conținutul paginii în `content/product-content.ts`. Secțiunile opționale (`use`, `lookbook`, `explain`) apar doar dacă există.
 4. Adaugă tag-ul GHL în `PRODUCT_TAG` (`server/integrations/ghl.ts`) și în `scripts/ghl-check.mjs`; un test pică dacă lipsește.

@@ -9,7 +9,7 @@ Written 26 September 2026 against commit “Launch pass”; updated 29 September
 | Area | Status |
 |---|---|
 | Storefront (home, 4 product pages, cart page, checkout, order page, legal, 404) | Built, tested at 390/430/768/1024/1280/1440 |
-| Prices | NEUROS Calm 6.380 lei, NEUROS Amber 315 lei (approved), NEUROS Focus 2.490 lei (from source, confirm), Brain Flow 12.900 / 14.900 / 13.900 lei for 1 / 4 / 13 zones (from the previous site, **confirm**, §28) |
+| Prices | NEUROS Calm 6.380 lei, NEUROS Amber 315 lei (approved), NEUROS Focus 2.490 lei (from source, confirm), NEUROS Flow 12.900 / 14.900 / 13.900 lei for 1 / 4 / 13 zones (from the previous site, **confirm**, §28) |
 | Advertising landings (4, one per product) | Built: `/lp/<slug>` locally, `<slug>.biohack-tech.ro` in production through host routing (§26); DNS not changed |
 | Attribution (landing + UTM → order → GHL) | Built; `contact.bt_last_order_source` in GHL |
 | Canonical orders (PostgreSQL) | Built and tested (PGlite + real PostgreSQL concurrency tests) |
@@ -36,7 +36,7 @@ Written 26 September 2026 against commit “Launch pass”; updated 29 September
 - Payment truth: only Stripe can mark a card order paid: the signed webhook, or the `stripe.reconcile` job (server-side retrieve, 10 minutes after the order and again before an order is marked abandoned) if the webhook was lost. The order page only reads; it never marks payments or starts workflows. Bank transfers become paid only when a person confirms the statement in /admin.
 - Side effects (CRM, invoice, email) go through a database outbox with unique keys: retried with backoff, never duplicated, visible in /admin when they fail.
 - Transactional emails are rendered by the site (HTML + text) and delivered through GoHighLevel.
-- 200 automated tests + 4 on real PostgreSQL (promotion matrix and integer rounding, discounted orders across Stripe / transfer / FGO / GHL / email, post-purchase offer incl. double click, SCA, decline, card declined, expiry, access control, contact form incl. validation, spam, rate limit and CRM outage, landing host mapping and proxy, Brain Flow variants and server pricing, payment matrix per configuration and method, attribution, fulfillment and return lifecycle, recovery with a variant, consent, recovery eligibility, unsubscribe, cookie script blocking, withdrawal, money, cart, validation, order state machine, idempotency, webhook route and signatures, browser-closed payment, reconciliation, FGO/GHL mapping, email rendering, outbox retries and outages, abandonment, transfer expiry, admin authorization, the real four-product catalog end to end, concurrency on PostgreSQL) + `scripts/stripe-e2e.mjs` against Stripe test mode.
+- 200 automated tests + 4 on real PostgreSQL (promotion matrix and integer rounding, discounted orders across Stripe / transfer / FGO / GHL / email, post-purchase offer incl. double click, SCA, decline, card declined, expiry, access control, contact form incl. validation, spam, rate limit and CRM outage, landing host mapping and proxy, NEUROS Flow variants and server pricing, payment matrix per configuration and method, attribution, fulfillment and return lifecycle, recovery with a variant, consent, recovery eligibility, unsubscribe, cookie script blocking, withdrawal, money, cart, validation, order state machine, idempotency, webhook route and signatures, browser-closed payment, reconciliation, FGO/GHL mapping, email rendering, outbox retries and outages, abandonment, transfer expiry, admin authorization, the real four-product catalog end to end, concurrency on PostgreSQL) + `scripts/stripe-e2e.mjs` against Stripe test mode.
 - /admin: HTTP Basic Auth in the proxy **and** inside every admin action (actions are HTTP endpoints; each verifies the credentials itself). Only bank transfers can be marked paid by a person; card money is confirmed by Stripe only.
 
 ## 3. What is blocked, and by what
@@ -691,7 +691,7 @@ One landing per product, for paid traffic only. Same app, same catalog, same che
 | calm | NEUROS Calm (`balance-wave`) | `calm.biohack-tech.ro` | `/lp/calm` |
 | focus | NEUROS Focus (`brainlink-pro`) | `focus.biohack-tech.ro` | `/lp/focus` |
 | amber | NEUROS Amber (`ochelari-biohack`) | `amber.biohack-tech.ro` | `/lp/amber` |
-| brain-flow | Brain Flow (`brain-flow`) | `brain-flow.biohack-tech.ro` | `/lp/brain-flow` |
+| brain-flow | NEUROS Flow (`brain-flow`) | `brain-flow.biohack-tech.ro` | `/lp/brain-flow` |
 
 **Routing.** `src/proxy.ts` + `src/lib/landing-hosts.ts`. The Host header is compared with an explicit allowlist built from `LANDING_SLUGS` and `LANDING_BASE_DOMAIN` (default `biohack-tech.ro`); nothing else is recognized (a forged or unknown host is the main site). On a landing hostname:
 - `/` is rewritten to `/lp/<slug>`;
@@ -704,7 +704,7 @@ Locally, `<slug>.localhost:3000` works outside production (Chrome resolves it to
 
 **SEO.** `robots: noindex, nofollow`, canonical = the product page on the main domain, excluded from `sitemap.xml`, plus the header above. The main site's indexing is unchanged.
 
-**Direct checkout.** The offer's button links to `/checkout?item=<productId>[:<variantId>]&lp=<slug>&lp_host=<host>&utm_*`. Only ids travel. The checkout puts the item in the cart (never twice; existing cart lines are kept), removes `item` from the URL and prices everything from the catalog; the server prices the order again (`resolveOrderLines`). Brain Flow requires a configuration; the landing opens on 4 zones, and every chip shows its own price.
+**Direct checkout.** The offer's button links to `/checkout?item=<productId>[:<variantId>]&lp=<slug>&lp_host=<host>&utm_*`. Only ids travel. The checkout puts the item in the cart (never twice; existing cart lines are kept), removes `item` from the URL and prices everything from the catalog; the server prices the order again (`resolveOrderLines`). NEUROS Flow requires a configuration; the landing opens on 4 zones, and every chip shows its own price.
 
 **Attribution.** No cookie or localStorage is used for it. The URL carries `lp`, `lp_host` and `utm_source/medium/campaign/content/term`; click ids (gclid, fbclid) are not collected. The server keeps only a known landing, its real hostname (or the main host for `/lp/<slug>`), and UTM values cleaned to a safe alphabet, max 100 characters (`sanitizeAttribution`). Stored in `orders.attribution` (jsonb, migration 004), shown in /admin (“Sursa comenzii”), written to the `order.created` audit event, and synced to GHL as `contact.bt_last_order_source`.
 
@@ -723,17 +723,19 @@ Locally, `<slug>.localhost:3000` works outside production (Chrome resolves it to
 | `calm.biohack-tech.ro` | the same app | NEUROS Calm landing |
 | `focus.biohack-tech.ro` | the same app | NEUROS Focus landing |
 | `amber.biohack-tech.ro` | the same app | NEUROS Amber landing |
-| `brain-flow.biohack-tech.ro` | the same app | Brain Flow landing |
+| `brain-flow.biohack-tech.ro` | the same app | NEUROS Flow landing |
 
 Add all six to the host (Railway → Networking) and the CNAME/ALIAS records it shows; set `LANDING_BASE_DOMAIN=biohack-tech.ro` (default). Stripe needs no change: the return URL is built from the page's own origin, and the webhook stays on the main domain. GHL links point to the main domain. Email DNS (SPF, DKIM, DMARC) is §11.
 
-## 28. Product 4: Brain Flow (evidence, decisions, conflicts)
+## 28. Product 4: NEUROS Flow (evidence, decisions, conflicts)
 
-**Identified from:** the previous rebuild repository (`~/neuros-ecom`, `src/content/brain-flow.ts`, commit 2d1eae6 “v0 rebuild from the original site”, 20 Sep 2026) and its audit of the old live site (`docs/audit.md`: Brain Flow pages public but hidden from the menus, 12.900 / 14.900 / 13.900 lei). Photographs: the same files as `laser-cap_*` in the source ZIP (`08_Nefolosite-pe-site`).
+**Name (29 Sep 2026):** customer-facing name **NEUROS Flow** (sold on the previous site as “Brain Flow”). Technical identity unchanged on purpose: product id and slug `brain-flow` (URL `/products/brain-flow`, orders, Stripe metadata, FGO `CodArticol brain-flow/<variant>`), variant ids `1-zona` / `4-zone` / `13-zone`, GHL tag `bt-cumparat-brain-flow`, landing host `brain-flow.biohack-tech.ro`. Orders placed before the rename keep “Brain Flow” in their line snapshot.
+
+**Identified from:** the previous rebuild repository (`~/neuros-ecom`, `src/content/brain-flow.ts`, commit 2d1eae6 “v0 rebuild from the original site”, 20 Sep 2026) and its audit of the old live site (`docs/audit.md`: NEUROS Flow pages public but hidden from the menus, 12.900 / 14.900 / 13.900 lei). Photographs: the same files as `laser-cap_*` in the source ZIP (`08_Nefolosite-pe-site`).
 
 | Item | Value used | Source |
 |---|---|---|
-| Name | Brain Flow (no maker stated; not renamed to NEUROS) | source page |
+| Name | NEUROS Flow (no maker stated; not renamed to NEUROS) | source page |
 | Kind | Cască de fotobiomodulare transcraniană, infraroșu 810 nm | source page |
 | Variants (stable ids) | `1-zona` (1 zone), `4-zone` (4 zones), `13-zone` (13 zones) | source page |
 | Prices (VAT incl.) | 12.900 / 14.900 / 13.900 lei | source page |
@@ -742,7 +744,7 @@ Add all six to the host (Railway → Networking) and the CNAME/ALIAS records it 
 
 **Conflicts, not resolved by us:**
 1. 13 zones (13.900 lei) costs **less** than 4 zones (14.900 lei). Kept exactly as the source lists it; needs business confirmation.
-2. `docs/CONTENT-DECISIONS.md` (earlier phase) says Brain Flow “nu se vinde”. Phase 3/4 makes it a sold product by instruction; confirm before ads run.
+2. `docs/CONTENT-DECISIONS.md` (earlier phase) says NEUROS Flow “nu se vinde”. Phase 3/4 makes it a sold product by instruction; confirm before ads run.
 3. The source page listed medical study topics (mood, anxiety, sleep). **Not reused**: the product page and landing make no health claim.
 4. Manufacturer, CE / regulatory status, GPSR data, box contents and warranty terms beyond the legal 2 years are unknown (OPEN-POINTS).
 
@@ -753,13 +755,17 @@ Add all six to the host (Railway → Networking) and the CNAME/ALIAS records it 
 3. The refund is its own step: Stripe dashboard (card; the webhook records it) or “Înregistrează rambursarea” (transfer). The stage becomes *Rambursată*, W7 creates the FGO storno task.
 Every step is idempotent (a second call changes nothing) and audited in the order history. The return address is not set (OPEN-POINTS): the withdrawal email says it will be sent to the customer.
 
+## 29a. Homepage structure (29 Sep 2026)
+
+Hero → the four products (one aligned row; each card: purpose, name, what it is, price, offer, one action: “Adaugă în coș” for Calm/Focus, “Alege rama” / “Alege configurația” for Amber/Flow) → trust line → “Ce vrei să schimbi?” (need → product, one photo) → Oferte → “Aceeași zi. Alt ritm.” (text only) → 7 purchase questions (all 14 on `/intrebari-frecvente`) → compact contact. Built for three behaviours: I know what I want, I want to compare, I am not sure.
+
 ## 30. Promotions (phase 3.5, built)
 
 Defined once in `src/config/promotions.ts`, applied by the pure engine `src/lib/promotions.ts` (integer bani only):
 
 | Id | Rule | Products |
 |---|---|---|
-| `trei-produse-20` | 3+ units in the order, any mix (same product counts) → 20% off those units | NEUROS Calm, NEUROS Focus, Brain Flow (any configuration) |
+| `trei-produse-20` | 3+ units in the order, any mix (same product counts) → 20% off those units | NEUROS Calm, NEUROS Focus, NEUROS Flow (any configuration) |
 | `amber-2-plus-1` | in every complete group of 3 units, the cheapest is free (`floor(n/3)` free) | NEUROS Amber (any frame) |
 
 - The rules touch separate products: Amber neither counts toward nor receives the 20%; no unit is discounted twice.
@@ -776,7 +782,7 @@ Defined once in `src/config/promotions.ts`, applied by the pure engine `src/lib/
 
 **Flow.** Checkout → card payment confirmed by Stripe (webhook or reconcile, never by the page) → the order page shows “Comanda ta este confirmată.” first, then, below, one optional offer. The offer requires two explicit clicks: “Adaugă la comandă”, then “Da, plătește X lei” with the amount and the card stated. “Nu, mulțumesc” ends it. Bank-transfer orders never get it.
 
-**What is offered.** `src/config/upsell.ts` (`UPSELL_MAP`): the first product in the list for what was bought that is not already in the order. Calm → Amber, Focus; Focus → Amber, Calm; Amber → Calm, Focus; Brain Flow → Amber, Calm. Brain Flow is never offered after a purchase (it is chosen with a specialist). Normal catalog price and normal promotion rules; no special upsell discount.
+**What is offered.** `src/config/upsell.ts` (`UPSELL_MAP`): the first product in the list for what was bought that is not already in the order. Calm → Amber, Focus; Focus → Amber, Calm; Amber → Calm, Focus; NEUROS Flow → Amber, Calm. NEUROS Flow is never offered after a purchase (it is chosen with a specialist). Normal catalog price and normal promotion rules; no special upsell discount.
 
 **Stripe.** Card checkout orders get a Stripe Customer, and the PaymentIntent uses `setup_future_usage=on_session`, so Stripe keeps the card for on-session reuse only. The checkout states it next to the card field and in /privacy-policy and /plati. The webhook/reconcile stores only `payment_method` and `customer` ids; card data never reaches us. The offer PaymentIntent is created and confirmed server-side with that customer + payment method, without `off_session`, so Stripe applies SCA: `requires_action` → the page opens Stripe's authentication step (`handleNextAction`) → the server re-reads the PaymentIntent from Stripe. The card is **detached** as soon as the offer is settled (paid, declined, failed) or after `UPSELL_WINDOW_MINUTES` (30) with no answer (`upsell.release` job).
 

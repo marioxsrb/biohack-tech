@@ -13,18 +13,18 @@ Updated 29 September 2026 (phase 3/4). Everything that is code is built; what is
 7. **`ADMIN_PASSWORD`** on the host (12+ characters). Without it /admin does not exist, so nobody can confirm a transfer or mark a shipment.
 8. **Domains (phase 4).** Connect `biohack-tech.ro`, `www`, and the four landing hostnames (runbook §27). No DNS has been changed.
 9. **Legal review** (items below under NEEDS BUSINESS INPUT, “Legal”), in particular the marketing-consent wording used for recovery, the order-button labels and the devices' regulatory status, before ads or marketing emails run.
-10. **GPSR product information** on each product page (Reg. (EU) 2023/988 art. 19): manufacturer name, postal and electronic address; EU responsible person if the manufacturer is outside the EU; product identifier; safety warnings in Romanian. None of it exists in the sources for any product, including Brain Flow.
+10. **GPSR product information** on each product page (Reg. (EU) 2023/988 art. 19): manufacturer name, postal and electronic address; EU responsible person if the manufacturer is outside the EU; product identifier; safety warnings in Romanian. None of it exists in the sources for any product, including NEUROS Flow.
 
 ## NEEDS BUSINESS INPUT
 
 **Prices and product 4**
 - **NEUROS Focus price:** confirm 2.490 lei (the only lei price in the source).
-- **Brain Flow prices:** confirm 12.900 / 14.900 / 13.900 lei for 1 / 4 / 13 zones. The source lists 13 zones cheaper than 4 zones; kept as listed (`src/config/prices.ts`).
-- **Brain Flow is for sale:** an earlier content decision said it “nu se vinde”; phase 3/4 made it a sold product. Confirm before ads run.
-- **Brain Flow:** manufacturer, CE / regulatory documentation, what's in the box (the photos show goggles next to the remote; not claimed), supplier SKU if any, whether configurations change delivery time.
+- **NEUROS Flow prices:** confirm 12.900 / 14.900 / 13.900 lei for 1 / 4 / 13 zones. The source lists 13 zones cheaper than 4 zones; kept as listed (`src/config/prices.ts`).
+- **NEUROS Flow is for sale:** an earlier content decision said it “nu se vinde”; phase 3/4 made it a sold product. Confirm before ads run.
+- **NEUROS Flow:** manufacturer, CE / regulatory documentation, what's in the box (the photos show goggles next to the remote; not claimed), supplier SKU if any, whether configurations change delivery time.
 
 **Promotions and the post-purchase offer (phase 3.5)**
-- Confirm the two promotions as built: 20% for 3+ units of Calm / Focus / Brain Flow (Amber excluded), and Amber 2+1 gratis; how long they run (the site says “atât timp cât sunt afișate pe site”).
+- Confirm the two promotions as built: 20% for 3+ units of Calm / Focus / NEUROS Flow (Amber excluded), and Amber 2+1 gratis; how long they run (the site says “atât timp cât sunt afișate pe site”).
 - Confirm the post-purchase pairs in `src/config/upsell.ts` (e.g. Calm → Amber) and the 30-minute window.
 - Customer testimonials: none are used (the source's were unverifiable). To show real ones, add them to `src/content/home.ts` with written consent and a source.
 
@@ -39,7 +39,7 @@ Updated 29 September 2026 (phase 3/4). Everything that is code is built; what is
 - **Shipping** stays free for all orders? (today: free, from the current site).
 - **Unpaid transfer orders:** set `TRANSFER_EXPIRY_DAYS` to cancel automatically, or keep manual cancellation after the W3 reminder.
 - **Card abandonment delay:** `ABANDON_AFTER_MINUTES` (default 60).
-- **People:** W1/W4 recipients, fulfilment person, specialist for onboarding calls (Calm, Focus, Brain Flow), review link.
+- **People:** W1/W4 recipients, fulfilment person, specialist for onboarding calls (Calm, Focus, NEUROS Flow), review link.
 
 **Marketing**
 - **Analytics ids:** GA4 / Clarity / Meta (`NEXT_PUBLIC_*`). The consent banner appears as soon as one is set.
@@ -48,7 +48,7 @@ Updated 29 September 2026 (phase 3/4). Everything that is code is built; what is
 **Legal (needs a person's legal judgement)**
 1. **Checkout recovery and the marketing checkbox.** Recovery emails rely on express consent; its wording covers “un memento dacă nu finalizez comanda”. Confirm it is valid consent. The existing-customer exception (Legea 506/2004 art. 12(2)) is **not** used.
 2. **Order button and contract conclusion** (OUG 34/2014 art. 8(2), as amended by OUG 18/2026): “Comandă cu obligație de plată” (transfer), “Plătește X lei” (card); the moment of conclusion stated in the terms.
-3. **Wellness claims and regulatory status** (MDR 2017/745) of every device, Brain Flow included (transcranial photobiomodulation): product copy, landing copy, the “nu înlocuiește sfatul medicului” disclaimer, CE documentation.
+3. **Wellness claims and regulatory status** (MDR 2017/745) of every device, NEUROS Flow included (transcranial photobiomodulation): product copy, landing copy, the “nu înlocuiește sfatul medicului” disclaimer, CE documentation.
 4. **Privacy policy:** transfer mechanism and processor agreements for Stripe and GoHighLevel; retention periods; whether courier and hosting must be named; the landing attribution (UTM, no click ids, no cookie) described in the policy.
 5. **Company (PJ) buyers:** which consumer rights the terms extend to them.
 6. **Service emails without consent:** W6 P1 (after-delivery help) and W3 T1 (transfer reminder) treated as non-marketing. Confirm.
@@ -62,9 +62,9 @@ Updated 29 September 2026 (phase 3/4). Everything that is code is built; what is
 
 - Courier API integration (automatic AWB, delivery tracking) through the courier adapter.
 - Upsell / cross-sell on the landings (extension point documented in runbook §26; only catalog prices, no discount logic yet).
-- Per-configuration photographs for Brain Flow (today the same gallery for 1, 4 and 13 zones).
+- Per-configuration photographs for NEUROS Flow (today the same gallery for 1, 4 and 13 zones).
 - A GHL workflow on `bt-retur-solicitat` / `bt-retur-primit` (tags are set; no workflow uses them yet).
 - W0 (GHL unsubscribe → site) once `GHL_WEBHOOK_SECRET` is set.
 - Landing reporting in GA4 by `lp` / UTM once analytics ids exist.
-- A dedicated product page layout for Brain Flow configurations (comparison table), if the business wants more than the picker.
+- A dedicated product page layout for NEUROS Flow configurations (comparison table), if the business wants more than the picker.
 - Automatic FGO storno on full refunds (`FGO_AUTO_STORNO`), once the accountant agrees.

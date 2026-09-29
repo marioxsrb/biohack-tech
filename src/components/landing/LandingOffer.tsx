@@ -125,7 +125,7 @@ export function LandingOffer({ slug, productId, title, text }: Props) {
   )
 }
 
-/** Brain Flow opens on 4 zones (the configuration the source site showed first); others on the first variant. */
+/** NEUROS Flow opens on 4 zones (the configuration the source site showed first); others on the first variant. */
 function defaultVariant(productId: ProductId) {
   const p = getProduct(productId)!
   if (!p.variants?.length) return undefined

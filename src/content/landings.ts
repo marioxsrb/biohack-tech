@@ -177,14 +177,14 @@ export const landings: Landing[] = [
     productId: 'brain-flow',
     theme: { bg: '#ffffff', ink: '#101418', muted: '#56616a', panel: '#f5f3f2', line: '#e6e1df', accent: '#b4232f', heroTone: 'dark', heroAlign: 'left' },
     meta: {
-      title: 'Brain Flow: cască cu lumină infraroșie, pentru acasă',
-      description: 'Brain Flow: cască de fotobiomodulare cu lumină infraroșie la 810 nm, cu 1, 4 sau 13 zone. Protocol stabilit cu un specialist. Livrare gratuită în România.',
+      title: 'NEUROS Flow: cască cu lumină infraroșie, pentru acasă',
+      description: 'NEUROS Flow: cască de fotobiomodulare cu lumină infraroșie la 810 nm, cu 1, 4 sau 13 zone. Protocol stabilit cu un specialist. Livrare gratuită în România.',
     },
     hero: {
-      eyebrow: 'Brain Flow',
+      eyebrow: 'NEUROS Flow',
       title: ['Lumină infraroșie,', 'în rutina de acasă.'],
       text: 'O cască fără fir, cu LED-uri la 810 nm. Alegi 1, 4 sau 13 zone, iar protocolul îl stabilești cu un specialist.',
-      image: photo(bfFemeie, 'Femeie relaxată pe canapea, purtând casca Brain Flow'),
+      image: photo(bfFemeie, 'Femeie relaxată pe canapea, purtând casca NEUROS Flow'),
       position: 'object-[80%_40%]',
     },
     points: [
@@ -201,13 +201,13 @@ export const landings: Landing[] = [
     moment: {
       title: 'La ora aleasă de tine.',
       text: 'Ședințele se fac acasă, în fotoliu sau pe canapea.',
-      image: photo(bfFotoliu, 'Femeie într-un fotoliu, cu o cană în mână, lângă casca Brain Flow'),
+      image: photo(bfFotoliu, 'Femeie într-un fotoliu, cu o cană în mână, lângă casca NEUROS Flow'),
     },
     offer: { title: 'Alege configurația.', text: 'Casca și tehnologia sunt aceleași. Diferă numărul de zone pe care le poți activa în același protocol.' },
     faqs: [
       { q: 'Ce diferă între configurații?', a: 'Casca și tehnologia sunt aceleași. Diferă câte zone poți activa în același protocol: 1, 4 sau 13.' },
       { q: 'Cine stabilește protocolul?', a: 'Un specialist Biohack Tech, la consultația de început. Împreună alegeți zonele, durata și frecvența ședințelor.' },
-      { q: 'Este un tratament medical?', a: 'Nu. Brain Flow este un produs de wellness. Dacă ai o afecțiune sau urmezi un tratament, vorbește întâi cu medicul tău.' },
+      { q: 'Este un tratament medical?', a: 'Nu. NEUROS Flow este un produs de wellness. Dacă ai o afecțiune sau urmezi un tratament, vorbește întâi cu medicul tău.' },
     ],
   },
 ]

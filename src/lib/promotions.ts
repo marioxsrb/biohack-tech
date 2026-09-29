@@ -105,7 +105,7 @@ export function promotionHints(lines: Pick<PricedLine, 'productId' | 'quantity'>
       const missing = p.minUnits - units
       hints.push({
         id: p.id,
-        text: `Mai adaugă ${missing === 1 ? 'un produs' : `${missing} produse`} NEUROS Calm, NEUROS Focus sau Brain Flow și primești ${p.percent}% reducere la toate.`,
+        text: `Mai adaugă ${missing === 1 ? 'un produs' : `${missing} produse`} NEUROS Calm, NEUROS Focus sau NEUROS Flow și primești ${p.percent}% reducere la toate.`,
       })
     } else {
       const inGroup = units % p.group

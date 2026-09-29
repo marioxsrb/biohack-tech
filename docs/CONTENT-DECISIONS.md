@@ -36,7 +36,7 @@ Sursa: `Biohack-Tech_Structura_si_Copy.docx` și folderul `poze/` din ZIP. Copy-
 | Ce | De ce |
 | --- | --- |
 | Statisticile de pe home (92% somn mai bun, 85% concentrare, 2.500+ hărți qEEG) | Fără sursă sau metodologie. Ca afirmații de sănătate, nu pot fi publicate fără dovadă. |
-| Cele 6 testimoniale | Nu pot fi verificate. O fotografie e o previzualizare Shutterstock cu watermark, „Dr. Ioana R., neurolog” are poza modelului Brain Flow, iar două testimoniale vorbesc despre Brain Flow, care nu se vinde. |
+| Cele 6 testimoniale | Nu pot fi verificate. O fotografie e o previzualizare Shutterstock cu watermark, „Dr. Ioana R., neurolog” are poza modelului NEUROS Flow, iar două testimoniale vorbesc despre NEUROS Flow, care nu se vinde. |
 | Badge-ul „Dovedit științific” | Niciun studiu din materiale nu testează aceste produse. |
 | „Înainte / după Biohack Tech” (te trezești odihnit, rămâi calm…) | Promisiuni de rezultat pe care produsele nu le pot garanta. |
 | Ochelari: „pot inhiba cortizolul și promova melatonina” | Afirmație hormonală fără sursă. Rămâne efectul direct: filtrează lumina albastră, lumină mai blândă seara. |
@@ -60,10 +60,17 @@ Sursa: `Biohack-Tech_Structura_si_Copy.docx` și folderul `poze/` din ZIP. Copy-
 - Pe site-ul vechi, alt-urile a două poze BrainLink erau inversate (meditație / lucru la laptop). Aici sunt corecte.
 - Din 40 MB de PNG-uri au rămas 2 MB de WebP; `next/image` servește AVIF/WebP la dimensiunea potrivită.
 
-## Faza 3/4: Brain Flow devine produsul 4 (29.09.2026)
+## Faza 3/4: NEUROS Flow devine produsul 4 (29.09.2026)
 
-Decizia de mai sus („Brain Flow, care nu se vinde”) este înlocuită la cerere: Brain Flow se vinde, cu trei configurații (1, 4, 13 zone). Păstrăm numele din sursă (fără marca NEUROS, nestatată pentru el), prețurile din sursă (de confirmat, vezi OPEN-POINTS) și doar faptele tehnice (810 nm, zone, telecomandă, baterie, consultație inițială). Studiile medicale și testimonialele din sursă nu sunt folosite. Pe pagina principală, cardurile trec de la trei la patru (două pe rând pe tabletă).
+Decizia de mai sus („NEUROS Flow, care nu se vinde”) este înlocuită la cerere: NEUROS Flow se vinde, cu trei configurații (1, 4, 13 zone). Păstrăm numele din sursă (fără marca NEUROS, nestatată pentru el), prețurile din sursă (de confirmat, vezi OPEN-POINTS) și doar faptele tehnice (810 nm, zone, telecomandă, baterie, consultație inițială). Studiile medicale și testimonialele din sursă nu sunt folosite. Pe pagina principală, cardurile trec de la trei la patru (două pe rând pe tabletă).
 
 ## Faza 3.5: pagina principală mai completă (29.09.2026)
 
 Ordinea: hero, produsele (cu oferta lor, discret), ideea de brand cu cele patru produse în viața reală, „Aceeași zi. Alt ritm.” (fără obicei / cu un obicei BiohackTech, despre rutine, nu despre rezultate), „O zi, patru momente.” (experiențe descrise de noi, cu oameni în cadru, nu citate de clienți), cele două oferte, momentul NEUROS Calm, întrebări frecvente, contact. Secțiunile deschise și închise alternează. Testimonialele din sursă rămân nefolosite; arhitectura le afișează doar dacă se adaugă unele reale, cu acord și sursă (`src/content/home.ts`).
+
+## Pagina principală editată și NEUROS Flow (29.09.2026)
+
+- Casca de fotobiomodulare se numește pentru clienți **NEUROS Flow** (fost „Brain Flow”). Id-ul tehnic rămâne `brain-flow`.
+- Pagina principală a fost editată, nu extinsă: au ieșit secțiunea de brand cu 4 fotografii, „O zi, patru momente” (4 fotografii), momentul NEUROS Calm și fotografia din contact. Au rămas două fotografii cu oameni (hero, „Ce vrei să schimbi?”) și imaginile produselor.
+- „Ce vrei să schimbi?” înlocuiește momentele zilei: patru nevoi, fiecare cu produsul ei și cum se folosește.
+- Întrebările: 7 pe pagina principală (cele care decid cumpărarea), toate 14 pe `/intrebari-frecvente`.

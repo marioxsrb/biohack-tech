@@ -396,7 +396,7 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
               <Totals pricing={pricing} />
             </div>
             <p className="text-right text-[13px] text-muted">{terms.vat}</p>
-            <PromotionHints hints={hints} className="mt-3" />
+            <PromotionHints hints={hints} applied={pricing.promotions} className="mt-3" />
 
             {anyMethod && (
               <>

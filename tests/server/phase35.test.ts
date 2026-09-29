@@ -6,6 +6,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NextRequest } from 'next/server'
 
+// Draining the outbox runs FGO calls, which the client spaces by 1.1 s (FGO's rate limit).
+vi.setConfig({ testTimeout: 30_000 })
+
 vi.mock('next/server', async (orig) => ({ ...(await orig<typeof import('next/server')>()), after: (fn: () => unknown) => void fn() }))
 
 const { freshDb, person, TEST_ENV } = await import('./helpers')
@@ -281,6 +284,26 @@ describe('post-purchase offer', () => {
     expect((await act(parent.publicToken, 'accept', { productId: 'ochelari-biohack', variantId: 'cat-eye-bej' })).state).toBe('failed')
     expect(upsellCalls()).toHaveLength(1)
   })
+
+  it('GHL "last order" is never a failed post-purchase addition; a paid one is', async () => {
+    const parent = await paidCard()
+    upsellMode = 'declined'
+    await act(parent.publicToken, 'accept', { productId: 'ochelari-biohack', variantId: 'cat-eye-bej' })
+    const failed = (await orders.childOf(db, parent.id))!
+    expect(failed.status).toBe('cancelled')
+    expect((await orders.latestKnown(db, parent.email))!.id).toBe(parent.id)
+    // A still-pending addition (authentication not finished) does not count either.
+    await db.query("update orders set status = 'pending', payment_status = 'pending' where id = $1", [failed.id])
+    expect((await orders.latestKnown(db, parent.email))!.id).toBe(parent.id)
+    // The CRM sync of the parent sends the parent's number as bt_last_order_number.
+    await svc.markProcessing(parent.id, 'admin')
+    await drain()
+    const last = calls.filter((c) => c.url.includes('/contacts/upsert')).at(-1)!.json as { customFields: { key: string; fieldValue: string }[] }
+    expect(last.customFields.find((f) => f.key === 'contact.bt_last_order_number')!.fieldValue).toBe(parent.orderNumber)
+    // Once an addition is paid, it is the last order.
+    await db.query("update orders set status = 'confirmed', payment_status = 'paid' where id = $1", [failed.id])
+    expect((await orders.latestKnown(db, parent.email))!.id).toBe(failed.id)
+  }, 30_000)
 
   it('decline: no charge, no order, not an abandoned checkout, card released', async () => {
     const parent = await paidCard()

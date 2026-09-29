@@ -44,6 +44,9 @@ export function CardPayment({ publishableKey, amount, apiRef }: { publishableKey
         mode: 'payment',
         amount,
         currency: 'ron',
+        // Only what the server's PaymentIntent accepts (card, incl. Apple Pay / Google Pay). Without this,
+        // Stripe shows every method enabled in the dashboard (Klarna, Revolut Pay...), which would then fail.
+        paymentMethodTypes: ['card'],
         fonts: [{ cssSrc: 'https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&display=swap' }],
         appearance: {
           theme: 'stripe',

@@ -5,8 +5,9 @@
  *
  * Naming: NEUROS is the maker (the neck device already carries the NEUROS logo; the
  * headset's app is Neuros Game). Each product is NEUROS + one short word for what it's for:
- * Calm, Focus, Amber. Brain Flow keeps the name it had in the source (no maker is stated for it).
- * Biohack Tech is the store. Internal ids stay unchanged so carts
+ * Calm, Focus, Amber, Flow. Biohack Tech is the store. The photobiomodulation helmet was sold as
+ * "Brain Flow" on the previous site; since 29.09.2026 it is NEUROS Flow for customers, while its
+ * technical id stays `brain-flow` (orders, URLs, CRM tags, landing host). Internal ids stay unchanged so carts
  * saved before the rename still resolve.
  */
 import type { StaticImageData } from 'next/image'
@@ -73,7 +74,7 @@ export type Variant = {
   /** Option values, keyed by option id (e.g. { model: 'cat-eye', culoare: 'negru' }). */
   options: Record<string, string>
   images: ProductImage[]
-  /** Brain Flow: how many zones the configuration can activate. */
+  /** NEUROS Flow: how many zones the configuration can activate. */
   zones?: number
   /** Price in bani for this configuration, when it differs per variant (config/prices.ts). */
   price?: number | null
@@ -91,9 +92,9 @@ export type Product = {
   id: ProductId
   /** URL segment. */
   slug: string
-  /** Maker shown above the model name. Brain Flow has no maker stated in the source, so none is shown. */
+  /** Maker shown above the model name. */
   brand?: 'NEUROS'
-  /** The short name: Calm, Focus, Amber, Brain Flow. */
+  /** The short name: Calm, Focus, Amber, Flow. */
   model: string
   /** Full customer-facing name: "NEUROS Calm". */
   name: string
@@ -137,11 +138,11 @@ function priced(p: Omit<Product, 'price'>): Product {
 }
 
 const brainFlowGallery = [
-  cut(bfCasca, 'Brain Flow, casca albă cu LED-urile aprinse'),
-  photo(bfFemeie, 'Femeie relaxată pe canapea, purtând casca Brain Flow'),
-  cut(bfTelecomanda, 'Brain Flow lângă telecomanda inclusă'),
-  cut(bfInterior, 'Interiorul căștii Brain Flow, cu LED-urile, lângă telecomandă și ochelari'),
-  photo(bfFotoliu, 'Femeie într-un fotoliu, cu o cană în mână, lângă casca Brain Flow'),
+  cut(bfCasca, 'NEUROS Flow, casca albă cu LED-urile aprinse'),
+  photo(bfFemeie, 'Femeie relaxată pe canapea, purtând casca NEUROS Flow'),
+  cut(bfTelecomanda, 'NEUROS Flow lângă telecomanda inclusă'),
+  cut(bfInterior, 'Interiorul căștii NEUROS Flow, cu LED-urile, lângă telecomandă și ochelari'),
+  photo(bfFotoliu, 'Femeie într-un fotoliu, cu o cană în mână, lângă casca NEUROS Flow'),
 ]
 
 /** Display order. Calm is the lead product on the source site. */
@@ -272,13 +273,14 @@ const catalog: Omit<Product, 'price'>[] = [
   {
     id: 'brain-flow',
     slug: 'brain-flow',
-    model: 'Brain Flow',
-    name: 'Brain Flow',
+    brand: 'NEUROS',
+    model: 'Flow',
+    name: 'NEUROS Flow',
     kind: 'Cască de fotobiomodulare, infraroșu 810 nm',
     purpose: 'Pentru rutina de acasă',
     tagline: 'O cască cu lumină infraroșie, folosită acasă, după un protocol stabilit cu un specialist.',
-    cutout: cut(bfCasca, 'Brain Flow, casca albă cu LED-urile aprinse'),
-    lifestyle: photo(bfFemeie, 'Femeie relaxată pe canapea, purtând casca Brain Flow'),
+    cutout: cut(bfCasca, 'NEUROS Flow, casca albă cu LED-urile aprinse'),
+    lifestyle: photo(bfFemeie, 'Femeie relaxată pe canapea, purtând casca NEUROS Flow'),
     images: brainFlowGallery,
     options: [
       {

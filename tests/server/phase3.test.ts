@@ -1,5 +1,5 @@
 /**
- * Phase 3/4 end to end on the real catalog (no price mocks): Brain Flow configurations across both
+ * Phase 3/4 end to end on the real catalog (no price mocks): NEUROS Flow configurations across both
  * payment methods, landing attribution from the checkout request to the CRM, the fulfillment and
  * return lifecycle, and checkout recovery with a variant. External APIs are stubbed at the HTTP boundary.
  */
@@ -51,7 +51,7 @@ beforeEach(async () => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
-describe('payment matrix: Brain Flow configuration × payment method', () => {
+describe('payment matrix: NEUROS Flow configuration × payment method', () => {
   const cases = [
     ['1-zona', 1290000],
     ['4-zone', 1490000],
@@ -144,7 +144,7 @@ describe('fulfillment and returns', () => {
     const o = await paidOrder('f-2')
     await svc.markShipped(o.id, 'admin', { courier: 'X', trackingNumber: 'AWB9' })
     await svc.markDelivered(o.id, 'admin')
-    const { matched } = await recordWithdrawal({ name: 'Ana Popescu', email: person.email, orderNumber: o.orderNumber, items: 'Brain Flow', message: '' })
+    const { matched } = await recordWithdrawal({ name: 'Ana Popescu', email: person.email, orderNumber: o.orderNumber, items: 'NEUROS Flow', message: '' })
     expect(matched).toBe(true)
     let now = (await orders.byId(db, o.id))!
     expect(now.returnStatus).toBe('requested')
@@ -170,7 +170,7 @@ describe('fulfillment and returns', () => {
 })
 
 describe('abandoned checkout regression with a variant', () => {
-  it('a Brain Flow card attempt with consent is recoverable and the link restores the same configuration', async () => {
+  it('a NEUROS Flow card attempt with consent is recoverable and the link restores the same configuration', async () => {
     const { order } = await svc.placeOrder({ lines: lines([{ productId: 'brain-flow', variantId: '13-zone', quantity: 1 }]), form: { ...person, marketingConsent: true }, attemptId: 'ab-1' })
     await svc.markAbandonedIfUnpaid(order.id)
     const o = (await orders.byId(db, order.id))!

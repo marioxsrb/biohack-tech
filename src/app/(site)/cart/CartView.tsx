@@ -106,7 +106,7 @@ export function CartView() {
               <Totals pricing={pricing} />
             </div>
             <p className="text-right text-[13px] text-muted">{terms.vat}</p>
-            <PromotionHints hints={hints} className="mt-4" />
+            <PromotionHints hints={hints} applied={pricing.promotions} className="mt-4" />
             <Link href="/checkout" className="cta mt-5 w-full">
               <Lock /> Finalizează comanda
             </Link>

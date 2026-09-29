@@ -31,11 +31,16 @@ export function Hero() {
           Corp relaxat.
         </h1>
         <p className="mt-5 max-w-[26em] text-[clamp(16px,1.3vw,19px)] leading-snug text-white/85">
-          Produse pentru relaxare, focus, ecrane și rutina de acasă.
+          Patru dispozitive NEUROS, pentru relaxare, atenție, ecrane și lumină infraroșie acasă.
         </p>
-        <a href="#produse" className="cta mt-7">
-          Vezi produsele <Arrow />
-        </a>
+        <div className="on-dark mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
+          <a href="#produse" className="cta">
+            Alege produsul <Arrow />
+          </a>
+          <a href="#alege" className="tlink">
+            Nu știi ce să alegi? <Arrow />
+          </a>
+        </div>
       </div>
     </section>
   )

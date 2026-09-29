@@ -10,6 +10,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     ...products.map((p) => ({ url: absolute(productHref(p)), changeFrequency: 'weekly' as const, priority: 0.9 })),
     { url: absolute('/about-us'), changeFrequency: 'monthly', priority: 0.5 },
     { url: absolute('/contact-us'), changeFrequency: 'monthly', priority: 0.5 },
+    { url: absolute('/intrebari-frecvente'), changeFrequency: 'monthly', priority: 0.5 },
     ...legalPages.map((p) => ({ url: absolute(`/${p.slug}`), changeFrequency: 'yearly' as const, priority: 0.2 })),
   ]
 }

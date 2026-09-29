@@ -4,7 +4,7 @@
  * order. Prices are the normal catalog prices (no special upsell discount exists).
  *
  * Why these pairs: Amber is the everyday screen companion to any device and the natural small addition;
- * Calm and Focus complement each other (relaxation / attention). Brain Flow is never offered after a
+ * Calm and Focus complement each other (relaxation / attention). NEUROS Flow is never offered after a
  * purchase: it is chosen with a specialist, not in one click.
  */
 import type { ProductId } from '@/content/catalog'

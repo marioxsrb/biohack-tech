@@ -14,7 +14,7 @@ const EMPTY = { name: '', email: '', phone: '', topic: 'produse' as EnquiryTopic
  * again on the server. Contacting us subscribes to nothing. A hidden field and the time spent on the
  * page keep simple bots out without a puzzle for people.
  */
-export function ContactForm({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
+export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light' | 'dark'; compact?: boolean }) {
   const [form, setForm] = useState(EMPTY)
   const [errors, setErrors] = useState<Partial<Record<EnquiryField, string>>>({})
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
@@ -131,7 +131,7 @@ export function ContactForm({ tone = 'light' }: { tone?: 'light' | 'dark' }) {
         <label htmlFor="c-message" className={label}>
           Mesaj
         </label>
-        <textarea {...a11y('message')} rows={6} style={{ minHeight: 150 }} className="field mt-2 resize-y" value={form.message} onChange={set('message')} maxLength={ENQUIRY_LIMITS.message + 200} required />
+        <textarea {...a11y('message')} rows={compact ? 4 : 6} style={{ minHeight: compact ? 110 : 150 }} className="field mt-2 resize-y" value={form.message} onChange={set('message')} maxLength={ENQUIRY_LIMITS.message + 200} required />
         {err('message')}
       </div>
       {/* Invisible to people (and to screen readers); bots tend to fill every field. */}
