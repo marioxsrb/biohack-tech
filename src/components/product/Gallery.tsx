@@ -51,7 +51,7 @@ export function Gallery({ images, label, wide }: Props) {
       <div className="relative">
         <div
           ref={track}
-          className={`flex aspect-[5/4] snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-[24px] bg-paper [scrollbar-width:none] max-sm:-mx-[var(--gut)] max-sm:rounded-none [&::-webkit-scrollbar]:hidden ${wide ? 'max-sm:aspect-[16/11]' : 'max-sm:aspect-square'}`}
+          className={`flex aspect-[5/4] snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-[24px] bg-paper [scrollbar-width:none] max-sm:rounded-[20px] [&::-webkit-scrollbar]:hidden ${wide ? 'max-sm:aspect-[16/11]' : 'max-sm:aspect-square'}`}
           tabIndex={0}
           aria-label={`${label}, imaginea ${active + 1} din ${images.length}. Folosește săgețile pentru a schimba imaginea.`}
           onKeyDown={(e) => {
@@ -67,7 +67,7 @@ export function Gallery({ images, label, wide }: Props) {
         >
           {images.map((img, i) => (
             <div key={img.src.src} className="relative h-full w-full flex-none snap-center" aria-hidden={i !== active}>
-              <div className={`absolute inset-0 ${img.kind === 'photo' ? '' : img.bleed === 'bottom' ? 'px-[8%] pt-[8%]' : 'p-[8%] max-sm:p-[6%]'}`}>
+              <div className={`absolute inset-0 ${img.kind === 'photo' ? '' : img.bleed === 'bottom' ? 'px-[8%] pt-[8%]' : 'p-[10%]'}`}>
                 <div className="relative h-full w-full">
                   <Image
                     src={img.src}

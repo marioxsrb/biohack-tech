@@ -104,12 +104,15 @@ export function ProductHero({ productId, intro }: Props) {
           </p>
           {purchasable && (
             <>
-              <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[15px] text-text">
-                <li>✓ Livrare gratuită</li>
-                <li>✓ Retur în {terms.returnDays} zile</li>
-                <li>✓ Garanție {terms.warrantyYears} ani</li>
+              <ul className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[14px] text-muted">
+                {['Livrare gratuită', `Retur în ${terms.returnDays} zile`, `Garanție ${terms.warrantyYears} ani`].map((t) => (
+                  <li key={t} className="flex items-center gap-1.5">
+                    <Check className="h-3.5 w-3.5 text-cyan-700" aria-hidden />
+                    {t}
+                  </li>
+                ))}
               </ul>
-              <ProductOffer productId={product.id} className="mt-4 max-w-[34em]" />
+              <ProductOffer productId={product.id} className="mt-6 max-w-[34em]" />
             </>
           )}
 

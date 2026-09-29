@@ -10,6 +10,7 @@ import { itemOf, track } from '@/lib/analytics'
 import type { LandingSlug } from '@/lib/landing-hosts'
 import { formatLei } from '@/lib/money'
 import { priceLines, promotionProgress } from '@/lib/promotions'
+import { amberCopy } from '@/lib/offer-copy'
 import { MAX_QTY } from '@/lib/purchase'
 import { checkoutHref, isPlainClick, startCheckout } from './checkout-link'
 
@@ -99,16 +100,14 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
     startCheckout(router.push, slug, picks, { exact: true })
   }
 
+  // Same wording as the cart and checkout, at every quantity (lib/offer-copy.ts).
+  const c = amberCopy(progress ?? null)
   const status =
     units === 0
       ? { big: 'Alege prima pereche.', small: 'La 3 perechi, una este gratuită. Poți combina ramele.' }
-      : progress?.active && progress.missing === 0
-        ? { big: '2+1 activ', small: `Plătești ${formatLei(pricing.totalMinor)} în loc de ${formatLei(pricing.subtotalMinor)}.` }
-        : progress?.active
-          ? { big: '2+1 activ', small: `Plătești ${formatLei(pricing.totalMinor)} în loc de ${formatLei(pricing.subtotalMinor)}. Mai alege ${progress.missing === 1 ? 'o pereche' : `${progress.missing} perechi`} pentru încă una gratuită.` }
-          : units % 3 === 2
-            ? { big: 'Mai alege 1 pereche și a treia este gratuită.', small: '' }
-            : { big: 'Mai alege 2 perechi.', small: 'La a treia, una este gratuită.' }
+      : c.tone === 'active'
+        ? { big: c.headline, small: [`Plătești ${formatLei(pricing.totalMinor)} în loc de ${formatLei(pricing.subtotalMinor)}.`, c.nudge ?? c.quiet].filter(Boolean).join(' ') }
+        : { big: c.headline, small: '' }
   const active = !!progress?.active
   const steps = [0, 1, 2].map((i) => i < (units % 3 === 0 && units > 0 ? 3 : units % 3))
 

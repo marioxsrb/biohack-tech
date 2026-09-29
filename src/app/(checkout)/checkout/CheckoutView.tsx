@@ -255,9 +255,9 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
             </div>
           </div>
         ) : (
-          <div className="space-y-4 md:col-span-7">
+          <div className="space-y-4 md:col-span-7 max-sm:space-y-6">
             <Group n={1} title="Date de contact">
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4">
                 <Field name="firstName" label="Prenume" error={show('firstName')}>
                   <input autoComplete="given-name" {...bind('firstName')} />
                 </Field>
@@ -276,24 +276,22 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
             </Group>
 
             <Group n={2} title="Facturare">
-              <div role="radiogroup" aria-label="Facturez pe" className="grid grid-cols-2 gap-2">
+              <div role="radiogroup" aria-label="Facturez pe" className="grid grid-cols-2 gap-1 rounded-[14px] bg-mist-2 p-1">
                 {(
                   [
-                    ['pf', 'Persoană fizică', 'Factura pe numele tău'],
-                    ['pj', 'Persoană juridică', 'Factura pe firmă'],
+                    ['pf', 'Persoană fizică', 'Pe numele tău'],
+                    ['pj', 'Persoană juridică', 'Pe firmă'],
                   ] as const
                 ).map(([v, label, sub]) => (
                   <label
                     key={v}
-                    className={`flex min-h-16 cursor-pointer flex-col justify-center rounded-[12px] px-4 py-3 transition-shadow has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-cyan ${
-                      form.buyerType === v
-                        ? 'bg-paper shadow-[inset_0_0_0_2px_var(--color-ink)]'
-                        : 'bg-mist shadow-[inset_0_0_0_1px_var(--color-line)] hover:shadow-[inset_0_0_0_1px_var(--color-faint)]'
+                    className={`flex min-h-14 cursor-pointer flex-col items-center justify-center rounded-[11px] px-2 py-2 text-center transition-[background-color,box-shadow] duration-150 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-cyan ${
+                      form.buyerType === v ? 'bg-paper shadow-[0_1px_3px_rgba(8,17,19,.12),0_0_0_1px_rgba(8,17,19,.04)]' : 'text-muted hover:text-ink'
                     }`}
                   >
                     <input type="radio" name="buyerType" value={v} checked={form.buyerType === v} onChange={() => patch({ buyerType: v })} className="sr-only" />
-                    <span className="text-[15.5px] font-semibold text-ink">{label}</span>
-                    <span className="text-[13.5px] text-muted">{sub}</span>
+                    <span className={`text-[15px] leading-tight font-semibold ${form.buyerType === v ? 'text-ink' : ''}`}>{label}</span>
+                    <span className="mt-0.5 text-[12.5px] text-muted">{sub}</span>
                   </label>
                 ))}
               </div>
@@ -377,7 +375,7 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
         )}
 
         <aside className="md:col-span-5" aria-labelledby="summary-title">
-          <div className="rounded-[20px] bg-paper p-6 md:sticky md:top-[calc(var(--nav-h)+24px)] max-sm:p-5">
+          <div className="rounded-[20px] bg-paper p-6 md:sticky md:top-[calc(var(--nav-h)+24px)] max-sm:rounded-none max-sm:border-t max-sm:border-line max-sm:bg-transparent max-sm:px-0 max-sm:pt-7">
             <div className="flex items-baseline justify-between">
               <h2 id="summary-title" className="text-[20px] tracking-[-0.015em]">
                 Comanda ta
@@ -513,8 +511,8 @@ function AddressLine({
   const k = (f: 'city' | 'county' | 'postalCode') => (prefix ? (`ship${f[0].toUpperCase()}${f.slice(1)}` as keyof OrderFields) : f)
   const ac = (v: string) => (autoComplete ? `${prefix ? 'shipping' : 'billing'} ${v}` : 'off')
   return (
-    <div className="grid gap-4 sm:grid-cols-[1.3fr_1fr_0.8fr]">
-      <Field name={k('city')} label="Localitate" error={show(k('city'))}>
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1.3fr_1fr_0.8fr] sm:gap-4">
+      <Field name={k('city')} label="Localitate" error={show(k('city'))} className="col-span-2 sm:col-span-1">
         <input autoComplete={ac('address-level2')} {...bind(k('city'))} />
       </Field>
       <Field name={k('county')} label="Județ" error={show(k('county'))}>
@@ -594,12 +592,15 @@ function SummaryLine({ line: l }: { line: ResolvedLine }) {
   )
 }
 
-/** One numbered group of the form, on its own white panel. */
+/**
+ * One numbered group of the form: a white panel from tablets up; on phones an open section separated by
+ * a hairline, so the page is not a stack of boxes.
+ */
 function Group({ n, title, children }: { n: number; title: string; children: ReactNode }) {
   return (
-    <fieldset className="rounded-[20px] bg-paper p-6 max-sm:px-5">
+    <fieldset className="rounded-[20px] bg-paper p-6 max-sm:rounded-none max-sm:border-t max-sm:border-line max-sm:bg-transparent max-sm:px-0 max-sm:pt-7 max-sm:pb-1">
       <legend className="float-left mb-5 flex w-full items-center gap-3 text-[19px] font-medium tracking-[-0.015em] text-ink">
-        <span aria-hidden className="flex h-7 w-7 items-center justify-center rounded-full bg-mist text-[13.5px] font-semibold tabular-nums">
+        <span aria-hidden className="flex h-7 w-7 items-center justify-center rounded-full bg-mist text-[13.5px] font-semibold tabular-nums max-sm:bg-paper max-sm:shadow-[inset_0_0_0_1px_var(--color-line)]">
           {n}
         </span>
         {title}
@@ -615,6 +616,7 @@ function Field({
   hint,
   error,
   optional,
+  className,
   children,
 }: {
   name: string
@@ -622,6 +624,7 @@ function Field({
   hint?: string
   error?: string
   optional?: boolean
+  className?: string
   children: ReactElement<Record<string, unknown>>
 }) {
   const described = [hint && !error && `h-${name}`, error && `e-${name}`].filter(Boolean).join(' ') || undefined
@@ -633,7 +636,7 @@ function Field({
     className: `field ${error ? 'field-error' : ''}`,
   })
   return (
-    <div>
+    <div className={className}>
       <label htmlFor={`f-${name}`} className="mb-1.5 block text-[14.5px] font-medium text-ink">
         {label} {optional && <span className="font-normal text-muted">(opțional)</span>}
       </label>

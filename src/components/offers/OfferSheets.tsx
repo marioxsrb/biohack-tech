@@ -8,15 +8,18 @@ import { Arrow, Check, Lock } from '@/components/ui/icons'
 import { getProduct, unitPrice, variantLabel, type ProductId } from '@/content/catalog'
 import { terms } from '@/config/site'
 import { AMBER_ID, amberLabel, amberModels, amberTotals, pairsToLines } from '@/lib/amber-pairs'
+import { BUNDLE, bundleNeeds, bundleToLines, bundleTotals, pickComplete, type BundlePick } from '@/lib/bundle-picks'
 import { trackUi, type UiPlacement } from '@/lib/analytics'
 import { formatLei } from '@/lib/money'
 import type { EntrySource } from '@/lib/purchase'
 import { Sheet } from './Sheet'
 
-type Open = ({ kind: 'amber'; slots: number; placement: UiPlacement } | { kind: 'variant'; productId: ProductId; placement: UiPlacement }) & { n: number }
+type Open = ({ kind: 'amber'; slots: number; placement: UiPlacement } | { kind: 'bundle'; placement: UiPlacement } | { kind: 'variant'; productId: ProductId; placement: UiPlacement }) & { n: number }
 
 const Ctx = createContext<{
   openAmber: (placement: UiPlacement, slots?: number) => void
+  /** The 20% for 3 products picker; asks only for the products the cart still needs. */
+  openBundle: (placement: UiPlacement) => void
   openVariant: (productId: ProductId, placement: UiPlacement) => void
 } | null>(null)
 
@@ -27,8 +30,8 @@ export const useOfferSheets = () => {
 }
 
 /** Where a line added from a sheet came from (kept on the cart line; the order's acquisition is not touched). */
-const sourceFor = (placement: UiPlacement, kind: 'amber' | 'variant'): EntrySource | undefined =>
-  placement === 'cart' ? 'cart_cross_sell' : placement === 'checkout' ? 'checkout_cross_sell' : kind === 'amber' ? 'amber_configurator' : undefined
+const sourceFor = (placement: UiPlacement, kind: 'amber' | 'bundle' | 'variant'): EntrySource | undefined =>
+  placement === 'cart' ? 'cart_cross_sell' : placement === 'checkout' ? 'checkout_cross_sell' : kind === 'amber' ? 'amber_configurator' : kind === 'bundle' ? 'bundle_configurator' : undefined
 
 /**
  * One place that opens the purchase pickers from anywhere (homepage, product page, cart, checkout):
@@ -50,6 +53,10 @@ export function OfferSheetsProvider({ children }: { children: ReactNode }) {
           items: slots,
         })
       },
+      openBundle: (placement: UiPlacement) => {
+        setOpen({ kind: 'bundle', placement, n: ++opened.current })
+        trackUi('open_bundle_configurator', { placement })
+      },
       openVariant: (productId: ProductId, placement: UiPlacement) => setOpen({ kind: 'variant', productId, placement, n: ++opened.current }),
     }),
     [],
@@ -58,6 +65,7 @@ export function OfferSheetsProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={value}>
       {children}
       {open?.kind === 'amber' && <AmberPairs key={open.n} slots={open.slots} placement={open.placement} onClose={close} />}
+      {open?.kind === 'bundle' && <BundlePicker key={open.n} placement={open.placement} onClose={close} />}
       {open?.kind === 'variant' && <VariantPicker key={open.n} productId={open.productId} placement={open.placement} onClose={close} />}
     </Ctx.Provider>
   )
@@ -158,7 +166,7 @@ function AmberPairs({ slots, placement, onClose }: { slots: number; placement: U
             <Lock /> {cta}
           </button>
           <p className="text-center text-[13px] text-muted" aria-live="polite">
-            {ready ? `${terms.vat}. Închiderea ferestrei nu adaugă nimic.` : `Mai alege perechea ${slotNo(firstEmpty)}.`}
+            {ready ? `${terms.vat}.` : `Mai alege perechea ${slotNo(firstEmpty)}.`}
           </p>
         </div>
       }
@@ -287,4 +295,168 @@ function VariantPicker({ productId, placement, onClose }: { productId: ProductId
       <p className="mt-4 text-[14.5px] text-text">Casca e aceeași; diferă câte zone poți activa. Protocolul îl stabilești cu un specialist la consultația de început.</p>
     </Sheet>
   )
+}
+
+/**
+ * 20% for 3 products: one slot per product the cart still needs (3, 2 or 1). Each slot is a product
+ * (NEUROS Calm, NEUROS Focus, NEUROS Flow; the same product more than once is fine) and, for NEUROS Flow,
+ * its configuration. Totals from the promotion engine; one button adds everything; closing adds nothing.
+ */
+function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose: () => void }) {
+  const { lines, addMany } = useCart()
+  const cart = lines.map((l) => ({ productId: l.product.id, variantId: l.variant?.id, quantity: l.quantity }))
+  // The number of slots is fixed when the picker opens.
+  const [need] = useState(() => bundleNeeds(cart))
+  const [picks, setPicks] = useState<BundlePick[]>(() => Array.from({ length: need.missing }, () => ({ productId: null, variantId: null })))
+  const [done, setDone] = useState(false)
+  const totals = bundleTotals(cart, picks)
+  const ready = bundleToLines(picks)
+  const firstOpen = picks.findIndex((p) => !pickComplete(p))
+  const slotNo = (i: number) => need.units + i + 1
+  const set = (i: number, next: BundlePick) => setPicks((ps) => ps.map((p, j) => (j === i ? next : p)))
+
+  if (need.missing === 0 || done) {
+    return (
+      <Sheet open onClose={onClose} label="20% la 3 produse" title={<p className="text-[17px] font-semibold text-ink">20% la 3 produse</p>}>
+        <div className="mx-auto max-w-[30em] py-6 text-center">
+          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-cyan-700 text-white">
+            <Check className="h-6 w-6" />
+          </span>
+          <p className="mt-4 text-[22px] leading-tight font-medium tracking-[-0.02em] text-ink" role="status">
+            {done ? 'Am adăugat selecția în coș. Reducerea de 20% se aplică.' : 'Reducerea de 20% este deja activă în coș.'}
+          </p>
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
+            {placement !== 'cart' && placement !== 'checkout' && (
+              <Link href="/cart" onClick={onClose} className="cta">
+                Vezi coșul <Arrow />
+              </Link>
+            )}
+            <button type="button" onClick={onClose} className="btn-secondary">
+              {placement === 'cart' || placement === 'checkout' ? 'Înapoi la comandă' : 'Continuă cumpărăturile'}
+            </button>
+          </div>
+        </div>
+      </Sheet>
+    )
+  }
+
+  const title = need.missing === 3 ? 'Alege 3 produse. Primești 20% reducere.' : need.missing === 1 ? 'Mai alege 1 produs pentru 20% reducere.' : `Mai alege ${need.missing} produse pentru 20% reducere.`
+  const add = () => {
+    if (!ready || !addMany(ready, sourceFor(placement, 'bundle'))) return
+    trackUi('complete_bundle_configurator', { placement, items: need.missing })
+    if (placement === 'cart' || placement === 'checkout') onClose()
+    else setDone(true)
+  }
+
+  return (
+    <Sheet
+      open
+      onClose={onClose}
+      label={title}
+      title={
+        <>
+          <p className="inline-flex rounded-full bg-cyan-700 px-2.5 py-0.5 text-[12.5px] font-semibold text-white">20% la 3 produse</p>
+          <h2 className="mt-1 text-[clamp(20px,2.4vw,26px)] leading-tight tracking-[-0.025em]">{title}</h2>
+        </>
+      }
+      footer={
+        <div className="space-y-3">
+          <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-0.5 text-[14.5px]">
+            {picks.map((p, i) =>
+              pickComplete(p) ? (
+                <div key={i} className="contents">
+                  <dt className="truncate text-text">{pickLabel(p)}</dt>
+                  <dd className="text-right tabular-nums">{formatLei(unitPrice(getProduct(p.productId!)!, getProduct(p.productId!)!.variants?.find((v) => v.id === p.variantId)) ?? 0)}</dd>
+                </div>
+              ) : null,
+            )}
+            {need.units > 0 && (
+              <>
+                <dt className="text-muted">Deja în coș</dt>
+                <dd className="text-right text-muted">{need.units === 1 ? '1 produs' : `${need.units} produse`}</dd>
+              </>
+            )}
+            <dt className="text-muted">Subtotal</dt>
+            <dd className="text-right tabular-nums">{formatLei(totals.subtotalMinor)}</dd>
+            <dt className="font-medium text-ink">Reducere 20%</dt>
+            <dd className="text-right font-medium text-ink tabular-nums">{totals.discountMinor ? `−${formatLei(totals.discountMinor)}` : '0 lei'}</dd>
+            <dt className="pt-1 text-[16px] font-semibold text-ink">Total după reducere</dt>
+            <dd className="pt-1 text-right text-[20px] font-medium tracking-[-0.02em] text-ink tabular-nums">{formatLei(totals.totalMinor)}</dd>
+          </dl>
+          <button type="button" onClick={add} disabled={!ready} className="cta w-full">
+            <Lock /> Adaugă selecția în coș
+          </button>
+          <p className="text-center text-[13px] text-muted" aria-live="polite">
+            {ready ? terms.vat + '.' : picks[firstOpen]?.productId === 'brain-flow' ? `Alege configurația pentru produsul ${slotNo(firstOpen)}.` : `Mai alege produsul ${slotNo(firstOpen)}.`}
+          </p>
+        </div>
+      }
+    >
+      <p className="text-[15px] text-text">NEUROS Calm, NEUROS Focus și NEUROS Flow, în orice combinație. Poți alege același produs de mai multe ori.</p>
+      <ol className="mt-4 space-y-3">
+        {picks.map((pick, i) => {
+          const flow = pick.productId ? getProduct(pick.productId) : undefined
+          return (
+            <li key={i} className={`rounded-[18px] bg-paper p-4 transition-shadow sm:p-5 ${pickComplete(pick) ? 'shadow-[inset_0_0_0_2px_var(--color-ink)]' : 'shadow-[inset_0_0_0_1px_var(--color-line)]'}`}>
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-[16px] font-semibold text-ink">Produsul {slotNo(i)}</p>
+                <p className={`truncate text-[14.5px] ${pickComplete(pick) ? 'font-medium text-cyan-700' : 'text-muted'}`}>{pickComplete(pick) ? pickLabel(pick) : 'Alege produsul'}</p>
+              </div>
+              <div role="radiogroup" aria-label={`Produsul ${slotNo(i)}`} className="mt-3 grid grid-cols-3 gap-2">
+                {(BUNDLE.products as ProductId[]).map((id) => {
+                  const p = getProduct(id)!
+                  const on = pick.productId === id
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      onClick={() => set(i, { productId: id, variantId: on ? pick.variantId : null })}
+                      className={`flex flex-col items-center rounded-[14px] px-1.5 pt-2 pb-2.5 text-center transition-shadow ${on ? 'bg-mist shadow-[inset_0_0_0_2px_var(--color-ink)]' : 'shadow-[inset_0_0_0_1px_var(--color-line)] hover:shadow-[inset_0_0_0_1px_var(--color-ink)]'}`}
+                    >
+                      <span className="relative block h-12 w-full sm:h-16">
+                        <Image src={p.cutout.src} alt="" fill sizes="120px" className="object-contain" />
+                      </span>
+                      <span className="mt-1.5 text-[13.5px] leading-tight font-semibold text-ink">{p.name.replace('NEUROS ', '')}</span>
+                      <span className="text-[12.5px] text-muted tabular-nums">
+                        {p.variablePrice ? 'de la ' : ''}
+                        {formatLei(p.price ?? 0)}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+              {flow?.variants?.length ? (
+                <div role="radiogroup" aria-label={`Configurația NEUROS Flow, produsul ${slotNo(i)}`} className="mt-3 grid grid-cols-3 gap-2">
+                  {flow.variants.map((v) => {
+                    const on = pick.variantId === v.id
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        role="radio"
+                        aria-checked={on}
+                        onClick={() => set(i, { productId: flow.id, variantId: v.id })}
+                        className={`flex min-h-14 flex-col items-center justify-center rounded-[12px] px-1 py-2 text-center transition-colors ${on ? 'bg-ink text-white' : 'bg-paper text-ink shadow-[inset_0_0_0_1px_var(--color-line)] hover:shadow-[inset_0_0_0_1px_var(--color-ink)]'}`}
+                      >
+                        <span className="text-[14.5px] font-semibold">{variantLabel(flow, v)}</span>
+                        <span className={`text-[12.5px] tabular-nums ${on ? 'text-white/80' : 'text-muted'}`}>{formatLei(unitPrice(flow, v) ?? 0)}</span>
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
+            </li>
+          )
+        })}
+      </ol>
+    </Sheet>
+  )
+}
+
+function pickLabel(p: BundlePick) {
+  const product = getProduct(p.productId!)!
+  const v = product.variants?.find((x) => x.id === p.variantId)
+  return v ? `${product.name} · ${variantLabel(product, v)}` : product.name
 }

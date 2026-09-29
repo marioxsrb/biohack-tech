@@ -27,23 +27,24 @@ describe('recommendations: one engine, deterministic', () => {
     expect(ids(recommend([L('balance-wave'), L('brainlink-pro'), L('ochelari-biohack', 1, 'cat-eye-bej')], 'checkout'))).not.toContain('ochelari-biohack')
   })
 
-  it('a nearby promotion comes first: the next Amber pair, then the third product for 20%', () => {
+  it('a nearby promotion comes first: the next Amber pair, then one row for the 20% (the 3-product picker)', () => {
     const r = recommend([L('balance-wave'), L('brainlink-pro'), L('ochelari-biohack', 2, 'cat-eye-bej')], 'cart')
-    expect(r.map((x) => [x.productId, x.kind, x.add, x.slots])).toEqual([
+    expect(r.slice(0, 2).map((x) => [x.productId, x.kind, x.add, x.slots])).toEqual([
       ['ochelari-biohack', 'complete_offer', 'amber_pairs', 1],
-      ['balance-wave', 'complete_offer', 'direct', undefined],
-      ['brainlink-pro', 'complete_offer', 'direct', undefined],
+      ['balance-wave', 'complete_offer', 'bundle', 1],
     ])
   })
 
-  it('20% one away: eligible products, not-in-cart first, NEUROS Flow last and only with its configuration picker', () => {
+  it('20% one away: a single suggestion that opens the picker for the missing product (never three product rows)', () => {
     const r = recommend([L('balance-wave'), L('brainlink-pro')], 'cart')
-    expect(r.map((x) => [x.productId, x.add])).toEqual([
-      ['balance-wave', 'direct'],
-      ['brainlink-pro', 'direct'],
-      ['brain-flow', 'variant'],
-    ])
-    expect(recommend([L('balance-wave'), L('brain-flow', 1, '4-zone')], 'cart')[0]).toMatchObject({ productId: 'brainlink-pro', kind: 'complete_offer' })
+    expect(r.filter((x) => x.kind === 'complete_offer')).toEqual([expect.objectContaining({ add: 'bundle', slots: 1, promotionId: 'trei-produse-20' })])
+    expect(recommend([L('balance-wave'), L('brain-flow', 1, '4-zone')], 'cart')[0]).toMatchObject({ productId: 'brainlink-pro', add: 'bundle', slots: 1 })
+  })
+
+  it('Amber beyond the first 2+1: suggested again only when the next free pair is one pair away (5, 8...), never at 3, 4, 6, 7', () => {
+    const amberAt = (n: number) => recommend([L('ochelari-biohack', n, 'cat-eye-bej')], 'cart').find((x) => x.productId === 'ochelari-biohack')
+    for (const n of [3, 4, 6, 7, 9]) expect(amberAt(n)).toBeUndefined()
+    for (const n of [2, 5, 8]) expect(amberAt(n)).toMatchObject({ kind: 'complete_offer', slots: 1 })
   })
 
   it('Amber is offered as a 3-pair 2+1 set when there is none; no promotions after payment', () => {
@@ -150,8 +151,9 @@ describe('pages', () => {
     const hero = read('src/components/product/ProductHero.tsx')
     expect(hero.indexOf('Garanție')).toBeLessThan(hero.indexOf('<ProductOffer'))
     expect(hero.indexOf('<ProductOffer')).toBeLessThan(hero.indexOf('<AddToCartButton'))
-    expect(read('src/components/offers/ProductOffer.tsx')).toContain("openAmber('product_page', 3)")
-    expect(read('src/components/home/Offers.tsx')).toContain('AmberOfferButton')
+    const offer = read('src/components/offers/ProductOffer.tsx')
+    expect(offer).toContain("openAmber('product_page', 3)")
+    expect(offer).toContain("openBundle('product_page')")
   })
   it('checkout: the suggestion module is the only product surface, before the payment decision', () => {
     const v = read('src/app/(checkout)/checkout/CheckoutView.tsx')

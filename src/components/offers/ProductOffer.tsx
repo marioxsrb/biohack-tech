@@ -7,10 +7,10 @@ import { useOfferSheets } from './OfferSheets'
 
 /**
  * The product's promotion, right under the price and the trust row: a quiet highlighted panel, one
- * headline, one sentence. NEUROS Amber's 2+1 opens the 3-pair picker in place (no page change).
+ * headline, one sentence, one action that opens the offer's picker in place (no page change).
  */
 export function ProductOffer({ productId, className = '' }: { productId: ProductId; className?: string }) {
-  const { openAmber } = useOfferSheets()
+  const { openAmber, openBundle } = useOfferSheets()
   const p = promotionFor(productId)
   if (!p) return null
   const amber = p.kind === 'buy_x_get_y'
@@ -24,11 +24,9 @@ export function ProductOffer({ productId, className = '' }: { productId: Product
           </p>
           <p className="mt-1 text-[14.5px] leading-snug text-text">{p.line}</p>
         </div>
-        {amber && (
-          <button type="button" onClick={() => openAmber('product_page', 3)} className="btn-secondary sm flex-none !bg-paper">
-            Alege cele 3 perechi <Arrow />
-          </button>
-        )}
+        <button type="button" onClick={() => (amber ? openAmber('product_page', 3) : openBundle('product_page'))} className="btn-secondary sm flex-none !bg-paper">
+          {amber ? 'Alege 3 perechi' : 'Alege 3 produse'} <Arrow />
+        </button>
       </div>
     </div>
   )

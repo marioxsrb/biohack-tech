@@ -1,9 +1,9 @@
 import Image from 'next/image'
 import Link from 'next/link'
-import { AmberOfferButton } from '@/components/offers/AmberOfferButton'
+import { OfferTrigger } from '@/components/offers/OfferTrigger'
 import { Arrow } from '@/components/ui/icons'
 import { PROMOTIONS } from '@/config/promotions'
-import { getProduct, productHref } from '@/content/catalog'
+import { getProduct } from '@/content/catalog'
 
 /**
  * The two standing offers. Readable in one line each ("3 produse, 20% reducere" / "2+1 gratis"), then one
@@ -35,38 +35,37 @@ export function Offers() {
             </span>
           </h3>
           <p className="mt-4 max-w-[26em] text-[16px] leading-relaxed text-white/80">Oricare trei: același produs sau combinate. Reducerea se aplică la toate trei.</p>
-          <ul aria-label="Produse eligibile" className="mt-7 grid grid-cols-3 items-start gap-3">
+          {/* The products are the way in: the image opens the 3-product picker, like the button. */}
+          <OfferTrigger offer="bundle" placement="homepage" label="Alege 3 produse pentru 20% reducere" className="group mt-7 grid w-full cursor-pointer grid-cols-3 items-start gap-3 text-left">
             {bundleProducts.map((p) => (
-              <li key={p.id}>
-                <Link href={productHref(p)} className="group block">
-                  <span className="relative block aspect-square rounded-[16px] bg-white/[0.06] shadow-[inset_0_0_0_1px_rgb(255_255_255/.08)] transition-colors group-hover:bg-white/[0.1]">
-                    <Image src={p.cutout.src} alt={p.name} fill sizes="140px" className={`object-contain p-[14%] ${p.cutout.bleed === 'bottom' ? 'object-bottom pb-0' : ''}`} />
-                  </span>
-                  <span className="mt-2 block text-center text-[14px] font-medium text-white/85 group-hover:text-white">{p.model}</span>
-                </Link>
-              </li>
+              <span key={p.id} className="block">
+                <span className="relative block aspect-square rounded-[16px] bg-white/[0.06] shadow-[inset_0_0_0_1px_rgb(255_255_255/.08)] transition-colors duration-200 group-hover:bg-white/[0.1]">
+                  <Image src={p.cutout.src} alt="" fill sizes="140px" className={`object-contain p-[14%] transition-transform duration-300 group-hover:scale-[1.03] ${p.cutout.bleed === 'bottom' ? 'object-bottom pb-0' : ''}`} />
+                </span>
+                <span className="mt-2 block text-center text-[14px] font-medium text-white/85 group-hover:text-white">{p.model}</span>
+              </span>
             ))}
-          </ul>
-          <Link href="#produse" className="cta sm mt-7 self-start">
-            Alege produsele <Arrow />
-          </Link>
+          </OfferTrigger>
+          <OfferTrigger offer="bundle" placement="homepage" className="cta sm mt-7 self-start">
+            Alege 3 produse <Arrow />
+          </OfferTrigger>
         </article>
 
-        <article aria-labelledby="offer-amber" className="relative flex flex-col overflow-hidden rounded-[24px] bg-[#f5ecdd] p-[clamp(24px,3.2vw,40px)]">
-          <p className="text-[13px] font-semibold tracking-[0.12em] text-[#8a5206] uppercase">NEUROS Amber</p>
+        <article aria-labelledby="offer-amber" className="relative flex flex-col overflow-hidden rounded-[24px] bg-paper p-[clamp(24px,3.2vw,40px)]">
+          <p className="text-[13px] font-semibold tracking-[0.12em] text-cyan-700 uppercase">NEUROS Amber</p>
           <h3 id="offer-amber" className="mt-5">
-            <span className="block text-[22px] font-medium tracking-[-0.02em] text-[#5b4630]">La 3 perechi</span>
+            <span className="block text-[22px] font-medium tracking-[-0.02em] text-muted">La 3 perechi</span>
             <span className="mt-1 block text-[clamp(56px,6vw,80px)] leading-[0.95] font-medium tracking-[-0.05em] text-ink">
-              2+1 <span className="text-[0.45em] tracking-[-0.02em] text-[#8a5206]">gratis</span>
+              2+1 <span className="ml-1 inline-flex rounded-full bg-[#f5b041] px-3 py-1 align-middle text-[0.3em] font-semibold tracking-normal text-ink">gratis</span>
             </span>
           </h3>
-          <p className="mt-4 max-w-[24em] text-[16px] leading-relaxed text-[#4b3b27]">Plătești două, a treia e gratuită. Poți combina ramele.</p>
-          <div className="relative mt-auto aspect-[16/7] w-full">
-            <Image src={amberProduct.cutout.src} alt="" fill sizes="(min-width: 768px) 480px, 90vw" className="object-contain" />
-          </div>
-          <AmberOfferButton className="cta sm mt-4 self-start" placement="homepage">
-            Alege cele 3 perechi <Arrow />
-          </AmberOfferButton>
+          <p className="mt-4 max-w-[24em] text-[16px] leading-relaxed text-text">Plătești două, a treia e gratuită. Poți combina ramele.</p>
+          <OfferTrigger offer="amber" placement="homepage" label="Alege 3 perechi NEUROS Amber, plătești 2" className="group relative mt-auto block aspect-[16/7] w-full cursor-pointer rounded-[16px] bg-mist transition-colors duration-200 hover:bg-mist-2">
+            <Image src={amberProduct.cutout.src} alt="" fill sizes="(min-width: 768px) 480px, 90vw" className="object-contain p-[6%] transition-transform duration-300 group-hover:scale-[1.03]" />
+          </OfferTrigger>
+          <OfferTrigger offer="amber" placement="homepage" className="cta sm mt-5 self-start">
+            Alege 3 perechi <Arrow />
+          </OfferTrigger>
         </article>
       </div>
       <p className="mt-4 text-[14px] text-muted">

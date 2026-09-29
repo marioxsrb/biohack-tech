@@ -407,8 +407,8 @@ select.field {
     right 12px center / 16px no-repeat;
 }
 .field:hover { box-shadow: inset 0 0 0 1px var(--color-faint); }
-.field:focus { outline: 0; box-shadow: inset 0 0 0 2px var(--color-cyan); }
-.field-error { box-shadow: inset 0 0 0 1px var(--color-red); }
+.field:focus { outline: 0; box-shadow: inset 0 0 0 2px var(--color-cyan-700), 0 0 0 4px rgb(6 182 212 / 0.14); }
+.field-error { box-shadow: inset 0 0 0 1.5px var(--color-red); }
 textarea.field { resize: vertical; }
 
 /* ============================================================

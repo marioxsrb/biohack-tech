@@ -135,6 +135,10 @@ export type PromotionProgress = {
   active: boolean
   savedMinor: number
   state: 'active' | 'close' | 'far'
+  /** 2+1: free units already earned (3 → 1, 6 → 2, 9 → 3...). 0 for the percentage rule. */
+  freeUnits: number
+  /** Units until the next reward: the 20% itself, or the next free unit of 2+1 (never 0 for 2+1). */
+  untilNext: number
 }
 
 export function promotionProgress(lines: PricedLine[], promotions: Promotion[] = PROMOTIONS): PromotionProgress[] {
@@ -148,7 +152,9 @@ export function promotionProgress(lines: PricedLine[], promotions: Promotion[] =
     const missing = p.kind === 'bundle_percent' ? Math.max(0, p.minUnits - units) : units % p.group >= p.pay ? p.group - (units % p.group) : 0
     const active = saved > 0
     const state = missing === 1 ? 'close' : active ? 'active' : 'far'
-    out.push({ id: p.id, kind: p.kind, label: p.label, products: p.products, units, missing: missing || (active ? 0 : target - (units % target)), target, active, savedMinor: saved, state })
+    const freeUnits = p.kind === 'buy_x_get_y' ? Math.floor(units / p.group) * (p.group - p.pay) : 0
+    const untilNext = p.kind === 'bundle_percent' ? Math.max(0, p.minUnits - units) : p.group - (units % p.group)
+    out.push({ id: p.id, kind: p.kind, label: p.label, products: p.products, units, missing: missing || (active ? 0 : target - (units % target)), target, active, savedMinor: saved, state, freeUnits, untilNext })
   }
   return out
 }

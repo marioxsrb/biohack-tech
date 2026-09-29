@@ -24,9 +24,9 @@ export type Recommendation = {
   /** Why it is shown: to complete a promotion, or as a complementary product. */
   kind: 'complete_offer' | 'cross_sell'
   promotionId?: string
-  /** How it is added: directly, with the Amber pair picker, or with a variant picker (NEUROS Flow). */
-  add: 'direct' | 'amber_pairs' | 'variant'
-  /** For `amber_pairs`: how many pairs the picker asks for (3 for a fresh 2+1, fewer to complete one). */
+  /** How it is added: directly, with the Amber pair picker, the 3-product picker, or a variant picker (NEUROS Flow). */
+  add: 'direct' | 'amber_pairs' | 'bundle' | 'variant'
+  /** For the pickers: how many units they ask for (3 for a fresh offer, fewer to complete one). */
   slots?: number
 }
 
@@ -58,10 +58,10 @@ export function recommend(lines: RecLine[], placement: Placement, limit = LIMIT[
     if (amber) push({ productId: AMBER, kind: 'complete_offer', promotionId: amber.id, add: 'amber_pairs', slots: amber.missing, reason: amber.missing === 1 ? 'Încă o pereche și a treia este gratuită.' : `Mai alege ${amber.missing} perechi pentru 2+1.` })
     const bundle = progress.find((p) => p.kind === 'bundle_percent' && p.state === 'close')
     if (bundle) {
-      // Products not in the cart first; NEUROS Flow last (it needs a configuration and a considered choice).
+      // One suggestion that opens the 3-product picker (asking only for the missing product); its image is
+      // the first eligible product not already in the cart.
       const ids = ([...bundle.products] as ProductId[]).sort((a, b) => Number(a === FLOW) - Number(b === FLOW) || Number(inCart.has(a)) - Number(inCart.has(b)))
-      const room = amber ? Math.min(2, limit - out.length) : limit - out.length
-      for (const id of ids.slice(0, room)) push({ productId: id, kind: 'complete_offer', promotionId: bundle.id, add: addMode(id), reason: 'Al treilea produs activează reducerea de 20%.' })
+      push({ productId: ids[0], kind: 'complete_offer', promotionId: bundle.id, add: 'bundle', slots: bundle.missing, reason: 'Al treilea produs activează reducerea de 20%.' })
     }
   }
 

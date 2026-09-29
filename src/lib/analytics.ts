@@ -61,7 +61,7 @@ export function track(
 }
 
 /** Interactions around suggestions and the NEUROS Amber 2+1 picker (GA4 only, never Meta). */
-export type UiEvent = 'view_cross_sell' | 'select_cross_sell' | 'add_cross_sell' | 'open_amber_bundle_configurator' | 'complete_amber_bundle_configurator'
+export type UiEvent = 'view_cross_sell' | 'select_cross_sell' | 'add_cross_sell' | 'open_amber_bundle_configurator' | 'complete_amber_bundle_configurator' | 'open_bundle_configurator' | 'complete_bundle_configurator'
 export type UiPlacement = 'cart' | 'checkout' | 'post_purchase' | 'product_page' | 'homepage'
 
 /** Same consent rule as `track`: nothing is sent, or queued, without analytics consent and a running GA4. */
