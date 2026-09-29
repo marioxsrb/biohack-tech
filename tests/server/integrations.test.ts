@@ -59,7 +59,7 @@ describe('GoHighLevel mapping', () => {
     const { order } = await placeOrder({ lines: lines([{ productId: 'brainlink-pro', quantity: 1 }, { productId: 'ochelari-biohack', variantId: 'cat-eye-bej', quantity: 1 }]), form: { ...person, paymentMethod: 'transfer' }, attemptId: 'a-ghl-1' })
     expect(tagsFor(order)).toEqual([])
     const paid = (await confirmPayment(order.id, 'admin')).order!
-    expect(tagsFor(paid)).toEqual(['client', 'cumparat-focus', 'cumparat-amber'])
+    expect(tagsFor(paid)).toEqual(['bt-client', 'bt-cumparat-focus', 'bt-cumparat-amber'])
   })
   it('builds the contact with last-order fields', async () => {
     const { order } = await placeOrder({ lines: lines([{ productId: 'brainlink-pro', quantity: 2 }]), form: company, attemptId: 'a-ghl-2' })

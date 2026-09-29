@@ -79,7 +79,12 @@ export const CONTACT_FIELDS = {
   marketingConsent: 'contact.bt_marketing_consent',
 } as const
 
-const PRODUCT_TAG: Record<string, string> = { 'balance-wave': 'cumparat-calm', 'brainlink-pro': 'cumparat-focus', 'ochelari-biohack': 'cumparat-amber' }
+/**
+ * Tags are prefixed `bt-` because the GHL location (NEUROS) is shared with other funnels (courses, events):
+ * generic names like `client` could collide with their automations. Create them in GHL with these exact names.
+ */
+export const TAGS = { client: 'bt-client', company: 'bt-client-firma' } as const
+const PRODUCT_TAG: Record<string, string> = { 'balance-wave': 'bt-cumparat-calm', 'brainlink-pro': 'bt-cumparat-focus', 'ochelari-biohack': 'bt-cumparat-amber' }
 
 const PAYMENT_STATUS_RO: Record<Order['paymentStatus'], string> = {
   pending: 'în curs',
@@ -139,9 +144,9 @@ export function contactPayload(c: GhlConfig, o: Order, lifetime: { orders: numbe
 export function tagsFor(o: Order): string[] {
   const paid = o.paymentStatus === 'paid' || o.paymentStatus === 'partially_refunded' || o.status === 'shipped' || o.status === 'delivered'
   if (!paid) return []
-  const tags = new Set(['client'])
+  const tags = new Set<string>([TAGS.client])
   for (const i of o.items) if (PRODUCT_TAG[i.productId]) tags.add(PRODUCT_TAG[i.productId])
-  if (o.customer.buyerType === 'pj') tags.add('client-firma')
+  if (o.customer.buyerType === 'pj') tags.add(TAGS.company)
   return [...tags]
 }
 

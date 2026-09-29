@@ -193,10 +193,12 @@ Sub-account → Settings → **Private Integrations** → Create. Scopes:
 - `contacts.readonly`, `contacts.write` (upsert contact, add tags)
 - `opportunities.readonly`, `opportunities.write` (pipelines, search, create, update)
 - `conversations.readonly`, `conversations.write`, `conversations/message.readonly`, `conversations/message.write` (send the emails)
-- `locations/customFields.readonly` (optional, for checking the fields)
-Copy the token → `GHL_PRIVATE_TOKEN`. Location id (Settings → Business Profile) → `GHL_LOCATION_ID`.
+- `locations/customFields.readonly`, `locations/tags.readonly` (optional, used only by `npm run ghl:check`)
+Copy the token → `GHL_PRIVATE_TOKEN`. Location id (Settings → Business Profile) → `GHL_LOCATION_ID` (NEUROS: `xnf2JtFk46U23NG0lzwC`).
 
-Settings → General: **“Allow duplicate contact” off**, matching on email first. The site upserts by email/phone; with duplicates allowed GHL would create one contact per order.
+Then `npm run ghl:check` (read-only): it prints the pipeline id for `GHL_PIPELINE_ID` and checks stages, fields and tags.
+
+Settings → General: **“Allow duplicate contact” off**, matching on email first. The site upserts by email/phone; with duplicates allowed GHL would create one contact per order. The NEUROS location is shared with courses and events: this setting is location-wide, so check with the owners of those funnels before changing it.
 
 ### 10.2 Pipeline “Comenzi Biohack Tech”
 Create it with these stages **in this order and with these exact names** (the site finds stages by name; copy them from here):
@@ -236,23 +238,27 @@ Standard fields filled too: first/last name, email, phone, company name (PJ), ad
 **Verify on the first test order** that the custom fields are filled (GHL has changed the custom-field payload format between doc versions; the site sends `{ key, fieldValue }`). If they stay empty, the one place to change is `contactPayload()` in `src/server/integrations/ghl.ts`.
 
 ### 10.4 Tags (only these)
-- `client`: has at least one paid order.
-- `cumparat-calm`, `cumparat-focus`, `cumparat-amber`: bought that product (per-product education and cross-sell).
-- `client-firma`: bought as a company (PJ).
+- `bt-client`: has at least one paid order.
+- `bt-cumparat-calm`, `bt-cumparat-focus`, `bt-cumparat-amber`: bought that product (per-product education and cross-sell).
+- `bt-client-firma`: bought as a company (PJ).
+
+All BiohackTech tags start with `bt-`: the NEUROS location is shared with other funnels (courses, events), so generic names are avoided.
 Tags are added only after payment and never removed by the site. Everything else is a field or a pipeline stage.
 
 ### 10.5 Workflows to create in GHL
 Transactional emails come from the site. **Do not** add workflow steps that email order confirmations, bank details, shipping or refunds; the customer would get them twice.
+
+Every trigger must be scoped to the pipeline “Comenzi Biohack Tech” (or a `bt-` tag): the NEUROS location also runs course and event workflows, and a trigger without that filter would reach their contacts. Put them in a new folder “BiohackTech Ecommerce”; the older folder “Biohack Tech” belongs to the previous site. Build each one as a draft, test it with a test contact, then publish. Status on 29 Sep 2026: none created yet (W1 needs the team recipients; W2–W6 need the email texts; W2, W5, W6 wait for the consent decision, §16).
 
 | # | Name | Trigger | Filters | Steps / delays | Email | Fields / pipeline | Exit / stop | Duplicate prevention | Type |
 |---|---|---|---|---|---|---|---|---|---|
 | W1 | Comandă nouă: notificare echipă | Opportunity created **or** stage changed to `Plătită, de pregătit`, pipeline “Comenzi Biohack Tech” | – | Internal notification (email/SMS/app) to the team with `{{opportunity.name}}`, value, link | Internal only | – | – | “Allow re-entry” off | Internal |
 | W2 | Recuperare plată nefinalizată | Stage changed to `Plată nefinalizată` | `bt_marketing_consent` = Da (pending legal decision, §16) | Email R1 now → wait 23 h → if stage is still `Plată nefinalizată` and `bt_last_payment_status` ≠ plătită → Email R2 → end | R1 “Comanda ta te așteaptă”, R2 optional | – | Stage changes (paid/closed) → exit | Re-entry off | Marketing |
 | W3 | Transfer: reamintire | Stage changed to `Așteaptă transferul` | – | Wait 48 h → if still in stage → Email T1 (order number, amount, link to order page `{{contact.bt_last_order_number}}`) → wait 3 days → if still in stage → internal task “sună clientul sau anulează” | T1 “Reamintire: comanda #… așteaptă plata” | – | Stage changes → exit | Re-entry off | Transactional (payment reminder) |
-| W4 | După livrare: primii pași | Stage changed to `Livrată` | Branch by tag `cumparat-calm` / `-focus` / `-amber` | Wait 1 day → product “primii pași” email | Per product (content to write, no medical advice) | – | – | Re-entry off | Service |
+| W4 | După livrare: primii pași | Stage changed to `Livrată` | Branch by tag `bt-cumparat-calm` / `-focus` / `-amber` | Wait 1 day → product “primii pași” email | Per product (content to write, no medical advice) | – | – | Re-entry off | Service |
 | W5 | Cerere recenzie | Stage changed to `Livrată` | `bt_marketing_consent` = Da | Wait 14 days → review request email | Link to your chosen review page (decide: Google Business profile) | – | Stage `Rambursată`/`Anulată` → exit | Re-entry off | Marketing |
-| W6 | Cross-sell (inactive at launch) | Stage `Livrată` | consent = Da; e.g. has `cumparat-calm` and not `cumparat-amber` | Wait 30 days → one email | Product suggestion | – | Purchase of that product → exit | Re-entry off | Marketing |
-| W7 | Specialist: primul apel | Stage changed to `Livrată` | tag `cumparat-calm` or `cumparat-focus` | Create task for the specialist: “Apel de început” due in 2 days | none | – | – | Re-entry off | Internal (the “ajutor la început” promised on the site) |
+| W6 | Cross-sell (inactive at launch) | Stage `Livrată` | consent = Da; e.g. has `bt-cumparat-calm` and not `bt-cumparat-amber` | Wait 30 days → one email | Product suggestion | – | Purchase of that product → exit | Re-entry off | Marketing |
+| W7 | Specialist: primul apel | Stage changed to `Livrată` | tag `bt-cumparat-calm` or `bt-cumparat-focus` | Create task for the specialist: “Apel de început” due in 2 days | none | – | – | Re-entry off | Internal (the “ajutor la început” promised on the site) |
 
 ### 10.6 Email sending (see §11)
 Settings → Email Services: dedicated sending domain on biohack-tech.ro, verified. `EMAIL_FROM` must be an address on it.
@@ -358,7 +364,7 @@ Use a staging deployment with `APP_ENV=staging`, Stripe **test** keys, the **FGO
 
 | # | Flow | Steps | Verify |
 |---|---|---|---|
-| 1 | PF, card | NEUROS Calm → add → popup “Finalizează comanda” → PF → card `4242 4242 4242 4242`, any future date, any CVC | Order page “Plata este confirmată”; /admin: Plătită, Factură Emisă; GHL: contact, fields, tags `client` + `cumparat-calm`, opportunity in “Plătită, de pregătit”, value 6380; emails: confirmation + invoice (one each) |
+| 1 | PF, card | NEUROS Calm → add → popup “Finalizează comanda” → PF → card `4242 4242 4242 4242`, any future date, any CVC | Order page “Plata este confirmată”; /admin: Plătită, Factură Emisă; GHL: contact, fields, tags `bt-client` + `bt-cumparat-calm`, opportunity in “Plătită, de pregătit”, value 6380; emails: confirmation + invoice (one each) |
 | 2 | PJ, card + 3-D Secure | NEUROS Amber Unisex pătrat Maro ×2 + NEUROS Focus → PJ with a real CUI → card `4000 0027 6000 3184` → complete the challenge | FGO test invoice on the company with CUI, lines with the exact variant; totals 2.490 + 630 |
 | 3 | Declined card | card `4000 0000 0000 0002` | Message in checkout, nothing charged; order stays “Card eșuat”; retry with 4242 on the same page → paid; one order, one invoice |
 | 4 | Webhook without browser | Pay, then close the tab before the redirect | Order paid within seconds (webhook) |
