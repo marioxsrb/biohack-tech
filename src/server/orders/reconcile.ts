@@ -19,7 +19,7 @@ export async function reconcileCardPayment(orderId: string): Promise<string> {
   if (isPaid(o.paymentStatus) || o.paymentStatus === 'refunded' || o.paymentStatus === 'cancelled') return `already ${o.paymentStatus}`
   const pi = await stripe.retrievePaymentIntent(c.stripe, o.stripePaymentIntentId)
   if (pi.status === 'succeeded') {
-    const r = await confirmPayment(o.id, 'stripe.reconcile', { amountMinor: pi.amount_received, currency: pi.currency, paymentIntentId: pi.id })
+    const r = await confirmPayment(o.id, 'stripe.reconcile', { amountMinor: pi.amount_received, currency: pi.currency, paymentIntentId: pi.id, paymentMethodId: pi.payment_method ?? null })
     return r.changed ? 'paid' : (r.reason ?? 'unchanged')
   }
   if (pi.status === 'canceled') {

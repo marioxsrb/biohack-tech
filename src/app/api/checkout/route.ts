@@ -7,7 +7,8 @@ import { getConfig, paymentMethods } from '@/server/config'
 import { StripeError, stripe } from '@/server/integrations/stripe'
 import { kickJobs } from '@/server/jobs/runner'
 import { errText, log } from '@/server/log'
-import { attachPaymentIntent, placeOrder } from '@/server/orders/service'
+import { customerName } from '@/server/orders/model'
+import { attachPaymentIntent, placeOrder, setStripeCustomer } from '@/server/orders/service'
 import { clientIp, rateLimit } from '@/server/rate-limit'
 
 export const runtime = 'nodejs'
@@ -72,9 +73,16 @@ export async function POST(req: NextRequest) {
 
   const c = getConfig()
   try {
+    // A Stripe customer per card order lets the card be offered again right after payment
+    // (post-purchase offer, on-session only). Stripe keeps the card; we keep only ids.
+    let customerId = order.stripeCustomerId
+    if (!customerId && !order.stripePaymentIntentId) {
+      customerId = (await stripe.createCustomer(c.stripe!, { id: order.id, orderNumber: order.orderNumber, email: order.email, name: customerName(order.customer) })).id
+      await setStripeCustomer(order.id, customerId)
+    }
     const pi = order.stripePaymentIntentId
       ? await stripe.retrievePaymentIntent(c.stripe!, order.stripePaymentIntentId)
-      : await stripe.createPaymentIntent(c.stripe!, order)
+      : await stripe.createPaymentIntent(c.stripe!, order, customerId ?? undefined)
     if (!order.stripePaymentIntentId) await attachPaymentIntent(order.id, pi.id)
     // Never hand out a PaymentIntent that does not belong to this order exactly.
     if (pi.amount !== order.totalMinor || pi.currency !== 'ron' || pi.metadata?.order_id !== order.id) throw new Error('payment intent does not match the order')

@@ -19,6 +19,8 @@ function toOrder(r: Row, items: OrderItem[]): Order {
     invoiceStatus: r.invoice_status as Order['invoiceStatus'],
     currency: 'RON',
     subtotalMinor: Number(r.subtotal_minor),
+    discountMinor: Number(r.discount_minor ?? 0),
+    promotions: (r.promotions as Order['promotions']) ?? [],
     shippingMinor: Number(r.shipping_minor),
     totalMinor: Number(r.total_minor),
     refundedMinor: Number(r.refunded_minor),
@@ -53,6 +55,12 @@ function toOrder(r: Row, items: OrderItem[]): Order {
     returnStatus: (r.return_status as Order['returnStatus']) ?? null,
     returnRequestedAt: date(r.return_requested_at),
     returnReceivedAt: date(r.return_received_at),
+    kind: ((r.kind as Order['kind']) ?? 'checkout'),
+    parentOrderId: (r.parent_order_id as string) ?? null,
+    stripeCustomerId: (r.stripe_customer_id as string) ?? null,
+    stripePaymentMethodId: (r.stripe_payment_method_id as string) ?? null,
+    upsellStatus: (r.upsell_status as Order['upsellStatus']) ?? null,
+    upsellExpiresAt: date(r.upsell_expires_at),
     items,
   }
 }
@@ -67,6 +75,8 @@ const toItem = (r: Row): OrderItem => ({
   quantity: Number(r.quantity),
   unitPriceMinor: Number(r.unit_price_minor),
   lineTotalMinor: Number(r.line_total_minor),
+  discountMinor: Number(r.discount_minor ?? 0),
+  promotionId: (r.promotion_id as string) ?? null,
 })
 
 async function withItems(q: Queryable, rows: Row[]): Promise<Order[]> {
@@ -88,6 +98,8 @@ export const orders = {
   byIdempotencyKey: (q: Queryable, key: string) => one(q, 'select * from orders where idempotency_key = $1', [key]),
   byPaymentIntent: (q: Queryable, pi: string) => one(q, 'select * from orders where stripe_payment_intent_id = $1', [pi]),
   byRecoveryToken: (q: Queryable, token: string) => one(q, 'select * from orders where recovery_token = $1', [token]),
+  /** The post-purchase order linked to a parent, if one was created. */
+  childOf: (q: Queryable, parentId: string) => one(q, 'select * from orders where parent_order_id = $1', [parentId]),
 
   /** The address's latest order the CRM knows about (unpaid card attempts still in progress are not). */
   latestKnown: (q: Queryable, email: string) =>
@@ -127,27 +139,31 @@ export const orders = {
 
   async insert(
     q: Queryable,
-    o: Omit<Order, 'createdAt' | 'updatedAt' | 'refundedMinor' | 'paidAt' | 'cancelledAt' | 'cancelReason' | 'refundedAt' | 'fgoInvoiceSeries' | 'fgoInvoiceNumber' | 'fgoInvoiceLink' | 'fgoStornoNumber' | 'ghlContactId' | 'ghlOpportunityId' | 'courier' | 'trackingNumber' | 'trackingUrl' | 'shippedAt' | 'deliveredAt' | 'stripePaymentIntentId' | 'recoveryStatus' | 'recoveryReason' | 'recoveryToken' | 'recoveryExpiresAt' | 'returnStatus' | 'returnRequestedAt' | 'returnReceivedAt'>,
+    o: Omit<Order, 'createdAt' | 'updatedAt' | 'refundedMinor' | 'paidAt' | 'cancelledAt' | 'cancelReason' | 'refundedAt' | 'fgoInvoiceSeries' | 'fgoInvoiceNumber' | 'fgoInvoiceLink' | 'fgoStornoNumber' | 'ghlContactId' | 'ghlOpportunityId' | 'courier' | 'trackingNumber' | 'trackingUrl' | 'shippedAt' | 'deliveredAt' | 'stripePaymentIntentId' | 'recoveryStatus' | 'recoveryReason' | 'recoveryToken' | 'recoveryExpiresAt' | 'returnStatus' | 'returnRequestedAt' | 'returnReceivedAt' | 'stripeCustomerId' | 'stripePaymentMethodId' | 'upsellStatus' | 'upsellExpiresAt'>,
     idempotencyKey: string,
     termsAcceptedAt: Date,
   ) {
     await q.query(
       `insert into orders (id, order_number, public_token, idempotency_key, status, payment_status, payment_method, invoice_status,
         currency, subtotal_minor, shipping_minor, total_minor, email, phone, customer, billing_address, shipping_address, notes,
-        marketing_consent, terms_accepted_at, attribution)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
+        marketing_consent, terms_accepted_at, attribution, discount_minor, promotions, kind, parent_order_id)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)`,
       [
         o.id, o.orderNumber, o.publicToken, idempotencyKey, o.status, o.paymentStatus, o.paymentMethod, o.invoiceStatus,
         o.currency, o.subtotalMinor, o.shippingMinor, o.totalMinor, o.email, o.phone, JSON.stringify(o.customer),
         JSON.stringify(o.billingAddress), JSON.stringify(o.shippingAddress), o.notes, o.marketingConsent, termsAcceptedAt,
         o.attribution ? JSON.stringify(o.attribution) : null,
+        o.discountMinor,
+        JSON.stringify(o.promotions),
+        o.kind,
+        o.parentOrderId,
       ],
     )
     for (const i of o.items) {
       await q.query(
-        `insert into order_items (order_id, position, product_id, variant_id, product_name, variant_name, sku, quantity, unit_price_minor, line_total_minor)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-        [o.id, i.position, i.productId, i.variantId, i.productName, i.variantName, i.sku, i.quantity, i.unitPriceMinor, i.lineTotalMinor],
+        `insert into order_items (order_id, position, product_id, variant_id, product_name, variant_name, sku, quantity, unit_price_minor, line_total_minor, discount_minor, promotion_id)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+        [o.id, i.position, i.productId, i.variantId, i.productName, i.variantName, i.sku, i.quantity, i.unitPriceMinor, i.lineTotalMinor, i.discountMinor, i.promotionId],
       )
     }
   },

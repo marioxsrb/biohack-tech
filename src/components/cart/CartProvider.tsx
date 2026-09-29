@@ -2,7 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { resolveLine, variantLabel, type Product, type ProductId, type Variant } from '@/content/catalog'
-import { orderTotal } from '@/lib/money'
+import { priceLines, promotionHints } from '@/lib/promotions'
 import { cartStore, lineKey } from './cart-store'
 
 export type ResolvedLine = {
@@ -85,13 +85,18 @@ export function useCart() {
   )
 
   const count = lines.reduce((n, l) => n + l.quantity, 0)
-  const total = orderTotal(lines)
+  // Same engine as the server, for display only: the server prices the order again when it is placed.
+  const pricing = useMemo(() => priceLines(lines.map((l) => ({ key: l.key, productId: l.product.id, quantity: l.quantity, unitAmount: l.unit }))), [lines])
+  const hints = useMemo(() => promotionHints(lines.map((l) => ({ productId: l.product.id, quantity: l.quantity }))), [lines])
 
   return {
     ...ui,
     lines,
     count,
-    total,
+    /** Total to pay (after promotions; shipping is free). */
+    total: pricing.totalMinor,
+    pricing,
+    hints,
     setQuantity: cartStore.setQuantity,
     remove: cartStore.remove,
     clear: cartStore.clear,

@@ -15,13 +15,16 @@ import { canSendAbandonedCheckoutEmail, newRecoveryToken, recoveryExpiry } from 
 import type { Attribution } from '@/lib/attribution'
 import { lineRef } from '@/content/catalog'
 import type { OrderForm } from '@/lib/checkout'
+import { priceLines } from '@/lib/promotions'
+import { upsellFor } from '@/lib/upsell'
+import { UPSELL_WINDOW_MINUTES } from '@/config/upsell'
 import type { OrderLine } from '@/lib/orders/resolve'
 import { canMoveOrder, canMovePayment, isPaid } from './state'
 import { formatOrderNumber, orderDay } from './number'
 import type { Address, Order, OrderStatus, PaymentMethod } from './model'
 import { orders } from './repository'
 
-export type Source = 'checkout' | 'stripe.webhook' | 'stripe.reconcile' | 'admin' | 'system'
+export type Source = 'checkout' | 'stripe.webhook' | 'stripe.reconcile' | 'upsell' | 'admin' | 'system'
 
 /**
  * Shipping cost in bani. Current rule: free delivery in Romania (stated on the current
@@ -56,7 +59,10 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
 
   const f = input.form
   const method: PaymentMethod = f.paymentMethod === 'transfer' ? 'bank_transfer' : 'card'
-  const subtotal = input.lines.reduce((s, l) => s + l.unitAmount * l.quantity, 0)
+  // Promotions are recomputed here from the catalog-priced lines, whatever the caller passed.
+  const pricing = priceLines(input.lines)
+  const subtotal = pricing.subtotalMinor
+  const discount = pricing.discountMinor
   const shipping = shippingFor()
 
   try {
@@ -76,8 +82,12 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
           invoiceStatus: 'none',
           currency: 'RON',
           subtotalMinor: subtotal,
+          discountMinor: discount,
+          promotions: pricing.promotions,
+          kind: 'checkout',
+          parentOrderId: null,
           shippingMinor: shipping,
-          totalMinor: subtotal + shipping,
+          totalMinor: subtotal - discount + shipping,
           email: f.email,
           phone: f.phone,
           customer:
@@ -99,6 +109,8 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
             quantity: l.quantity,
             unitPriceMinor: l.unitAmount,
             lineTotalMinor: l.unitAmount * l.quantity,
+            discountMinor: pricing.lineDiscounts[l.key] ?? 0,
+            promotionId: pricing.linePromotion[l.key] ?? null,
           })),
         },
         key,
@@ -106,7 +118,8 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
       )
       await orders.event(t, id, 'order.created', 'checkout', {
         method,
-        total: subtotal + shipping,
+        total: subtotal - discount + shipping,
+        ...(discount && { discount, promotions: pricing.promotions.map((p) => p.id) }),
         marketingConsent: f.marketingConsent,
         ...(input.attribution && { attribution: input.attribution }),
       })
@@ -134,6 +147,11 @@ export async function attachPaymentIntent(orderId: string, paymentIntentId: stri
     if (o.stripePaymentIntentId) throw new Error('order already has a different payment intent')
     await orders.update(t, orderId, { stripe_payment_intent_id: paymentIntentId })
   })
+}
+
+export async function setStripeCustomer(orderId: string, customerId: string) {
+  const db = await getDb()
+  await db.query('update orders set stripe_customer_id = $2, updated_at = now() where id = $1 and stripe_customer_id is null', [orderId, customerId])
 }
 
 type Change = { changed: boolean; order: Order | null; reason?: string }
@@ -171,7 +189,7 @@ async function transition(
  * Money received. For cards, only Stripe (webhook or a server-side retrieve) calls this,
  * with the amount it reports; for bank transfer, a person in /admin after seeing the statement.
  */
-export function confirmPayment(orderId: string, source: Source, reported?: { amountMinor: number; currency: string; paymentIntentId?: string }) {
+export function confirmPayment(orderId: string, source: Source, reported?: { amountMinor: number; currency: string; paymentIntentId?: string; paymentMethodId?: string | null }) {
   return transition(orderId, source, async (o, t) => {
     if (isPaid(o.paymentStatus) || o.paymentStatus === 'refunded') return { skip: 'already_paid' }
     // Card money is confirmed only by Stripe (webhook or reconciliation); a person confirms only transfers.
@@ -188,10 +206,122 @@ export function confirmPayment(orderId: string, source: Source, reported?: { amo
     await closeAbandonedAttempts(t, o)
     const c = getConfig()
     const invoiceDue = o.paymentMethod === 'card' || c.fgo?.transferInvoice !== 'manual'
+    // A paid card checkout order with a card Stripe kept for on-session use gets the optional
+    // post-purchase offer for a limited time. Only ids are stored, never card data.
+    const offer =
+      o.kind === 'checkout' && o.paymentMethod === 'card' && o.stripeCustomerId && reported?.paymentMethodId && upsellFor(o.items.map((i) => i.productId))
+        ? { stripe_payment_method_id: reported.paymentMethodId, upsell_status: 'offered', upsell_expires_at: new Date(Date.now() + UPSELL_WINDOW_MINUTES * 60_000) }
+        : {}
     return {
-      patch: { payment_status: 'paid', status, paid_at: new Date(), invoice_status: c.fgo && invoiceDue ? 'pending' : 'manual' },
+      patch: { payment_status: 'paid', status, paid_at: new Date(), invoice_status: c.fgo && invoiceDue ? 'pending' : 'manual', ...offer },
       event: 'payment.confirmed',
-      data: { amount: o.totalMinor },
+      data: { amount: o.totalMinor, ...('upsell_status' in offer && { upsellOffered: true }) },
+    }
+  })
+}
+
+/**
+ * The customer accepted the post-purchase offer: a separate order, linked to the paid parent, with the
+ * same buyer, addresses and card customer, priced from the catalog (and the normal promotion rules)
+ * like any order. At most one per parent (unique index); a second call returns the first.
+ */
+export async function placeUpsellOrder(parent: Order, line: OrderLine): Promise<{ order: Order; created: boolean }> {
+  const db = await getDb()
+  const existing = await orders.childOf(db, parent.id)
+  if (existing) return { order: existing, created: false }
+  const pricing = priceLines([line])
+  try {
+    const order = await db.tx(async (t) => {
+      const locked = (await orders.byId(t, parent.id, true))!
+      const again = await orders.childOf(t, parent.id)
+      if (again) return again
+      if (locked.upsellStatus !== 'offered') throw new UpsellClosed(locked.upsellStatus ?? 'none')
+      const now = new Date()
+      const id = randomUUID()
+      await orders.insert(
+        t,
+        {
+          id,
+          orderNumber: formatOrderNumber(await orders.nextSeq(t, orderDay(now).iso), now),
+          publicToken: randomBytes(24).toString('base64url'),
+          status: 'pending',
+          paymentStatus: 'pending',
+          paymentMethod: 'card',
+          invoiceStatus: 'none',
+          currency: 'RON',
+          subtotalMinor: pricing.subtotalMinor,
+          discountMinor: pricing.discountMinor,
+          promotions: pricing.promotions,
+          shippingMinor: 0,
+          totalMinor: pricing.totalMinor,
+          kind: 'upsell',
+          parentOrderId: parent.id,
+          email: parent.email,
+          phone: parent.phone,
+          customer: parent.customer,
+          billingAddress: parent.billingAddress,
+          shippingAddress: parent.shippingAddress,
+          notes: `Adăugată după plata comenzii ${parent.orderNumber}. Se poate expedia împreună cu ea.`,
+          marketingConsent: false,
+          attribution: parent.attribution,
+          items: [
+            {
+              position: 1,
+              productId: line.productId,
+              variantId: line.variantId ?? null,
+              productName: line.name,
+              variantName: line.description ?? null,
+              sku: lineRef(line.productId, line.variantId),
+              quantity: line.quantity,
+              unitPriceMinor: line.unitAmount,
+              lineTotalMinor: line.unitAmount * line.quantity,
+              discountMinor: pricing.lineDiscounts[line.key] ?? 0,
+              promotionId: pricing.linePromotion[line.key] ?? null,
+            },
+          ],
+        },
+        `upsell:${parent.id}`,
+        now,
+      )
+      await orders.update(t, id, { stripe_customer_id: parent.stripeCustomerId })
+      await orders.update(t, parent.id, { upsell_status: 'accepted' })
+      await orders.event(t, id, 'order.created', 'upsell', { method: 'card', total: pricing.totalMinor, parentOrder: parent.orderNumber })
+      await orders.event(t, parent.id, 'upsell.accepted', 'upsell', { child: id, product: lineRef(line.productId, line.variantId) })
+      const created = (await orders.byId(t, id))!
+      await enqueueAll(t, jobsFor('created', created))
+      return created
+    })
+    log.info('upsell.created', { parentId: parent.id, orderId: order.id, orderNumber: order.orderNumber, totalMinor: order.totalMinor })
+    return { order, created: true }
+  } catch (e) {
+    const raced = await orders.childOf(db, parent.id)
+    if (raced) return { order: raced, created: false }
+    throw e
+  }
+}
+
+export class UpsellClosed extends Error {}
+
+/** The customer said no: nothing is charged, nothing is created, the kept card is released. */
+export function declineUpsell(parentId: string) {
+  return transition(parentId, 'upsell', async (o) => {
+    if (o.upsellStatus !== 'offered') return { skip: `upsell_${o.upsellStatus ?? 'none'}` }
+    return { patch: { upsell_status: 'declined' }, event: 'upsell.declined' }
+  })
+}
+
+/**
+ * The post-purchase payment did not go through (declined, authentication failed or abandoned). The
+ * extra order is closed; the parent order is not touched. It was never confirmed to the customer,
+ * so no email and no CRM record.
+ */
+export function failUpsell(orderId: string, reason: string) {
+  return transition(orderId, 'upsell', async (o) => {
+    if (o.kind !== 'upsell' || isPaid(o.paymentStatus) || o.status === 'cancelled') return { skip: `status_${o.status}` }
+    return {
+      patch: { payment_status: 'failed', status: 'cancelled', cancelled_at: new Date(), cancel_reason: `plata ofertei nu a reușit (${reason.slice(0, 80)})` },
+      event: 'upsell.failed',
+      data: { reason },
     }
   })
 }
@@ -365,8 +495,15 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
   const email = (template: string): NewJob[] =>
     c.email.transport === 'none' ? [] : [{ kind: 'email.send', orderId: o.id, dedupeKey: `email:${template}:${o.id}`, payload: { template } }]
 
+  // The card kept for the post-purchase offer is released as soon as the offer is settled.
+  const release = (parentId: string, at?: Date): NewJob[] =>
+    c.stripe ? [{ kind: 'upsell.release', orderId: parentId, dedupeKey: `upsell.release:${parentId}:${at ? 'expiry' : event}`, ...(at && { runAt: at }) }] : []
+
   switch (event) {
     case 'created':
+      // A post-purchase order is paid on the spot or not at all: only the safety-net reconcile, never
+      // an abandonment (a declined or failed offer is not an abandoned checkout).
+      if (o.kind === 'upsell') return [{ kind: 'stripe.reconcile', orderId: o.id, dedupeKey: `reconcile:${o.id}`, runAt: new Date(Date.now() + 10 * 60_000) }]
       return o.paymentMethod === 'bank_transfer'
         ? [
             ...crm(),
@@ -380,8 +517,14 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
             { kind: 'stripe.reconcile', orderId: o.id, dedupeKey: `reconcile:${o.id}`, runAt: new Date(Date.now() + 10 * 60_000) },
             { kind: 'order.abandon_check', orderId: o.id, dedupeKey: `abandon:${o.id}`, runAt: new Date(Date.now() + c.abandonAfterMinutes * 60_000) },
           ]
+    case 'upsell.declined':
+      return release(o.id)
+    case 'upsell.failed':
+      return o.parentOrderId ? release(o.parentOrderId) : []
     case 'payment.confirmed':
       return [
+        ...(o.upsellStatus === 'offered' && o.upsellExpiresAt ? release(o.id, o.upsellExpiresAt) : []),
+        ...(o.kind === 'upsell' && o.parentOrderId ? release(o.parentOrderId) : []),
         ...crm(),
         ...email(o.paymentMethod === 'card' ? 'order_confirmed' : 'payment_received'),
         ...(o.invoiceStatus === 'pending' ? [{ kind: 'fgo.invoice' as const, orderId: o.id, dedupeKey: `fgo.invoice:${o.id}` }] : []),

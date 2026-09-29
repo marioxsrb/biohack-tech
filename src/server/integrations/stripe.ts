@@ -9,7 +9,13 @@ import { createHmac, timingSafeEqual } from 'node:crypto'
 import type { StripeConfig } from '@/server/config'
 
 export class StripeError extends Error {
-  constructor(message: string, readonly status: number, readonly code?: string) {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly code?: string,
+    /** Set when Stripe created a PaymentIntent but refused to confirm it (e.g. a declined card). */
+    readonly paymentIntentId?: string,
+  ) {
     super(message)
   }
 }
@@ -36,8 +42,8 @@ async function call<T>(c: StripeConfig, path: string, init?: { body?: Record<str
     cache: 'no-store',
     signal: AbortSignal.timeout(20_000),
   })
-  const json = (await res.json().catch(() => ({}))) as { error?: { message?: string; code?: string } }
-  if (!res.ok) throw new StripeError(json.error?.message ?? `Stripe ${res.status}`, res.status, json.error?.code)
+  const json = (await res.json().catch(() => ({}))) as { error?: { message?: string; code?: string; decline_code?: string; payment_intent?: { id?: string } } }
+  if (!res.ok) throw new StripeError(json.error?.message ?? `Stripe ${res.status}`, res.status, json.error?.decline_code ?? json.error?.code, json.error?.payment_intent?.id)
   return json as T
 }
 
@@ -49,12 +55,27 @@ export type PaymentIntent = {
   currency: string
   client_secret: string
   metadata: Record<string, string>
-  last_payment_error?: { message?: string; code?: string } | null
+  last_payment_error?: { message?: string; code?: string; decline_code?: string } | null
+  /** Id of the card used (never card data). */
+  payment_method?: string | null
+  customer?: string | null
 }
 
 export const stripe = {
-  /** One PaymentIntent per order: the idempotency key is the order id. */
-  createPaymentIntent(c: StripeConfig, o: { id: string; orderNumber: string; totalMinor: number }) {
+  /** One Stripe customer per card order, so the card can be offered again right after payment. */
+  createCustomer(c: StripeConfig, o: { id: string; orderNumber: string; email: string; name: string }) {
+    return call<{ id: string }>(c, '/customers', {
+      idempotencyKey: `cus-create-${o.id}`,
+      body: { email: o.email, name: o.name, metadata: { order_id: o.id, order_number: o.orderNumber } },
+    })
+  },
+
+  /**
+   * One PaymentIntent per order: the idempotency key is the order id. With a customer, Stripe keeps the
+   * card on that customer for on-session use only (the customer present on our page), which is what the
+   * post-purchase offer needs; it is detached again when the offer ends.
+   */
+  createPaymentIntent(c: StripeConfig, o: { id: string; orderNumber: string; totalMinor: number }, customerId?: string) {
     return call<PaymentIntent>(c, '/payment_intents', {
       idempotencyKey: `pi-create-${o.id}`,
       body: {
@@ -64,9 +85,33 @@ export const stripe = {
         payment_method_types: ['card'],
         description: `Biohack Tech ${o.orderNumber}`,
         metadata: { order_id: o.id, order_number: o.orderNumber },
+        ...(customerId && { customer: customerId, setup_future_usage: 'on_session' }),
       },
     })
   },
+
+  /**
+   * The post-purchase charge: the saved card, confirmed on the server while the customer is on the page
+   * (not off-session). Stripe decides whether the bank wants authentication (status requires_action).
+   */
+  createUpsellPaymentIntent(c: StripeConfig, o: { id: string; orderNumber: string; totalMinor: number; parentId: string }, customerId: string, paymentMethodId: string) {
+    return call<PaymentIntent>(c, '/payment_intents', {
+      idempotencyKey: `pi-upsell-${o.id}`,
+      body: {
+        amount: o.totalMinor,
+        currency: 'ron',
+        payment_method_types: ['card'],
+        customer: customerId,
+        payment_method: paymentMethodId,
+        confirm: true,
+        description: `Biohack Tech ${o.orderNumber} (adăugată după plată)`,
+        metadata: { order_id: o.id, order_number: o.orderNumber, parent_order_id: o.parentId },
+      },
+    })
+  },
+
+  cancelPaymentIntent: (c: StripeConfig, id: string) => call<PaymentIntent>(c, `/payment_intents/${encodeURIComponent(id)}/cancel`, { body: {}, idempotencyKey: `pi-cancel-${id}` }),
+  detachPaymentMethod: (c: StripeConfig, id: string) => call<{ id: string }>(c, `/payment_methods/${encodeURIComponent(id)}/detach`, { body: {} }),
   retrievePaymentIntent: (c: StripeConfig, id: string) => call<PaymentIntent>(c, `/payment_intents/${encodeURIComponent(id)}`),
 }
 

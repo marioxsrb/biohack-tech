@@ -50,6 +50,12 @@ Arhitectura, integrările și pașii de lansare: **docs/PRODUCTION-LAUNCH.md**.
 4. Adaugă tag-ul GHL în `PRODUCT_TAG` (`server/integrations/ghl.ts`) și în `scripts/ghl-check.mjs`; un test pică dacă lipsește.
 5. Pentru reclame: adaugă landing-ul în `content/landings.ts` și slug-ul în `lib/landing-hosts.ts`.
 
+## Promoții, ofertă după plată, contact
+
+- Promoțiile sunt definite o singură dată în `config/promotions.ts` și calculate de `lib/promotions.ts` (doar numere întregi). Serverul recalculează tot; coșul doar afișează același calcul.
+- Oferta de după plată (doar card): `config/upsell.ts` spune ce se propune. E o comandă separată, legată de prima, plătită cu același card doar după două confirmări explicite (`server/orders/upsell.ts`).
+- Formularul de contact scrie în tabelul `enquiries`; mesajele se văd în `/admin/mesaje`.
+
 ## Landing-uri pentru reclame
 
 Câte unul pe produs: `/lp/calm`, `/lp/focus`, `/lp/amber`, `/lp/brain-flow` local, respectiv `calm.biohack-tech.ro` etc. în producție (rutare după host în `src/proxy.ts`, doar hostnames din listă). Nu apar în meniu, footer, grilă sau sitemap și au `noindex`. Butonul duce direct în checkout cu id-urile produsului și ale variantei; serverul recalculează prețul. Parametrii UTM și landing-ul ajung în comandă și în GHL (`contact.bt_last_order_source`). Detalii: docs/PRODUCTION-LAUNCH.md §26.

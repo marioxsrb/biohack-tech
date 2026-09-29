@@ -23,6 +23,13 @@ export const fgoCounty = (county: string) => county.normalize('NFD').replace(/[Ì
 
 const lei = (minor: number) => Number((minor / 100).toFixed(2))
 
+function lineName(i: Order['items'][number], o: Order) {
+  const base = i.variantName ? `${i.productName} (${i.variantName})` : i.productName
+  if (!i.discountMinor) return base
+  const promo = o.promotions.find((p) => p.id === i.promotionId)?.label ?? 'reducere'
+  return `${base}, ${promo}: -${(i.discountMinor / 100).toFixed(2)} lei`
+}
+
 /** The invoice request, built from the canonical order only. */
 export function invoicePayload(c: FgoConfig, o: Order) {
   const client = billingName(o.customer)
@@ -47,14 +54,16 @@ export function invoicePayload(c: FgoConfig, o: Order) {
       Localitate: o.billingAddress.city,
       Adresa: o.billingAddress.address,
     },
-    // Prices are VAT-inclusive, so each line sends its total and FGO derives the unit price.
+    // Prices are VAT-inclusive, so each line sends its total and FGO derives the unit price. A promotion
+    // is already split across its lines (whole bani), so line totals add up to exactly what was paid;
+    // the line name says which promotion lowered it.
     Continut: o.items.map((i) => ({
-      Denumire: i.variantName ? `${i.productName} (${i.variantName})` : i.productName,
+      Denumire: lineName(i, o),
       CodArticol: i.sku,
       UM: c.unit,
       NrProduse: i.quantity,
       CotaTVA: c.vatRate,
-      PretTotal: lei(i.lineTotalMinor),
+      PretTotal: lei(i.lineTotalMinor - i.discountMinor),
     })),
     PlatformaUrl: c.platformUrl,
   }

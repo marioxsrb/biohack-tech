@@ -158,11 +158,13 @@ describe('checkout: PaymentIntent reuse', () => {
   /** A tiny Stripe: POST creates the PaymentIntent (echoing our metadata), GET returns its current state. */
   const fakeStripe = () => {
     const state = { pi: null as Record<string, unknown> | null, creates: 0 }
-    vi.stubGlobal('fetch', vi.fn(async (_url: string, init?: RequestInit) => {
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
+      // The card order's Stripe customer (for the post-purchase offer).
+      if (String(url).endsWith('/v1/customers')) return new Response(JSON.stringify({ id: 'cus_reuse' }), { status: 200 })
       if (init?.method === 'POST') {
         const form = new URLSearchParams(String(init.body))
         state.creates++
-        state.pi ??= { id: 'pi_reuse', status: 'requires_payment_method', amount: Number(form.get('amount')), amount_received: 0, currency: form.get('currency'), client_secret: 'cs_1', metadata: { order_id: form.get('metadata[order_id]') }, payment_method_types: form.getAll('payment_method_types[0]') }
+        state.pi ??= { id: 'pi_reuse', status: 'requires_payment_method', amount: Number(form.get('amount')), amount_received: 0, currency: form.get('currency'), client_secret: 'cs_1', metadata: { order_id: form.get('metadata[order_id]') }, payment_method_types: form.getAll('payment_method_types[0]'), customer: form.get('customer'), setup_future_usage: form.get('setup_future_usage') }
       }
       return new Response(JSON.stringify(state.pi), { status: 200 })
     }))
@@ -173,7 +175,7 @@ describe('checkout: PaymentIntent reuse', () => {
     const stripe = fakeStripe()
     const first = await place('attempt-reuse')
     expect(first.body).toMatchObject({ method: 'card', clientSecret: 'cs_1' })
-    expect(stripe.pi).toMatchObject({ amount: 638000, currency: 'ron', payment_method_types: ['card'] })
+    expect(stripe.pi).toMatchObject({ amount: 638000, currency: 'ron', payment_method_types: ['card'], customer: 'cus_reuse', setup_future_usage: 'on_session' })
     const again = await place('attempt-reuse')
     expect(again.body).toMatchObject({ method: 'card', clientSecret: 'cs_1', orderNumber: first.body.orderNumber })
     expect(stripe.creates).toBe(1)

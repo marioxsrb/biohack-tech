@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { PromotionHints, Totals } from '@/components/cart/Totals'
 import { useEffect, useSyncExternalStore } from 'react'
 import { useCart } from '@/components/cart/CartProvider'
 import { Price } from '@/components/cart/Price'
@@ -22,10 +23,10 @@ const useHydrated = () =>
 /** The cart as its own page: every line editable, one clear way forward. */
 export function CartView() {
   const hydrated = useHydrated()
-  const { lines, count, total, setQuantity, remove } = useCart()
+  const { lines, count, pricing, hints, setQuantity, remove } = useCart()
 
   useEffect(() => {
-    if (hydrated && lines.length) track('view_cart', { value: total, items: lines })
+    if (hydrated && lines.length) track('view_cart', { value: pricing.totalMinor, items: lines })
     // Once per visit of the page, not on every quantity change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated])
@@ -101,21 +102,11 @@ export function CartView() {
             <h2 id="cart-summary" className="text-[20px] tracking-[-0.015em]">
               Sumar
             </h2>
-            <dl className="mt-4 space-y-2 text-[15.5px]">
-              <div className="flex justify-between">
-                <dt className="text-muted">Subtotal</dt>
-                <dd className="text-ink tabular-nums">{formatLei(total)}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-muted">Livrare în România</dt>
-                <dd className="text-ink">Gratuită</dd>
-              </div>
-              <div className="flex items-baseline justify-between border-t border-mist-2 pt-3">
-                <dt className="font-medium text-ink">Total</dt>
-                <dd className="text-[26px] font-medium tracking-[-0.02em] text-ink tabular-nums">{formatLei(total)}</dd>
-              </div>
-            </dl>
+            <div className="mt-4">
+              <Totals pricing={pricing} />
+            </div>
             <p className="text-right text-[13px] text-muted">{terms.vat}</p>
+            <PromotionHints hints={hints} className="mt-4" />
             <Link href="/checkout" className="cta mt-5 w-full">
               <Lock /> Finalizează comanda
             </Link>

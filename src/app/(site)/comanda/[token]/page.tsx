@@ -11,7 +11,9 @@ import { getDb } from '@/server/db'
 import { customerName, formatAddress, type Order } from '@/server/orders/model'
 import { orders } from '@/server/orders/repository'
 import { isPaid } from '@/server/orders/state'
+import { offerFor } from '@/server/orders/upsell'
 import { CopyButton, OrderEffects, WaitForPayment } from './OrderClient'
+import { PostPurchaseOffer } from './PostPurchaseOffer'
 
 export const metadata: Metadata = { title: 'Comanda ta', robots: { index: false, follow: false } }
 
@@ -40,6 +42,11 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/co
   const cardFailed = cardOpen && !cardPending
 
   const placed = paid || transfer
+  // The offer exists only for a card payment Stripe already confirmed (never from URL parameters).
+  const db = await getDb()
+  const offer = c.stripe ? offerFor(order) : null
+  const child = order.kind === 'checkout' ? await orders.childOf(db, order.id) : null
+  const parent = order.parentOrderId ? await orders.byId(db, order.parentOrderId) : null
   const items = order.items.map((i) => lineKey({ productId: i.productId as never, variantId: i.variantId ?? undefined }))
 
   return (
@@ -60,8 +67,10 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/co
         <h1 className="mt-1 text-[clamp(30px,3.6vw,42px)] leading-tight tracking-[-0.035em]">
           {order.status === 'cancelled'
             ? 'Comanda a fost anulată.'
-            : placed
-              ? 'Mulțumim pentru comandă.'
+            : paid
+              ? 'Comanda ta este confirmată.'
+              : placed
+                ? 'Mulțumim pentru comandă.'
               : cardPending
                 ? 'Confirmăm plata.'
                 : 'Plata nu a fost finalizată.'}
@@ -71,6 +80,22 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/co
           <p className="sub mt-4">
             Plata este confirmată. Confirmarea a plecat pe {order.email}. Pregătim coletul în {terms.processingDays}.
           </p>
+        )}
+        {parent && (
+          <p className="mt-2 text-[15px] text-muted">Adăugată după comanda #{parent.orderNumber}. Le putem expedia împreună.</p>
+        )}
+        {child && isPaid(child.paymentStatus) && (
+          <p className="mt-4 rounded-[14px] bg-cyan-50 px-5 py-3 text-[15px] text-cyan-700">
+            Ai adăugat și {child.items.map((i) => (i.variantName ? `${i.productName} (${i.variantName})` : i.productName)).join(', ')}: comanda separată #{child.orderNumber}, plătită.
+          </p>
+        )}
+        {offer && !child && c.stripe && (
+          <PostPurchaseOffer
+            token={order.publicToken}
+            orderNumber={order.orderNumber}
+            publishableKey={c.stripe.publishableKey}
+            offer={{ productId: offer.productId, name: offer.name, reason: offer.reason, variants: offer.variants, priceMinor: offer.priceMinor }}
+          />
         )}
         {transfer && <p className="sub mt-4">Comanda este înregistrată și așteaptă plata. O pregătim imediat ce suma ajunge în cont.</p>}
         {cardPending && (
@@ -158,6 +183,18 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/co
             ))}
           </ul>
           <dl className="mt-1 space-y-1 border-t border-mist-2 pt-3 text-[15px]">
+            {order.discountMinor > 0 && (
+              <div className="flex justify-between">
+                <dt className="text-muted">Subtotal</dt>
+                <dd className="text-ink tabular-nums">{formatLei(order.subtotalMinor)}</dd>
+              </div>
+            )}
+            {order.promotions.map((p) => (
+              <div key={p.id} className="flex justify-between text-cyan-700">
+                <dt>{p.label}</dt>
+                <dd className="tabular-nums">−{formatLei(p.amountMinor)}</dd>
+              </div>
+            ))}
             <div className="flex justify-between">
               <dt className="text-muted">Livrare</dt>
               <dd className="text-ink">{order.shippingMinor ? formatLei(order.shippingMinor) : 'Gratuită'}</dd>

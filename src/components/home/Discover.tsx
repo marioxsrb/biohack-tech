@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { Arrow } from '@/components/ui/icons'
 import { Price } from '@/components/cart/Price'
+import { PromoNote } from '@/components/cart/PromoNote'
 import { productHref, products } from '@/content/catalog'
 
 /**
@@ -44,6 +45,7 @@ export function Discover() {
                 </span>
               </span>
 
+              <PromoNote productId={p.id} className="mb-3" />
               <span className="flex items-center justify-between gap-3 border-t border-line pt-4">
                 <span className="text-[18px] font-medium tracking-[-0.015em] whitespace-nowrap text-ink tabular-nums">
                   <Price productId={p.id} />

@@ -8,11 +8,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   return (
     <section className="pt-[calc(var(--nav-h)+32px)] pb-[var(--sec)]">
       <div className="wrap">
-        <p className="text-[13px] font-semibold tracking-[0.12em] text-muted uppercase">
+        <nav aria-label="Administrare" className="flex flex-wrap items-center gap-x-5 text-[13px] font-semibold tracking-[0.12em] text-muted uppercase">
           <Link href="/admin" className="hover:text-ink">
-            Administrare
+            Comenzi
           </Link>
-        </p>
+          <Link href="/admin/mesaje" className="hover:text-ink">
+            Mesaje
+          </Link>
+        </nav>
         {children}
       </div>
     </section>

@@ -196,4 +196,42 @@ alter table orders add column if not exists return_received_at timestamptz;
 create index if not exists orders_return_status_idx on orders (return_status) where return_status is not null
 `,
   },
+  {
+    // Promotions: the discount and its explanation are stored with the order and per line (for invoices).
+    // Post-purchase offers: a separate, linked order (own payment, own invoice), at most one per parent.
+    // Contact form enquiries.
+    id: '005_promotions_upsell_enquiries',
+    sql: `
+alter table orders add column if not exists discount_minor integer not null default 0;
+alter table orders add column if not exists promotions jsonb not null default '[]'::jsonb;
+alter table orders add column if not exists kind text not null default 'checkout';
+alter table orders add column if not exists parent_order_id uuid references orders(id);
+alter table orders add column if not exists stripe_customer_id text;
+alter table orders add column if not exists stripe_payment_method_id text;
+alter table orders add column if not exists upsell_status text;
+alter table orders add column if not exists upsell_expires_at timestamptz;
+create unique index if not exists orders_one_upsell_per_parent on orders (parent_order_id) where parent_order_id is not null;
+alter table order_items add column if not exists discount_minor integer not null default 0;
+alter table order_items add column if not exists promotion_id text;
+
+create table if not exists enquiries (
+  id uuid primary key,
+  reference text not null unique,
+  idempotency_key text not null unique,
+  name text not null,
+  email text not null,
+  phone text not null default '',
+  topic text not null,
+  message text not null,
+  status text not null default 'new',
+  source_page text,
+  attribution jsonb,
+  ghl_contact_id text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists enquiries_created_idx on enquiries (created_at desc);
+create index if not exists enquiries_status_idx on enquiries (status)
+`,
+  },
 ]

@@ -12,10 +12,23 @@ describe('resolveOrderLines (server side)', () => {
     ])
     expect(r).toEqual({
       ok: true,
+      subtotal: 249000 + 2 * 19950,
+      discount: 0,
       total: 249000 + 2 * 19950,
+      promotions: [],
       lines: [
-        { key: 'brainlink-pro:', productId: 'brainlink-pro', variantId: undefined, name: 'NEUROS Focus', description: undefined, quantity: 1, unitAmount: 249000 },
-        { key: 'ochelari-biohack:patrat-maro', productId: 'ochelari-biohack', variantId: 'patrat-maro', name: 'NEUROS Amber', description: 'Unisex pătrat · Maro', quantity: 2, unitAmount: 19950 },
+        { key: 'brainlink-pro:', productId: 'brainlink-pro', variantId: undefined, name: 'NEUROS Focus', description: undefined, quantity: 1, unitAmount: 249000, discountMinor: 0, promotionId: undefined },
+        {
+          key: 'ochelari-biohack:patrat-maro',
+          productId: 'ochelari-biohack',
+          variantId: 'patrat-maro',
+          name: 'NEUROS Amber',
+          description: 'Unisex pătrat · Maro',
+          quantity: 2,
+          unitAmount: 19950,
+          discountMinor: 0,
+          promotionId: undefined,
+        },
       ],
     })
   })

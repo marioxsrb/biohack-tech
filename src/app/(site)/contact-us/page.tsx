@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import { ContactForm } from '@/components/contact/ContactForm'
 import { site, terms } from '@/config/site'
 import { pageMetadata } from '@/lib/seo'
 
@@ -27,6 +28,12 @@ export default function ContactPage() {
             <span className="block text-[15px] text-muted">Telefon</span>
             <span className="mt-1 block text-[clamp(24px,2.6vw,36px)] leading-tight tracking-[-0.03em] text-ink group-hover:text-cyan-700">{site.phone}</span>
           </a>
+        </div>
+        <div className="mt-14 rounded-[28px] bg-paper p-[clamp(24px,4.4vw,56px)]">
+          <h2 className="text-[26px] tracking-[-0.025em]">Sau scrie-ne aici</h2>
+          <div className="mt-6 max-w-[760px]">
+            <ContactForm />
+          </div>
         </div>
       </div>
     </section>

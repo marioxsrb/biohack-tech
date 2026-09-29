@@ -7,6 +7,7 @@ import { useCart, type ResolvedLine } from '@/components/cart/CartProvider'
 import { cartStore, type CartLine } from '@/components/cart/cart-store'
 import { Price } from '@/components/cart/Price'
 import { Thumb } from '@/components/cart/Thumb'
+import { PromotionHints, Totals } from '@/components/cart/Totals'
 import { Arrow, Bank, CardIcon, Lock, Mail } from '@/components/ui/icons'
 import { productHref, products, resolveLine } from '@/content/catalog'
 import { attributionParams } from '@/lib/attribution'
@@ -110,7 +111,7 @@ function readDraft(methods: Methods): OrderForm {
 
 function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; methods: Methods; stripeKey: string | null }) {
   const router = useRouter()
-  const { total } = useCart()
+  const { total, pricing, hints } = useCart()
   const anyMethod = methods.card || methods.transfer
 
   const [form, setForm] = useState<OrderForm>(() => readDraft(methods))
@@ -352,6 +353,10 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
                   {methods.card && stripeKey && (
                     <div className={form.paymentMethod === 'card' ? 'mt-4' : 'hidden'}>
                       <CardPayment publishableKey={stripeKey} amount={total} apiRef={card} />
+                      <p className="mt-3 text-[13px] leading-relaxed text-muted">
+                        După plată îți putem propune un produs opțional. Stripe păstrează cardul asociat acestei comenzi 30 de minute, ca să-l poți adăuga doar dacă vrei,
+                        confirmând din nou. Noi nu vedem și nu stocăm datele cardului.
+                      </p>
                     </div>
                   )}
                 </PayOption>
@@ -387,21 +392,11 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
               ))}
             </ul>
 
-            <dl className="mt-4 space-y-1.5 text-[15.5px]">
-              <div className="flex justify-between">
-                <dt className="text-muted">Subtotal</dt>
-                <dd className="text-ink tabular-nums">{formatLei(total)}</dd>
-              </div>
-              <div className="flex justify-between">
-                <dt className="text-muted">Livrare</dt>
-                <dd className="text-ink">Gratuită</dd>
-              </div>
-              <div className="flex items-baseline justify-between border-t border-mist-2 pt-3">
-                <dt className="font-medium text-ink">Total</dt>
-                <dd className="text-[26px] font-medium tracking-[-0.02em] text-ink tabular-nums">{formatLei(total)}</dd>
-              </div>
-            </dl>
+            <div className="mt-4">
+              <Totals pricing={pricing} />
+            </div>
             <p className="text-right text-[13px] text-muted">{terms.vat}</p>
+            <PromotionHints hints={hints} className="mt-3" />
 
             {anyMethod && (
               <>

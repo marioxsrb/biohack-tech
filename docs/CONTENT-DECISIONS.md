@@ -63,3 +63,7 @@ Sursa: `Biohack-Tech_Structura_si_Copy.docx` și folderul `poze/` din ZIP. Copy-
 ## Faza 3/4: Brain Flow devine produsul 4 (29.09.2026)
 
 Decizia de mai sus („Brain Flow, care nu se vinde”) este înlocuită la cerere: Brain Flow se vinde, cu trei configurații (1, 4, 13 zone). Păstrăm numele din sursă (fără marca NEUROS, nestatată pentru el), prețurile din sursă (de confirmat, vezi OPEN-POINTS) și doar faptele tehnice (810 nm, zone, telecomandă, baterie, consultație inițială). Studiile medicale și testimonialele din sursă nu sunt folosite. Pe pagina principală, cardurile trec de la trei la patru (două pe rând pe tabletă).
+
+## Faza 3.5: pagina principală mai completă (29.09.2026)
+
+Ordinea: hero, produsele (cu oferta lor, discret), ideea de brand cu cele patru produse în viața reală, „Aceeași zi. Alt ritm.” (fără obicei / cu un obicei BiohackTech, despre rutine, nu despre rezultate), „O zi, patru momente.” (experiențe descrise de noi, cu oameni în cadru, nu citate de clienți), cele două oferte, momentul NEUROS Calm, întrebări frecvente, contact. Secțiunile deschise și închise alternează. Testimonialele din sursă rămân nefolosite; arhitectura le afișează doar dacă se adaugă unele reale, cu acord și sursă (`src/content/home.ts`).

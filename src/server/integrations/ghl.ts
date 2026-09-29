@@ -101,6 +101,8 @@ export const TAGS = {
   returnRequested: 'bt-retur-solicitat',
   /** The returned product arrived back; the refund follows (W7 on Rambursată). */
   returnReceived: 'bt-retur-primit',
+  /** Wrote to us through the site's contact form. Starts no order workflow. */
+  enquiry: 'bt-mesaj-contact',
 } as const
 /** One tag per product bought. Every catalog product must have one (tested). */
 export const PRODUCT_TAG: Record<string, string> = {
@@ -211,6 +213,23 @@ export const ghl = {
   /** Only the marketing fields of an existing contact (after an unsubscribe), matched by email. */
   async updateMarketing(c: GhlConfig, email: string, m: MarketingFields) {
     const r = await call<{ contact: { id: string } }>(c, 'POST', '/contacts/upsert', { locationId: c.locationId, email, customFields: marketingFields(m) })
+    return r.contact.id
+  },
+
+  /**
+   * A contact-form sender: identity only (no order fields, no marketing fields, no pipeline), so no
+   * ecommerce workflow can start from it. Matched by email like every other upsert.
+   */
+  async upsertEnquiryContact(c: GhlConfig, e: { name: string; email: string; phone: string }) {
+    const [firstName, ...rest] = e.name.split(' ')
+    const r = await call<{ contact: { id: string } }>(c, 'POST', '/contacts/upsert', {
+      locationId: c.locationId,
+      email: e.email,
+      firstName,
+      ...(rest.length && { lastName: rest.join(' ') }),
+      ...(e.phone && { phone: e.phone }),
+      source: 'biohack-tech.ro contact',
+    })
     return r.contact.id
   },
 

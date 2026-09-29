@@ -39,6 +39,8 @@ export default async function AdminOrderPage({ params }: PageProps<'/admin/order
   const [events, jobList, consent, withdrawalList] = await Promise.all([orders.events(db, id), jobs.forOrder(db, id), marketing.state(db, o.email), withdrawals.forOrder(id)])
   const c = getConfig()
   const paid = isPaid(o.paymentStatus)
+  const [parent, child] = await Promise.all([o.parentOrderId ? orders.byId(db, o.parentOrderId) : null, orders.childOf(db, o.id)])
+  const UPSELL: Record<string, string> = { offered: 'oferită, fără răspuns încă', declined: 'refuzată de client', accepted: 'acceptată', expired: 'expirată (fără răspuns)' }
 
   return (
     <>
@@ -53,6 +55,30 @@ export default async function AdminOrderPage({ params }: PageProps<'/admin/order
       <p className="mt-1 text-[14.5px] text-muted">
         {dt(o.createdAt)} · {o.paymentMethod === 'card' ? 'Card' : 'Transfer bancar'} · {formatLei(o.totalMinor)}
       </p>
+
+      {(parent || child || o.upsellStatus) && (
+        <div className="mt-5 rounded-[14px] bg-cyan-50 px-5 py-3 text-[14.5px] text-ink">
+          {parent && (
+            <p>
+              ↳ Comandă adăugată după plată la{' '}
+              <Link href={`/admin/orders/${parent.id}`} className="font-medium underline underline-offset-4">
+                {parent.orderNumber}
+              </Link>{' '}
+              ({PAYMENT_LABEL[parent.paymentStatus]}, {ORDER_LABEL[parent.status]}). Același client și aceeași adresă: se pot expedia împreună. Plată și factură separate.
+            </p>
+          )}
+          {child && (
+            <p>
+              Comandă inițială. Adăugată după plată:{' '}
+              <Link href={`/admin/orders/${child.id}`} className="font-medium underline underline-offset-4">
+                ↳ {child.orderNumber}
+              </Link>{' '}
+              · {child.items.map((i) => `${i.quantity} × ${i.productName}${i.variantName ? ` (${i.variantName})` : ''}`).join(', ')} · {formatLei(child.totalMinor)} · {PAYMENT_LABEL[child.paymentStatus]}. Se pot expedia împreună.
+            </p>
+          )}
+          {!child && o.upsellStatus && <p>Oferta după plată: {UPSELL[o.upsellStatus] ?? o.upsellStatus}.</p>}
+        </div>
+      )}
 
       <div className="mt-6 grid gap-5 lg:grid-cols-12">
         <div className="space-y-5 lg:col-span-7">
@@ -77,11 +103,38 @@ export default async function AdminOrderPage({ params }: PageProps<'/admin/order
                         {i.variantId && ` · variantă ${i.variantId}`} · ref. {i.sku} · {formatLei(i.unitPriceMinor)} / buc.
                       </span>
                     </span>
-                    <span className="tabular-nums">{formatLei(i.lineTotalMinor)}</span>
+                    <span className="text-right tabular-nums">
+                      {formatLei(i.lineTotalMinor)}
+                      {i.discountMinor > 0 && (
+                        <span className="block text-[13px] text-cyan-700">
+                          −{formatLei(i.discountMinor)} = {formatLei(i.lineTotalMinor - i.discountMinor)}
+                        </span>
+                      )}
+                    </span>
                   </li>
                 )
               })}
             </ul>
+            <dl className="mt-2 space-y-1 border-t border-mist-2 pt-2">
+              <div className="flex justify-between">
+                <dt className="text-muted">Subtotal</dt>
+                <dd className="tabular-nums">{formatLei(o.subtotalMinor)}</dd>
+              </div>
+              {o.promotions.map((p) => (
+                <div key={p.id} className="flex justify-between text-cyan-700">
+                  <dt>
+                    Promoție: {p.label} <span className="text-muted">({p.id})</span>
+                  </dt>
+                  <dd className="tabular-nums">−{formatLei(p.amountMinor)}</dd>
+                </div>
+              ))}
+              {o.discountMinor > 0 && (
+                <div className="flex justify-between">
+                  <dt className="text-muted">Reducere totală</dt>
+                  <dd className="tabular-nums">−{formatLei(o.discountMinor)}</dd>
+                </div>
+              )}
+            </dl>
             <p className="mt-2 flex justify-between border-t border-mist-2 pt-2 font-semibold">
               <span>Total (livrare {o.shippingMinor ? formatLei(o.shippingMinor) : 'gratuită'})</span>
               <span className="tabular-nums">{formatLei(o.totalMinor)}</span>

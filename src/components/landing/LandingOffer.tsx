@@ -9,6 +9,7 @@ import { terms } from '@/config/site'
 import { itemOf, track } from '@/lib/analytics'
 import type { LandingSlug } from '@/lib/landing-hosts'
 import { formatLei } from '@/lib/money'
+import { PromoNote } from '@/components/cart/PromoNote'
 import { checkoutHref } from './checkout-link'
 
 type Props = { slug: LandingSlug; productId: ProductId; title: string; text: string }
@@ -104,6 +105,7 @@ export function LandingOffer({ slug, productId, title, text }: Props) {
             {price !== null && <span className="text-[14px] font-normal tracking-normal text-[var(--lp-muted)]">{terms.vat}</span>}
           </p>
 
+          {price !== null && <PromoNote productId={product.id} full className="mt-3 [&_.text-text]:!text-[var(--lp-muted)]" />}
           {price !== null && (
             <a href={href} onClick={go} className="cta mt-5 w-full sm:w-auto">
               Comandă acum <Arrow />

@@ -59,7 +59,8 @@ describe('the four-product catalog', () => {
       { productId: 'brain-flow', variantId: '13-zone', quantity: 1, unitAmount: 100, price: 1 },
       { productId: 'brain-flow', variantId: '1-zona', quantity: 2 },
     ])
-    expect(r).toMatchObject({ ok: true, total: 1390000 + 2 * 1290000 })
+    // Three Brain Flow units also unlock the 20% promotion (every configuration counts).
+    expect(r).toMatchObject({ ok: true, subtotal: 1390000 + 2 * 1290000, discount: 794000, total: 3176000 })
     expect(resolveOrderLines([{ productId: 'brain-flow', quantity: 1 }])).toEqual({ ok: false, reason: 'BAD_LINE' })
     expect(resolveOrderLines([{ productId: 'brain-flow', variantId: '4-zone', quantity: 11 }])).toEqual({ ok: false, reason: 'BAD_LINE' })
     expect(resolveOrderLines([{ productId: 'brain-flow', variantId: '4-zone', quantity: -1 }])).toEqual({ ok: false, reason: 'BAD_LINE' })

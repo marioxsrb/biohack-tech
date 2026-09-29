@@ -4,6 +4,7 @@ import { Arrow } from '@/components/ui/icons'
 import { productHref, products } from '@/content/catalog'
 import { terms } from '@/config/site'
 import { Price } from '@/components/cart/Price'
+import { PromoNote } from '@/components/cart/PromoNote'
 
 /**
  * All products side by side on one shelf line (two per row on tablets). Hover lifts a product and softens its
@@ -41,6 +42,7 @@ export function Lineup({ title = 'Toate produsele.', headingLevel = 2 }: { title
                   <span className="lg:sr-only">Vezi produsul</span> <Arrow className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </span>
               </span>
+              <PromoNote productId={p.id} className="mt-3" />
             </Link>
           </li>
         ))}

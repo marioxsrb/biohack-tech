@@ -16,6 +16,8 @@ import { errText, log } from '@/server/log'
 import { marketingStatus } from '@/server/marketing/sync'
 import { orders } from '@/server/orders/repository'
 import { reconcileCardPayment } from '@/server/orders/reconcile'
+import { releaseUpsellCard } from '@/server/orders/upsell'
+import { syncEnquiry } from '@/server/enquiries'
 import { expireUnpaidTransfer, markAbandonedIfUnpaid } from '@/server/orders/service'
 import { withdrawals } from '@/server/orders/withdrawal'
 import { jobs, type Job } from './outbox'
@@ -114,6 +116,8 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
   },
 
   'stripe.reconcile': async (j) => reconcileCardPayment(j.orderId!),
+  'upsell.release': async (j) => releaseUpsellCard(j.orderId!),
+  'ghl.enquiry': async (j) => syncEnquiry(String(j.payload.enquiryId ?? '')),
   'order.transfer_expiry': async (j) => {
     const r = await expireUnpaidTransfer(j.orderId!)
     return r.changed ? 'cancelled' : (r.reason ?? 'unchanged')

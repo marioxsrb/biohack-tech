@@ -15,6 +15,8 @@ export type JobKind =
   | 'order.abandon_check'
   | 'stripe.reconcile'
   | 'order.transfer_expiry'
+  | 'upsell.release'
+  | 'ghl.enquiry'
 export type JobStatus = 'pending' | 'running' | 'retry' | 'done' | 'failed' | 'skipped'
 
 export type Job = {

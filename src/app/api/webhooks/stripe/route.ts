@@ -54,7 +54,8 @@ export async function POST(req: NextRequest) {
       const piId = String(obj.id)
       if (!o) outcome = 'order_not_found'
       else if (event.type === 'payment_intent.succeeded') {
-        const r = await confirmPayment(o.id, 'stripe.webhook', { amountMinor: Number(obj.amount_received ?? obj.amount), currency: String(obj.currency), paymentIntentId: piId })
+        const pm = typeof obj.payment_method === 'string' ? obj.payment_method : null
+        const r = await confirmPayment(o.id, 'stripe.webhook', { amountMinor: Number(obj.amount_received ?? obj.amount), currency: String(obj.currency), paymentIntentId: piId, paymentMethodId: pm })
         outcome = r.changed ? 'paid' : (r.reason ?? 'unchanged')
       } else if (event.type === 'payment_intent.payment_failed') {
         const err = obj.last_payment_error as { code?: string; decline_code?: string } | undefined

@@ -7,6 +7,7 @@
  *   PaymentStatus what we know about the money
  */
 import type { Attribution } from '@/lib/attribution'
+import type { AppliedPromotion } from '@/lib/promotions'
 
 export const ORDER_STATUS = {
   pending: 'pending', // created, waiting for payment
@@ -64,8 +65,16 @@ export type OrderItem = {
   sku: string
   quantity: number
   unitPriceMinor: number
+  /** quantity × unit price, before promotions. */
   lineTotalMinor: number
+  /** This line's share of the order's promotions (0 when none). Invoiced amount = lineTotal − discount. */
+  discountMinor: number
+  promotionId: string | null
 }
+
+/** A normal checkout order, or the optional one added right after a card payment (linked to its parent). */
+export type OrderKind = 'checkout' | 'upsell'
+export type UpsellStatus = 'offered' | 'declined' | 'accepted' | 'expired'
 
 export type Order = {
   id: string
@@ -78,7 +87,10 @@ export type Order = {
   paymentMethod: PaymentMethod
   invoiceStatus: InvoiceStatus
   currency: 'RON'
+  /** Sum of line totals before promotions. total = subtotal − discount + shipping. */
   subtotalMinor: number
+  discountMinor: number
+  promotions: AppliedPromotion[]
   shippingMinor: number
   totalMinor: number
   refundedMinor: number
@@ -117,6 +129,15 @@ export type Order = {
   returnStatus: ReturnStatus | null
   returnRequestedAt: Date | null
   returnReceivedAt: Date | null
+  kind: OrderKind
+  /** Upsell orders: the paid order they were offered after. */
+  parentOrderId: string | null
+  /** Card orders: Stripe's customer and the card saved for the post-purchase offer (ids only, never card data). */
+  stripeCustomerId: string | null
+  stripePaymentMethodId: string | null
+  /** Parent orders: the post-purchase offer's state and deadline. */
+  upsellStatus: UpsellStatus | null
+  upsellExpiresAt: Date | null
   items: OrderItem[]
 }
 

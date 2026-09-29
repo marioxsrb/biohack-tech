@@ -8,6 +8,7 @@ import { jobs } from '@/server/jobs/outbox'
 import { runDueJobs } from '@/server/jobs/runner'
 import { log } from '@/server/log'
 import { courier } from '@/server/fulfillment/courier'
+import { enquiries, type EnquiryStatus } from '@/server/enquiries'
 import { cancelOrder, confirmPayment, markDelivered, markProcessing, markReturnReceived, markReturnRequested, markShipped, recordRefund } from '@/server/orders/service'
 
 /**
@@ -101,4 +102,13 @@ export async function resyncCrmAction(f: FormData) {
   const id = text(f, 'id')
   await jobs.enqueue(await getDb(), { kind: 'ghl.sync', orderId: id, dedupeKey: `ghl.sync:${id}:admin:${Date.now()}` })
   await done(id, 'resync_crm', true)
+}
+
+export async function enquiryStatusAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id', 40)
+  const status = text(f, 'status', 20) as EnquiryStatus
+  const changed = await enquiries.setStatus(id, status)
+  log.info('admin.action', { enquiryId: id, action: `enquiry_${status}`, changed })
+  revalidatePath('/admin/mesaje')
 }

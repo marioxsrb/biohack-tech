@@ -163,7 +163,7 @@ export const legalPages: LegalPage[] = [
           'Fiecare furnizor primește doar datele necesare pentru rolul lui:',
           {
             list: [
-              'Stripe: plata cu cardul. Datele cardului merg direct la Stripe; noi nu le vedem.',
+              'Stripe: plata cu cardul. Datele cardului merg direct la Stripe; noi nu le vedem. După o plată cu cardul, Stripe păstrează cardul asociat comenzii cel mult 30 de minute, pentru oferta opțională de după plată; se încasează doar dacă o accepți explicit. Apoi cardul este dezasociat.',
               'FGO: emiterea facturilor.',
               'GoHighLevel (platforma LeadConnector): evidența clienților și trimiterea emailurilor.',
               'Firma de curierat: livrarea coletului.',
@@ -390,6 +390,8 @@ export const legalPages: LegalPage[] = [
           'Plătești online, prin Stripe, procesatorul nostru de plăți. Datele cardului merg direct la Stripe. Noi nu le vedem și nu le păstrăm.',
           'Banca ta poate cere o confirmare suplimentară (3-D Secure), în aplicația băncii sau prin SMS.',
           'Comanda este confirmată când Stripe confirmă plata. Dacă plata nu reușește, nu ți se retrage nimic și poți încerca din nou.',
+          'Promoții: la NEUROS Calm, NEUROS Focus și Brain Flow (orice configurație), când comanda are cel puțin 3 bucăți din aceste produse, în orice combinație, primești 20% reducere la ele. La NEUROS Amber, din fiecare 3 perechi din aceeași comandă, una este gratuită (cea mai ieftină, dacă prețurile diferă). NEUROS Amber nu intră în calculul celor 3 produse și nu primește reducerea de 20%. Reducerile se calculează automat în coș, pe prețurile afișate, și apar separat în comandă și pe factură. Se aplică atât timp cât sunt afișate pe site.',
+          'După o plată cu cardul îți putem propune, o singură dată, un produs opțional. Se plătește cu același card doar dacă apeși „Adaugă la comandă” și confirmi suma. Devine o comandă separată, cu factură separată; prima comandă rămâne plătită și confirmată oricum. Dacă banca cere confirmarea, se deschide pasul de verificare al băncii.',
         ],
       },
       {

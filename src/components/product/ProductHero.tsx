@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AddToCartButton } from '@/components/cart/AddToCartButton'
 import { Price } from '@/components/cart/Price'
+import { PromoNote } from '@/components/cart/PromoNote'
 import { QuantityStepper } from '@/components/cart/QuantityStepper'
 import { Check } from '@/components/ui/icons'
 import { getProduct, isPurchasable, variantLabel, type ProductId } from '@/content/catalog'
@@ -101,6 +102,7 @@ export function ProductHero({ productId, intro }: Props) {
             <Price productId={product.id} variantId={variant?.id} />
             {purchasable && <span className="ml-3 align-middle text-[14px] font-normal tracking-normal text-muted">{terms.vat}</span>}
           </p>
+          {purchasable && <PromoNote productId={product.id} full className="mt-3 max-w-[32em]" />}
 
           {product.options?.map((opt) => {
             const avail = available(opt.id)

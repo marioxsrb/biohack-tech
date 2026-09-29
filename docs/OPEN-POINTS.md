@@ -23,6 +23,11 @@ Updated 29 September 2026 (phase 3/4). Everything that is code is built; what is
 - **Brain Flow is for sale:** an earlier content decision said it “nu se vinde”; phase 3/4 made it a sold product. Confirm before ads run.
 - **Brain Flow:** manufacturer, CE / regulatory documentation, what's in the box (the photos show goggles next to the remote; not claimed), supplier SKU if any, whether configurations change delivery time.
 
+**Promotions and the post-purchase offer (phase 3.5)**
+- Confirm the two promotions as built: 20% for 3+ units of Calm / Focus / Brain Flow (Amber excluded), and Amber 2+1 gratis; how long they run (the site says “atât timp cât sunt afișate pe site”).
+- Confirm the post-purchase pairs in `src/config/upsell.ts` (e.g. Calm → Amber) and the 30-minute window.
+- Customer testimonials: none are used (the source's were unverifiable). To show real ones, add them to `src/content/home.ts` with written consent and a source.
+
 **Company and support**
 - **Return address** (`COMPANY_RETURN_ADDRESS`). Company identity is set from the data you provided (NEUROS EUROPE S.R.L., CUI 50323873, J2024001256321, Str. N. D. Cocea nr. 10, Sibiu); the return address was not given, so the site says it is sent to the customer.
 - **Support contact:** keep `contact@neuros.ro` and `+40 757 890 707` (from the source) or use Biohack Tech's own.
@@ -47,9 +52,13 @@ Updated 29 September 2026 (phase 3/4). Everything that is code is built; what is
 4. **Privacy policy:** transfer mechanism and processor agreements for Stripe and GoHighLevel; retention periods; whether courier and hosting must be named; the landing attribution (UTM, no click ids, no cookie) described in the policy.
 5. **Company (PJ) buyers:** which consumer rights the terms extend to them.
 6. **Service emails without consent:** W6 P1 (after-delivery help) and W3 T1 (transfer reminder) treated as non-marketing. Confirm.
-7. **ANPC SAL pictogram** (Ordin ANPC 449/2022, amended by Ordin 270/2026) and the **harmonised legal-guarantee notice** (Reg. (EU) 2025/1960): official images to place; today text only.
+7. **Post-purchase offer and promotions**: the disclosure that Stripe keeps the card for 30 minutes for the optional offer (checkout, privacy policy, /plati); the two-click confirmation; the promotion terms on /plati (and, if a promotion is ever shown as a price reduction, the Omnibus “lowest price in the last 30 days” rule).
+8. **ANPC SAL pictogram** (Ordin ANPC 449/2022, amended by Ordin 270/2026) and the **harmonised legal-guarantee notice** (Reg. (EU) 2025/1960): official images to place; today text only.
 
 ## CAN IMPROVE AFTER LAUNCH
+
+- Show the card brand and last digits in the post-purchase confirmation (Stripe payment method details).
+- A “before” photograph without a product for the homepage comparison (today a desaturated evening-screen scene).
 
 - Courier API integration (automatic AWB, delivery tracking) through the courier adapter.
 - Upsell / cross-sell on the landings (extension point documented in runbook §26; only catalog prices, no discount logic yet).

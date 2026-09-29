@@ -1,6 +1,6 @@
 # Biohack Tech: production launch runbook
 
-Written 26 September 2026 against commit “Launch pass”; updated 29 September 2026 for phase 3/4 (product 4, advertising landings, attribution, returns). Everything below refers to code that exists in this repository. Items marked **YOU** need an account, a credential or a business decision; nothing in them has been invented.
+Written 26 September 2026 against commit “Launch pass”; updated 29 September 2026 for phase 3/4 (product 4, advertising landings, attribution, returns) and phase 3.5 (homepage, promotions, post-purchase offer, contact form). Everything below refers to code that exists in this repository. Items marked **YOU** need an account, a credential or a business decision; nothing in them has been invented.
 
 ---
 
@@ -36,7 +36,7 @@ Written 26 September 2026 against commit “Launch pass”; updated 29 September
 - Payment truth: only Stripe can mark a card order paid: the signed webhook, or the `stripe.reconcile` job (server-side retrieve, 10 minutes after the order and again before an order is marked abandoned) if the webhook was lost. The order page only reads; it never marks payments or starts workflows. Bank transfers become paid only when a person confirms the statement in /admin.
 - Side effects (CRM, invoice, email) go through a database outbox with unique keys: retried with backoff, never duplicated, visible in /admin when they fail.
 - Transactional emails are rendered by the site (HTML + text) and delivered through GoHighLevel.
-- 158 automated tests (landing host mapping and proxy, Brain Flow variants and server pricing, payment matrix per configuration and method, attribution, fulfillment and return lifecycle, recovery with a variant, consent, recovery eligibility, unsubscribe, cookie script blocking, withdrawal, money, cart, validation, order state machine, idempotency, webhook route and signatures, browser-closed payment, reconciliation, FGO/GHL mapping, email rendering, outbox retries and outages, abandonment, transfer expiry, admin authorization, the real four-product catalog end to end, concurrency on PostgreSQL) + `scripts/stripe-e2e.mjs` against Stripe test mode.
+- 200 automated tests + 4 on real PostgreSQL (promotion matrix and integer rounding, discounted orders across Stripe / transfer / FGO / GHL / email, post-purchase offer incl. double click, SCA, decline, card declined, expiry, access control, contact form incl. validation, spam, rate limit and CRM outage, landing host mapping and proxy, Brain Flow variants and server pricing, payment matrix per configuration and method, attribution, fulfillment and return lifecycle, recovery with a variant, consent, recovery eligibility, unsubscribe, cookie script blocking, withdrawal, money, cart, validation, order state machine, idempotency, webhook route and signatures, browser-closed payment, reconciliation, FGO/GHL mapping, email rendering, outbox retries and outages, abandonment, transfer expiry, admin authorization, the real four-product catalog end to end, concurrency on PostgreSQL) + `scripts/stripe-e2e.mjs` against Stripe test mode.
 - /admin: HTTP Basic Auth in the proxy **and** inside every admin action (actions are HTTP endpoints; each verifies the credentials itself). Only bank transfers can be marked paid by a person; card money is confirmed by Stripe only.
 
 ## 3. What is blocked, and by what
@@ -250,6 +250,7 @@ Standard fields filled too: first/last name, email, phone, company name (PJ), ad
 ### 10.4 Tags (only these)
 - `bt-client`: has at least one paid order.
 - `bt-cumparat-calm`, `bt-cumparat-focus`, `bt-cumparat-amber`, `bt-cumparat-brain-flow`: bought that product (per-product education and cross-sell). A test fails if a catalog product has no tag.
+- `bt-mesaj-contact`: wrote through the site's contact form (identity only; no order fields, no pipeline; starts nothing).
 - `bt-retur-solicitat`: a withdrawal was declared for a paid order. `bt-retur-primit`: the returned product arrived back. Both set only by the site (§29).
 - `bt-client-firma`: bought as a company (PJ).
 - `bt-recuperare-eligibil`: **added and removed only by the site**. It is present only while a checkout recovery email is allowed (consent, still unpaid and abandoned, link valid). It starts W2. Never add it by hand or in a workflow.
@@ -751,3 +752,40 @@ Add all six to the host (Railway → Networking) and the CNAME/ALIAS records it 
 2. The parcel arrives back and is checked: /admin → “Produsul returnat a fost primit” (`markReturnReceived`). The customer gets the `return_received` email; linked withdrawal statements become `received`; CRM: tag `bt-retur-primit`.
 3. The refund is its own step: Stripe dashboard (card; the webhook records it) or “Înregistrează rambursarea” (transfer). The stage becomes *Rambursată*, W7 creates the FGO storno task.
 Every step is idempotent (a second call changes nothing) and audited in the order history. The return address is not set (OPEN-POINTS): the withdrawal email says it will be sent to the customer.
+
+## 30. Promotions (phase 3.5, built)
+
+Defined once in `src/config/promotions.ts`, applied by the pure engine `src/lib/promotions.ts` (integer bani only):
+
+| Id | Rule | Products |
+|---|---|---|
+| `trei-produse-20` | 3+ units in the order, any mix (same product counts) → 20% off those units | NEUROS Calm, NEUROS Focus, Brain Flow (any configuration) |
+| `amber-2-plus-1` | in every complete group of 3 units, the cheapest is free (`floor(n/3)` free) | NEUROS Amber (any frame) |
+
+- The rules touch separate products: Amber neither counts toward nor receives the 20%; no unit is discounted twice.
+- **Server truth.** `resolveOrderLines` prices lines from the catalog and runs the engine; `placeOrder` runs it again. Nothing the browser sends about prices or discounts is read (tested with tampered payloads).
+- **Order model.** `orders.subtotal_minor` (before promotions), `discount_minor`, `promotions` (jsonb: id, label, amount), `total_minor = subtotal − discount + shipping`; each line keeps `discount_minor` and `promotion_id` (migration 005).
+- **Rounding.** 20% is rounded half-up in whole bani on the eligible subtotal, then split across lines by the largest-remainder method, so the parts always add up.
+- **Stripe** charges `total_minor`. **Bank transfer** instructions show `total_minor`. **Refunds** compare against `total_minor`.
+- **FGO.** Each invoice line sends `PretTotal = line total − line discount` (VAT-inclusive), and its name states the promotion (“NEUROS Calm, 20% la 3 produse: -3828.00 lei”). The invoice total therefore equals the amount paid. Not called against FGO production.
+- **GHL.** `bt_last_order_value` and the opportunity value are the discounted total.
+- **Emails, order page, admin** show Subtotal, each promotion with its amount, and Total.
+- **Customer-facing presentation.** Quiet badges beside prices (home cards, product listing, product page, landing offer), the offer section on the homepage, and honest progress hints in cart and checkout (“Mai adaugă un produs…”, “Mai adaugă o pereche…”), with no countdowns and no struck prices. The terms are on /plati.
+
+## 31. Post-purchase offer (phase 3.5, built)
+
+**Flow.** Checkout → card payment confirmed by Stripe (webhook or reconcile, never by the page) → the order page shows “Comanda ta este confirmată.” first, then, below, one optional offer. The offer requires two explicit clicks: “Adaugă la comandă”, then “Da, plătește X lei” with the amount and the card stated. “Nu, mulțumesc” ends it. Bank-transfer orders never get it.
+
+**What is offered.** `src/config/upsell.ts` (`UPSELL_MAP`): the first product in the list for what was bought that is not already in the order. Calm → Amber, Focus; Focus → Amber, Calm; Amber → Calm, Focus; Brain Flow → Amber, Calm. Brain Flow is never offered after a purchase (it is chosen with a specialist). Normal catalog price and normal promotion rules; no special upsell discount.
+
+**Stripe.** Card checkout orders get a Stripe Customer, and the PaymentIntent uses `setup_future_usage=on_session`, so Stripe keeps the card for on-session reuse only. The checkout states it next to the card field and in /privacy-policy and /plati. The webhook/reconcile stores only `payment_method` and `customer` ids; card data never reaches us. The offer PaymentIntent is created and confirmed server-side with that customer + payment method, without `off_session`, so Stripe applies SCA: `requires_action` → the page opens Stripe's authentication step (`handleNextAction`) → the server re-reads the PaymentIntent from Stripe. The card is **detached** as soon as the offer is settled (paid, declined, failed) or after `UPSELL_WINDOW_MINUTES` (30) with no answer (`upsell.release` job).
+
+**Order model.** A separate order, `kind='upsell'`, `parent_order_id` = the paid order, same buyer and addresses, its own number, PaymentIntent, FGO invoice, GHL opportunity (so W1/W4 prepare it like any paid order) and confirmation email. At most one per parent (unique index). The parent is never modified except `upsell_status` (offered / accepted / declined / expired). Admin shows “Comandă inițială ↳ BHT-…” and “↳ adăugată la BHT-…” so both ship together.
+
+**Safety (tested).** Double click and concurrent requests → one PaymentIntent (row lock + Stripe idempotency key); refresh, back or opening the order URL → nothing charged (viewing never charges); another product, another variant or a tampered price → refused or ignored; unknown token → refused; unpaid, transfer or expired order → refused; card declined → the extra order is closed and its PaymentIntent cancelled, the parent stays paid; authentication closed → cancelled the same way; a repeated webhook → idempotent. A declined or failed offer is not an abandoned checkout: no abandonment job, no recovery.
+
+**Verified against Stripe TEST (29 Sep 2026):** discounted card order charged exactly 12.830 lei with customer + on_session; one-click offer charged once (315 lei) despite a double click, parent card released afterwards; decline released the card with no charge; with an always-authenticate card, the offer returned `requires_action` and Stripe's 3DS step opened on our page (completing that nested step could not be automated in the browser; the completion and the abandonment paths are covered by tests).
+
+## 32. Contact form (phase 3.5, built)
+
+Homepage (last section before the footer) and /contact-us. Fields: name, email, optional phone, topic, message; a privacy line; no marketing consent. `POST /api/contact` validates again, drops bots (hidden field, minimum 2.5 s on the page) with the same “sent” answer, rate-limits 5 per 10 minutes per address, caps the body at 16 KB, and is idempotent per submission attempt. Stored in `enquiries` (reference `MSG-…`, status `new` / `in_progress` / `resolved`, source page, attribution). Operators work in /admin/mesaje (filters, status buttons, mailto/tel). The outbox (`ghl.enquiry`) upserts the sender in GHL with identity only and the tag `bt-mesaj-contact`; a GHL outage keeps the message and retries.

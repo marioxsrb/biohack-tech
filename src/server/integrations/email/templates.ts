@@ -59,12 +59,19 @@ function itemsBlock(o: Order): Block {
     )
     .join('')}
     <tr><td style="padding:8px 0;border-top:1px solid #e8edef;font-size:14px;color:#5a6870">Subtotal</td><td align="right" style="padding:8px 0;border-top:1px solid #e8edef;font-size:14px;color:#0b1316">${esc(formatLei(o.subtotalMinor))}</td></tr>
+    ${o.promotions
+      .map(
+        (pr) =>
+          `<tr><td style="padding:4px 0;font-size:14px;color:#0e7490">${esc(pr.label)}</td><td align="right" style="padding:4px 0;font-size:14px;color:#0e7490;white-space:nowrap">${esc(`-${formatLei(pr.amountMinor)}`)}</td></tr>`,
+      )
+      .join('')}
     <tr><td style="padding:4px 0;font-size:14px;color:#5a6870">Livrare</td><td align="right" style="padding:4px 0;font-size:14px;color:#0b1316">${o.shippingMinor ? esc(formatLei(o.shippingMinor)) : 'Gratuită'}</td></tr>
     <tr><td style="padding:10px 0;border-top:1px solid #e8edef;font-size:16px;font-weight:700;color:#0b1316">Total</td><td align="right" style="padding:10px 0;border-top:1px solid #e8edef;font-size:17px;font-weight:700;color:#0b1316">${esc(formatLei(o.totalMinor))}</td></tr>
   </table><p style="margin:4px 0 0;font-size:12px;color:#5a6870;text-align:right">${esc(terms.vat)}</p>`
   const text = [
     ...lines.map((l) => `${l.qty} x ${l.name}${l.variant ? ` (${l.variant})` : ''}: ${formatLei(l.total)}`),
     `Subtotal: ${formatLei(o.subtotalMinor)}`,
+    ...o.promotions.map((pr) => `${pr.label}: -${formatLei(pr.amountMinor)}`),
     `Livrare: ${o.shippingMinor ? formatLei(o.shippingMinor) : 'Gratuită'}`,
     `Total: ${formatLei(o.totalMinor)} (${terms.vat})`,
   ].join('\n')
