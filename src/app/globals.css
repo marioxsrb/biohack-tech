@@ -321,6 +321,32 @@
   .menu-sheet[open] { opacity: 0; transform: translateY(-8px); }
 }
 
+/* ---------- cookie consent ----------
+   Accept and reject share one style on purpose: neither choice is pushed. */
+.consent-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0 14px;
+  border-radius: 12px;
+  background: var(--color-ink);
+  color: #fff;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: -0.01em;
+  text-align: center;
+  line-height: 1.2;
+  transition: background 0.18s, transform 0.18s var(--ease-brand);
+}
+.consent-btn:hover { background: #1c2a2f; }
+.consent-btn:active { transform: translateY(1px); }
+.consent-btn:focus-visible { outline: 0; box-shadow: 0 0 0 3px var(--color-paper), 0 0 0 5px var(--color-cyan); }
+.consent-in { animation: popup-in 0.24s var(--ease-brand) both; }
+@media (prefers-reduced-motion: reduce) {
+  .consent-in { animation: none; }
+}
+
 /* Modal dialogs don't lock page scroll on their own. */
 html:has(dialog[open]) { overflow: hidden; }
 

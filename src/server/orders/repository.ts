@@ -45,6 +45,10 @@ function toOrder(r: Row, items: OrderItem[]): Order {
     trackingUrl: (r.tracking_url as string) ?? null,
     shippedAt: date(r.shipped_at),
     deliveredAt: date(r.delivered_at),
+    recoveryStatus: (r.recovery_status as Order['recoveryStatus']) ?? null,
+    recoveryReason: (r.recovery_reason as string) ?? null,
+    recoveryToken: (r.recovery_token as string) ?? null,
+    recoveryExpiresAt: date(r.recovery_expires_at),
     items,
   }
 }
@@ -79,6 +83,17 @@ export const orders = {
   byNumber: (q: Queryable, n: string) => one(q, 'select * from orders where order_number = $1', [n]),
   byIdempotencyKey: (q: Queryable, key: string) => one(q, 'select * from orders where idempotency_key = $1', [key]),
   byPaymentIntent: (q: Queryable, pi: string) => one(q, 'select * from orders where stripe_payment_intent_id = $1', [pi]),
+  byRecoveryToken: (q: Queryable, token: string) => one(q, 'select * from orders where recovery_token = $1', [token]),
+
+  /** The address's latest order the CRM knows about (unpaid card attempts still in progress are not). */
+  latestKnown: (q: Queryable, email: string) =>
+    one(q, "select * from orders where email = $1 and not (payment_method = 'card' and status = 'pending') order by created_at desc limit 1", [email]),
+
+  /** Unpaid card attempts of an address still left in `abandoned`, newest first. */
+  async abandonedFor(q: Queryable, email: string) {
+    const { rows } = await q.query("select * from orders where email = $1 and status = 'abandoned' order by created_at desc", [email])
+    return withItems(q, rows)
+  },
 
   async list(q: Queryable, opts: { limit?: number; search?: string } = {}) {
     const params: unknown[] = [opts.limit ?? 100]
@@ -108,7 +123,7 @@ export const orders = {
 
   async insert(
     q: Queryable,
-    o: Omit<Order, 'createdAt' | 'updatedAt' | 'refundedMinor' | 'paidAt' | 'cancelledAt' | 'cancelReason' | 'refundedAt' | 'fgoInvoiceSeries' | 'fgoInvoiceNumber' | 'fgoInvoiceLink' | 'fgoStornoNumber' | 'ghlContactId' | 'ghlOpportunityId' | 'courier' | 'trackingNumber' | 'trackingUrl' | 'shippedAt' | 'deliveredAt' | 'stripePaymentIntentId'>,
+    o: Omit<Order, 'createdAt' | 'updatedAt' | 'refundedMinor' | 'paidAt' | 'cancelledAt' | 'cancelReason' | 'refundedAt' | 'fgoInvoiceSeries' | 'fgoInvoiceNumber' | 'fgoInvoiceLink' | 'fgoStornoNumber' | 'ghlContactId' | 'ghlOpportunityId' | 'courier' | 'trackingNumber' | 'trackingUrl' | 'shippedAt' | 'deliveredAt' | 'stripePaymentIntentId' | 'recoveryStatus' | 'recoveryReason' | 'recoveryToken' | 'recoveryExpiresAt'>,
     idempotencyKey: string,
     termsAcceptedAt: Date,
   ) {

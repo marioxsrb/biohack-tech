@@ -62,6 +62,16 @@ După „Adaugă în coș” coșul nu se deschide singur: apare o confirmare mi
 
 Browserul trimite id-uri, cantități și formularul. Serverul calculează prețurile, salvează comanda (`BHT-20260929-0007`) și, pentru card, creează un PaymentIntent Stripe doar pentru card, exact pe total. Comanda devine plătită doar când Stripe confirmă: webhook semnat sau, dacă webhook-ul se pierde, job-ul `stripe.reconcile`. Pagina comenzii doar afișează starea din baza de date; plata rămâne valabilă chiar dacă clientul închide browserul imediat după plată. Test cu Stripe (mod test): `scripts/stripe-e2e.mjs`. Transferul bancar devine plătit doar când cineva confirmă extrasul în `/admin`. Factura (FGO), CRM-ul (GoHighLevel) și emailurile pleacă din outbox, o singură dată, cu reîncercări. Detalii: docs/PRODUCTION-LAUNCH.md.
 
+## Confidențialitate și consimțământ, pe scurt
+
+- **Cookie-uri:** `components/consent/ConsentManager.tsx` + `lib/consent/`. Nimic opțional nu e în HTML. GA4, Clarity și Meta pornesc doar după acord pe categorie și doar dacă au id setat (`NEXT_PUBLIC_*`). Fără id-uri nu apare niciun banner. „Setări cookies” este în footer.
+- **Emailuri de marketing:** bifa din checkout este separată și nebifată. Dovada (text, versiune, oră, comandă) stă în baza de date (`server/marketing/`).
+  - Dezabonarea se face la `/dezabonare/<token>`.
+  - Recuperarea checkout-ului (`/reluare/<token>`, tag `bt-recuperare-eligibil`) merge doar cu acord.
+  - Emailurile despre comenzi pleacă oricum: nu sunt marketing.
+- **Retragere din contract:** `/retragere` (OUG 34/2014 art. 11^1). Paginile legale sunt în `content/legal.ts`, iar datele firmei vin din `COMPANY_*`.
+- **Verificare GoHighLevel:** `npm run ghl:check` (pipeline, etape, câmpuri, tag-uri; doar citește).
+
 ## Documente
 
 - `docs/PRODUCTION-LAUNCH.md`: runbook de lansare (conturi, chei, Stripe, FGO, GoHighLevel, email, DNS, teste, go-live).

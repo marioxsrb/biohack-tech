@@ -77,13 +77,24 @@ export const CONTACT_FIELDS = {
   lifetimeOrders: 'contact.bt_lifetime_orders',
   lifetimeValue: 'contact.bt_lifetime_value',
   marketingConsent: 'contact.bt_marketing_consent',
+  /** Link to the latest order's page (opaque token); used by the transfer reminder (W3). */
+  lastOrderUrl: 'contact.bt_last_order_url',
+  /** Checkout recovery link, set only while a recovery email is allowed (W2); empty otherwise. */
+  recoveryUrl: 'contact.bt_recovery_url',
+  /** The site's own unsubscribe link for marketing emails (never GHL's DND, which would also block order emails). */
+  unsubscribeUrl: 'contact.bt_unsubscribe_url',
 } as const
 
 /**
  * Tags are prefixed `bt-` because the GHL location (NEUROS) is shared with other funnels (courses, events):
  * generic names like `client` could collide with their automations. Create them in GHL with these exact names.
  */
-export const TAGS = { client: 'bt-client', company: 'bt-client-firma' } as const
+export const TAGS = {
+  client: 'bt-client',
+  company: 'bt-client-firma',
+  /** Present only while the site allows a checkout recovery email (consent, still unpaid, link valid). W2 starts on it. */
+  recovery: 'bt-recuperare-eligibil',
+} as const
 const PRODUCT_TAG: Record<string, string> = { 'balance-wave': 'bt-cumparat-calm', 'brainlink-pro': 'bt-cumparat-focus', 'ochelari-biohack': 'bt-cumparat-amber' }
 
 const PAYMENT_STATUS_RO: Record<Order['paymentStatus'], string> = {
@@ -107,8 +118,18 @@ const ORDER_STATUS_RO: Record<Order['status'], string> = {
 export const paymentStatusRo = (s: Order['paymentStatus']) => PAYMENT_STATUS_RO[s]
 export const orderStatusRo = (s: Order['status']) => ORDER_STATUS_RO[s]
 
-/** The contact as GHL receives it: identity, address, and the latest order at a glance. */
-export function contactPayload(c: GhlConfig, o: Order, lifetime: { orders: number; valueMinor: number }) {
+/** What the site decided about marketing for this address, as GHL fields. The database stays the proof. */
+export type MarketingFields = { consent: boolean; recoveryUrl: string; unsubscribeUrl: string }
+
+const marketingFields = (m: MarketingFields) =>
+  [
+    [CONTACT_FIELDS.marketingConsent, m.consent ? 'Da' : 'Nu'],
+    [CONTACT_FIELDS.recoveryUrl, m.recoveryUrl],
+    [CONTACT_FIELDS.unsubscribeUrl, m.unsubscribeUrl],
+  ].map(([key, value]) => ({ key, fieldValue: value }))
+
+/** The contact as GHL receives it: identity, address, the latest order at a glance, and the marketing decision. */
+export function contactPayload(c: GhlConfig, o: Order, lifetime: { orders: number; valueMinor: number }, m: MarketingFields, siteUrl: string) {
   const products = o.items.map((i) => `${i.quantity} x ${i.productName}${i.variantName ? ` (${i.variantName})` : ''}`).join(', ')
   return {
     locationId: c.locationId,
@@ -135,8 +156,10 @@ export function contactPayload(c: GhlConfig, o: Order, lifetime: { orders: numbe
       [CONTACT_FIELDS.lastOrderStatus, ORDER_STATUS_RO[o.status]],
       [CONTACT_FIELDS.lifetimeOrders, String(lifetime.orders)],
       [CONTACT_FIELDS.lifetimeValue, (lifetime.valueMinor / 100).toFixed(2)],
-      [CONTACT_FIELDS.marketingConsent, o.marketingConsent ? 'Da' : 'Nu'],
-    ].map(([key, value]) => ({ key, fieldValue: value })),
+      [CONTACT_FIELDS.lastOrderUrl, `${siteUrl}/comanda/${o.publicToken}`],
+    ]
+      .map(([key, value]) => ({ key, fieldValue: value }))
+      .concat(marketingFields(m)),
   }
 }
 
@@ -164,13 +187,23 @@ async function stageIds(c: GhlConfig): Promise<Map<string, string>> {
 }
 
 export const ghl = {
-  async upsertContact(c: GhlConfig, o: Order, lifetime: { orders: number; valueMinor: number }) {
-    const r = await call<{ contact: { id: string } }>(c, 'POST', '/contacts/upsert', contactPayload(c, o, lifetime))
+  async upsertContact(c: GhlConfig, o: Order, lifetime: { orders: number; valueMinor: number }, m: MarketingFields, siteUrl: string) {
+    const r = await call<{ contact: { id: string } }>(c, 'POST', '/contacts/upsert', contactPayload(c, o, lifetime, m, siteUrl))
+    return r.contact.id
+  },
+
+  /** Only the marketing fields of an existing contact (after an unsubscribe), matched by email. */
+  async updateMarketing(c: GhlConfig, email: string, m: MarketingFields) {
+    const r = await call<{ contact: { id: string } }>(c, 'POST', '/contacts/upsert', { locationId: c.locationId, email, customFields: marketingFields(m) })
     return r.contact.id
   },
 
   async addTags(c: GhlConfig, contactId: string, tags: string[]) {
     if (tags.length) await call(c, 'POST', `/contacts/${contactId}/tags`, { tags })
+  },
+
+  async removeTags(c: GhlConfig, contactId: string, tags: string[]) {
+    if (tags.length) await call(c, 'DELETE', `/contacts/${contactId}/tags`, { tags })
   },
 
   /** Creates the order's opportunity once (found again by name if our id was lost), then moves it. */

@@ -123,4 +123,65 @@ create table if not exists order_day_counters (
 alter table webhook_events add column if not exists outcome text;
 `,
   },
+  {
+    // Email marketing consent: one subject per email address (with its opaque unsubscribe token) and an
+    // append-only log of what was agreed or withdrawn, with the exact wording and where it happened.
+    // The current state of an address is its latest event. Cookie choices are logged separately under a
+    // random id kept in the visitor's browser: no IP, no user agent, nothing that identifies a person.
+    // Orders get the checkout-recovery decision and an opaque, expiring link that only restores the cart.
+    // Online withdrawal statements are kept with their exact content and time.
+    id: '003_consent_recovery',
+    sql: `
+create table if not exists marketing_subjects (
+  email text primary key,
+  unsubscribe_token text not null unique,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists marketing_consent_events (
+  id bigserial primary key,
+  email text not null references marketing_subjects(email) on delete cascade,
+  granted boolean not null,
+  source text not null,
+  text_version text not null,
+  consent_text text not null,
+  order_id uuid references orders(id) on delete set null,
+  page text,
+  created_at timestamptz not null default now()
+);
+create index if not exists marketing_consent_events_email_idx on marketing_consent_events (email, id desc);
+
+create table if not exists cookie_consents (
+  id bigserial primary key,
+  consent_id uuid not null,
+  policy_version text not null,
+  analytics boolean not null,
+  marketing boolean not null,
+  action text not null,
+  page text,
+  created_at timestamptz not null default now()
+);
+create index if not exists cookie_consents_id_idx on cookie_consents (consent_id, id desc);
+
+-- Online withdrawal statements (OUG 34/2014 art. 11^1): what was declared, when, for which order.
+create table if not exists withdrawal_requests (
+  id uuid primary key,
+  reference text not null unique,
+  order_id uuid references orders(id) on delete set null,
+  order_number text not null,
+  name text not null,
+  email text not null,
+  items text not null,
+  message text not null default '',
+  status text not null default 'new',
+  created_at timestamptz not null default now()
+);
+create index if not exists withdrawal_requests_created_idx on withdrawal_requests (created_at desc);
+
+alter table orders add column if not exists recovery_status text;
+alter table orders add column if not exists recovery_reason text;
+alter table orders add column if not exists recovery_token text unique;
+alter table orders add column if not exists recovery_expires_at timestamptz
+`,
+  },
 ]

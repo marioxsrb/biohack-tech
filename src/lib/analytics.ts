@@ -1,13 +1,15 @@
 /**
- * Ecommerce events in the GA4 shape, pushed to window.dataLayer. Nothing is loaded here:
- * a tag manager (GTM / GA4 / Meta) installed later, behind cookie consent, reads the layer.
- * Until then the calls are harmless no-ops for visitors.
+ * Ecommerce events (GA4 names), sent only to tools the visitor allowed and that are running:
+ * Google Analytics 4 with analytics consent, Meta Pixel with marketing consent. Without consent,
+ * or without configured tools, every call does nothing: nothing is queued for later either.
  *
- * `purchase` is sent only from the order page, only when the server says the order is paid,
- * and only once per order per browser.
+ * Events carry products and amounts only, never contact details. `purchase` is sent only from the
+ * order page, only when the server says the order is paid, and only once per order per browser.
  */
 import type { ResolvedLine } from '@/components/cart/CartProvider'
 import type { Product, Variant } from '@/content/catalog'
+import { consentStore } from '@/lib/consent/store'
+import { isLoaded } from '@/lib/consent/vendors'
 
 export type EcomEvent = 'view_item' | 'select_item' | 'add_to_cart' | 'view_cart' | 'begin_checkout' | 'add_payment_info' | 'purchase'
 
@@ -25,22 +27,35 @@ export const itemOf = (p: Product, v?: Variant, variantLabel?: string, quantity 
 
 const lineItem = (l: ResolvedLine): Item => itemOf(l.product, l.variant, l.variantLabel, l.quantity)
 
+const META_EVENT: Partial<Record<EcomEvent, string>> = {
+  view_item: 'ViewContent',
+  add_to_cart: 'AddToCart',
+  begin_checkout: 'InitiateCheckout',
+  add_payment_info: 'AddPaymentInfo',
+  purchase: 'Purchase',
+}
+
+/** True when at least one running tool may receive events (used to avoid marking a purchase as reported). */
+export const canTrack = () => (consentStore.allows('analytics') && isLoaded('ga4')) || (consentStore.allows('marketing') && isLoaded('meta'))
+
 export function track(
   event: EcomEvent,
   data: { value: number; items: (Item | ResolvedLine)[]; transaction_id?: string; payment_type?: string },
 ) {
-  if (typeof window === 'undefined') return
-  const w = window as unknown as { dataLayer?: unknown[] }
-  w.dataLayer ??= []
-  w.dataLayer.push({ ecommerce: null })
-  w.dataLayer.push({
-    event,
-    ecommerce: {
+  if (typeof window === 'undefined' || !canTrack()) return
+  const items = data.items.map((i) => ('product' in i ? lineItem(i) : i))
+  const w = window as unknown as { gtag?: (...a: unknown[]) => void; fbq?: (...a: unknown[]) => void }
+  if (consentStore.allows('analytics') && isLoaded('ga4')) {
+    w.gtag?.('event', event, {
       currency: 'RON',
       value: lei(data.value),
       ...(data.transaction_id && { transaction_id: data.transaction_id }),
       ...(data.payment_type && { payment_type: data.payment_type }),
-      items: data.items.map((i) => ('product' in i ? lineItem(i) : i)),
-    },
-  })
+      items,
+    })
+  }
+  const meta = META_EVENT[event]
+  if (meta && consentStore.allows('marketing') && isLoaded('meta')) {
+    w.fbq?.('track', meta, { currency: 'RON', value: lei(data.value), content_type: 'product', content_ids: items.map((i) => i.item_id), num_items: items.reduce((n, i) => n + i.quantity, 0) }, data.transaction_id ? { eventID: data.transaction_id } : undefined)
+  }
 }

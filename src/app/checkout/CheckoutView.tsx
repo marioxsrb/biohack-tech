@@ -10,6 +10,7 @@ import { Arrow, Bank, CardIcon, Lock, Mail } from '@/components/ui/icons'
 import { productHref, products } from '@/content/catalog'
 import { site, terms } from '@/config/site'
 import { track } from '@/lib/analytics'
+import { MARKETING_CONSENT_TEXT } from '@/lib/consent/marketing'
 import {
   COUNTIES,
   DRAFT_KEY,
@@ -395,7 +396,7 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
                       </Link>{' '}
                       și{' '}
                       <Link href="/politica-retur" target="_blank" className="font-medium text-ink underline underline-offset-4">
-                        politica de retur
+                        politica de retur și retragere
                       </Link>
                       .
                     </span>
@@ -413,9 +414,16 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
                       className="mt-0.5 h-5 w-5 flex-none accent-[var(--color-ink)]"
                     />
                     <span>
-                      Vreau să primesc pe email sfaturi de utilizare și noutăți. <span className="text-muted">(opțional)</span>
+                      {MARKETING_CONSENT_TEXT} <span className="text-muted">(opțional)</span>
                     </span>
                   </label>
+                  <p className="text-[13.5px] leading-snug text-muted">
+                    Folosim datele tale ca să procesăm, să facturăm și să livrăm comanda. Detalii în{' '}
+                    <Link href="/privacy-policy" target="_blank" className="underline underline-offset-4 hover:text-ink">
+                      politica de confidențialitate
+                    </Link>
+                    .
+                  </p>
                 </div>
 
                 {submitted && Object.keys(errors).length > 0 && !serverError && (
@@ -439,13 +447,23 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
                       <Lock /> Plătește {formatLei(total)}
                     </>
                   ) : (
-                    <>Plasează comanda</>
+                    // OUG 34/2014 art. 8(2): the button says the order implies an obligation to pay.
+                    <>Comandă cu obligație de plată</>
                   )}
                 </button>
                 <p className="mt-3 text-center text-[14px] leading-snug text-text">
                   {form.paymentMethod === 'card'
                     ? 'Plata se face în siguranță prin Stripe. După plată primești confirmarea pe email.'
                     : 'Comanda se înregistrează imediat. Datele pentru transfer apar pe pagina următoare și în email.'}
+                </p>
+                <p className="mt-2 text-center text-[13.5px] leading-snug text-muted">
+                  <Link href="/politica-retur" target="_blank" className="underline underline-offset-4 hover:text-ink">
+                    Drept de retragere {terms.returnDays} zile
+                  </Link>{' '}
+                  ·{' '}
+                  <Link href="/garantie" target="_blank" className="underline underline-offset-4 hover:text-ink">
+                    garanție legală de conformitate {terms.warrantyYears} ani
+                  </Link>
                 </p>
               </>
             )}

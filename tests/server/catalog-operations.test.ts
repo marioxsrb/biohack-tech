@@ -47,7 +47,7 @@ describe('the three-product catalog', () => {
       ['NEUROS Focus', 1, 2490],
       ['NEUROS Amber (Unisex pătrat · Maro)', 2, 630],
     ])
-    const products = contactPayload(c.ghl!, order, { orders: 1, valueMinor: order.totalMinor }).customFields.find((f) => f.key === 'contact.bt_last_order_products')!
+    const products = contactPayload(c.ghl!, order, { orders: 1, valueMinor: order.totalMinor }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, c.siteUrl).customFields.find((f) => f.key === 'contact.bt_last_order_products')!
     expect(products.fieldValue).toBe('1 x NEUROS Calm, 1 x NEUROS Focus, 2 x NEUROS Amber (Unisex pătrat · Maro)')
     const mail = renderEmail('order_confirmed', order, { siteUrl: c.siteUrl, bank: c.bank })
     for (const s of ['NEUROS Calm', 'NEUROS Focus', 'NEUROS Amber', '6.380 lei', '2.490 lei', '630 lei', '9.500 lei', order.orderNumber, 'Plata a fost confirmată']) expect(mail.text).toContain(s)

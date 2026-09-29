@@ -214,6 +214,15 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/co
           </a>
           . Menționează numărul comenzii: {order.orderNumber}.
         </p>
+        {paid && order.customer.buyerType === 'pf' && order.status !== 'cancelled' && (
+          <p className="mt-3 text-[15px] text-muted">
+            Te-ai răzgândit? Ai {terms.returnDays} zile de la primire.{' '}
+            <Link href="/retragere" className="font-medium text-ink underline underline-offset-4">
+              Retrage-te din contract aici
+            </Link>
+            .
+          </p>
+        )}
         <Link href="/" className="tlink mt-6">
           Înapoi la magazin <Arrow />
         </Link>

@@ -20,8 +20,9 @@ if (!TOKEN || !LOCATION) {
 const PIPELINE = 'Comenzi Biohack Tech'
 const STAGES = ['Așteaptă transferul', 'Plată nefinalizată', 'Plătită, de pregătit', 'În pregătire', 'Expediată', 'Livrată', 'Anulată', 'Rambursată']
 const FIELDS = ['customer_type', 'last_order_number', 'last_order_date', 'last_order_value', 'last_order_products', 'last_payment_method',
-  'last_payment_status', 'last_order_status', 'lifetime_orders', 'lifetime_value', 'marketing_consent'].map((f) => `contact.bt_${f}`)
-const TAGS = ['bt-client', 'bt-client-firma', 'bt-cumparat-calm', 'bt-cumparat-focus', 'bt-cumparat-amber']
+  'last_payment_status', 'last_order_status', 'lifetime_orders', 'lifetime_value', 'marketing_consent', 'last_order_url', 'recovery_url',
+  'unsubscribe_url'].map((f) => `contact.bt_${f}`)
+const TAGS = ['bt-client', 'bt-client-firma', 'bt-cumparat-calm', 'bt-cumparat-focus', 'bt-cumparat-amber', 'bt-recuperare-eligibil']
 
 const get = async (path) => {
   const res = await fetch(`${BASE}${path}`, { headers: { Authorization: `Bearer ${TOKEN}`, Version: '2021-07-28', Accept: 'application/json' } })
@@ -47,13 +48,13 @@ if (pipeline) {
 const fields = await get(`/locations/${encodeURIComponent(LOCATION)}/customFields?model=contact`)
 if (fields.status === 200) {
   const gaps = missing(FIELDS, fields.body.customFields.map((f) => f.fieldKey))
-  check('11 contact fields contact.bt_*', gaps.length === 0, gaps.join(', '))
+  check(`${FIELDS.length} contact fields contact.bt_*`, gaps.length === 0, gaps.join(', '))
 } else console.log(`SKIP  contact fields (HTTP ${fields.status}; scope locations/customFields.readonly)`)
 
 const tags = await get(`/locations/${encodeURIComponent(LOCATION)}/tags`)
 if (tags.status === 200) {
   const gaps = missing(TAGS, tags.body.tags.map((t) => t.name))
-  check('5 bt- tags', gaps.length === 0, gaps.join(', '))
+  check(`${TAGS.length} bt- tags`, gaps.length === 0, gaps.join(', '))
 } else console.log(`SKIP  tags (HTTP ${tags.status}; scope locations/tags.readonly)`)
 
 const failed = results.filter((ok) => !ok).length

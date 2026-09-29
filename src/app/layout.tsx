@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { AddedPopup } from '@/components/cart/AddedPopup'
 import { CartProvider } from '@/components/cart/CartProvider'
+import { ConsentManager } from '@/components/consent/ConsentManager'
 import { Footer } from '@/components/site/Footer'
 import { Header } from '@/components/site/Header'
 import { site } from '@/config/site'
@@ -29,6 +30,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ro" data-scroll-behavior="smooth" className={`${geist.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body>
+        {/* First in the tab order, so the cookie choice is reachable before the page. */}
+        <ConsentManager />
         <CartProvider>
           <Header />
           <main id="main">{children}</main>

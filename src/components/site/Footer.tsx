@@ -1,7 +1,9 @@
 import Link from 'next/link'
+import { CookieSettingsButton } from '@/components/consent/ConsentManager'
 import { Arrow, Mail, Phone } from '@/components/ui/icons'
 import { productHref, products } from '@/content/catalog'
 import { legalPages } from '@/content/legal'
+import { companyLine } from '@/config/company'
 import { site, terms } from '@/config/site'
 import { Wordmark } from './Wordmark'
 
@@ -9,7 +11,11 @@ const page = (slug: string) => legalPages.find((p) => p.slug === slug)!
 
 const help = [
   { href: `/${page('politica-livrare').slug}`, label: 'Livrare' },
-  { href: `/${page('politica-retur').slug}`, label: 'Retur și rambursare' },
+  { href: `/${page('plati').slug}`, label: 'Plăți' },
+  { href: `/${page('politica-retur').slug}`, label: 'Retur și retragere' },
+  { href: `/${page('garantie').slug}`, label: 'Garanție și reclamații' },
+  // OUG 34/2014 art. 11^1: the online withdrawal function, reachable from every page.
+  { href: '/retragere', label: 'Retrage-te din contract aici' },
   { href: '/contact-us', label: 'Contact' },
   { href: '/about-us', label: 'Despre noi' },
 ]
@@ -17,6 +23,7 @@ const help = [
 const legal = [
   { href: `/${page('terms-of-service').slug}`, label: 'Termeni și condiții' },
   { href: `/${page('privacy-policy').slug}`, label: 'Confidențialitate' },
+  { href: `/${page('politica-cookies').slug}`, label: 'Politica de cookies' },
 ]
 
 /**
@@ -83,8 +90,17 @@ export function Footer() {
                 </li>
               ))}
               <li>
-                <a href="https://anpc.ro/ce-este-sal/" target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center hover:text-white">
-                  ANPC, soluționarea litigiilor
+                <CookieSettingsButton className="flex min-h-10 items-center text-left hover:text-white" />
+              </li>
+              <li>
+                <a href="https://anpc.ro" target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center hover:text-white">
+                  ANPC
+                  <span className="sr-only"> (se deschide într-o filă nouă)</span>
+                </a>
+              </li>
+              <li>
+                <a href="https://reclamatiisal.anpc.ro" target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center hover:text-white">
+                  ANPC SAL, soluționarea alternativă a litigiilor
                   <span className="sr-only"> (se deschide într-o filă nouă)</span>
                 </a>
               </li>
@@ -114,7 +130,10 @@ export function Footer() {
             <Wordmark tone="dark" className="text-white" />
             <span>© {new Date().getFullYear()}</span>
           </div>
-          <p className="max-w-[40em]">Produse de wellness pentru uz zilnic. Nu înlocuiesc sfatul medicului.</p>
+          <div className="max-w-[46em] space-y-1 md:text-right">
+            {companyLine() && <p>{companyLine()}</p>}
+            <p>Produse de wellness pentru uz zilnic. Nu înlocuiesc sfatul medicului.</p>
+          </div>
         </div>
       </div>
     </footer>

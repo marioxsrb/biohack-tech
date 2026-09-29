@@ -5,6 +5,7 @@
  * Nothing here is ever sent to the browser except where explicitly marked public.
  */
 import 'server-only'
+import { missingCompanyFields } from '@/config/company'
 
 export type AppEnv = 'development' | 'staging' | 'production'
 
@@ -188,6 +189,11 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
   const adminPassword = str('ADMIN_PASSWORD')
   if (!adminPassword) issues.push({ area: 'admin', level: appEnv === 'production' ? 'error' : 'warn', message: 'ADMIN_PASSWORD lipsește: pagina /admin este oprită.' })
   else if (adminPassword.length < 12) issues.push({ area: 'admin', level: 'error', message: 'ADMIN_PASSWORD trebuie să aibă cel puțin 12 caractere.' })
+
+  const missingCompany = missingCompanyFields()
+  if (missingCompany.length) {
+    issues.push({ area: 'legal', level: appEnv === 'production' ? 'error' : 'warn', message: `Datele de identificare a firmei lipsesc de pe site: ${missingCompany.join(', ')}.` })
+  }
 
   const cronSecret = str('CRON_SECRET')
   if (!cronSecret && appEnv === 'production') issues.push({ area: 'jobs', level: 'warn', message: 'CRON_SECRET lipsește: /api/jobs/run nu poate fi apelat din exterior (rulează doar intern).' })

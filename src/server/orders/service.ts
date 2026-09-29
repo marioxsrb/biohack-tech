@@ -10,6 +10,8 @@ import { getConfig } from '@/server/config'
 import { getDb, type Queryable } from '@/server/db'
 import { jobs, type NewJob } from '@/server/jobs/outbox'
 import { log } from '@/server/log'
+import { marketing } from '@/server/marketing/consent'
+import { canSendAbandonedCheckoutEmail, newRecoveryToken, recoveryExpiry } from '@/server/marketing/recovery'
 import type { OrderForm } from '@/lib/checkout'
 import type { OrderLine } from '@/lib/orders/resolve'
 import { canMoveOrder, canMovePayment, isPaid } from './state'
@@ -97,7 +99,9 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
         key,
         now,
       )
-      await orders.event(t, id, 'order.created', 'checkout', { method, total: subtotal + shipping })
+      await orders.event(t, id, 'order.created', 'checkout', { method, total: subtotal + shipping, marketingConsent: f.marketingConsent })
+      // Proof of the ticked box: exact wording, version, time, order. An unticked box records nothing.
+      if (f.marketingConsent) await marketing.grant(t, { email: f.email, source: 'checkout', orderId: id, page: '/checkout' })
       const created = (await orders.byId(t, id))!
       await enqueueAll(t, jobsFor('created', created))
       return created
@@ -158,7 +162,7 @@ async function transition(
  * with the amount it reports; for bank transfer, a person in /admin after seeing the statement.
  */
 export function confirmPayment(orderId: string, source: Source, reported?: { amountMinor: number; currency: string; paymentIntentId?: string }) {
-  return transition(orderId, source, async (o) => {
+  return transition(orderId, source, async (o, t) => {
     if (isPaid(o.paymentStatus) || o.paymentStatus === 'refunded') return { skip: 'already_paid' }
     // Card money is confirmed only by Stripe (webhook or reconciliation); a person confirms only transfers.
     if (source === 'admin' && o.paymentMethod !== 'bank_transfer') return { skip: 'card_payment_confirmed_by_stripe_only' }
@@ -171,6 +175,7 @@ export function confirmPayment(orderId: string, source: Source, reported?: { amo
       if (reported.paymentIntentId && o.stripePaymentIntentId && reported.paymentIntentId !== o.stripePaymentIntentId) return { skip: 'intent_mismatch' }
     }
     const status: OrderStatus = canMoveOrder(o.status, 'confirmed') ? 'confirmed' : o.status
+    await closeAbandonedAttempts(t, o)
     const c = getConfig()
     const invoiceDue = o.paymentMethod === 'card' || c.fgo?.transferInvoice !== 'manual'
     return {
@@ -221,8 +226,31 @@ export function markAbandonedIfUnpaid(orderId: string) {
       [o.email, o.id, o.createdAt],
     )
     if (later.rows.length) return { patch: { status: 'cancelled', cancelled_at: new Date(), cancel_reason: 'înlocuită de o comandă ulterioară' }, event: 'order.superseded' }
-    return { patch: { status: 'abandoned' }, event: 'order.abandoned' }
+    // Abandoned is a state; whether the customer may be emailed about it is decided separately.
+    const decision = canSendAbandonedCheckoutEmail({ ...o, status: 'abandoned' }, await marketing.state(t, o.email), new Date(), false)
+    const link = decision.eligible ? { recovery_token: newRecoveryToken(), recovery_expires_at: recoveryExpiry() } : {}
+    return {
+      patch: { status: 'abandoned', recovery_status: decision.eligible ? 'eligible' : 'ineligible', recovery_reason: decision.reason, ...link },
+      event: 'order.abandoned',
+      data: { recovery: decision.eligible ? 'eligible' : 'ineligible', reason: decision.reason },
+    }
   })
+}
+
+/**
+ * The customer paid: earlier unpaid card attempts of the same address are closed, in the same
+ * transaction, so no recovery message can go out about a purchase that is already done.
+ */
+async function closeAbandonedAttempts(t: Queryable, paid: Order) {
+  const { rows } = await t.query<{ id: string; ghl_opportunity_id: string | null }>(
+    "select id, ghl_opportunity_id from orders where email = $1 and id <> $2 and status = 'abandoned' for update",
+    [paid.email, paid.id],
+  )
+  for (const r of rows) {
+    await orders.update(t, r.id, { status: 'cancelled', cancelled_at: new Date(), cancel_reason: 'înlocuită de o comandă plătită' })
+    await orders.event(t, r.id, 'order.superseded', 'system', { by: paid.orderNumber })
+    if (getConfig().ghl && r.ghl_opportunity_id) await jobs.enqueue(t, { kind: 'ghl.sync', orderId: r.id, dedupeKey: `ghl.sync:${r.id}:order.superseded` })
+  }
 }
 
 /**

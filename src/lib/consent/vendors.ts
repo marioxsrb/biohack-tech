@@ -1,0 +1,136 @@
+/**
+ * Optional third-party tools. None is in the page's HTML: a tool's script is added to the page only
+ * after the visitor allows its category, and only if its id is configured (NEXT_PUBLIC_*). With no ids
+ * set, the site loads nothing optional and asks nothing.
+ *
+ * To add a tool: one entry here (category, cookies it sets, how to start it) and one line in the
+ * cookie policy (src/content/legal.ts). A tool that cannot say which category it belongs to (for
+ * example a tag manager that loads other tags) does not go here.
+ */
+import type { ConsentChoice, OptionalCategory } from './cookies'
+
+export type VendorId = 'ga4' | 'clarity' | 'meta'
+
+export type Vendor = {
+  id: VendorId
+  name: string
+  category: OptionalCategory
+  /** Configured account id; the tool is off without it. */
+  key: string | undefined
+  /** First-party cookies it sets, removed when consent is withdrawn. */
+  cookies: RegExp[]
+  /** Pages where it never runs (session recording is kept away from forms with personal data). */
+  excludePaths?: RegExp
+  purpose: string
+}
+
+const PRIVATE_PAGES = /^\/(checkout|comanda|reluare|dezabonare|retragere|admin)(\/|$)/
+
+export const VENDORS: Vendor[] = [
+  {
+    id: 'ga4',
+    name: 'Google Analytics 4',
+    category: 'analytics',
+    key: process.env.NEXT_PUBLIC_GA4_ID,
+    cookies: [/^_ga$/, /^_ga_/, /^_gid$/],
+    purpose: 'Statistici despre vizite și comenzi, fără date de contact.',
+  },
+  {
+    id: 'clarity',
+    name: 'Microsoft Clarity',
+    category: 'analytics',
+    key: process.env.NEXT_PUBLIC_CLARITY_ID,
+    cookies: [/^_clck$/, /^_clsk$/],
+    excludePaths: PRIVATE_PAGES,
+    purpose: 'Cum sunt folosite paginile (clicuri, derulare), ca să le facem mai clare.',
+  },
+  {
+    id: 'meta',
+    name: 'Meta Pixel',
+    category: 'marketing',
+    key: process.env.NEXT_PUBLIC_META_PIXEL_ID,
+    cookies: [/^_fbp$/, /^_fbc$/],
+    purpose: 'Măsurarea și afișarea reclamelor Biohack Tech pe Facebook și Instagram.',
+  },
+]
+
+export const configuredVendors = (list: Vendor[] = VENDORS) => list.filter((v) => !!v.key)
+
+/** Which tools may run, for a choice and a page. No choice means none. */
+export function vendorsToLoad(choice: ConsentChoice | null, path: string, list: Vendor[] = VENDORS): Vendor[] {
+  if (!choice) return []
+  return configuredVendors(list).filter((v) => choice[v.category] && !v.excludePaths?.test(path))
+}
+
+type W = Window & {
+  dataLayer?: unknown[]
+  gtag?: (...a: unknown[]) => void
+  fbq?: ((...a: unknown[]) => void) & { queue?: unknown[]; loaded?: boolean; version?: string; callMethod?: (...a: unknown[]) => void; push?: unknown }
+  _fbq?: unknown
+  clarity?: ((...a: unknown[]) => void) & { q?: unknown[] }
+}
+
+const loaded = new Set<VendorId>()
+export const isLoaded = (id: VendorId) => loaded.has(id)
+
+function addScript(src: string) {
+  const s = document.createElement('script')
+  s.async = true
+  s.src = src
+  s.dataset.consent = 'granted'
+  document.head.appendChild(s)
+}
+
+/** Starts a tool once per page load. Called only by the consent manager, after consent. */
+export function startVendor(v: Vendor) {
+  if (loaded.has(v.id) || !v.key) return
+  loaded.add(v.id)
+  const w = window as W
+  if (v.id === 'ga4') {
+    w.dataLayer = w.dataLayer ?? []
+    w.gtag = function gtag() {
+      // gtag.js reads the `arguments` object, not an array.
+      // eslint-disable-next-line prefer-rest-params
+      w.dataLayer!.push(arguments)
+    }
+    // Analytics only: advertising storage and signals stay denied.
+    w.gtag('consent', 'default', { analytics_storage: 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' })
+    w.gtag('js', new Date())
+    w.gtag('config', v.key)
+    addScript(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(v.key)}`)
+  }
+  if (v.id === 'clarity') {
+    const q = ((...a: unknown[]) => void (q.q = q.q ?? []).push(a)) as NonNullable<W['clarity']>
+    w.clarity = w.clarity ?? q
+    addScript(`https://www.clarity.ms/tag/${encodeURIComponent(v.key)}`)
+  }
+  if (v.id === 'meta') {
+    if (!w.fbq) {
+      const f = ((...a: unknown[]) => (f.callMethod ? f.callMethod(...a) : f.queue!.push(a))) as NonNullable<W['fbq']>
+      f.push = f
+      f.loaded = true
+      f.version = '2.0'
+      f.queue = []
+      w.fbq = f
+      w._fbq = f
+    }
+    // No automatic event or form-field collection: only the events the site sends, without personal data.
+    w.fbq('set', 'autoConfig', false, v.key)
+    w.fbq('init', v.key)
+    w.fbq('track', 'PageView')
+    addScript('https://connect.facebook.net/en_US/fbevents.js')
+  }
+}
+
+/** Removes the first-party cookies of tools whose consent was withdrawn. */
+export function clearVendorCookies(categories: OptionalCategory[], list: Vendor[] = VENDORS) {
+  const patterns = list.filter((v) => categories.includes(v.category)).flatMap((v) => v.cookies)
+  if (!patterns.length) return
+  const host = location.hostname
+  const domains = ['', host, `.${host}`, `.${host.split('.').slice(-2).join('.')}`]
+  for (const part of document.cookie.split(';')) {
+    const name = part.split('=')[0].trim()
+    if (!patterns.some((p) => p.test(name))) continue
+    for (const d of domains) document.cookie = `${name}=; Max-Age=0; path=/${d ? `; domain=${d}` : ''}`
+  }
+}

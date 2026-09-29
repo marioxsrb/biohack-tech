@@ -17,7 +17,10 @@ Written 26 September 2026 against commit “Launch pass”. Everything below ref
 | GoHighLevel CRM + transactional email | Built on API v2 (2021-07-28); tested against a mock (idempotency, outage, permanent rejection, retry). **Needs token, location, pipeline, fields, sending domain; never called against GHL yet** |
 | Operations (/admin) | Built: orders, payment confirmation for transfers, shipping + AWB, delivery, cancel, refunds for transfers, failed-sync retry |
 | Courier integration | Not built (no courier chosen). AWB entered by hand in /admin |
-| Analytics | Event layer built (GA4 format); no tracker installed (needs IDs + consent) |
+| Cookie consent | Built: banner + preferences + real script blocking (GA4, Clarity, Meta registry), proof log; no tool configured yet |
+| Email marketing consent, recovery, unsubscribe | Built: proof in DB, consent-gated recovery tag/link, unsubscribe page, GHL sync (§15) |
+| Legal pages + online withdrawal | Built (§16); company data and legal review pending |
+| GHL workflows W1–W7 | Specified (§10.5), **not yet created in GHL** |
 
 **The store is not live-ready until the P0 items in §24 are done.** Most of them are accounts and credentials, not code.
 
@@ -25,12 +28,12 @@ Written 26 September 2026 against commit “Launch pass”. Everything below ref
 
 - One source of truth for prices: `src/config/prices.ts` (integer bani, VAT included). Everything reads it: listings, product pages, cart, checkout, server total, Stripe amount, FGO lines, GHL value, emails, JSON-LD.
 - Cart: `/cart` page (no drawer). Add to cart → check + “Adăugat în coș” → compact confirmation top right (desktop) / bottom card (phone), with “Finalizează comanda” and “Continuă cumpărăturile”. The cart persists in localStorage as ids + quantities only and is re-priced from the catalog on every load.
-- Checkout: contact, billing (persoană fizică / juridică with CUI check digit), delivery (same address by default), payment (card or bank transfer), order summary, terms + optional marketing consent. The draft survives a refresh (sessionStorage only).
+- Checkout: contact, billing (persoană fizică / juridică with CUI check digit), delivery (same address by default), payment (card or bank transfer), order summary, terms + optional marketing consent (separate, unticked, with proof stored). The draft survives a refresh (sessionStorage only).
 - Server: the browser sends ids, quantities and the form; the server prices the order, stores a snapshot, and creates the Stripe PaymentIntent for exactly that total.
 - Payment truth: only Stripe can mark a card order paid: the signed webhook, or the `stripe.reconcile` job (server-side retrieve, 10 minutes after the order and again before an order is marked abandoned) if the webhook was lost. The order page only reads; it never marks payments or starts workflows. Bank transfers become paid only when a person confirms the statement in /admin.
 - Side effects (CRM, invoice, email) go through a database outbox with unique keys: retried with backoff, never duplicated, visible in /admin when they fail.
 - Transactional emails are rendered by the site (HTML + text) and delivered through GoHighLevel.
-- 105 automated tests (money, cart, validation, order state machine, idempotency, webhook route and signatures, browser-closed payment, reconciliation, FGO/GHL mapping, email rendering, outbox retries and outages, abandonment, transfer expiry, admin authorization, the real three-product catalog end to end, concurrency on PostgreSQL) + `scripts/stripe-e2e.mjs` against Stripe test mode.
+- 133 automated tests (consent, recovery eligibility, unsubscribe, cookie script blocking, withdrawal, money, cart, validation, order state machine, idempotency, webhook route and signatures, browser-closed payment, reconciliation, FGO/GHL mapping, email rendering, outbox retries and outages, abandonment, transfer expiry, admin authorization, the real three-product catalog end to end, concurrency on PostgreSQL) + `scripts/stripe-e2e.mjs` against Stripe test mode.
 - /admin: HTTP Basic Auth in the proxy **and** inside every admin action (actions are HTTP endpoints; each verifies the credentials itself). Only bank transfers can be marked paid by a person; card money is confirmed by Stripe only.
 
 ## 3. What is blocked, and by what
@@ -42,7 +45,7 @@ Written 26 September 2026 against commit “Launch pass”. Everything below ref
 | Bank transfer | Beneficiary, bank, IBAN | “Transfer bancar” shows “În curând” |
 | Automatic invoices | FGO API user, private key, series, VAT rate | Orders show “Factură: Manual” in /admin |
 | CRM + all customer emails | GHL token, location, pipeline, fields, sending domain | No confirmation emails (**P0**) |
-| Legal compliance | Company data, full legal texts | Footer and legal pages incomplete (**P0**) |
+| Legal readiness | Company data (`COMPANY_*`), legal review (OPEN-POINTS) | Pages exist; identification missing on the site (**P0**) |
 
 ## 3a. Operational lifecycle (what happens after each change)
 
@@ -56,7 +59,7 @@ Every change of an order or payment is one database transaction that also writes
 | Transfer confirmed by a person in /admin | `payment.confirmed` | invoice if `FGO_TRANSFER_INVOICE=on_payment` (default) | → `Plătită, de pregătit` | `payment_received`; `invoice_issued` after FGO |
 | Card payment failed | `payment.failed` | – | – (the customer is still on the checkout and can retry) | – (failure is shown in the checkout; no email spam) |
 | Card payment cancelled in Stripe | `payment.cancelled` | – | stage update only if an opportunity already exists | – |
-| Unpaid card order after `ABANDON_AFTER_MINUTES` | `order.abandoned` | – | → `Plată nefinalizată` (status abandoned) | – from the site; GHL W2 recovery, consent only |
+| Unpaid card order after `ABANDON_AFTER_MINUTES` | `order.abandoned` | – | → `Plată nefinalizată` (status abandoned) | – from the site; the recovery decision is stored on the order; tag `bt-recuperare-eligibil` + GHL W2 only with marketing consent |
 | Unpaid transfer after `TRANSFER_EXPIRY_DAYS` (off by default) | `order.cancelled` | – | → `Anulată` | `order_cancelled` |
 | Shipped / delivered / cancelled / refunded in /admin or Stripe | `order.*` / `payment.refunded` | storno only with `FGO_AUTO_STORNO=true` | stage update | `order_shipped` / `order_cancelled` / `refund_issued` |
 
@@ -205,19 +208,19 @@ Create it with these stages **in this order and with these exact names** (the si
 
 | # | Stage (exact name) | Purpose | Entry (automatic, from the site) | Exit | Automation | Manual action | Order status | Payment status | Customer email (sent by the site) |
 |---|---|---|---|---|---|---|---|---|---|
-| 1 | `Așteaptă transferul` | Transfer orders waiting for money | Transfer order placed | Payment confirmed in /admin, or cancelled | W1 team notification; W3 reminder after 48 h | Check the bank statement daily | pending | awaiting_transfer | “Comanda #…: datele pentru transfer” |
-| 2 | `Plată nefinalizată` | Card checkout started, never paid | 60 min after an unpaid card order | Paid later → Plătită; closed if another order is paid | W2 recovery (consent only) | none | abandoned | pending / failed | none from the site |
+| 1 | `Așteaptă transferul` | Transfer orders waiting for money | Transfer order placed | Payment confirmed in /admin, or cancelled | W1 team notification; W3 reminder after 48 h, task at 5 days | Check the bank statement daily | pending | awaiting_transfer | “Comanda #…: datele pentru transfer” |
+| 2 | `Plată nefinalizată` | Card checkout started, never paid | 60 min after an unpaid card order | Paid later → Plătită; closed if another order is paid | W2 recovery, only with the `bt-recuperare-eligibil` tag set by the site | none | abandoned | pending / failed | none from the site |
 | 3 | `Plătită, de pregătit` | Paid, to pack | Stripe confirms, or transfer confirmed in /admin | Marked “în pregătire” or shipped | W1 team notification | Pack the order | confirmed | paid | Card: “Comanda ta Biohack Tech #…”. Transfer: “Am primit plata…”. Both: “Factura pentru comanda #…” |
 | 4 | `În pregătire` | Being packed (optional) | “Marchează în pregătire” in /admin | Shipped | – | Create AWB at the courier | processing | paid | none |
 | 5 | `Expediată` | At the courier | AWB entered in /admin | Delivered | – | – | shipped | paid | “Comanda #… a fost expediată” (courier, AWB, tracking link) |
-| 6 | `Livrată` | Delivered | “Marchează livrată” in /admin | – | W4 getting started, W5 review, W7 specialist call | – | delivered | paid | none (GHL W4) |
+| 6 | `Livrată` | Delivered | “Marchează livrată” in /admin | – | W6: P1 service email, specialist task (Calm/Focus), review request with consent only | – | delivered | paid | none from the site (GHL W6) |
 | 7 | `Anulată` | Cancelled | Cancelled in /admin | – | – | Refund if it was paid | cancelled | any | “Comanda #… a fost anulată” (transfer or paid orders) |
 | 8 | `Rambursată` | Fully refunded | Full refund in Stripe (webhook) or recorded in /admin | – | – | Storno in FGO | any | refunded | “Rambursare pentru comanda #…” |
 
 Opportunity: name `BHT-20260929-0007 · Prenume Nume`, value = order total in lei (minus refunds), status `open` (waiting), `won` (paid and later), `lost` (cancelled/refunded), `abandoned`. One opportunity per order: its id is stored on the order, and a lost id is recovered by searching the order number, so retries never duplicate it. Copy the pipeline id → `GHL_PIPELINE_ID`.
 
 ### 10.3 Contact custom fields
-Settings → Custom Fields → Contact. Create them so the **field keys** are exactly these (GHL derives the key from the name; name them `bt_customer_type` etc., then rename the label if you like; the key stays):
+Settings → Custom Fields → Contact, folder “BiohackTech Ecommerce” (all 14 exist in NEUROS since 29 Sep 2026; `npm run ghl:check` verifies). Create them so the **field keys** are exactly these (GHL derives the key from the name; name them `bt_customer_type` etc., then rename the label if you like; the key stays):
 
 | Key | Type | Purpose | Source | Example |
 |---|---|---|---|---|
@@ -231,7 +234,10 @@ Settings → Custom Fields → Contact. Create them so the **field keys** are ex
 | `contact.bt_last_order_status` | Single line | Stop conditions | Order | expediată |
 | `contact.bt_lifetime_orders` | Number | Loyalty | Database (paid orders) | 2 |
 | `contact.bt_lifetime_value` | Monetary / number | Loyalty | Database | 9500.00 |
-| `contact.bt_marketing_consent` | Single line (Da/Nu) | Marketing filter | Checkout checkbox | Da |
+| `contact.bt_marketing_consent` | Single line (Da/Nu) | Marketing filter | **Current** email marketing consent of the address, from our database (latest event: checkbox or unsubscribe) | Da |
+| `contact.bt_last_order_url` | Single line | W3 link to the order page (opaque token) | Latest order | https://biohack-tech.ro/comanda/… |
+| `contact.bt_recovery_url` | Single line | W2 link; **empty unless recovery is allowed** | Recovery decision | https://biohack-tech.ro/reluare/… |
+| `contact.bt_unsubscribe_url` | Single line | Unsubscribe link in every marketing email | Consent subject | https://biohack-tech.ro/dezabonare/… |
 
 Standard fields filled too: first/last name, email, phone, company name (PJ), address, city, county, postal code, country, source `biohack-tech.ro`.
 
@@ -241,24 +247,159 @@ Standard fields filled too: first/last name, email, phone, company name (PJ), ad
 - `bt-client`: has at least one paid order.
 - `bt-cumparat-calm`, `bt-cumparat-focus`, `bt-cumparat-amber`: bought that product (per-product education and cross-sell).
 - `bt-client-firma`: bought as a company (PJ).
+- `bt-recuperare-eligibil`: **added and removed only by the site**. It is present only while a checkout recovery email is allowed (consent, still unpaid and abandoned, link valid). It starts W2. Never add it by hand or in a workflow.
 
 All BiohackTech tags start with `bt-`: the NEUROS location is shared with other funnels (courses, events), so generic names are avoided.
-Tags are added only after payment and never removed by the site. Everything else is a field or a pipeline stage.
+Customer tags are added only after payment and never removed by the site; `bt-recuperare-eligibil` is the one tag the site also removes. Everything else is a field or a pipeline stage.
 
-### 10.5 Workflows to create in GHL
-Transactional emails come from the site. **Do not** add workflow steps that email order confirmations, bank details, shipping or refunds; the customer would get them twice.
+### 10.5 Workflows W1–W7 (GHL, folder “BiohackTech Ecommerce”)
 
-Every trigger must be scoped to the pipeline “Comenzi Biohack Tech” (or a `bt-` tag): the NEUROS location also runs course and event workflows, and a trigger without that filter would reach their contacts. Put them in a new folder “BiohackTech Ecommerce”; the older folder “Biohack Tech” belongs to the previous site. Build each one as a draft, test it with a test contact, then publish. Status on 29 Sep 2026: none created yet (W1 needs the team recipients; W2–W6 need the email texts; W2, W5, W6 wait for the consent decision, §16).
+**Status on 29 Sep 2026: not created in GHL.** GHL's API cannot create workflows, and the Kerrsid workflow builder did not respond while the browser window was in the background (lists, folders and “Create workflow” ignored every action). The build sheets below are complete: build them in this order, all as **Draft**.
 
-| # | Name | Trigger | Filters | Steps / delays | Email | Fields / pipeline | Exit / stop | Duplicate prevention | Type |
-|---|---|---|---|---|---|---|---|---|---|
-| W1 | Comandă nouă: notificare echipă | Opportunity created **or** stage changed to `Plătită, de pregătit`, pipeline “Comenzi Biohack Tech” | – | Internal notification (email/SMS/app) to the team with `{{opportunity.name}}`, value, link | Internal only | – | – | “Allow re-entry” off | Internal |
-| W2 | Recuperare plată nefinalizată | Stage changed to `Plată nefinalizată` | `bt_marketing_consent` = Da (pending legal decision, §16) | Email R1 now → wait 23 h → if stage is still `Plată nefinalizată` and `bt_last_payment_status` ≠ plătită → Email R2 → end | R1 “Comanda ta te așteaptă”, R2 optional | – | Stage changes (paid/closed) → exit | Re-entry off | Marketing |
-| W3 | Transfer: reamintire | Stage changed to `Așteaptă transferul` | – | Wait 48 h → if still in stage → Email T1 (order number, amount, link to order page `{{contact.bt_last_order_number}}`) → wait 3 days → if still in stage → internal task “sună clientul sau anulează” | T1 “Reamintire: comanda #… așteaptă plata” | – | Stage changes → exit | Re-entry off | Transactional (payment reminder) |
-| W4 | După livrare: primii pași | Stage changed to `Livrată` | Branch by tag `bt-cumparat-calm` / `-focus` / `-amber` | Wait 1 day → product “primii pași” email | Per product (content to write, no medical advice) | – | – | Re-entry off | Service |
-| W5 | Cerere recenzie | Stage changed to `Livrată` | `bt_marketing_consent` = Da | Wait 14 days → review request email | Link to your chosen review page (decide: Google Business profile) | – | Stage `Rambursată`/`Anulată` → exit | Re-entry off | Marketing |
-| W6 | Cross-sell (inactive at launch) | Stage `Livrată` | consent = Da; e.g. has `bt-cumparat-calm` and not `bt-cumparat-amber` | Wait 30 days → one email | Product suggestion | – | Purchase of that product → exit | Re-entry off | Marketing |
-| W7 | Specialist: primul apel | Stage changed to `Livrată` | tag `bt-cumparat-calm` or `bt-cumparat-focus` | Create task for the specialist: “Apel de început” due in 2 days | none | – | – | Re-entry off | Internal (the “ajutor la început” promised on the site) |
+**Rules for every BiohackTech workflow**
+- Transactional emails come from the site. No workflow sends an order confirmation, bank details, an invoice, a shipping notice, a cancellation or a refund email: the customer would get them twice.
+- Every trigger is scoped to the pipeline “Comenzi Biohack Tech”, a `bt-` tag or a `contact.bt_*` field. **Never** use “Contact Created”, “Form Submitted” or a trigger without these filters. The NEUROS location also runs courses, events and other funnels.
+- Marketing emails go out only when the **site** says so: `contact.bt_marketing_consent` = `Da` (from our database, where the consent proof is), or the tag `bt-recuperare-eligibil` for checkout recovery. GHL never decides legal eligibility because an email address exists.
+- Every marketing email ends with `{{contact.bt_unsubscribe_url}}` (the site's own unsubscribe link). **Do not** add GHL's own unsubscribe link or set email DND to unsubscribe people: DND on email also blocks the site's order emails sent through GHL, and the order email job then fails (visible in /admin).
+- Settings for each workflow: *Allow re-entry* **on** (a customer can place several orders; each stage move happens once per order, so there are no duplicates). Sender: `EMAIL_FROM` once the sending domain is verified (§11).
+- GHL never changes payment truth. Paid, cancelled and refunded come from Stripe and the site's database. Workflows only read the stage and the fields.
+- Stay **Draft** until the sending domain and `EMAIL_FROM` are verified, the recipients are set, and each one is tested with the test contact (§20).
+
+Roles changed from the first version of this runbook. W1–W3 are the same. Getting started, review and specialist call moved into W6. W4, W5 and W7 are now the operational steps after payment, at shipping, and at cancellation or refund.
+
+| # | Name | Type | Trigger (all: pipeline = Comenzi Biohack Tech) | Sends to customer | ON when |
+|---|---|---|---|---|---|
+| W1 | BT · Comandă nouă: notificare echipă | Internal | Opportunity created in stage *Așteaptă transferul* or *Plătită, de pregătit*; stage changed to *Plătită, de pregătit* | nothing | recipients set |
+| W2 | BT · Recuperare checkout | Marketing, consent only | Tag added `bt-recuperare-eligibil` | 1 email (R1) | sending domain + legal review §16 |
+| W3 | BT · Transfer: reamintire | Transactional reminder | Opportunity created in stage *Așteaptă transferul* | 1 email (T1) | sending domain |
+| W4 | BT · Plătită: pregătire comandă | Internal | Opportunity created in, or stage changed to, *Plătită, de pregătit* | nothing | assignee set |
+| W5 | BT · Expediată: urmărire livrare | Internal | Stage changed to *Expediată* | nothing | assignee set |
+| W6 | BT · După livrare | Service + marketing (separated) | Stage changed to *Livrată* | P1 (service); REV (marketing, consent only) | sending domain + review link |
+| W7 | BT · Anulare și rambursare | Internal | Stage changed to *Anulată* or *Rambursată* | nothing | assignee set |
+| (W0) | BT · Dezabonare din GHL → site | Sync | Contact DND on Email turned on + filter: tag `bt-client` or field `bt_last_order_number` not empty | nothing | `GHL_WEBHOOK_SECRET` set |
+
+#### W1 · Comandă nouă: notificare echipă
+1. Triggers: *Opportunity Created*, filters Pipeline = Comenzi Biohack Tech, Stage is *Așteaptă transferul* or *Plătită, de pregătit*. Second trigger: *Pipeline Stage Changed*, Pipeline = Comenzi Biohack Tech, Stage = *Plătită, de pregătit*. Card orders appear in the pipeline already paid, and transfer orders appear waiting and then move to paid, so the team hears about both.
+2. Action *Internal Notification* (email, or app notification), to **[BLOCKER: team recipients]**:
+   - Subject: `Comandă {{contact.bt_last_order_number}}: {{opportunity.pipeline_stage_name}}`
+   - Body: `{{opportunity.name}} · {{contact.bt_last_order_value}} lei · {{contact.bt_last_payment_method}} · {{contact.bt_last_order_products}}. Detalii și acțiuni: https://biohack-tech.ro/admin`
+   - No address, phone or email in the notification: the team opens /admin.
+
+#### W2 · Recuperare checkout (consent only)
+The site adds `bt-recuperare-eligibil` only when all of these hold: the address has email marketing consent in our database, the card order is still unpaid and abandoned, and the recovery link is valid (7 days). The site removes the tag when the order is paid, cancelled or replaced by a paid order, or when the customer unsubscribes. Without consent the order is still in *Plată nefinalizată*, but there is no tag and no email.
+1. Trigger: *Contact Tag Added* = `bt-recuperare-eligibil`.
+2. *Wait* 30 minutes (the order is already 60 minutes old: `ABANDON_AFTER_MINUTES`).
+3. *If/Else*: contact **has tag** `bt-recuperare-eligibil` **and** `bt_marketing_consent` = `Da` **and** `bt_recovery_url` is not empty. If not, end.
+4. *Send Email* R1 (below). End. One email, no second reminder.
+
+R1. Subject: `Comanda ta te așteaptă`
+> Bună, {{contact.first_name}},
+>
+> Ai început o comandă pe biohack-tech.ro, dar plata nu s-a finalizat.
+>
+> Produsele te așteaptă. Poți relua comanda de aici:
+>
+> **[Reiau comanda]** → `{{contact.bt_recovery_url}}`
+>
+> Linkul funcționează 7 zile.
+>
+> Dacă ai avut o problemă la plată sau ai o întrebare, răspunde la acest email. Te ajutăm.
+>
+> Echipa Biohack Tech
+>
+> *Primești acest email pentru că ai acceptat, la comandă, emailuri de la Biohack Tech. Dezabonare: {{contact.bt_unsubscribe_url}}* · [company line, §16]
+
+The recovery link only puts the products back in the cart. It shows no personal data and pays nothing; the customer completes a new checkout.
+
+#### W3 · Transfer: reamintire
+1. Trigger: *Opportunity Created*, Pipeline = Comenzi Biohack Tech, Stage = *Așteaptă transferul*.
+2. *Wait* 2 days.
+3. *If/Else*: opportunity stage is still *Așteaptă transferul* **and** `bt_last_payment_status` = `așteaptă transferul` **and** `bt_last_payment_method` = `Transfer bancar`. If not (paid, cancelled or expired), end.
+4. *Send Email* T1 (below).
+5. *Wait* 3 days. *If/Else*: stage still *Așteaptă transferul* → *Create Task* for **[assignee]**: `Transfer neprimit {{contact.bt_last_order_number}}: sună clientul sau anulează în /admin`. End.
+
+T1. Subject: `Reamintire: comanda {{contact.bt_last_order_number}} așteaptă plata`
+> Bună, {{contact.first_name}},
+>
+> Comanda {{contact.bt_last_order_number}} este înregistrată și așteaptă plata prin transfer bancar.
+>
+> Suma: {{contact.bt_last_order_value}} lei.
+>
+> Datele pentru transfer sunt pe pagina comenzii: **[Văd datele de plată]** → `{{contact.bt_last_order_url}}`
+>
+> Scrie {{contact.bt_last_order_number}} la detaliile plății. Așa potrivim transferul cu comanda.
+>
+> Ai plătit deja? Ignoră acest mesaj. Îți scriem când primim suma.
+>
+> Te-ai răzgândit? Răspunde la acest email și anulăm comanda.
+>
+> Echipa Biohack Tech
+
+This is a payment reminder for an order already placed, not marketing, so it has no unsubscribe link and no offers. The bank details stay on the order page, which is protected by an opaque token, and in the site's first email. They are not copied into GHL.
+
+#### W4 · Plătită: pregătire comandă
+1. Triggers: *Opportunity Created* with Stage = *Plătită, de pregătit*, and *Pipeline Stage Changed* to *Plătită, de pregătit* (pipeline filter on both).
+2. *Create Task* for **[BLOCKER: fulfilment person]**: `Pregătește coletul {{contact.bt_last_order_number}}` with the description `{{contact.bt_last_order_products}}. Marchează „în pregătire”, apoi „expediată” cu AWB în /admin.`, due in 1 day.
+3. *Wait* 2 days. *If/Else*: stage still *Plătită, de pregătit* → *Internal Notification*: `Comanda {{contact.bt_last_order_number}} nu este încă la curier (termen 1-3 zile).`
+No customer email: the site already sent the confirmation and the invoice.
+
+#### W5 · Expediată: urmărire livrare
+1. Trigger: *Pipeline Stage Changed* to *Expediată*.
+2. *Wait* 5 days (transit 2-5 days).
+3. *If/Else*: stage still *Expediată* → *Create Task*: `Verifică la curier livrarea {{contact.bt_last_order_number}}; marchează „livrată” în /admin.`
+No customer email: the site sends the shipping email with courier and AWB. **Boundary (implementation 3/4):** there is no courier integration. The AWB is typed in /admin and *Livrată* is set by hand. W5 ends at that boundary and invents no statuses.
+
+#### W6 · După livrare
+1. Trigger: *Pipeline Stage Changed* to *Livrată*.
+2. Service branch, for every customer:
+   - *If/Else*: tag `bt-cumparat-calm` or `bt-cumparat-focus` → *Create Task* for **[specialist]**: `Apel de început {{contact.first_name}} ({{contact.bt_last_order_number}})`, due in 2 days.
+   - *Wait* 1 day → *Send Email* P1 (below).
+3. Marketing branch, consent only:
+   - *Wait* 14 days.
+   - *If/Else*: `bt_marketing_consent` = `Da` **and** stage still *Livrată* (not *Rambursată* or *Anulată*) → *Send Email* REV. Otherwise end.
+
+P1 (service). Subject: `Comanda {{contact.bt_last_order_number}} a ajuns. Te ajutăm la început`
+> Bună, {{contact.first_name}},
+>
+> Sperăm că produsele au ajuns bine.
+>
+> Ai o întrebare despre folosire sau ceva nu merge cum te aștepți? Răspunde la acest email sau sună la +40 757 890 707.
+>
+> Te ajutăm să pornești corect.
+>
+> Echipa Biohack Tech
+
+REV (marketing). Subject: `Cum ți se pare?`
+> Bună, {{contact.first_name}},
+>
+> Ai primit comanda acum două săptămâni. Ne-ar ajuta mult să aflăm cum ți se pare.
+>
+> **[Las o părere]** → **[BLOCKER: review link, e.g. Google Business profile]**
+>
+> Durează un minut.
+>
+> Echipa Biohack Tech
+>
+> *Primești acest email pentru că ai acceptat, la comandă, emailuri de la Biohack Tech. Dezabonare: {{contact.bt_unsubscribe_url}}*
+
+Cross-sell is not part of the launch. If added later, it is a separate workflow with the same consent filter and unsubscribe link, and it states only true product facts.
+
+#### W7 · Anulare și rambursare
+1. Triggers: *Pipeline Stage Changed* to *Anulată*; *Pipeline Stage Changed* to *Rambursată*.
+2. *Remove from Workflow*: W2, W3, W4, W5, W6. This is an explicit stop on top of their own checks.
+3. *If/Else*: stage *Anulată* and `bt_last_payment_status` is `plătită` or `rambursată parțial` → *Create Task*: `Rambursează {{contact.bt_last_order_number}} (Stripe pentru card, transfer pentru transfer); refund-ul se vede apoi în /admin.`
+4. *If/Else*: stage *Rambursată* → *Create Task*: `Verifică stornarea facturii în FGO pentru {{contact.bt_last_order_number}}.`
+No customer email: the site sends the cancellation and refund emails. Failed integrations (FGO, GHL, email) are not a pipeline stage; they appear in /admin under “Sincronizări care au nevoie de atenție”.
+
+#### W0 · Dezabonare din GHL → site (optional, recommended)
+Trigger: *Contact DND* turned on for Email, filtered to BiohackTech contacts (tag `bt-client` or `bt_last_order_number` not empty). Action *Webhook*: `POST https://biohack-tech.ro/api/ghl/unsubscribe`, header `x-bt-webhook-secret: <GHL_WEBHOOK_SECRET>`, body `{"email": "{{contact.email}}"}`. The site records the withdrawal, and every future marketing decision reads it. Then remove the DND manually if the customer still needs order emails.
+
+#### Testing each workflow (before ON)
+Use one dedicated test contact with a mailbox you own. Do not use a customer or an `example.com` address, because GHL would try to deliver. Test with *Test Workflow* or by moving the test opportunity through the stages.
+- W1: create a test transfer order, then confirm it in /admin → 2 notifications.
+- W2: without consent: no tag, no email. With consent: tag → R1. Pay: tag removed → the pre-send check stops R1.
+- W3: transfer order → T1 after 2 days (shorten the wait for the test). Confirm payment first → no T1.
+- W4–W7: move the test order in /admin and check the tasks. W7 removes the contact from the others.
 
 ### 10.6 Email sending (see §11)
 Settings → Email Services: dedicated sending domain on biohack-tech.ro, verified. `EMAIL_FROM` must be an address on it.
@@ -282,9 +423,10 @@ Settings → Email Services: dedicated sending domain on biohack-tech.ro, verifi
 | `order_shipped` | Comanda #{nr} a fost expediată | AWB saved in /admin | courier, AWB, tracking link, address | Urmărește coletul | Transactional |
 | `order_cancelled` | Comanda #{nr} a fost anulată | Cancelled in /admin (transfer or paid orders) | number, refund note | – | Transactional |
 | `refund_issued` | Rambursare pentru comanda #{nr} | Refund (Stripe webhook or /admin) | amount refunded | – | Transactional |
-| R1/R2, T1, W4, W5, W6 | see §10.5 | GHL workflows | GHL merge fields | as designed | see §10.5 |
+| `withdrawal_received` | Am primit cererea de retragere pentru comanda #{nr} | Online withdrawal statement matching an order (`/retragere`) | reference, date and time, name, order, products, message, next steps (return within 14 days, refund within 14 days) | – | Transactional (OUG 34/2014 art. 11^1 acknowledgement) |
+| R1, T1, P1, REV | see §10.5 | GHL workflows | GHL merge fields | as designed | R1, REV marketing (consent + unsubscribe link); T1, P1 transactional/service |
 
-Every email: plain text version included, support line with the order number, no marketing blocks.
+Every site email: plain text version included, support line with the order number, no marketing blocks. They go out whatever the customer's marketing choice is: they are needed for the order. Unsubscribing never stops them.
 
 ## 12. Database setup
 
@@ -306,22 +448,73 @@ Provide: **beneficiary** (legal name of the company), **IBAN** (RON account), **
 
 **Decisions (YOU):** courier (Fan Courier, Sameday, Cargus…), confirm free shipping for all orders, pickup schedule, whether to offer easybox/lockers, Romania only (the checkout accepts only Romanian counties). **Not built:** automatic AWB generation (needs the courier’s API account; P2), delivery tracking sync (P2). Today: create the AWB in the courier’s portal, paste it into /admin.
 
-## 15. Analytics setup
+## 15. Privacy, consent and analytics
 
-**Built:** `src/lib/analytics.ts` pushes GA4-format ecommerce events to `window.dataLayer`: `view_cart`, `begin_checkout`, `add_payment_info`, `purchase` (order page, only when the server says the order is paid, once per order per browser, `transaction_id` = order number, value/currency RON). Nothing is loaded; no cookies are set by analytics today.
+### 15.1 Cookie consent (built)
+- **Categories.** *Necessary* is always on: cart (`biohack-cart-v1`), checkout draft (sessionStorage), `bt-cart-cleared-*`, the choice itself (`bt-consent-v1`), and Stripe's fraud-prevention cookies on the checkout page only. *Analytics* and *Marketing* are off until the visitor says yes.
+- **Banner.** It appears only when at least one optional tool is configured (`NEXT_PUBLIC_GA4_ID`, `NEXT_PUBLIC_CLARITY_ID`, `NEXT_PUBLIC_META_PIXEL_ID`) and there is no current choice. With no tool configured there is nothing to ask. The site then uses only strictly necessary storage, and “Setări cookies” says so.
+  - The first layer has *Refuz opționalele* and *Accept toate* in the same style, plus *Aleg eu ce accept*.
+  - The dialog has one switch per category, off by default, and *Salvez alegerea*.
+- **Real blocking.** No optional script is in the HTML. `src/lib/consent/vendors.ts` adds a tool's script only after its category is allowed.
+  - GA4 runs with advertising storage and signals denied.
+  - Meta runs with `autoConfig` off, so it never reads form fields.
+  - Clarity never runs on checkout, order, recovery, unsubscribe, withdrawal or admin pages.
+  - `track()` sends nothing without consent and queues nothing for later.
+  - Verified in the browser: before consent there is no gtag and no request to Google. *Accept toate* loads `gtag/js` and one `collect` with `gcs=G101`. Withdrawing reloads the page without it.
+- **Withdrawal.** “Setări cookies” in every footer. Withdrawing a category deletes that tool's first-party cookies and reloads the page.
+- **Storage and proof.** The browser keeps `{id, version, analytics, marketing, at, updatedAt}`, where `id` is random. `POST /api/consent` logs the same to `cookie_consents`, without IP or user agent. The choice lasts 12 months and is asked again if `COOKIE_POLICY_VERSION` changes, which you should do when a tool is added.
+- **Adding a tool.** Add one entry in `VENDORS` (category, cookies) and one row in the cookie policy table in `src/content/legal.ts`. Bump `COOKIE_POLICY_VERSION`. A tag manager that loads arbitrary tags does not fit a single category, so it is not supported on purpose.
 
-**To do (YOU, P1):** decide the tools (GTM + GA4 recommended; Meta Pixel if you run Meta ads), provide the ids, and add a consent banner (Google Consent Mode v2) before loading any of them. `add_to_cart` and `view_item` are the next two events to wire when GTM goes in. A server-side purchase event (GA4 Measurement Protocol from the Stripe webhook) is P2.
+### 15.2 Email marketing consent (built)
+- **Checkout checkbox.** It is optional, unticked, and separate from accepting the terms. The order works the same without it. Its text is in `src/lib/consent/marketing.ts` (version `mkt-2026-09-29`) and covers news, offers, recommendations and a reminder for an unfinished order.
+- **Proof in our database.** `marketing_consent_events` is append-only and stores: granted true/false, time, exact text, text version, source, page and order. The current state of an address is its latest event.
+  - An unticked box records nothing: it is not an objection and does not undo an earlier consent.
+  - A withdrawal always wins until a new, explicit consent.
+- **Cookie consent is not email consent.** They are stored and asked separately.
+- **Unsubscribe.** The link `/dezabonare/<opaque token>` (one per address) confirms with one button. The withdrawal is recorded, then a `marketing.sync` job sets `bt_marketing_consent` = `Nu` in GHL, empties `bt_recovery_url` and removes `bt-recuperare-eligibil`. Opt-outs made inside GHL can come back through W0 → `POST /api/ghl/unsubscribe`.
+- **Transactional emails are unaffected.** Confirmation, transfer details, payment received, invoice, shipping, cancellation, refund and withdrawal acknowledgement are not marketing.
+- **Existing-customer exception (soft opt-in): not used.** Art. 12(2) of Legea 506/2004 requires that the customer be clearly offered a way to object when the address is collected. The checkout offers an opt-in instead, and an unticked opt-in cannot be read as “did not object”. All marketing therefore needs the checkbox. Enabling the exception would need a different checkout wording and a lawyer's approval (§16).
 
-## 16. Legal requirements (YOU + your lawyer/accountant)
+### 15.3 Checkout recovery (built)
+- *Abandoned* is an order state. The job `order.abandon_check` sets it after `ABANDON_AFTER_MINUTES`, once Stripe has confirmed the payment is not there. *May we email about it* is a separate decision: `canSendAbandonedCheckoutEmail()` in `src/server/marketing/recovery.ts`.
+  - It requires a card order, unpaid, still abandoned, marketing consent for the address, and a valid link.
+  - The reason is stored on the order (`recovery_status`, `recovery_reason`) and in the `order.abandoned` event, without personal data.
+  - It is re-checked at every CRM sync.
+- **Without consent.** The order is in *Plată nefinalizată* in the CRM, with no tag, no link and no email.
+- **With consent.** Tag `bt-recuperare-eligibil` and `bt_recovery_url` → W2.
+  - The link `/reluare/<opaque token>` expires after 7 days and only puts the products back in the cart. It shows no name or address, and it confirms nothing.
+- **Paid.**
+  - Paying the same order removes the tag and kills the link.
+  - Paying a new order closes earlier abandoned attempts of that address in the same transaction (`order.superseded`), then removes the tag.
 
-Must exist before launch (the site does not invent them):
-1. **Company identification** in the footer and on the terms page: legal name, CUI, Reg. Com. number, registered office, share capital if applicable, contact. (§ 18 lists what to send.)
-2. **Full Terms and conditions**, **Privacy policy** (the processors are listed: Stripe, FGO, GoHighLevel, courier, hosting), **Cookie policy** (the site uses only functional browser storage for the cart; Stripe.js sets its own fraud-prevention cookies on checkout; analytics would need consent), **Shipping** and **Returns** policies. The published pages are short versions and say so.
-3. **Right of withdrawal** (OUG 34/2014): 14 days + the model withdrawal form.
-4. **ANPC / SAL** link: present in the footer. (The EU ODR platform closed in July 2025; no link needed.)
-5. **Marketing consent:** the checkbox is optional and unticked. Decide whether W2 (checkout recovery) and W4 (usage emails) may go to customers without marketing consent, under legitimate interest. Until then the site stores the consent and the workflows filter on it.
-6. **Wellness claims:** the product copy is conservative (“poate ajuta”, “nu înlocuiește sfatul medicului”). Have it reviewed; keep the CE/FCC documents for NEUROS Focus on file.
-7. **Data retention:** decide how long orders are kept (accounting: 10 years for invoices) and how an erasure request is handled (delete in GHL, anonymise in the database except fiscal data).
+### 15.4 Analytics tools (YOU)
+Decide the tools and set their ids. Events sent with consent: `view_cart`, `begin_checkout`, `add_payment_info`, `purchase` (once per order, only when paid). They contain products and amounts only. Set Clarity's masking to *Strict*. In Meta Events Manager, keep automatic advanced matching off.
+
+## 16. Legal pages and checkout information
+
+**Built (29 Sep 2026)**
+- Pages:
+  - `/terms-of-service` (ordering steps, contract conclusion, prices, links, product disclaimer, complaints, ANPC, applicable law);
+  - `/privacy-policy` (controller, purposes and legal bases table, marketing consent, recipients, transfers, retention, rights, ANSPDCP);
+  - `/politica-cookies` (table generated from what is actually configured);
+  - `/politica-livrare`;
+  - `/politica-retur` (withdrawal right, how, return, refund, **model withdrawal form**);
+  - `/garantie` (legal guarantee of conformity, OUG 140/2021; complaints; ANPC and SAL);
+  - `/plati`.
+- **Online withdrawal function** (OUG 34/2014 art. 11^1, in force since 19 June 2026). `/retragere` is linked from every footer as “Retrage-te din contract aici” and from the order page. The confirm button reads “Confirmați retragerea”.
+  - The statement is stored in `withdrawal_requests`.
+  - A statement that matches an order gets the email acknowledgement `withdrawal_received` (content, date and time).
+  - Every statement shows in /admin.
+- **Checkout.**
+  - The transfer button reads “Comandă cu obligație de plată”; the card button reads “Plătește X lei”.
+  - The terms checkbox (terms and the returns and withdrawal policy) is separate from the optional marketing checkbox.
+  - A privacy notice with a link sits under the checkboxes.
+  - “Drept de retragere 14 zile · garanție legală de conformitate 2 ani” is shown with links.
+  - Products, variants, quantities, unit and line prices, VAT included, free delivery and the total are shown before the button.
+- **Footer.** Company line (from `COMPANY_*`), “Setări cookies”, ANPC, and ANPC SAL (`reclamatiisal.anpc.ro`). The EU ODR platform closed on 20 July 2025, so there is no ODR link.
+- **No placeholder text.** A missing company field is not shown. /admin lists it (error in production).
+
+See the short **LEGAL REVIEW BEFORE GO-LIVE** list in `docs/OPEN-POINTS.md`.
 
 ## 17. Deployment
 
@@ -371,10 +564,10 @@ Use a staging deployment with `APP_ENV=staging`, Stripe **test** keys, the **FGO
 | 5 | Webhook replay | Stripe Dashboard → the event → Resend | No second invoice, email or opportunity |
 | 6 | PF, transfer | NEUROS Calm → transfer | Order page with bank details; email “datele pentru transfer”; GHL stage “Așteaptă transferul”; no invoice |
 | 7 | Transfer paid | /admin → the order → “Plata a fost primită” | Email “Am primit plata”, invoice, stage “Plătită, de pregătit” |
-| 8 | Ship + deliver | /admin → courier + AWB + tracking link → then “Marchează livrată” | Shipping email with the link; stages Expediată → Livrată; W4/W7 start |
+| 8 | Ship + deliver | /admin → courier + AWB + tracking link → then “Marchează livrată” | Shipping email with the link; stages Expediată → Livrată; W5, then W6 start |
 | 9 | Refund | Stripe → refund payment of flow 1 | Order “Rambursată”, email, GHL stage “Rambursată”; storno per your FGO setting |
 | 10 | Cancel | Transfer order → /admin → Anulează | Email “anulată”, stage “Anulată” |
-| 11 | Abandoned card | Start a card checkout, stop before paying, wait 60 min | Stage “Plată nefinalizată”; W2 only if consent |
+| 11 | Abandoned card | Start a card checkout, stop before paying, wait 60 min | Stage “Plată nefinalizată”; without the marketing box: no tag, no email; with it: tag `bt-recuperare-eligibil`, `bt_recovery_url` set, W2 |
 | 12 | Phone | Repeat flow 1 and 6 on an iPhone and an Android | Popup at the bottom, Payment Element, Apple/Google Pay if enabled |
 
 **Automated check (test mode):** with the app running on PostgreSQL and `stripe listen --forward-to <app>/api/webhooks/stripe` feeding it, `E2E_BASE_URL=<app> DATABASE_URL=<same db> node scripts/stripe-e2e.mjs` runs flows 1, 3, 4 and more against real Stripe test payments: paid with the browser gone, decline then retry, 3-D Secure pending, cancellation, double submit, invalid signature, bank transfer. It refuses live keys.
@@ -387,7 +580,7 @@ The ordered sequence:
 
 1. Railway project + PostgreSQL; backups on.
 2. Deploy the repo with `APP_ENV=staging`, test keys, FGO test, GHL (test contacts). Health = 200.
-3. GHL: Private Integration, pipeline + 8 stages, 11 custom fields, sending domain verified, W1 + W3 created (W2/W4/W5/W7 can follow).
+3. GHL: Private Integration, pipeline + 8 stages, 14 custom fields, 6 tags (`npm run ghl:check`), sending domain verified, W1, W3, W4, W7 built and tested (W2, W5, W6 can follow).
 4. Stripe test webhook registered on the staging URL.
 5. Run the test orders of §20 (at least 1, 2, 3, 5, 6, 7, 8, 9). Everything green in /admin (no failed syncs).
 6. Legal texts + company data published (code change in `src/content/legal.ts`, `src/components/site/Footer.tsx`, `src/config/site.ts`).
@@ -449,10 +642,10 @@ The ordered sequence:
 
 **P1: fix before or immediately after launch**
 1. Confirm the NEUROS Focus price (2.490 lei, from the source material).
-2. GHL workflows W1 (team notification) and W3 (transfer reminder) live on day one; W4, W7 in the first week.
+2. GHL workflows W1, W3, W4 and W7 live on day one; W5 and W6 in the first week; W2 after the legal review.
 3. Uptime monitor + log alerts (§22).
 4. Courier choice and packing routine; free-shipping rule confirmed.
-5. Marketing-consent decision for W2/W4 (§16).
+5. Legal review of the points in OPEN-POINTS “LEGAL REVIEW BEFORE GO-LIVE”.
 6. Analytics tools chosen + consent banner, then load GTM.
 7. “Ce primești în cutie” for each product (not in the source material).
 8. CE/FCC documents for NEUROS Focus on file.

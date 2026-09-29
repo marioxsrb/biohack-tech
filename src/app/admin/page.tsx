@@ -6,6 +6,7 @@ import { getDb } from '@/server/db'
 import { jobs } from '@/server/jobs/outbox'
 import { customerName } from '@/server/orders/model'
 import { orders } from '@/server/orders/repository'
+import { withdrawals } from '@/server/orders/withdrawal'
 import { retryJobsAction } from './actions'
 import { INVOICE_LABEL, ORDER_LABEL, PAYMENT_LABEL, tone } from './labels'
 
@@ -17,7 +18,7 @@ export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
   const q = String((await searchParams).q ?? '').trim().slice(0, 80)
   const { issues } = loadConfig()
   const db = await getDb()
-  const [list, problems] = await Promise.all([orders.list(db, { limit: 150, search: q || undefined }), jobs.problems(db)])
+  const [list, problems, withdrawalList] = await Promise.all([orders.list(db, { limit: 150, search: q || undefined }), jobs.problems(db), withdrawals.recent(20)])
   const errors = issues.filter((i) => i.level === 'error')
 
   return (
@@ -36,6 +37,27 @@ export default async function AdminPage({ searchParams }: PageProps<'/admin'>) {
           <ul className="mt-1 list-disc pl-5">
             {errors.map((e) => (
               <li key={e.message}>{e.message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {withdrawalList.length > 0 && (
+        <div className="mt-6 rounded-[14px] bg-paper p-5">
+          <p className="font-semibold text-ink">Cereri de retragere ({withdrawalList.length} recente)</p>
+          <ul className="mt-3 divide-y divide-mist-2 text-[14px]">
+            {withdrawalList.map((w) => (
+              <li key={w.id} className="flex flex-wrap items-center justify-between gap-3 py-2">
+                <span>
+                  <span className="font-medium">{w.reference}</span> · {dt(w.createdAt)} · {w.orderNumber} · {w.name} · {w.email}
+                  {!w.orderId && <span className="text-red-deep"> · comanda nu a fost găsită, verifică manual</span>}
+                </span>
+                {w.orderId && (
+                  <Link href={`/admin/orders/${w.orderId}`} className="underline underline-offset-4">
+                    Deschide
+                  </Link>
+                )}
+              </li>
             ))}
           </ul>
         </div>

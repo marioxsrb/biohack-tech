@@ -4,14 +4,14 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { cartStore } from '@/components/cart/cart-store'
 import { Check, Copy } from '@/components/ui/icons'
-import { track } from '@/lib/analytics'
+import { canTrack, track } from '@/lib/analytics'
 import { DRAFT_KEY } from '@/lib/checkout'
 
 type PurchaseItem = { item_id: string; item_name: string; item_variant?: string; price: number; quantity: number }
 
 /**
  * Once an order is placed: take its lines out of the cart (once per order, so reopening an old order
- * page never empties a new cart), forget the form, report the purchase once.
+ * page never empties a new cart), forget the form, report the purchase once (only with analytics or marketing consent).
  * A convenience only: payment state never depends on it, and it tolerates unavailable storage.
  */
 export function OrderEffects({ orderNumber, clearKeys, purchase }: { orderNumber: string; clearKeys: string[]; purchase: { orderNumber: string; value: number; items: PurchaseItem[] } | null }) {
@@ -29,7 +29,8 @@ export function OrderEffects({ orderNumber, clearKeys, purchase }: { orderNumber
   }, [orderNumber, clearKeys])
 
   useEffect(() => {
-    if (!purchase) return
+    // Without consent (or without tools) nothing is sent and nothing is written to the browser.
+    if (!purchase || !canTrack()) return
     const key = `bt-purchase-${purchase.orderNumber}`
     try {
       if (localStorage.getItem(key)) return

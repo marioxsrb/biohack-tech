@@ -101,4 +101,15 @@ export const cartStore = {
   clear() {
     commit(EMPTY)
   },
+  /** Puts lines back (checkout recovery) without doubling what is already in the cart. */
+  restore(restored: CartLine[]) {
+    const current = cartStore.getSnapshot()
+    const next = [...current]
+    for (const l of sanitize(restored)) {
+      const i = next.findIndex((x) => lineKey(x) === lineKey(l))
+      if (i === -1) next.push(l)
+      else next[i] = { ...next[i], quantity: Math.max(next[i].quantity, l.quantity) }
+    }
+    commit(next)
+  },
 }

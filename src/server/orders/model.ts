@@ -101,8 +101,16 @@ export type Order = {
   trackingUrl: string | null
   shippedAt: Date | null
   deliveredAt: Date | null
+  /** Checkout recovery for an abandoned card order: whether a recovery email may be sent, and why. */
+  recoveryStatus: RecoveryStatus | null
+  recoveryReason: string | null
+  /** Opaque token of the recovery link (it only restores the cart), and when it stops working. */
+  recoveryToken: string | null
+  recoveryExpiresAt: Date | null
   items: OrderItem[]
 }
+
+export type RecoveryStatus = 'eligible' | 'ineligible'
 
 export const customerName = (c: Customer) => `${c.firstName} ${c.lastName}`.trim()
 /** Name on the invoice: the company for PJ, the person for PF. */

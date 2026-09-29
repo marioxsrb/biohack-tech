@@ -6,7 +6,9 @@ import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { jobs } from '@/server/jobs/outbox'
 import { customerName, formatAddress } from '@/server/orders/model'
+import { marketing } from '@/server/marketing/consent'
 import { orders } from '@/server/orders/repository'
+import { withdrawals } from '@/server/orders/withdrawal'
 import { canMoveOrder, isPaid } from '@/server/orders/state'
 import { cancelAction, deliveredAction, markPaidAction, processingAction, refundAction, resyncCrmAction, retryJobsAction, shipAction } from '../../actions'
 import { INVOICE_LABEL, ORDER_LABEL, PAYMENT_LABEL, tone } from '../../labels'
@@ -21,7 +23,7 @@ export default async function AdminOrderPage({ params }: PageProps<'/admin/order
   const db = await getDb()
   const o = await orders.byId(db, id)
   if (!o) notFound()
-  const [events, jobList] = await Promise.all([orders.events(db, id), jobs.forOrder(db, id)])
+  const [events, jobList, consent, withdrawalList] = await Promise.all([orders.events(db, id), jobs.forOrder(db, id), marketing.state(db, o.email), withdrawals.forOrder(id)])
   const c = getConfig()
   const paid = isPaid(o.paymentStatus)
 
@@ -80,10 +82,27 @@ export default async function AdminOrderPage({ params }: PageProps<'/admin/order
                 ['Adresă facturare', formatAddress(o.billingAddress)],
                 ['Adresă livrare', formatAddress(o.shippingAddress)],
                 ['Observații', o.notes || '–'],
-                ['Acord marketing', o.marketingConsent ? 'Da' : 'Nu'],
+                ['Bifă marketing la această comandă', o.marketingConsent ? 'Da' : 'Nu'],
+                ['Marketing email acum', consent ? `${consent.granted ? 'Acord' : 'Retras'} · ${dt(consent.at)} · ${consent.source} · ${consent.version}` : 'Fără acord'],
+                ...(o.recoveryStatus
+                  ? ([['Recuperare checkout', `${o.recoveryStatus === 'eligible' ? 'Permisă' : 'Nepermisă'} (${o.recoveryReason})`]] as [string, string][])
+                  : []),
               ]}
             />
           </Panel>
+
+          {withdrawalList.length > 0 && (
+            <Panel title="Cereri de retragere">
+              <ul className="space-y-2 text-[14px]">
+                {withdrawalList.map((w) => (
+                  <li key={w.id}>
+                    <span className="font-medium">{w.reference}</span> · {dt(w.createdAt)} · {w.items}
+                    {w.message && <span className="block text-muted">{w.message}</span>}
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          )}
 
           <Panel title="Istoric">
             <ul className="space-y-1.5 text-[14px]">

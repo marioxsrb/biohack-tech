@@ -9,7 +9,15 @@ import type { BankConfig } from '@/server/config'
 import { customerName, formatAddress, type Order } from '@/server/orders/model'
 import { formatLei } from '@/lib/money'
 
-export type EmailTemplate = 'order_confirmed' | 'transfer_instructions' | 'payment_received' | 'invoice_issued' | 'order_shipped' | 'order_cancelled' | 'refund_issued'
+export type EmailTemplate =
+  | 'order_confirmed'
+  | 'transfer_instructions'
+  | 'payment_received'
+  | 'invoice_issued'
+  | 'order_shipped'
+  | 'order_cancelled'
+  | 'refund_issued'
+  | 'withdrawal_received'
 
 export const EMAIL_TEMPLATES: Record<EmailTemplate, { subject: (o: Order) => string; kind: 'transactional' }> = {
   order_confirmed: { subject: (o) => `Comanda ta Biohack Tech #${o.orderNumber}`, kind: 'transactional' },
@@ -19,11 +27,16 @@ export const EMAIL_TEMPLATES: Record<EmailTemplate, { subject: (o: Order) => str
   order_shipped: { subject: (o) => `Comanda #${o.orderNumber} a fost expediată`, kind: 'transactional' },
   order_cancelled: { subject: (o) => `Comanda #${o.orderNumber} a fost anulată`, kind: 'transactional' },
   refund_issued: { subject: (o) => `Rambursare pentru comanda #${o.orderNumber}`, kind: 'transactional' },
+  withdrawal_received: { subject: (o) => `Am primit cererea de retragere pentru comanda #${o.orderNumber}`, kind: 'transactional' },
 }
 
-export type EmailContext = { siteUrl: string; bank: BankConfig | null }
+/** The withdrawal statement being acknowledged (withdrawal_received only). */
+export type WithdrawalStatement = { reference: string; name: string; items: string; message: string; createdAt: Date }
+export type EmailContext = { siteUrl: string; bank: BankConfig | null; withdrawal?: WithdrawalStatement }
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
+const dateTimeRo = (d: Date) =>
+  d.toLocaleString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bucharest' })
 const dateRo = (d: Date) => d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Bucharest' })
 
 type Block = { html: string; text: string }
@@ -132,6 +145,26 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
           p(`Pentru orice întrebare, scrie-ne la ${site.email}.`),
         ],
       }
+    case 'withdrawal_received': {
+      const w = ctx.withdrawal
+      return {
+        lead: `Am primit cererea ta de retragere din contract pentru comanda #${o.orderNumber}.`,
+        blocks: [
+          p('Aceasta este confirmarea declarației tale, cu conținutul, data și ora la care am primit-o.'),
+          rows([
+            ['Referință', w?.reference ?? ''],
+            ['Primită la', w ? dateTimeRo(w.createdAt) : ''],
+            ['Nume', w?.name ?? customerName(o.customer)],
+            ['Comanda', o.orderNumber],
+            ['Produse', w?.items ?? ''],
+            ...(w?.message ? ([['Mesajul tău', w.message]] as [string, string][]) : []),
+          ]),
+          h('Ce urmează'),
+          p('Trimite-ne produsele în cel mult 14 zile de la această cerere. Îți scriem adresa de retur și pașii.'),
+          p('Îți returnăm banii în cel mult 14 zile de la data de mai sus, pe aceeași cale prin care ai plătit. Putem amâna rambursarea până primim produsele sau dovada că le-ai trimis.'),
+        ],
+      }
+    }
     case 'refund_issued':
       return {
         lead: `Am procesat o rambursare de ${formatLei(o.refundedMinor)} pentru comanda #${o.orderNumber}.`,
