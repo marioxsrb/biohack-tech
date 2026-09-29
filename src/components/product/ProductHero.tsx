@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { AddToCartButton } from '@/components/cart/AddToCartButton'
 import { Price } from '@/components/cart/Price'
-import { PromoNote } from '@/components/cart/PromoNote'
+import { ProductOffer } from '@/components/offers/ProductOffer'
 import { QuantityStepper } from '@/components/cart/QuantityStepper'
 import { Check } from '@/components/ui/icons'
 import { getProduct, isPurchasable, variantLabel, type ProductId } from '@/content/catalog'
@@ -102,7 +102,16 @@ export function ProductHero({ productId, intro }: Props) {
             <Price productId={product.id} variantId={variant?.id} />
             {purchasable && <span className="ml-3 align-middle text-[14px] font-normal tracking-normal text-muted">{terms.vat}</span>}
           </p>
-          {purchasable && <PromoNote productId={product.id} full className="mt-3 max-w-[32em]" />}
+          {purchasable && (
+            <>
+              <ul className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[15px] text-text">
+                <li>✓ Livrare gratuită</li>
+                <li>✓ Retur în {terms.returnDays} zile</li>
+                <li>✓ Garanție {terms.warrantyYears} ani</li>
+              </ul>
+              <ProductOffer productId={product.id} className="mt-4 max-w-[34em]" />
+            </>
+          )}
 
           {product.options?.map((opt) => {
             const avail = available(opt.id)
@@ -156,12 +165,6 @@ export function ProductHero({ productId, intro }: Props) {
           ) : (
             <p className="mt-3 max-w-[30em] text-[15px] text-text">Prețul în lei se anunță în curând. Scrie-ne și îți răspundem în cel mult 24 de ore.</p>
           )}
-
-          <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-1 text-[15px] text-text">
-            <li>✓ Livrare gratuită</li>
-            <li>✓ Retur în {terms.returnDays} zile</li>
-            <li>✓ Garanție {terms.warrantyYears} ani</li>
-          </ul>
 
           <p className="mt-7 max-w-[32em] border-t border-mist-2 pt-6 text-[16.5px] leading-relaxed text-text">{intro}</p>
         </div>

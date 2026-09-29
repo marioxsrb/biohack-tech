@@ -26,7 +26,9 @@ type CartUI = {
   dismissConfirmation: () => void
   /** Short message for the screen-reader live region. */
   announcement: string
-  add: (productId: ProductId, variantId?: string, quantity?: number) => boolean
+  add: (productId: ProductId, variantId?: string, quantity?: number, source?: EntrySource) => boolean
+  /** Several lines at once (all or nothing), e.g. the three NEUROS Amber pairs. */
+  addMany: (picks: { productId: ProductId; variantId?: string; quantity?: number }[], source?: EntrySource) => boolean
 }
 
 const CartUIContext = createContext<CartUI | null>(null)
@@ -37,19 +39,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const dismissConfirmation = useCallback(() => setConfirmation(null), [])
 
-  const add = useCallback((productId: ProductId, variantId?: string, quantity = 1) => {
+  const add = useCallback((productId: ProductId, variantId?: string, quantity = 1, source?: EntrySource) => {
     const resolved = resolveLine(productId, variantId)
     if (!resolved || resolved.unit === null) return false
-    cartStore.add(productId, variantId, quantity, sourceForPath(window.location.pathname))
+    cartStore.add(productId, variantId, quantity, source ?? sourceForPath(window.location.pathname))
     setConfirmation({ key: lineKey({ productId, variantId }), quantity, at: Date.now() })
     const label = resolved.variant ? `${resolved.product.name}, ${variantLabel(resolved.product, resolved.variant)}` : resolved.product.name
     setAnnouncement(`${label} a fost adăugat în coș.`)
     return true
   }, [])
 
+  const addMany = useCallback((picks: { productId: ProductId; variantId?: string; quantity?: number }[], source?: EntrySource) => {
+    if (!cartStore.addMany(picks, source ?? sourceForPath(window.location.pathname))) return false
+    const n = picks.reduce((s, p) => s + (p.quantity ?? 1), 0)
+    setAnnouncement(`${n === 1 ? 'O pereche a fost adăugată' : `${n} perechi au fost adăugate`} în coș.`)
+    return true
+  }, [])
+
   const value = useMemo(
-    () => ({ confirmation, dismissConfirmation, announcement, add }),
-    [confirmation, dismissConfirmation, announcement, add],
+    () => ({ confirmation, dismissConfirmation, announcement, add, addMany }),
+    [confirmation, dismissConfirmation, announcement, add, addMany],
   )
 
   return (

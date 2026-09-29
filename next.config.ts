@@ -3,6 +3,8 @@ import type { NextConfig } from 'next'
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // A second local instance (the Stripe TEST environment, scripts/stripe-test.mjs) builds into its own folder.
+  ...(process.env.NEXT_DIST_DIR && { distDir: process.env.NEXT_DIST_DIR }),
   turbopack: { root: process.cwd() },
   // Database drivers load native/wasm code at runtime; keep them out of the server bundle.
   serverExternalPackages: ['pg', '@electric-sql/pglite'],

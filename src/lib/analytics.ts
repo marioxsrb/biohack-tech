@@ -59,3 +59,13 @@ export function track(
     w.fbq?.('track', meta, { currency: 'RON', value: lei(data.value), content_type: 'product', content_ids: items.map((i) => i.item_id), num_items: items.reduce((n, i) => n + i.quantity, 0) }, data.transaction_id ? { eventID: data.transaction_id } : undefined)
   }
 }
+
+/** Interactions around suggestions and the NEUROS Amber 2+1 picker (GA4 only, never Meta). */
+export type UiEvent = 'view_cross_sell' | 'select_cross_sell' | 'add_cross_sell' | 'open_amber_bundle_configurator' | 'complete_amber_bundle_configurator'
+export type UiPlacement = 'cart' | 'checkout' | 'post_purchase' | 'product_page' | 'homepage'
+
+/** Same consent rule as `track`: nothing is sent, or queued, without analytics consent and a running GA4. */
+export function trackUi(event: UiEvent, params: { placement: UiPlacement; product_id?: string; variant_id?: string; items?: number }) {
+  if (typeof window === 'undefined' || !consentStore.allows('analytics') || !isLoaded('ga4')) return
+  ;(window as unknown as { gtag?: (...a: unknown[]) => void }).gtag?.('event', event, params)
+}

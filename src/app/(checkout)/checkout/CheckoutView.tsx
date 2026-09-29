@@ -9,6 +9,7 @@ import { CarryLink } from '@/components/cart/CarryLink'
 import { Price } from '@/components/cart/Price'
 import { Thumb } from '@/components/cart/Thumb'
 import { OfferProgress } from '@/components/cart/OfferProgress'
+import { Suggestions } from '@/components/offers/Suggestions'
 import { Totals } from '@/components/cart/Totals'
 import { Arrow, Bank, CardIcon, Lock, Mail } from '@/components/ui/icons'
 import { productHref, products } from '@/content/catalog'
@@ -396,7 +397,9 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
               <Totals pricing={pricing} />
             </div>
             <p className="text-right text-[13px] text-muted">{terms.vat}</p>
-            <OfferProgress progress={progress} lines={lines} actions={false} className="mt-4" />
+            <OfferProgress progress={progress} lines={lines} actions={false} compact className="mt-4" />
+            {/* The only product suggestion in the checkout: light, before the payment decision. */}
+            {anyMethod && <Suggestions placement="checkout" className="mt-4" />}
 
             {anyMethod && (
               <>

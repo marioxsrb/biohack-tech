@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { CarryLink } from '@/components/cart/CarryLink'
 import { OfferProgress } from '@/components/cart/OfferProgress'
+import { Suggestions } from '@/components/offers/Suggestions'
 import { Totals } from '@/components/cart/Totals'
 import { useEffect, useSyncExternalStore } from 'react'
 import { useCart } from '@/components/cart/CartProvider'
@@ -65,14 +66,13 @@ export function CartView() {
       <h1 className="text-[clamp(30px,3.4vw,40px)] leading-tight tracking-[-0.035em]">
         Coșul tău <span className="text-muted">({count})</span>
       </h1>
-      {/* The offers first: the easiest thing to miss and the most useful to know. */}
-      <OfferProgress progress={progress} lines={lines} className="mt-6 grid gap-3 md:grid-cols-2 md:space-y-0" />
-      <div className="mt-8 grid gap-y-6 md:grid-cols-12 md:gap-x-8 lg:gap-x-12">
-        <ul className="rounded-[20px] bg-paper px-6 md:col-span-7 max-sm:px-4" aria-label="Produse în coș">
+      {/* Order: the lines, then the summary (totals, the offer that is close, the button), then suggestions. */}
+      <div className="mt-6 grid gap-y-4 md:mt-8 md:grid-cols-12 md:gap-x-8 lg:gap-x-12">
+        <ul className="rounded-[20px] bg-paper px-6 md:col-span-7 md:self-start max-sm:px-4" aria-label="Produse în coș">
           {lines.map((l) => (
-            <li key={l.key} className="grid grid-cols-[112px_1fr] gap-5 border-b border-mist-2 py-6 last:border-0 max-sm:grid-cols-[84px_1fr] max-sm:gap-4">
+            <li key={l.key} className="grid grid-cols-[112px_1fr] gap-5 border-b border-mist-2 py-6 last:border-0 max-sm:grid-cols-[72px_1fr] max-sm:gap-3.5 max-sm:py-4">
               <Link href={productHref(l.product)} tabIndex={-1} aria-hidden>
-                <Thumb image={l.variant?.images[0] ?? l.product.cutout} sizes="112px" className="h-[88px] w-[112px] bg-mist max-sm:h-[68px] max-sm:w-[84px]" />
+                <Thumb image={l.variant?.images[0] ?? l.product.cutout} sizes="112px" className="h-[88px] w-[112px] bg-mist max-sm:h-[60px] max-sm:w-[72px]" />
               </Link>
               <div className="min-w-0">
                 <div className="flex items-start justify-between gap-4">
@@ -85,7 +85,7 @@ export function CartView() {
                   </div>
                   <p className="flex-none text-[17px] font-medium text-ink tabular-nums">{formatLei(l.unit * l.quantity)}</p>
                 </div>
-                <div className="mt-4 flex items-center justify-between gap-3">
+                <div className="mt-4 flex items-center justify-between gap-3 max-sm:mt-2.5">
                   <QuantityStepper size="sm" value={l.quantity} onChange={(q) => setQuantity(l.key, q)} label={`Cantitate ${l.product.name}`} />
                   <button
                     type="button"
@@ -110,17 +110,17 @@ export function CartView() {
               <Totals pricing={pricing} />
             </div>
             <p className="text-right text-[13px] text-muted">{terms.vat}</p>
+            <OfferProgress progress={progress} lines={lines} actions={false} compact className="mt-4" />
             <CarryLink href="/checkout" className="cta mt-5 w-full">
               <Lock /> Finalizează comanda
             </CarryLink>
-            <Link href="/products" className="btn-secondary mt-2 w-full">
-              Continuă cumpărăturile
-            </Link>
-            <ul className="mt-5 space-y-1 text-[14.5px] text-text">
-              <li>✓ Livrare gratuită în România</li>
-              <li>✓ Retur în {terms.returnDays} zile</li>
-              <li>✓ Garanție {terms.warrantyYears} ani</li>
-            </ul>
+            <p className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[14px] text-text">
+              <span>✓ Livrare gratuită · Retur {terms.returnDays} zile · Garanție {terms.warrantyYears} ani</span>
+              <Link href="/products" className="font-medium text-ink underline underline-offset-4">
+                Continuă cumpărăturile
+              </Link>
+            </p>
+            <Suggestions placement="cart" className="mt-5 block border-t border-mist-2 pt-5" />
           </div>
         </aside>
       </div>

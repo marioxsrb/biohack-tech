@@ -1,12 +1,14 @@
-import { UPSELL_MAP, type UpsellCandidate } from '@/config/upsell'
-import type { ProductId } from '@/content/catalog'
+import type { UpsellCandidate } from '@/config/upsell'
+import { recommend } from './recommend'
 
-/** The one product offered after an order with these products, or null. Pure: used by page and API alike. */
+/**
+ * The one product offered after an order with these products, or null. Pure: used by page and API alike.
+ * The same engine as the cart and checkout suggestions (`lib/recommend.ts`), placement `post_purchase`.
+ */
 export function upsellFor(productIds: string[]): UpsellCandidate | null {
-  const bought = new Set(productIds)
-  for (const id of productIds) {
-    const hit = (UPSELL_MAP[id as ProductId] ?? []).find((c) => !bought.has(c.productId))
-    if (hit) return hit
-  }
-  return null
+  const r = recommend(
+    productIds.map((productId) => ({ productId, quantity: 1 })),
+    'post_purchase',
+  )[0]
+  return r ? { productId: r.productId, reason: r.reason } : null
 }

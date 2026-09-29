@@ -51,7 +51,7 @@ function Tile({ p, when, tint, wide }: { p: Product; when: string; tint: string;
     <>
       <p className="text-[14px] font-semibold tracking-[0.01em] text-cyan-700">{when}</p>
       <h3 className="mt-2 text-[clamp(30px,2.8vw,38px)] leading-[1] tracking-[-0.04em] whitespace-nowrap">
-        <Link href={productHref(p)} className="after:absolute after:inset-0 after:content-[''] hover:underline hover:decoration-1 hover:underline-offset-4">
+        <Link href={productHref(p)} className="hover:underline hover:decoration-1 hover:underline-offset-4">
           {p.name}
         </Link>
       </h3>
@@ -66,7 +66,6 @@ function Tile({ p, when, tint, wide }: { p: Product; when: string; tint: string;
         </span>
         <PromoNote productId={p.id} />
       </p>
-      {/* Above the tile-wide link, so the buttons act on their own. */}
       <div className="relative z-20 mt-4 flex flex-wrap items-center gap-x-5 gap-y-2">
         {choose ? (
           <Link href={`${productHref(p)}#cumpara`} className="cta sm">
@@ -101,12 +100,16 @@ function Tile({ p, when, tint, wide }: { p: Product; when: string; tint: string;
             {head}
             <div className="mt-auto pt-6 sm:pt-8">{buy}</div>
           </div>
-          <div className={`relative min-h-[190px] sm:min-h-[260px] ${p.cutout.bleed === 'bottom' ? 'mx-[6%] mt-[6%]' : 'm-[8%]'}`}>{image}</div>
+          <Link href={productHref(p)} aria-label={`${p.name}: vezi produsul`} className={`relative block min-h-[190px] cursor-pointer sm:min-h-[260px] ${p.cutout.bleed === 'bottom' ? 'mx-[6%] mt-[6%]' : 'm-[8%]'}`}>
+            {image}
+          </Link>
         </div>
       ) : (
         <div className={`flex h-full flex-col ${pad}`}>
           <div className="relative z-10">{head}</div>
-          <div className="relative my-4 min-h-[170px] flex-1 sm:my-6 sm:min-h-[200px]">{image}</div>
+          <Link href={productHref(p)} aria-label={`${p.name}: vezi produsul`} className="relative my-4 block min-h-[170px] flex-1 cursor-pointer sm:my-6 sm:min-h-[200px]">
+            {image}
+          </Link>
           <div className="relative z-10">{buy}</div>
         </div>
       )}

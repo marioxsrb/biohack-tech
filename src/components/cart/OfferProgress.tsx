@@ -13,7 +13,7 @@ import { useCart, type ResolvedLine } from './CartProvider'
  * comes from the promotion engine. Nothing is added unless the customer presses a button.
  * `actions={false}` shows the states without buttons (checkout).
  */
-export function OfferProgress({ progress, lines, actions = true, className = '' }: { progress: PromotionProgress[]; lines: ResolvedLine[]; actions?: boolean; className?: string }) {
+export function OfferProgress({ progress, lines, actions = true, compact = false, className = '' }: { progress: PromotionProgress[]; lines: ResolvedLine[]; actions?: boolean; compact?: boolean; className?: string }) {
   const { add } = useCart()
   if (!progress.length) return null
   return (
@@ -25,13 +25,13 @@ export function OfferProgress({ progress, lines, actions = true, className = '' 
         return (
           <div key={p.id} className="space-y-3">
             {p.active && (
-              <div className="flex items-start gap-4 rounded-[18px] bg-cyan-700 px-5 py-4 text-white">
+              <div className={`flex items-start gap-4 rounded-[18px] bg-cyan-700 text-white ${compact ? 'px-4 py-3' : 'px-5 py-4'}`}>
                 <span className="mt-1 flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/20">
                   <Check className="h-4 w-4" aria-hidden />
                 </span>
                 <span className="leading-snug">
                   <span className="block text-[14.5px] font-medium text-white/85">Oferta este activă: {p.label}</span>
-                  <span className="mt-0.5 block text-[clamp(24px,2.4vw,30px)] leading-tight font-semibold tracking-[-0.025em] text-white">
+                  <span className={`mt-0.5 block leading-tight font-semibold tracking-[-0.025em] text-white ${compact ? 'text-[22px]' : 'text-[clamp(24px,2.4vw,30px)]'}`}>
                     Economisești {formatLei(p.savedMinor)}.
                   </span>
                 </span>
@@ -39,11 +39,11 @@ export function OfferProgress({ progress, lines, actions = true, className = '' 
             )}
 
             {p.state === 'close' && (
-              <div className="rounded-[18px] bg-cyan-50 p-5 shadow-[inset_0_0_0_2px_var(--color-cyan-700)]">
+              <div className={`rounded-[18px] bg-cyan-50 shadow-[inset_0_0_0_2px_var(--color-cyan-700)] ${compact ? 'p-4' : 'p-5'}`}>
                 <p className="text-[15.5px] font-medium text-ink">
                   {amber ? 'Mai adaugă o pereche de NEUROS Amber' : 'Mai adaugă un produs NEUROS Calm, Focus sau Flow'}
                 </p>
-                <p className="mt-1 text-[clamp(26px,2.6vw,34px)] leading-[1.05] font-semibold tracking-[-0.03em] text-cyan-700">
+                <p className={`mt-1 leading-[1.05] font-semibold tracking-[-0.03em] text-cyan-700 ${compact ? 'text-[22px]' : 'text-[clamp(26px,2.6vw,34px)]'}`}>
                   {amber ? (p.active ? 'și primești încă una gratis.' : 'și primești 2+1 gratis.') : 'și primești 20% reducere.'}
                 </p>
                 {gain > 0 && (

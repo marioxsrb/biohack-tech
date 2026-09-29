@@ -172,14 +172,19 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
   const appEnv: AppEnv = appEnvRaw === 'production' || appEnvRaw === 'staging' ? appEnvRaw : 'development'
   const siteUrl = (str('NEXT_PUBLIC_SITE_URL') ?? 'http://localhost:3000').replace(/\/$/, '')
 
-  const databaseUrl = str('DATABASE_URL')
+  // Isolated test mode (scripts/stripe-test.mjs): its own embedded database, no FGO, no GoHighLevel, emails
+  // to files, Stripe test keys only. Never in production. Nothing here can reach a real invoice or CRM.
+  const isolated = str('ISOLATED_TEST') === '1' && appEnv !== 'production'
+  if (str('ISOLATED_TEST') === '1' && appEnv === 'production') issues.push({ area: 'app', level: 'error', message: 'ISOLATED_TEST nu se folosește în producție; este ignorat.' })
+
+  const databaseUrl = isolated ? undefined : str('DATABASE_URL')
   // Production never falls back to the embedded database: orders must survive a redeploy.
   const localDb = !databaseUrl && appEnv !== 'production'
   if (!databaseUrl && !localDb) issues.push({ area: 'database', level: 'error', message: 'DATABASE_URL lipsește. Fără bază de date nu se pot înregistra comenzi.' })
   if (appEnv === 'production' && siteUrl.startsWith('http://')) issues.push({ area: 'app', level: 'error', message: 'NEXT_PUBLIC_SITE_URL trebuie să fie https în producție.' })
 
-  const transportRaw = str('EMAIL_TRANSPORT')
-  const ghl = readGhl(issues)
+  const transportRaw = isolated ? 'file' : str('EMAIL_TRANSPORT')
+  const ghl = isolated ? null : readGhl(issues)
   const transport: EmailConfig['transport'] = transportRaw === 'ghl' || transportRaw === 'file' || transportRaw === 'none' ? transportRaw : appEnv === 'development' ? 'file' : 'none'
   if (transport === 'ghl' && !ghl) issues.push({ area: 'email', level: 'error', message: 'EMAIL_TRANSPORT=ghl are nevoie de configurarea GoHighLevel.' })
   if (transport === 'none') issues.push({ area: 'email', level: appEnv === 'production' ? 'error' : 'warn', message: 'Emailurile tranzacționale sunt oprite (EMAIL_TRANSPORT).' })
@@ -205,7 +210,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     localDb,
     stripe: readStripe(appEnv, issues),
     bank: readBank(issues),
-    fgo: readFgo(issues, siteUrl),
+    fgo: isolated ? null : readFgo(issues, siteUrl),
     ghl,
     email: { transport, replyTo: str('EMAIL_REPLY_TO'), fileDir: str('EMAIL_FILE_DIR') ?? '.data/emails' },
     admin: adminPassword && adminPassword.length >= 12 ? { user: adminUser ?? 'admin', password: adminPassword } : null,

@@ -94,6 +94,23 @@ export const cartStore = {
         : [...current, { productId, variantId, quantity: Math.min(MAX_QTY, quantity), ...(source && { source }) }],
     )
   },
+  /**
+   * Several lines in one step (the NEUROS Amber 2+1 picker): all are added, or none. Identical picks
+   * add up on one line; each line keeps its first source.
+   */
+  addMany(picks: { productId: ProductId; variantId?: string; quantity?: number }[], source?: EntrySource) {
+    const current = cartStore.getSnapshot()
+    const want = sanitize(picks.map((p) => ({ ...p, quantity: p.quantity ?? 1, source })))
+    if (!want.length || want.length !== new Set(picks.map((p) => lineKey(p))).size) return false
+    const next = [...current]
+    for (const l of want) {
+      const i = next.findIndex((x) => lineKey(x) === lineKey(l))
+      if (i === -1) next.push(l)
+      else next[i] = { ...next[i], quantity: Math.min(MAX_QTY, next[i].quantity + l.quantity) }
+    }
+    commit(next)
+    return true
+  },
   setQuantity(key: string, quantity: number) {
     const q = Math.min(MAX_QTY, Math.max(1, Math.floor(quantity)))
     commit(cartStore.getSnapshot().map((l) => (lineKey(l) === key ? { ...l, quantity: q } : l)))

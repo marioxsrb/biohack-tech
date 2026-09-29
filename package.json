@@ -14,7 +14,8 @@
     "assets": "python3 scripts/prepare-assets.py",
     "test": "vitest run",
     "db:migrate": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/db-migrate.mjs",
-    "ghl:check": "node scripts/ghl-check.mjs"
+    "ghl:check": "node scripts/ghl-check.mjs",
+    "stripe:test": "node scripts/stripe-test.mjs"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.8",

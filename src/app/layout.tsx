@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { AddedPopup } from '@/components/cart/AddedPopup'
 import { CartProvider } from '@/components/cart/CartProvider'
+import { OfferSheetsProvider } from '@/components/offers/OfferSheets'
 import { ConsentManager } from '@/components/consent/ConsentManager'
 import { site } from '@/config/site'
 import { JsonLd, organizationJsonLd } from '@/lib/seo'
@@ -32,8 +33,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ConsentManager />
         {/* Site chrome (header, footer) lives in (site)/layout; advertising landings in (landing) have their own. */}
         <CartProvider>
-          {children}
-          <AddedPopup />
+          <OfferSheetsProvider>
+            {children}
+            <AddedPopup />
+          </OfferSheetsProvider>
         </CartProvider>
         <JsonLd data={organizationJsonLd()} />
       </body>

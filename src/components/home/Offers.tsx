@@ -1,5 +1,6 @@
 import Image from 'next/image'
 import Link from 'next/link'
+import { AmberOfferButton } from '@/components/offers/AmberOfferButton'
 import { Arrow } from '@/components/ui/icons'
 import { PROMOTIONS } from '@/config/promotions'
 import { getProduct, productHref } from '@/content/catalog'
@@ -63,9 +64,9 @@ export function Offers() {
           <div className="relative mt-auto aspect-[16/7] w-full">
             <Image src={amberProduct.cutout.src} alt="" fill sizes="(min-width: 768px) 480px, 90vw" className="object-contain" />
           </div>
-          <Link href={`${productHref(amberProduct)}#cumpara`} className="cta sm mt-4 self-start">
-            Alege ramele <Arrow />
-          </Link>
+          <AmberOfferButton className="cta sm mt-4 self-start" placement="homepage">
+            Alege cele 3 perechi <Arrow />
+          </AmberOfferButton>
         </article>
       </div>
       <p className="mt-4 text-[14px] text-muted">
