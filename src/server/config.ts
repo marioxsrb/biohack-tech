@@ -45,6 +45,8 @@ export type Config = {
   cronSecret?: string
   /** Minutes after which an unpaid card order counts as abandoned. */
   abandonAfterMinutes: number
+  /** Days after which an unpaid bank-transfer order is cancelled automatically; null = never (default). */
+  transferExpiryDays: number | null
 }
 
 /** ISO 13616 mod-97 check, so a mistyped IBAN is caught before a customer sees it. */
@@ -155,6 +157,11 @@ function readGhl(issues: ConfigIssue[]): GhlConfig | null {
   return { token, locationId, pipelineId, apiBase: str('GHL_API_BASE') ?? 'https://services.leadconnectorhq.com', emailFrom: str('EMAIL_FROM') }
 }
 
+const positiveInt = (v: string | undefined) => {
+  const n = Number(v)
+  return v !== undefined && Number.isInteger(n) && n > 0 ? n : null
+}
+
 let cached: { config: Config; issues: ConfigIssue[] } | null = null
 
 export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
@@ -197,7 +204,8 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     email: { transport, replyTo: str('EMAIL_REPLY_TO'), fileDir: str('EMAIL_FILE_DIR') ?? '.data/emails' },
     admin: adminPassword && adminPassword.length >= 12 ? { user: adminUser ?? 'admin', password: adminPassword } : null,
     cronSecret,
-    abandonAfterMinutes: Number(str('ABANDON_AFTER_MINUTES') ?? 60) || 60,
+    abandonAfterMinutes: positiveInt(str('ABANDON_AFTER_MINUTES')) ?? 60,
+    transferExpiryDays: positiveInt(str('TRANSFER_EXPIRY_DAYS')),
   }
   cached = { config, issues }
   return cached

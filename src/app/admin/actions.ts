@@ -2,16 +2,22 @@
 
 import { revalidatePath } from 'next/cache'
 import { headers } from 'next/headers'
+import { checkAdminAuth } from '@/lib/admin-auth'
 import { getDb } from '@/server/db'
 import { jobs } from '@/server/jobs/outbox'
 import { runDueJobs } from '@/server/jobs/runner'
 import { log } from '@/server/log'
 import { cancelOrder, confirmPayment, markDelivered, markProcessing, markShipped, recordRefund } from '@/server/orders/service'
 
-/** Defense in depth: the proxy already requires Basic Auth for /admin. */
+/**
+ * Every action verifies the admin credentials itself. Server Actions are HTTP endpoints; the proxy's
+ * /admin matcher is not treated as the only line of defense.
+ */
 async function guard() {
-  const auth = (await headers()).get('authorization') ?? ''
-  if (!process.env.ADMIN_PASSWORD || !auth.startsWith('Basic ')) throw new Error('unauthorized')
+  if (checkAdminAuth((await headers()).get('authorization')) !== 'ok') {
+    log.warn('admin.unauthorized_action')
+    throw new Error('unauthorized')
+  }
 }
 
 const text = (f: FormData, k: string, max = 200) => String(f.get(k) ?? '').trim().slice(0, max)

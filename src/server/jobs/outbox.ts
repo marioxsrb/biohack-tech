@@ -6,7 +6,7 @@
 import 'server-only'
 import type { Queryable, Row } from '@/server/db'
 
-export type JobKind = 'ghl.sync' | 'fgo.invoice' | 'fgo.storno' | 'email.send' | 'order.abandon_check' | 'stripe.reconcile'
+export type JobKind = 'ghl.sync' | 'fgo.invoice' | 'fgo.storno' | 'email.send' | 'order.abandon_check' | 'stripe.reconcile' | 'order.transfer_expiry'
 export type JobStatus = 'pending' | 'running' | 'retry' | 'done' | 'failed' | 'skipped'
 
 export type Job = {

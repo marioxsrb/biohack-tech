@@ -11,10 +11,10 @@ Written 26 September 2026 against commit “Launch pass”. Everything below ref
 | Storefront (home, 3 product pages, cart page, checkout, order page, legal, 404) | Built, tested at 390/430/768/1024/1280/1440 |
 | Prices | NEUROS Calm 6.380 lei, NEUROS Amber 315 lei (approved), NEUROS Focus 2.490 lei (from source, confirm) |
 | Canonical orders (PostgreSQL) | Built and tested (PGlite + real PostgreSQL concurrency tests) |
-| Card payments (Stripe Payment Element, own checkout) | Built; tested against a Stripe API mock. **Needs Stripe keys to run a real test payment** |
-| Bank transfer | Built and tested end to end. **Needs real bank details** |
-| FGO invoices | Built to the official FGO API v7.1 spec; tested against a mock. **Needs FGO API credentials** |
-| GoHighLevel CRM + transactional email | Built on API v2 (2021-07-28); tested against a mock. **Needs token, location, pipeline, fields** |
+| Card payments (Stripe Payment Element, own checkout) | Built; **verified in Stripe TEST mode** with real test payments and real webhooks (`scripts/stripe-e2e.mjs`, 19/19). Needs live keys + live webhook for production |
+| Bank transfer | Built and tested end to end; real bank details verified locally (IBAN checksum, checkout, order page, instructions email). Production host needs the same `BANK_*` values |
+| FGO invoices | Built to the official FGO API v7.1 spec; tested against a mock (idempotency, outage, rejection). **Needs FGO API credentials; never called against FGO yet** |
+| GoHighLevel CRM + transactional email | Built on API v2 (2021-07-28); tested against a mock (idempotency, outage, permanent rejection, retry). **Needs token, location, pipeline, fields, sending domain; never called against GHL yet** |
 | Operations (/admin) | Built: orders, payment confirmation for transfers, shipping + AWB, delivery, cancel, refunds for transfers, failed-sync retry |
 | Courier integration | Not built (no courier chosen). AWB entered by hand in /admin |
 | Analytics | Event layer built (GA4 format); no tracker installed (needs IDs + consent) |
@@ -30,7 +30,8 @@ Written 26 September 2026 against commit “Launch pass”. Everything below ref
 - Payment truth: only Stripe can mark a card order paid: the signed webhook, or the `stripe.reconcile` job (server-side retrieve, 10 minutes after the order and again before an order is marked abandoned) if the webhook was lost. The order page only reads; it never marks payments or starts workflows. Bank transfers become paid only when a person confirms the statement in /admin.
 - Side effects (CRM, invoice, email) go through a database outbox with unique keys: retried with backoff, never duplicated, visible in /admin when they fail.
 - Transactional emails are rendered by the site (HTML + text) and delivered through GoHighLevel.
-- 69 automated tests (money, cart, validation, order state machine, idempotency, webhook signatures, FGO/GHL mapping, email rendering, outbox, concurrency on PostgreSQL) + an HTTP integration run + 34 browser journeys.
+- 105 automated tests (money, cart, validation, order state machine, idempotency, webhook route and signatures, browser-closed payment, reconciliation, FGO/GHL mapping, email rendering, outbox retries and outages, abandonment, transfer expiry, admin authorization, the real three-product catalog end to end, concurrency on PostgreSQL) + `scripts/stripe-e2e.mjs` against Stripe test mode.
+- /admin: HTTP Basic Auth in the proxy **and** inside every admin action (actions are HTTP endpoints; each verifies the credentials itself). Only bank transfers can be marked paid by a person; card money is confirmed by Stripe only.
 
 ## 3. What is blocked, and by what
 
@@ -42,6 +43,50 @@ Written 26 September 2026 against commit “Launch pass”. Everything below ref
 | Automatic invoices | FGO API user, private key, series, VAT rate | Orders show “Factură: Manual” in /admin |
 | CRM + all customer emails | GHL token, location, pipeline, fields, sending domain | No confirmation emails (**P0**) |
 | Legal compliance | Company data, full legal texts | Footer and legal pages incomplete (**P0**) |
+
+## 3a. Operational lifecycle (what happens after each change)
+
+Every change of an order or payment is one database transaction that also writes an event (`order_events`) and the resulting side effects as outbox jobs (`jobs`, unique `dedupe_key`). Integrations consume those jobs; nothing depends on the browser, the order page, localStorage or query parameters.
+
+| Canonical change | Event | FGO | GoHighLevel | Email (site, via GHL) |
+|---|---|---|---|---|
+| Card order created | `order.created` | – | – (a card attempt reaches the CRM only when paid or abandoned) | – |
+| Transfer order created | `order.created` | – | contact + opportunity in `Așteaptă transferul` | `transfer_instructions` (beneficiary, IBAN, bank, amount, order number as reference) |
+| Card paid (Stripe webhook or `stripe.reconcile`) | `payment.confirmed` | invoice (`fgo.invoice`) | contact, tags, opportunity → `Plătită, de pregătit` (won) | `order_confirmed`; `invoice_issued` after FGO |
+| Transfer confirmed by a person in /admin | `payment.confirmed` | invoice if `FGO_TRANSFER_INVOICE=on_payment` (default) | → `Plătită, de pregătit` | `payment_received`; `invoice_issued` after FGO |
+| Card payment failed | `payment.failed` | – | – (the customer is still on the checkout and can retry) | – (failure is shown in the checkout; no email spam) |
+| Card payment cancelled in Stripe | `payment.cancelled` | – | stage update only if an opportunity already exists | – |
+| Unpaid card order after `ABANDON_AFTER_MINUTES` | `order.abandoned` | – | → `Plată nefinalizată` (status abandoned) | – from the site; GHL W2 recovery, consent only |
+| Unpaid transfer after `TRANSFER_EXPIRY_DAYS` (off by default) | `order.cancelled` | – | → `Anulată` | `order_cancelled` |
+| Shipped / delivered / cancelled / refunded in /admin or Stripe | `order.*` / `payment.refunded` | storno only with `FGO_AUTO_STORNO=true` | stage update | `order_shipped` / `order_cancelled` / `refund_issued` |
+
+The team is notified by GHL workflow W1 (opportunity created / stage `Plătită, de pregătit`) and always sees everything in /admin.
+
+**Idempotency.**
+- Each side effect has a dedupe key, e.g. `fgo.invoice:<order>`, `email:order_confirmed:<order>`, `ghl.sync:<order>:<event>`. A repeated webhook, reconciliation or admin click finds the order already moved and queues nothing.
+- **FGO:** never called again once an invoice number is stored; FGO itself refuses a second invoice for the same `IdExtern`.
+- **GHL:** the contact is upserted; the opportunity is found by stored id or by the order number.
+- **Emails:** sent once per template and order. Delivery is at least once: if a server dies after GHL accepted an email but before the job was marked done, the retry can send it again. This is rare, and preferred to losing a confirmation.
+
+**Abandoned checkout policy.**
+- A card order still unpaid `ABANDON_AFTER_MINUTES` (default 60) after it was created is checked by the `order.abandon_check` job.
+- **Stripe first:** the job first asks Stripe (`stripe.reconcile`). A payment whose webhook was lost is confirmed instead, and an order that is paid is never abandoned.
+- **Stripe unreachable:** the check retries rather than guessing.
+- **Kept, not deleted:** abandoned orders stay for history and can still be paid later (`abandoned → confirmed`). If the same customer has paid another order since, the attempt is closed quietly (`order.superseded`).
+- **Bank transfers** are never abandoned. They wait for the transfer, with the GHL W3 reminder at 48 h. Optionally, `TRANSFER_EXPIRY_DAYS` cancels them automatically after N days, with an email. It is off until you decide the number of days.
+
+**Retries and failures.**
+- **Retry state:** jobs retry with backoff (1, 2, 4… minutes, up to 6 h) for 8 attempts. Status, attempts and the last error are stored per job and shown in /admin.
+- **Permanent errors are not retried blindly:** FGO refusals and GHL 4xx other than 401/404 stop at once, as `failed`, for a person.
+- **Payments are never touched:** an FGO, GHL or email failure never changes a payment or order state.
+- **Manual retry:** "Reîncearcă" in /admin (per job, per order, or all) puts failed jobs back. It is safe for the idempotency reasons above.
+
+**Verified vs not yet verified (29.09.2026).**
+- **Verified:**
+  - Stripe test mode, with real test payments and webhooks;
+  - bank transfer with the real bank details (locally: checkout, order page, instructions email content);
+  - all job logic against HTTP-level mocks of FGO and GHL.
+- **Not verified:** FGO and GoHighLevel have never been called with real credentials. Run §20 on staging with the FGO test account and a GHL sub-account before going live.
 
 ## 4. Required accounts
 
@@ -366,6 +411,7 @@ The ordered sequence:
 | Webhook endpoint failing | Stripe retries for 3 days; payments stay safe in Stripe | Fix, then Stripe → Resend failed events |
 | FGO down or refusing | Order stays paid; invoice retried 8 times; then “Factură: Eroare” | /admin → Reîncearcă, or issue the invoice in FGO by hand with the order number in the text |
 | GHL down | Order is saved; CRM/email jobs retry for hours | /admin → Reîncearcă tot. If emails failed permanently, email the customer from GHL by hand |
+| GHL rejects a request (4xx, e.g. a custom field missing) | The job stops at once as `failed` (no blind retries); the order is untouched | Fix the GHL setup (§10), then /admin → Reîncearcă |
 | Email not delivered | Job shows the error in /admin | Check the sending domain; resend via Reîncearcă |
 | Bank payment received with no reference | – | Match by amount/name in /admin search → “Plata a fost primită” |
 | Customer paid twice (two orders) | Both orders are paid | Refund the second in Stripe; cancel it in /admin |

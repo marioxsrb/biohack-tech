@@ -160,6 +160,8 @@ async function transition(
 export function confirmPayment(orderId: string, source: Source, reported?: { amountMinor: number; currency: string; paymentIntentId?: string }) {
   return transition(orderId, source, async (o) => {
     if (isPaid(o.paymentStatus) || o.paymentStatus === 'refunded') return { skip: 'already_paid' }
+    // Card money is confirmed only by Stripe (webhook or reconciliation); a person confirms only transfers.
+    if (source === 'admin' && o.paymentMethod !== 'bank_transfer') return { skip: 'card_payment_confirmed_by_stripe_only' }
     if (!canMovePayment(o.paymentStatus, 'paid')) return { skip: `payment_${o.paymentStatus}` }
     if (reported) {
       if (reported.currency.toUpperCase() !== 'RON' || reported.amountMinor !== o.totalMinor) {
@@ -220,6 +222,22 @@ export function markAbandonedIfUnpaid(orderId: string) {
     )
     if (later.rows.length) return { patch: { status: 'cancelled', cancelled_at: new Date(), cancel_reason: 'înlocuită de o comandă ulterioară' }, event: 'order.superseded' }
     return { patch: { status: 'abandoned' }, event: 'order.abandoned' }
+  })
+}
+
+/**
+ * A bank-transfer order whose money never arrived within TRANSFER_EXPIRY_DAYS. Cancelled like any
+ * cancellation (customer email, CRM stage), never deleted. A transfer confirmed in time is untouched.
+ */
+export function expireUnpaidTransfer(orderId: string) {
+  const days = getConfig().transferExpiryDays
+  return transition(orderId, 'system', async (o) => {
+    if (o.paymentMethod !== 'bank_transfer' || o.paymentStatus !== 'awaiting_transfer' || !canMoveOrder(o.status, 'cancelled')) return { skip: 'not_expired' }
+    return {
+      patch: { status: 'cancelled', cancelled_at: new Date(), cancel_reason: `transferul nu a ajuns în ${days ?? '?'} zile` },
+      event: 'order.cancelled',
+      data: { wasPaid: false, reason: 'transfer_expired' },
+    }
   })
 }
 
@@ -284,7 +302,13 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
   switch (event) {
     case 'created':
       return o.paymentMethod === 'bank_transfer'
-        ? [...crm(), ...email('transfer_instructions')]
+        ? [
+            ...crm(),
+            ...email('transfer_instructions'),
+            ...(c.transferExpiryDays
+              ? [{ kind: 'order.transfer_expiry' as const, orderId: o.id, dedupeKey: `transfer_expiry:${o.id}`, runAt: new Date(Date.now() + c.transferExpiryDays * 86_400_000) }]
+              : []),
+          ]
         : [
             // Safety net if Stripe's webhook never arrives; the webhook normally confirms within seconds.
             { kind: 'stripe.reconcile', orderId: o.id, dedupeKey: `reconcile:${o.id}`, runAt: new Date(Date.now() + 10 * 60_000) },

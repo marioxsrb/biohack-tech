@@ -8,12 +8,13 @@ Short on purpose. The full runbook is `docs/PRODUCTION-LAUNCH.md`.
 - **If missing:** the product sells at 2.490 lei.
 
 ### Bank details
-- **Needed:** beneficiary, IBAN (RON), bank name, SWIFT (optional).
+- **Status:** provided in the local `.env.local` (IBAN valid). Set the same `BANK_*` values on the production host; `BANK_SWIFT` still optional.
 - **Used in:** checkout, order page, transfer email (`BANK_*`).
 - **If missing:** “Transfer bancar” shows “În curând”.
 
 ### Stripe live account
-- **Needed:** activated account, live keys, webhook secret (§8 of the runbook).
+- **Status:** test mode works end to end locally (test keys + Stripe CLI webhook secret).
+- **Needed:** activated account, live keys, live webhook endpoint secret (§8 of the runbook).
 - **Used in:** card payments.
 - **If missing:** “Card bancar” shows “În curând”.
 
@@ -39,8 +40,14 @@ Short on purpose. The full runbook is `docs/PRODUCTION-LAUNCH.md`.
 
 ### Decisions
 - **Courier** and whether shipping stays free for all orders (today: free, from the current site).
-- **Unpaid transfer orders:** after how many days to cancel (today: reminder at 2 days, task at 5 days).
+- **Unpaid transfer orders:** after how many days to cancel them automatically. Today: GHL reminder at 2 days, task at 5 days, cancellation by hand. Set `TRANSFER_EXPIRY_DAYS` to automate it (the customer gets the cancellation email).
+- **Card checkout abandonment:** `ABANDON_AFTER_MINUTES` (default 60) before an unpaid card order counts as “Plată nefinalizată”.
 - **Marketing consent:** may checkout recovery and usage emails go to customers who did not tick the box?
 - **Analytics:** GA4 / GTM / Meta ids, and a consent banner.
 - **Support contact:** keep `contact@neuros.ro` and `+40 757 890 707` (from the source) or use Biohack Tech’s own.
 - **What’s in the box** for each product.
+
+### Admin access
+- **Needed:** `ADMIN_PASSWORD` (12+ characters; `ADMIN_USER` optional, default `admin`).
+- **Used in:** /admin (orders, transfer confirmation, shipping, retries).
+- **If missing:** /admin does not exist (404), so nobody can confirm a bank transfer or see failed syncs.

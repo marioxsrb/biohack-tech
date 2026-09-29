@@ -15,7 +15,7 @@ import { deliver } from '@/server/integrations/email/transport'
 import { errText, log } from '@/server/log'
 import { orders } from '@/server/orders/repository'
 import { reconcileCardPayment } from '@/server/orders/reconcile'
-import { markAbandonedIfUnpaid } from '@/server/orders/service'
+import { expireUnpaidTransfer, markAbandonedIfUnpaid } from '@/server/orders/service'
 import { jobs, type Job } from './outbox'
 
 class Skip extends Error {}
@@ -92,6 +92,10 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
   },
 
   'stripe.reconcile': async (j) => reconcileCardPayment(j.orderId!),
+  'order.transfer_expiry': async (j) => {
+    const r = await expireUnpaidTransfer(j.orderId!)
+    return r.changed ? 'cancelled' : (r.reason ?? 'unchanged')
+  },
   // Ask Stripe first: a payment whose webhook was lost must never be marked abandoned.
   'order.abandon_check': async (j) => {
     const reconciled = await reconcileCardPayment(j.orderId!)
