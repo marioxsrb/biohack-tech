@@ -62,6 +62,7 @@ Updated 29 September 2026 (phase 3/4). Everything that is code is built; what is
 
 - Courier API integration (automatic AWB, delivery tracking) through the courier adapter.
 - Upsell / cross-sell on the landings (extension point documented in runbook §26; only catalog prices, no discount logic yet).
+- GHL segmentation by configuration or promotion (e.g. tags for NEUROS Flow 1 / 4 / 13 zones or for orders with 2+1): the data is in the orders (runbook §30a); add tags only when a campaign needs them.
 - Real customer testimonials on the landings (the slot exists in `components/landing/kit.tsx`, hidden while empty), with written consent and a source.
 - Per-configuration photographs for NEUROS Flow (today the same gallery for 1, 4 and 13 zones).
 - A GHL workflow on `bt-retur-solicitat` / `bt-retur-primit` (tags are set; no workflow uses them yet).

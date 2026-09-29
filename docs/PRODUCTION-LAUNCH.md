@@ -696,7 +696,8 @@ One landing per product, for paid traffic only. Same app, same catalog, same che
 **Routing.** `src/proxy.ts` + `src/lib/landing-hosts.ts`. The Host header is compared with an explicit allowlist built from `LANDING_SLUGS` and `LANDING_BASE_DOMAIN` (default `biohack-tech.ro`); nothing else is recognized (a forged or unknown host is the main site). On a landing hostname:
 - `/` is rewritten to `/lp/<slug>`;
 - `/checkout`, `/comanda/<token>`, `/api/checkout`, `/api/consent`, `/api/contact`, the legal pages, `/retragere` and framework files are served on the same host, so consent, cart and the Stripe return stay on one origin;
-- everything else (incl. `/admin`, `/api/webhooks/*`, `/api/jobs/*`, product pages) gets a 308 to the same path on `NEXT_PUBLIC_SITE_URL`;
+- `/cart`, `/products` and `/products/<slug>` are also served on the landing host: the cart lives in that origin's storage, so the whole purchase path (landing → checkout → cart → product page for another frame or configuration → cart → checkout) stays on one origin;
+- everything else (incl. `/admin`, `/api/webhooks/*`, `/api/jobs/*`, brand pages) gets a 308 to the same path on `NEXT_PUBLIC_SITE_URL`;
 - every response carries `X-Robots-Tag: noindex, nofollow`.
 Locally, `<slug>.localhost:3000` works outside production (Chrome resolves it to 127.0.0.1).
 
@@ -704,9 +705,11 @@ Locally, `<slug>.localhost:3000` works outside production (Chrome resolves it to
 
 **SEO.** `robots: noindex, nofollow`, canonical = the product page on the main domain, excluded from `sitemap.xml`, plus the header above. The main site's indexing is unchanged.
 
-**Direct checkout.** The offer's button links to `/checkout?item=<productId>[:<variantId>]&lp=<slug>&lp_host=<host>&utm_*`. Only ids travel. The checkout puts the item in the cart (never twice; existing cart lines are kept), removes `item` from the URL and prices everything from the catalog; the server prices the order again (`resolveOrderLines`). NEUROS Flow requires a configuration; the landing opens on 4 zones, and every chip shows its own price.
+**Direct checkout.** One handoff for every purchase button (`src/lib/purchase.ts`): product id, variant id when the product has variants, quantity and the entry surface; never a price. The cart (`cart-store.ts`, localStorage `biohack-cart-v1`) is the canonical state. A landing's “Comandă” (`startCheckout` in `components/landing/checkout-link.ts`) first puts its selection in the cart (never doubling a line that is already there; other cart lines are kept), then opens `/checkout?item=<productId>[:<variantId>][*<qty>]&lp=<slug>&lp_host=<host>&utm_*`. The checkout reads `item` from the router's search params, applies it the same way (so the link also works alone: new tab, shared link, reload) and removes it from the URL. The server prices everything again (`resolveOrderLines`). NEUROS Flow requires a configuration (opens on 4 zones); NEUROS Amber requires a frame and has a quantity choice (the 2+1 total is shown by the promotion engine).
 
-**Attribution.** No cookie or localStorage is used for it. The URL carries `lp`, `lp_host` and `utm_source/medium/campaign/content/term`; click ids (gclid, fbclid) are not collected. The server keeps only a known landing, its real hostname (or the main host for `/lp/<slug>`), and UTM values cleaned to a safe alphabet, max 100 characters (`sanitizeAttribution`). Stored in `orders.attribution` (jsonb, migration 004), shown in /admin (“Sursa comenzii”), written to the `order.created` audit event, and synced to GHL as `contact.bt_last_order_source`.
+*Defect fixed 29 Sep 2026:* the checkout used to read `?item` from `window.location` during its first render; on a client-side navigation from the landing that still held the landing's URL, so the checkout showed “Coșul tău este gol.” with the product in the address bar. Regression tests: `tests/purchase-handoff.test.ts`.
+
+**Attribution.** No cookie or localStorage is used for it. The URL carries `lp`, `lp_host` and `utm_source/medium/campaign/content/term` from the landing to the checkout; the cart ↔ checkout links (`CarryLink`) keep them. Click ids (gclid, fbclid) are not collected. The server keeps only a known landing, its real hostname (or the main host for `/lp/<slug>`), UTM values cleaned to a safe alphabet, max 100 characters, and `entry`: where the order's first product was added (`home`, `catalog`, `product`, `landing`, `cart_offer`, `recovery`, `link`; stored with the cart line, first touch wins). All in `orders.attribution` (jsonb), shown in /admin (“Sursa comenzii”), written to the `order.created` audit event, and synced to GHL as `contact.bt_last_order_source` (“landing calm · meta / cpc / toamna”, “site, pagina produsului”).
 
 **Consent and analytics.** The landing uses the same `ConsentManager` and consent-gated `track()`: `view_item` on load, `select_variant` on each configuration/frame change (GA4 only), then the checkout's `begin_checkout`, `add_payment_info` and the order page's `purchase` (once per order, deduplicated). Nothing is sent without consent.
 
@@ -759,7 +762,7 @@ Every step is idempotent (a second call changes nothing) and audited in the orde
 
 Hero → **the four products** (one editorial shelf, the only product block: each tile states the moment, name, what it is, price, offer and one action, “Adaugă în coș” for Calm/Focus, “Alege rama” / “Alege configurația” for Amber/Flow, plus “Detalii”) → **De ce Biohack Tech** (three points, one photo) → **“Aceeași zi. Alt ritm.”** (four moments: without a routine vs. with one, typography only) → **Oferte** → 7 purchase questions (all on `/intrebari-frecvente`) → **contact** (support panel + form). The earlier “Ce vrei să schimbi?” chooser was removed (it repeated the products).
 
-**Cart and checkout offer progress.** `promotionProgress()` (`src/lib/promotions.ts`) reports, per promotion touched by the cart: units, units missing, saving, and a state. `components/cart/OfferProgress.tsx` renders it: *far* (a quiet line), *one away* (prominent: the benefit in large type and explicit buttons, “+ NEUROS Calm”, “+ NEUROS Focus”, “Alege NEUROS Flow”, or “+ Adaugă încă o pereche”), *active* (“Oferta este activă”, “Economisești X lei”). Nothing is added automatically. The checkout shows the same blocks without buttons.
+**Cart and checkout offer progress.** `promotionProgress()` (`src/lib/promotions.ts`) reports, per promotion touched by the cart: units, units missing, saving, and a state. `components/cart/OfferProgress.tsx` renders it: *far* (a quiet line), *one away* (“Mai adaugă un produs NEUROS Calm, Focus sau Flow” / “Mai adaugă o pereche de NEUROS Amber”, then the benefit in large type, “și primești 20% reducere.” / “și primești 2+1 gratis.”, the exact saving from the engine, “Economisești cel puțin X lei.” / “A treia pereche e gratuită: economisești 315 lei.”, and explicit teal buttons, “+ Adaugă NEUROS Calm”, “+ Adaugă NEUROS Focus”, “Alege NEUROS Flow”, “+ Adaugă încă o pereche”, so only “Finalizează comanda” is red), *active* (“Oferta este activă: …” and, large, “Economisești X lei.”). Nothing is added automatically. The checkout shows the same blocks without buttons.
 
 ## 30. Promotions (phase 3.5, built)
 
@@ -779,6 +782,24 @@ Defined once in `src/config/promotions.ts`, applied by the pure engine `src/lib/
 - **GHL.** `bt_last_order_value` and the opportunity value are the discounted total.
 - **Emails, order page, admin** show Subtotal, each promotion with its amount, and Total.
 - **Customer-facing presentation.** Quiet badges beside prices (home cards, product listing, product page, landing offer), the offer section on the homepage, and the offer progress blocks in cart and checkout (§29a), with no countdowns and no struck prices. The terms are on /plati.
+
+## 30a. Purchase entry points and segmentation data (29 Sep 2026)
+
+**Entry points (all end in the same cart lines).** Homepage shelf: “Adaugă în coș” (Calm, Focus), “Alege rama” / “Alege configurația” (Amber, NEUROS Flow → product page picker). `/products` and product pages: variant picker + quantity + “Adaugă în coș”. Landings: hero “Comandă” (Calm, Focus: direct checkout), anchors to the offer (`#comanda`: header, mid-page, sticky bar on phones, final section), offer “Comandă …” (direct checkout with variant and, for Amber, quantity). Cart: offer actions (“+ Adaugă …”, “Alege NEUROS Flow”, “Altă ramă”). Recovery link `/reluare/<token>`: restores the unfinished order's lines. Post-purchase: server-side offer, a separate `kind='upsell'` order.
+
+**What the order already answers** (no duplication; `src/lib/segments.ts` is the agreed reading, tested in `tests/segments.test.ts`):
+
+| Question | Source |
+|---|---|
+| Bought Calm / Focus / Amber / NEUROS Flow | `order_items.product_id` (`balance-wave`, `brainlink-pro`, `ochelari-biohack`, `brain-flow`) on orders where `isConfirmedPurchase` |
+| Frame / configuration | `order_items.variant_id` (`cat-eye-bej`…, `1-zona` / `4-zone` / `13-zone`) |
+| Promotion eligible / reached / applied | items vs `config/promotions.ts` (eligible, qualified); `orders.promotions[].id` and `order_items.promotion_id` (applied, stable ids `trei-produse-20`, `amber-2-plus-1`) |
+| Original or post-purchase order | `orders.kind` (`checkout` / `upsell`), `parent_order_id` |
+| Landing, campaign, entry surface | `orders.attribution` (`landing`, `utm`, `entry`) |
+| Purchase or abandoned intent | `purchaseState()`: confirmed / refunded / open / abandoned / cancelled from `status` + `payment_status` |
+| Marketing consent | `orders.marketing_consent` and the consent ledger; never derived from a purchase |
+
+`customerProfile(orders)` combines one customer's orders: products bought (confirmed only), configurations, promotions used, products left only in abandoned orders, upsell count, landings. GHL keeps its current fields and tags: `bt-cumparat-*` is added only for a confirmed purchase (the same `isConfirmedPurchase` rule; the id `bt-cumparat-brain-flow` stays for NEUROS Flow), `bt_last_order_products` / `bt_last_payment_status` show the last order including unfinished ones, `bt_marketing_consent` is separate. No new GHL fields or tags were added; configuration or promotion tags can be derived from the database when a campaign needs them.
 
 ## 31. Post-purchase offer (phase 3.5, built)
 

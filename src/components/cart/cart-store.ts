@@ -5,10 +5,12 @@
  * products without an approved price, bad quantities and duplicates are dropped or fixed.
  */
 import { resolveLine, type ProductId } from '@/content/catalog'
+import { MAX_QTY, isEntrySource, type EntrySource } from '@/lib/purchase'
 
-export type CartLine = { productId: ProductId; variantId?: string; quantity: number }
+/** `source`: where the line was first added (first touch wins); see `lib/purchase.ts`. */
+export type CartLine = { productId: ProductId; variantId?: string; quantity: number; source?: EntrySource }
 
-export const MAX_QTY = 10
+export { MAX_QTY }
 const KEY = 'biohack-cart-v1'
 const EMPTY: CartLine[] = []
 
@@ -23,7 +25,7 @@ export function sanitize(raw: unknown): CartLine[] {
   const byKey = new Map<string, CartLine>()
   for (const item of raw) {
     if (!item || typeof item !== 'object') continue
-    const { productId, variantId, quantity } = item as Record<string, unknown>
+    const { productId, variantId, quantity, source } = item as Record<string, unknown>
     if (typeof productId !== 'string') continue
     const v = typeof variantId === 'string' ? variantId : undefined
     const r = resolveLine(productId, v)
@@ -31,7 +33,8 @@ export function sanitize(raw: unknown): CartLine[] {
     const q = Math.min(MAX_QTY, Math.max(1, Math.floor(Number(quantity) || 1)))
     const key = lineKey({ productId: r.product.id, variantId: v })
     const prev = byKey.get(key)
-    byKey.set(key, { productId: r.product.id, variantId: v, quantity: Math.min(MAX_QTY, (prev?.quantity ?? 0) + q) })
+    const src = prev?.source ?? (isEntrySource(source) ? source : undefined)
+    byKey.set(key, { productId: r.product.id, variantId: v, quantity: Math.min(MAX_QTY, (prev?.quantity ?? 0) + q), ...(src && { source: src }) })
   }
   return [...byKey.values()]
 }
@@ -79,7 +82,7 @@ export const cartStore = {
   getServerSnapshot(): CartLine[] {
     return EMPTY
   },
-  add(productId: ProductId, variantId: string | undefined, quantity = 1) {
+  add(productId: ProductId, variantId: string | undefined, quantity = 1, source?: EntrySource) {
     const r = resolveLine(productId, variantId)
     if (!r || r.unit === null) return
     const key = lineKey({ productId, variantId })
@@ -88,7 +91,7 @@ export const cartStore = {
     commit(
       existing
         ? current.map((l) => (l === existing ? { ...l, quantity: Math.min(MAX_QTY, l.quantity + quantity) } : l))
-        : [...current, { productId, variantId, quantity: Math.min(MAX_QTY, quantity) }],
+        : [...current, { productId, variantId, quantity: Math.min(MAX_QTY, quantity), ...(source && { source }) }],
     )
   },
   setQuantity(key: string, quantity: number) {
@@ -101,7 +104,11 @@ export const cartStore = {
   clear() {
     commit(EMPTY)
   },
-  /** Puts lines back (checkout recovery) without doubling what is already in the cart. */
+  /**
+   * Makes sure these lines are in the cart without doubling what is already there: a line that exists
+   * keeps the larger quantity and its first source. Used by the landing handoff, the checkout's
+   * `?item=` links and checkout recovery.
+   */
   restore(restored: CartLine[]) {
     const current = cartStore.getSnapshot()
     const next = [...current]

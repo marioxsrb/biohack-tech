@@ -69,7 +69,9 @@ export const landings: Landing[] = [
   {
     slug: 'amber',
     productId: 'ochelari-biohack',
-    theme: { bg: '#fbf5ec', ink: '#1d1409', muted: '#5f4e3a', panel: '#ffffff', line: '#eadfce', accent: '#9a5b06' },
+    // Biohack Tech first (the site's mist, ink, lines and red button), amber second: warmth comes from
+    // the lens photographs, one accent colour and a few warm surfaces, not from the whole page.
+    theme: { bg: '#f2f5f6', ink: '#0b1316', muted: '#4b5960', panel: '#ffffff', line: '#dce3e6', accent: '#9a5b06' },
     meta: {
       title: 'NEUROS Amber: ochelari pentru ecrane, 2+1 gratis',
       description: 'Ochelari cu lentile chihlimbar, care filtrează lumina albastră a ecranelor. Patru rame. La trei perechi, una e gratuită.',

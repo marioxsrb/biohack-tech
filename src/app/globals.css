@@ -182,6 +182,10 @@
     box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2);
   }
   .cta.sm svg { width: 15px; height: 15px; }
+  /* Offer actions in the cart: strong, but never the red of "Finalizează comanda". */
+  .cta.offer { background: var(--color-cyan-700); box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2); }
+  .cta.offer:hover { background: #0b5f73; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.2); }
+  .cta.offer:active { background: #094e5f; }
 
   /* Secondary action: outlined, never competes with the red one. Same height as .cta. */
   .btn-secondary {

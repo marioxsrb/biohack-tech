@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { Arrow } from '@/components/ui/icons'
 import { getProduct, type ProductId } from '@/content/catalog'
 import type { LandingSlug } from '@/lib/landing-hosts'
-import { checkoutHref } from './checkout-link'
+import { checkoutHref, isPlainClick, startCheckout } from './checkout-link'
 
 /**
  * The hero's button. Products without variants go straight to the checkout; the others scroll to the
@@ -22,11 +22,11 @@ export function HeroCta({ slug, productId, label }: { slug: LandingSlug; product
   }
   return (
     <a
-      href={checkoutHref(slug, productId)}
+      href={checkoutHref(slug, { productId })}
       onClick={(e) => {
-        if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+        if (!isPlainClick(e)) return
         e.preventDefault()
-        router.push(checkoutHref(slug, productId, undefined, { search: window.location.search, host: window.location.host }))
+        startCheckout(router.push, slug, { productId })
       }}
       className="cta"
     >

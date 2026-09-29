@@ -5,6 +5,7 @@
  * are deliberately not collected.
  */
 import { isLandingSlug, landingBaseDomain, landingHost, type LandingSlug } from './landing-hosts'
+import { ENTRY_LABEL, isEntrySource, type EntrySource } from './purchase'
 
 export const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'] as const
 export type UtmKey = (typeof UTM_KEYS)[number]
@@ -16,6 +17,8 @@ export type Attribution = {
   landingHost?: string
   landingPath?: string
   utm?: Partial<Record<UtmKey, string>>
+  /** Where the order's first product was added (home, catalog, product, landing, cart offer, recovery, link). */
+  entry?: EntrySource
 }
 
 const clean = (v: unknown) =>
@@ -67,13 +70,17 @@ export function sanitizeAttribution(raw: unknown, mainHost?: string, base = land
     if (v) utm[k] = v
   }
   if (Object.keys(utm).length) a.utm = utm
-  return a.landing || a.utm ? a : null
+  if (isEntrySource(r.entry)) a.entry = r.entry
+  return a.landing || a.utm || a.entry ? a : null
 }
 
-/** One line for the CRM and the admin: "landing brain-flow · facebook / paid-social / lansare". */
+/**
+ * One line for the CRM and the admin: "landing brain-flow · facebook / paid-social / lansare",
+ * "site, pagina produsului". Plain "site" when nothing is known.
+ */
 export function attributionSummary(a: Attribution | null | undefined): string {
   if (!a) return 'site'
-  const parts = [a.landing ? `landing ${a.landing}` : 'site']
+  const parts = [a.landing ? `landing ${a.landing}` : a.entry ? `site, ${ENTRY_LABEL[a.entry]}` : 'site']
   const u = a.utm
   if (u && (u.utm_source || u.utm_medium || u.utm_campaign)) parts.push([u.utm_source || '-', u.utm_medium || '-', u.utm_campaign || '-'].join(' / '))
   return parts.join(' · ').slice(0, 250)

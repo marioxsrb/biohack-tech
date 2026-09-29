@@ -1,0 +1,164 @@
+/**
+ * The purchase handoff (lib/purchase.ts, landing/checkout-link.ts, cart-store.ts).
+ *
+ * Regression for 29 Sep 2026: "Comandă" on a landing opened the checkout with ?item=… in the URL but
+ * an empty cart ("Coșul tău este gol."). The checkout read window.location.search during render, which
+ * on a client-side navigation still holds the landing's URL. Now the landing writes the selection into
+ * the cart before navigating, and the checkout reads ?item from the router's search params.
+ */
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { attributionParams, attributionSummary, sanitizeAttribution } from '@/lib/attribution'
+import { routeLanding } from '@/lib/landing-hosts'
+import { encodeItem, parseItems, sourceForPath } from '@/lib/purchase'
+import { priceLines } from '@/lib/promotions'
+import { resolveOrderLines } from '@/lib/orders/resolve'
+
+const KEY = 'biohack-cart-v1'
+let storage: Map<string, string>
+
+function fakeWindow(url: string) {
+  storage = storage ?? new Map()
+  const u = new URL(url)
+  vi.stubGlobal('window', {
+    localStorage: { getItem: (k: string) => storage.get(k) ?? null, setItem: (k: string, v: string) => void storage.set(k, v) },
+    location: { search: u.search, host: u.host, pathname: u.pathname, href: u.href },
+    addEventListener() {},
+    removeEventListener() {},
+  })
+}
+
+/** A fresh page load: modules (and the in-memory cart) start again, only localStorage survives. */
+async function page(url: string) {
+  fakeWindow(url)
+  vi.resetModules()
+  const { cartStore } = await import('@/components/cart/cart-store')
+  const { checkoutHref, startCheckout } = await import('@/components/landing/checkout-link')
+  return { cartStore, checkoutHref, startCheckout }
+}
+
+beforeEach(() => {
+  vi.unstubAllGlobals()
+  storage = new Map()
+})
+
+const LANDINGS = [
+  { slug: 'calm', pick: { productId: 'balance-wave' as const }, name: 'NEUROS Calm', unit: 638000 },
+  { slug: 'focus', pick: { productId: 'brainlink-pro' as const }, name: 'NEUROS Focus', unit: 249000 },
+  { slug: 'amber', pick: { productId: 'ochelari-biohack' as const, variantId: 'patrat-maro', quantity: 3 }, name: 'NEUROS Amber', unit: 31500 },
+  { slug: 'brain-flow', pick: { productId: 'brain-flow' as const, variantId: '13-zone' }, name: 'NEUROS Flow', unit: 1390000 },
+] as const
+
+describe('landing → checkout: the selection survives', () => {
+  for (const l of LANDINGS) {
+    it(`${l.slug}: an empty cart ends up with exactly the landing's product, variant and quantity`, async () => {
+      const { cartStore, startCheckout } = await page(`https://${l.slug}.biohack-tech.ro/?utm_source=meta&utm_campaign=toamna&fbclid=x`)
+      expect(cartStore.getSnapshot()).toEqual([])
+      const push = vi.fn()
+      startCheckout(push, l.slug, l.pick)
+
+      // Written to the canonical cart before the navigation: the checkout's first render has it.
+      const want = { productId: l.pick.productId, variantId: 'variantId' in l.pick ? l.pick.variantId : undefined, quantity: 'quantity' in l.pick ? l.pick.quantity : 1, source: 'landing' }
+      expect(cartStore.getSnapshot()).toEqual([want])
+      expect(JSON.parse(storage.get(KEY)!)).toEqual([JSON.parse(JSON.stringify(want))])
+
+      // The URL carries the same selection and the campaign, nothing else.
+      const url = new URL(push.mock.calls[0][0], 'https://x')
+      expect(url.pathname).toBe('/checkout')
+      expect(parseItems(url.searchParams, 'landing')).toEqual([want])
+      expect(Object.fromEntries(attributionParams(url.searchParams))).toEqual({ lp: l.slug, lp_host: `${l.slug}.biohack-tech.ro`, utm_source: 'meta', utm_campaign: 'toamna' })
+
+      // The server prices the same lines from the catalog; the public name is the catalog's.
+      const order = resolveOrderLines(cartStore.getSnapshot())
+      expect(order.ok && order.lines.map((x) => [x.productId, x.variantId, x.quantity, x.unitAmount, x.name])).toEqual([[want.productId, want.variantId, want.quantity, l.unit, l.name]])
+    })
+  }
+
+  it('the link alone (new tab, shared link, full reload) gives the same cart as the click', async () => {
+    for (const l of LANDINGS) {
+      storage = new Map()
+      const { cartStore, checkoutHref } = await page(`https://biohack-tech.ro/lp/${l.slug}`)
+      const href = checkoutHref(l.slug, l.pick)
+      cartStore.restore(parseItems(new URL(href, 'https://x').searchParams, 'landing'))
+      expect(cartStore.getSnapshot().map((x) => [x.productId, x.variantId, x.quantity])).toEqual([
+        [l.pick.productId, 'variantId' in l.pick ? l.pick.variantId : undefined, 'quantity' in l.pick ? l.pick.quantity : 1],
+      ])
+    }
+  })
+
+  it('refresh and repeated clicks never double the product; an existing cart is kept', async () => {
+    let p = await page('https://biohack-tech.ro/lp/calm')
+    p.cartStore.add('ochelari-biohack', 'cat-eye-bej', 1, 'product')
+    p.startCheckout(vi.fn(), 'calm', { productId: 'balance-wave' })
+    p.startCheckout(vi.fn(), 'calm', { productId: 'balance-wave' })
+    // Reload of the checkout: new page, only storage survives; the ?item link is applied again.
+    p = await page('https://biohack-tech.ro/checkout?item=balance-wave&lp=calm')
+    p.cartStore.restore(parseItems('?item=balance-wave', 'landing'))
+    expect(p.cartStore.getSnapshot()).toEqual([
+      { productId: 'ochelari-biohack', variantId: 'cat-eye-bej', quantity: 1, source: 'product' },
+      { productId: 'balance-wave', variantId: undefined, quantity: 1, source: 'landing' },
+    ])
+  })
+
+  it('the checkout reads ?item from the router, not from window.location during render', () => {
+    const src = readFileSync(join(process.cwd(), 'src/app/(site)/checkout/CheckoutView.tsx'), 'utf8')
+    expect(src).toContain('useSearchParams()')
+    expect(src).not.toMatch(/useState\(\s*\(\)\s*=>[^)]*window\.location\.search/)
+  })
+})
+
+describe('the item parameter', () => {
+  it('round-trips product, variant and quantity; drops what the catalog does not sell', () => {
+    expect(encodeItem({ productId: 'brain-flow', variantId: '4-zone' })).toBe('brain-flow:4-zone')
+    expect(encodeItem({ productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 3 })).toBe('ochelari-biohack:cat-eye-negru*3')
+    expect(parseItems('?item=ochelari-biohack:cat-eye-negru*3&item=balance-wave')).toEqual([
+      { productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 3, source: 'link' },
+      { productId: 'balance-wave', variantId: undefined, quantity: 1, source: 'link' },
+    ])
+    // A product with variants needs one; a product without variants takes none; quantities are clamped.
+    expect(parseItems('?item=brain-flow&item=ochelari-biohack:nope&item=balance-wave:x&item=nu-exista&item=<script>')).toEqual([])
+    expect(parseItems('?item=brainlink-pro*99')).toEqual([{ productId: 'brainlink-pro', variantId: undefined, quantity: 10, source: 'link' }])
+    expect(parseItems('?item=brainlink-pro&item=brainlink-pro')[0].quantity).toBe(2)
+  })
+
+  it('names the surface a line was added from', () => {
+    expect(['/', '/products', '/products/amber', '/lp/calm', '/cart', '/checkout', '/about-us'].map(sourceForPath)).toEqual([
+      'home', 'catalog', 'product', 'landing', 'cart_offer', 'cart_offer', 'link',
+    ])
+  })
+})
+
+describe('landing hostnames keep the whole purchase path on one origin', () => {
+  it('cart, checkout and product pages are served on the landing host (its storage holds the cart)', () => {
+    for (const p of ['/cart', '/checkout', '/products', '/products/amber']) expect(routeLanding('amber', p)).toEqual({ action: 'next' })
+  })
+})
+
+describe('attribution and promotions survive the handoff', () => {
+  it('landing, campaign and entry reach the order; entry alone is kept for site orders', () => {
+    const a = sanitizeAttribution({ lp: 'amber', lp_host: 'amber.biohack-tech.ro', utm_source: 'meta', entry: 'landing' }, 'biohack-tech.ro', 'biohack-tech.ro')
+    expect(a).toEqual({ landing: 'amber', landingHost: 'amber.biohack-tech.ro', landingPath: '/', utm: { utm_source: 'meta' }, entry: 'landing' })
+    expect(sanitizeAttribution({ entry: 'product' }, 'biohack-tech.ro')).toEqual({ entry: 'product' })
+    expect(sanitizeAttribution({ entry: 'evil' }, 'biohack-tech.ro')).toBeNull()
+    expect(attributionSummary({ entry: 'home' })).toBe('site, pagina principală')
+  })
+
+  it('Amber 2+1 from the landing and 20% on a mixed cart: cart = server', async () => {
+    const p = await page('https://biohack-tech.ro/lp/amber')
+    p.startCheckout(vi.fn(), 'amber', { productId: 'ochelari-biohack', variantId: 'patrat-maro', quantity: 3 })
+    p.cartStore.add('balance-wave', undefined, 1, 'home')
+    p.cartStore.add('brainlink-pro', undefined, 1, 'product')
+    p.cartStore.add('brain-flow', '1-zona', 1, 'product')
+    const lines = p.cartStore.getSnapshot()
+    const shown = priceLines(
+      lines.map((l) => ({ key: `${l.productId}:${l.variantId ?? ''}`, productId: l.productId, quantity: l.quantity, unitAmount: { 'balance-wave': 638000, 'brainlink-pro': 249000, 'ochelari-biohack': 31500, 'brain-flow': 1290000 }[l.productId] })),
+    )
+    const server = resolveOrderLines(lines)
+    expect(server.ok).toBe(true)
+    if (!server.ok) return
+    expect(server.promotions.map((x) => x.id).sort()).toEqual(['amber-2-plus-1', 'trei-produse-20'])
+    expect([server.subtotal, server.discount, server.total]).toEqual([shown.subtotalMinor, shown.discountMinor, shown.totalMinor])
+    expect(server.promotions.find((x) => x.id === 'amber-2-plus-1')?.amountMinor).toBe(31500)
+  })
+})

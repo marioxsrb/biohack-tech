@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { resolveLine, variantLabel, type Product, type ProductId, type Variant } from '@/content/catalog'
 import { priceLines, promotionHints, promotionProgress } from '@/lib/promotions'
+import { sourceForPath, type EntrySource } from '@/lib/purchase'
 import { cartStore, lineKey } from './cart-store'
 
 export type ResolvedLine = {
@@ -13,6 +14,8 @@ export type ResolvedLine = {
   quantity: number
   /** Unit price in bani, read from the catalog. */
   unit: number
+  /** Where the line was first added. */
+  source?: EntrySource
 }
 
 /** What was just added: shown in the compact confirmation, not in the full cart. */
@@ -37,7 +40,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const add = useCallback((productId: ProductId, variantId?: string, quantity = 1) => {
     const resolved = resolveLine(productId, variantId)
     if (!resolved || resolved.unit === null) return false
-    cartStore.add(productId, variantId, quantity)
+    cartStore.add(productId, variantId, quantity, sourceForPath(window.location.pathname))
     setConfirmation({ key: lineKey({ productId, variantId }), quantity, at: Date.now() })
     const label = resolved.variant ? `${resolved.product.name}, ${variantLabel(resolved.product, resolved.variant)}` : resolved.product.name
     setAnnouncement(`${label} a fost adăugat în coș.`)
@@ -78,6 +81,7 @@ export function useCart() {
             variantLabel: r.variant ? variantLabel(r.product, r.variant) : undefined,
             quantity: l.quantity,
             unit: r.unit,
+            source: l.source,
           },
         ]
       }),

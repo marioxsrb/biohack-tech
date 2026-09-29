@@ -8,7 +8,7 @@ import { cartStore, type CartLine } from '@/components/cart/cart-store'
 export function RestoreCart({ lines }: { lines: CartLine[] }) {
   const router = useRouter()
   useEffect(() => {
-    cartStore.restore(lines)
+    cartStore.restore(lines.map((l) => ({ ...l, source: l.source ?? 'recovery' })))
     router.replace('/checkout')
   }, [lines, router])
   return (

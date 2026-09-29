@@ -26,7 +26,8 @@ const FRAMES = [
 ]
 
 /**
- * NEUROS Amber: a warm page in evening light. The glasses first as an object worth wearing, then the four
+ * NEUROS Amber: the site's neutral surfaces and type, warmed by the lens photographs, an amber accent
+ * and a few warm surfaces (the hero glow, the 2+1 panel, the evening section). The glasses first as an object worth wearing, then the four
  * frames, what the lens does, when to wear them, the 2+1 offer as a clear calculation, and the purchase.
  */
 export function AmberLanding({ landing }: { landing: Landing }) {
@@ -36,34 +37,37 @@ export function AmberLanding({ landing }: { landing: Landing }) {
   return (
     <LandingShell landing={landing} heroTone="dark" cta={CTA}>
       {/* Hero: the photograph first, the proposition and the offer beside it. */}
-      <section id="lp-hero" aria-labelledby="lp-title" className="lp-wrap pt-24 pb-[var(--sec)] max-sm:pt-20">
-        <div className="grid items-center gap-y-10 lg:grid-cols-12 lg:gap-x-12">
-          <div className="relative aspect-[16/11] overflow-hidden rounded-[32px] lg:col-span-7 max-sm:-mx-[var(--gut)] max-sm:rounded-none">
-            <Image src={terasa} alt="Femeie pe o terasă, la apus, purtând NEUROS Amber cat eye bej" fill priority placeholder="blur" sizes="(min-width: 1152px) 680px, 100vw" className="object-cover object-[72%_40%]" />
-          </div>
-          <div className="lg:col-span-5">
-            <Kicker>{p.name} · pentru ecrane</Kicker>
-            <h1 id="lp-title" className="mt-4 text-[clamp(40px,4.8vw,68px)] leading-[0.98] tracking-[-0.045em]">
-              Ecranele, într-o lumină mai caldă.
-            </h1>
-            <p className="mt-5 max-w-[26em] text-[clamp(17px,1.3vw,19px)] leading-snug text-[var(--lp-muted)]">
-              Ochelari cu lentile chihlimbar. Filtrează lumina albastră a ecranelor. Patru rame, același filtru.
-            </p>
-            <div className="mt-7 flex items-stretch gap-4">
-              <div>
-                <p className="text-[30px] font-medium tracking-[-0.03em] tabular-nums">{p.price !== null && formatLei(p.price)}</p>
-                <p className="text-[14px] text-[var(--lp-muted)]">{terms.vat} · livrare gratuită</p>
-              </div>
-              <a href="#doi-plus-unu" className="flex flex-col justify-center rounded-[16px] bg-[var(--lp-ink)] px-4 py-2 text-white">
-                <span className="text-[22px] leading-none font-semibold tracking-[-0.02em] whitespace-nowrap">2+1 gratis</span>
-                <span className="mt-1 text-[13px] text-white/75">la 3 perechi</span>
-              </a>
+      <section id="lp-hero" aria-labelledby="lp-title" className="relative isolate">
+        <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(60%_70%_at_28%_40%,rgb(240_179_90/0.22),transparent_70%)]" />
+        <div className="lp-wrap pt-24 pb-[var(--sec)] max-sm:pt-20">
+          <div className="grid items-center gap-y-10 lg:grid-cols-12 lg:gap-x-12">
+            <div className="relative aspect-[16/11] overflow-hidden rounded-[32px] lg:col-span-7 max-sm:-mx-[var(--gut)] max-sm:rounded-none">
+              <Image src={terasa} alt="Femeie pe o terasă, la apus, purtând NEUROS Amber cat eye bej" fill priority placeholder="blur" sizes="(min-width: 1152px) 680px, 100vw" className="object-cover object-[72%_40%]" />
             </div>
-            <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
-              <HeroCta slug={landing.slug} productId={p.id} label={CTA} />
-              <a href="#rame" className="tlink">
-                Vezi ramele <Arrow />
-              </a>
+            <div className="lg:col-span-5">
+              <Kicker>{p.name} · pentru ecrane</Kicker>
+              <h1 id="lp-title" className="mt-4 text-[clamp(40px,4.8vw,68px)] leading-[0.98] tracking-[-0.045em]">
+                Ecranele, într-o lumină mai caldă.
+              </h1>
+              <p className="mt-5 max-w-[26em] text-[clamp(17px,1.3vw,19px)] leading-snug text-[var(--lp-muted)]">
+                Ochelari cu lentile chihlimbar. Filtrează lumina albastră a ecranelor. Patru rame, același filtru.
+              </p>
+              <div className="mt-7 flex items-stretch gap-4">
+                <div>
+                  <p className="text-[30px] font-medium tracking-[-0.03em] tabular-nums">{p.price !== null && formatLei(p.price)}</p>
+                  <p className="text-[14px] text-[var(--lp-muted)]">{terms.vat} · livrare gratuită</p>
+                </div>
+                <a href="#doi-plus-unu" className="flex flex-col justify-center rounded-[16px] bg-[var(--lp-ink)] px-4 py-2 text-white">
+                  <span className="text-[22px] leading-none font-semibold tracking-[-0.02em] whitespace-nowrap text-[#f0b35a]">2+1 gratis</span>
+                  <span className="mt-1 text-[13px] text-white/75">la 3 perechi</span>
+                </a>
+              </div>
+              <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
+                <HeroCta slug={landing.slug} productId={p.id} label={CTA} />
+                <a href="#rame" className="tlink">
+                  Vezi ramele <Arrow />
+                </a>
+              </div>
             </div>
           </div>
         </div>
@@ -91,7 +95,8 @@ export function AmberLanding({ landing }: { landing: Landing }) {
       </section>
 
       {/* How it works: the lens, in the evening. */}
-      <section id="cum" aria-labelledby="cum-title" className="relative isolate overflow-hidden bg-[#1a120a] py-[var(--sec)] text-white">
+      <section id="cum" aria-labelledby="cum-title" className="relative isolate overflow-hidden bg-dark py-[var(--sec)] text-white">
+        <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(55%_80%_at_75%_50%,rgb(240_179_90/0.16),transparent_70%)]" />
         <div className="lp-wrap grid items-center gap-y-10 lg:grid-cols-12 lg:gap-x-12">
           <div className="on-dark lg:col-span-5">
             <p className="text-[13px] font-semibold tracking-[0.14em] text-[#f0b35a] uppercase">Cum funcționează</p>
@@ -157,7 +162,7 @@ export function AmberLanding({ landing }: { landing: Landing }) {
               Alege ramele <Arrow />
             </a>
           </div>
-          <div className="flex flex-col justify-center gap-1 bg-[#2a1d10] px-[8%] py-8 lg:col-span-6">
+          <div className="flex flex-col justify-center gap-1 bg-[linear-gradient(160deg,#fdf4e6,#f6e3c4)] px-[8%] py-8 lg:col-span-6">
             {[catBej, sqNegru, sqMaro].map((src, i) => (
               <div key={i} className={`relative aspect-[5/2] w-[78%] ${i === 1 ? 'self-end' : ''}`}>
                 <Image src={src} alt="" fill sizes="420px" className="object-contain" />
@@ -167,7 +172,7 @@ export function AmberLanding({ landing }: { landing: Landing }) {
         </div>
       </section>
 
-      <LandingOffer slug={landing.slug} productId={p.id} cta="Comandă NEUROS Amber" title="Alege-ți rama." text="Același preț pentru toate cele patru rame. La trei perechi, una e gratuită." />
+      <LandingOffer slug={landing.slug} productId={p.id} withQuantity cta="Comandă NEUROS Amber" title="Alege-ți rama." text="Același preț pentru toate cele patru rame. La trei perechi, una e gratuită; poți amesteca ramele din coș." />
 
       <section aria-labelledby="detalii" className="lp-wrap pb-[var(--sec)]">
         <div className="grid gap-y-8 lg:grid-cols-12 lg:gap-x-12">

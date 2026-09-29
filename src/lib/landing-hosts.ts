@@ -27,12 +27,15 @@ export function landingForHost(hostHeader: string | null | undefined, base = lan
 }
 
 /**
- * Paths a landing hostname serves itself: the landing, the checkout it leads to (so consent and the
- * cart stay on one origin), the order page Stripe returns to, the legal pages the checkout links to,
+ * Paths a landing hostname serves itself: the landing, the whole purchase path (checkout, cart and
+ * the product pages the cart's offer links to, so the cart, which lives in this origin's storage,
+ * is never lost on the way), the order page Stripe returns to, the legal pages the checkout links to,
  * and the framework's own files. Everything else is sent to the main site.
  */
 const LANDING_PASSTHROUGH = [
   /^\/checkout\/?$/,
+  /^\/cart\/?$/,
+  /^\/products(\/[\w-]+)?\/?$/,
   /^\/comanda\/[\w-]+\/?$/,
   /^\/api\/(checkout|consent|contact)(\/|$)/,
   /^\/_next\//,

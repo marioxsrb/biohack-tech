@@ -5,6 +5,7 @@
  */
 import 'server-only'
 import { attributionSummary } from '@/lib/attribution'
+import { isConfirmedPurchase } from '@/lib/segments'
 import type { GhlConfig } from '@/server/config'
 import { customerName, type Order } from '@/server/orders/model'
 
@@ -181,8 +182,7 @@ export function contactPayload(c: GhlConfig, o: Order, lifetime: { orders: numbe
 
 /** Tags are added (never replaced): client + one per product bought, only once paid. */
 export function tagsFor(o: Order): string[] {
-  const paid = o.paymentStatus === 'paid' || o.paymentStatus === 'partially_refunded' || o.status === 'shipped' || o.status === 'delivered'
-  if (!paid) return []
+  if (!isConfirmedPurchase(o)) return []
   const tags = new Set<string>([TAGS.client])
   for (const i of o.items) if (PRODUCT_TAG[i.productId]) tags.add(PRODUCT_TAG[i.productId])
   if (o.customer.buyerType === 'pj') tags.add(TAGS.company)

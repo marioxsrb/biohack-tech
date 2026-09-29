@@ -1,16 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { cloneElement, useEffect, useRef, useState, useSyncExternalStore, type ReactElement, type ReactNode } from 'react'
 import { useCart, type ResolvedLine } from '@/components/cart/CartProvider'
-import { cartStore, type CartLine } from '@/components/cart/cart-store'
+import { cartStore } from '@/components/cart/cart-store'
+import { CarryLink } from '@/components/cart/CarryLink'
 import { Price } from '@/components/cart/Price'
 import { Thumb } from '@/components/cart/Thumb'
 import { OfferProgress } from '@/components/cart/OfferProgress'
 import { Totals } from '@/components/cart/Totals'
 import { Arrow, Bank, CardIcon, Lock, Mail } from '@/components/ui/icons'
-import { productHref, products, resolveLine } from '@/content/catalog'
+import { productHref, products } from '@/content/catalog'
 import { attributionParams } from '@/lib/attribution'
 import { site, terms } from '@/config/site'
 import { track } from '@/lib/analytics'
@@ -27,6 +28,8 @@ import {
   type PaymentMethod,
 } from '@/lib/checkout'
 import { formatLei } from '@/lib/money'
+import { isLandingSlug } from '@/lib/landing-hosts'
+import { parseItems } from '@/lib/purchase'
 import { CardPayment, type CardApi } from './CardPayment'
 
 /** Field order on screen, so the first error is focused first. */
@@ -45,33 +48,33 @@ const useHydrated = () =>
   )
 
 /**
- * Direct checkout from an advertising landing: /checkout?item=<productId>[:<variantId>] (repeatable).
- * Only ids arrive; unknown or unpriced ones are ignored, and the server prices the order again.
+ * Direct checkout: /checkout?item=<productId>[:<variantId>][*<quantity>] (repeatable; `lib/purchase.ts`).
+ * The landing already put its selection in the cart before navigating; the URL carries the same
+ * selection so the link also works on its own (new tab, shared link, reload). The items are read
+ * from the router's search params, never from window.location during render: on a client-side
+ * navigation window.location still holds the previous page's URL at that point (the bug that
+ * emptied the checkout coming from a landing). Unknown or unpriced ids are ignored; the server
+ * prices the order again.
  */
-function directItems(search: string): CartLine[] {
-  return new URLSearchParams(search).getAll('item').flatMap((raw) => {
-    const [productId, variantId] = raw.split(':')
-    const r = resolveLine(productId, variantId || undefined)
-    return r && r.unit !== null ? [{ productId: r.product.id, variantId: r.variant?.id, quantity: 1 }] : []
-  })
-}
-
 export function CheckoutView({ methods, stripeKey }: { methods: Methods; stripeKey: string | null }) {
   const hydrated = useHydrated()
   const { lines } = useCart()
-  const [direct] = useState(() => (typeof window === 'undefined' ? [] : directItems(window.location.search)))
+  const params = useSearchParams()
+  const items = params.getAll('item').join('&')
+  const lp = params.get('lp')
 
-  // Puts the landing's product in the cart (never twice), then drops ?item so a reload changes nothing.
-  // The campaign parameters stay in the URL until the order is placed.
+  // Makes sure the linked selection is in the cart (never twice), then drops ?item so a reload or a
+  // return to this page changes nothing. The campaign parameters stay until the order is placed.
   useEffect(() => {
-    if (!direct.length) return
-    cartStore.restore(direct)
+    if (!items) return
+    const direct = parseItems(new URLSearchParams(items.split('&').map((i) => ['item', i])), isLandingSlug(lp) ? 'landing' : 'link')
+    if (direct.length) cartStore.restore(direct)
     const url = new URL(window.location.href)
     url.searchParams.delete('item')
     window.history.replaceState(window.history.state, '', url)
-  }, [direct])
+  }, [items, lp])
 
-  if (!hydrated || (direct.length > 0 && lines.length === 0)) return <div className="min-h-[60vh]" aria-busy="true" />
+  if (!hydrated || (items && lines.length === 0)) return <div className="min-h-[60vh]" aria-busy="true" />
   if (lines.length === 0) return <EmptyCheckout />
   return <CheckoutForm lines={lines} methods={{ card: methods.card && !!stripeKey, transfer: methods.transfer }} stripeKey={stripeKey} />
 }
@@ -176,8 +179,9 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
           order: form,
           acceptedTerms: accepted,
           attemptId,
-          // Landing and UTM parameters from the URL, if any. The server validates them.
-          attribution: Object.fromEntries(attributionParams(window.location.search)),
+          // Landing and UTM parameters from the URL, if any, and where the first product was added.
+          // The server validates them.
+          attribution: { ...Object.fromEntries(attributionParams(window.location.search)), ...(lines[0]?.source && { entry: lines[0].source }) },
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -382,9 +386,9 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
               <h2 id="summary-title" className="text-[20px] tracking-[-0.015em]">
                 Comanda ta
               </h2>
-              <Link href="/cart" className="-mr-2 flex min-h-11 items-center rounded px-2 text-[15px] text-muted underline underline-offset-4 hover:text-ink">
+              <CarryLink href="/cart" className="-mr-2 flex min-h-11 items-center rounded px-2 text-[15px] text-muted underline underline-offset-4 hover:text-ink">
                 Modifică
-              </Link>
+              </CarryLink>
             </div>
 
             <ul className="mt-2 divide-y divide-mist-2 border-y border-mist-2 max-md:hidden">

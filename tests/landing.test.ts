@@ -45,13 +45,14 @@ describe('landing hostnames (explicit allowlist)', () => {
 })
 
 describe('what a landing hostname serves', () => {
-  it('its landing at "/", the checkout and order pages it needs, and a redirect to the main site for the rest', () => {
+  it('its landing at "/", the whole purchase path on the same origin, and a redirect to the main site for the rest', () => {
     expect(routeLanding('focus', '/')).toEqual({ action: 'rewrite', path: '/lp/focus' })
     expect(routeLanding('focus', '/lp/focus')).toEqual({ action: 'redirect', path: '/' })
-    for (const p of ['/checkout', '/comanda/abc_DEF-123', '/api/checkout', '/api/consent', '/api/contact', '/_next/static/x.js', '/politica-retur', '/retragere', '/retragere/confirmare', '/terms-of-service']) {
+    // The cart lives in this origin's storage: cart, checkout and the product pages the cart links to stay here.
+    for (const p of ['/checkout', '/cart', '/products', '/products/brain-flow', '/comanda/abc_DEF-123', '/api/checkout', '/api/consent', '/api/contact', '/_next/static/x.js', '/politica-retur', '/retragere', '/retragere/confirmare', '/terms-of-service']) {
       expect(routeLanding('focus', p)).toEqual({ action: 'next' })
     }
-    for (const p of ['/products/focus', '/admin', '/admin/orders/1', '/cart', '/lp/calm', '/api/jobs/run', '/api/webhooks/stripe', '/about-us']) {
+    for (const p of ['/admin', '/admin/orders/1', '/products/focus/extra', '/lp/calm', '/api/jobs/run', '/api/webhooks/stripe', '/about-us']) {
       expect(routeLanding('focus', p)).toEqual({ action: 'redirect', path: p })
     }
   })
@@ -79,7 +80,7 @@ describe('the four landings', () => {
   })
 
   it('the checkout link carries ids and campaign parameters only', () => {
-    const href = checkoutHref('brain-flow', 'brain-flow', '13-zone', {
+    const href = checkoutHref('brain-flow', { productId: 'brain-flow', variantId: '13-zone' }, {
       search: '?utm_source=facebook&utm_medium=paid&utm_campaign=lansare&fbclid=abc&email=ana@x.ro&price=1',
       host: 'brain-flow.biohack-tech.ro',
     })

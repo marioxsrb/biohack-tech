@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { CarryLink } from '@/components/cart/CarryLink'
 import { OfferProgress } from '@/components/cart/OfferProgress'
 import { Totals } from '@/components/cart/Totals'
 import { useEffect, useSyncExternalStore } from 'react'
@@ -109,9 +110,9 @@ export function CartView() {
               <Totals pricing={pricing} />
             </div>
             <p className="text-right text-[13px] text-muted">{terms.vat}</p>
-            <Link href="/checkout" className="cta mt-5 w-full">
+            <CarryLink href="/checkout" className="cta mt-5 w-full">
               <Lock /> Finalizează comanda
-            </Link>
+            </CarryLink>
             <Link href="/products" className="btn-secondary mt-2 w-full">
               Continuă cumpărăturile
             </Link>

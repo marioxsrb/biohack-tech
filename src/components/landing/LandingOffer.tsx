@@ -4,13 +4,15 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { PromoNote } from '@/components/cart/PromoNote'
+import { QuantityStepper } from '@/components/cart/QuantityStepper'
 import { Arrow, Lock } from '@/components/ui/icons'
 import { getProduct, unitPrice, variantLabel, type ProductId } from '@/content/catalog'
 import { terms } from '@/config/site'
 import { itemOf, track } from '@/lib/analytics'
 import type { LandingSlug } from '@/lib/landing-hosts'
 import { formatLei } from '@/lib/money'
-import { checkoutHref } from './checkout-link'
+import { priceLines } from '@/lib/promotions'
+import { checkoutHref, isPlainClick, startCheckout } from './checkout-link'
 
 export type VariantNote = { big: string; text: string }
 
@@ -25,6 +27,8 @@ type Props = {
   /** 'panel': product image beside the picker. 'columns': the variants side by side, large (configurations). */
   layout?: 'panel' | 'columns'
   defaultVariant?: string
+  /** A quantity choice (NEUROS Amber: the 2+1 needs three pairs). The total is priced by the promotion engine. */
+  withQuantity?: boolean
 }
 
 /**
@@ -32,12 +36,15 @@ type Props = {
  * one button to the checkout. Only ids travel in the link; the checkout and the server price everything
  * again. Colours come from the landing theme (--lp-*).
  */
-export function LandingOffer({ slug, productId, title, text, cta, notes, layout = 'panel', defaultVariant }: Props) {
+export function LandingOffer({ slug, productId, title, text, cta, notes, layout = 'panel', defaultVariant, withQuantity }: Props) {
   const product = getProduct(productId)!
   const variants = product.variants ?? []
   const [variantId, setVariantId] = useState<string | undefined>(() => (variants.length ? (variants.find((v) => v.id === defaultVariant) ?? variants[0]).id : undefined))
   const variant = variants.find((v) => v.id === variantId)
   const price = unitPrice(product, variant)
+  const [quantity, setQuantity] = useState(1)
+  // Same engine as the cart and the server, for display only.
+  const priced = price !== null ? priceLines([{ key: 'offer', productId: product.id, quantity, unitAmount: price }]) : null
   const image = variant?.images.find((i) => i.kind === 'cutout') ?? product.cutout
   const router = useRouter()
 
@@ -54,19 +61,31 @@ export function LandingOffer({ slug, productId, title, text, cta, notes, layout 
     track('select_variant', { value: unitPrice(product, v) ?? 0, items: [itemOf(product, v, variantLabel(product, v))] })
   }
 
-  const href = checkoutHref(slug, product.id, variant?.id)
+  const pick = { productId: product.id, variantId: variant?.id, quantity }
+  const href = checkoutHref(slug, pick)
   const go = (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return
+    if (!isPlainClick(e)) return
     e.preventDefault()
-    router.push(checkoutHref(slug, product.id, variant?.id, { search: window.location.search, host: window.location.host }))
+    startCheckout(router.push, slug, pick)
   }
 
   const buy = (
     <>
+      {withQuantity && price !== null && (
+        <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <QuantityStepper value={quantity} onChange={setQuantity} label="Câte perechi" size="sm" />
+          <span className="text-[15px] text-[var(--lp-muted)]">{quantity === 1 ? '1 pereche' : `${quantity} perechi`}</span>
+        </div>
+      )}
       <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[36px] font-medium tracking-[-0.03em] text-[var(--lp-ink)] tabular-nums" aria-live="polite">
-        {price !== null ? formatLei(price) : 'Preț în curând'}
+        {priced ? formatLei(priced.totalMinor) : 'Preț în curând'}
         {price !== null && <span className="text-[14px] font-normal tracking-normal text-[var(--lp-muted)]">{terms.vat}, livrare gratuită</span>}
       </p>
+      {priced && priced.discountMinor > 0 && (
+        <p className="mt-2 text-[16px] font-semibold text-[var(--lp-ink)]">
+          {priced.promotions.map((a) => a.label).join(', ')}: economisești {formatLei(priced.discountMinor)}.
+        </p>
+      )}
       {price !== null && <PromoNote productId={product.id} full className="mt-3 [&_.text-text]:!text-[var(--lp-muted)]" />}
       {price !== null && (
         <a href={href} onClick={go} className="cta mt-6 w-full sm:w-auto">

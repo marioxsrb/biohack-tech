@@ -85,3 +85,9 @@ Ordinea: hero, produsele (cu oferta lor, discret), ideea de brand cu cele patru 
 - Fiecare landing este o prezentare completă, cu povestea produsului: NEUROS Calm (seara, liniștit, cald), NEUROS Focus (munca și jocul care antrenează atenția, fără ton de gaming), NEUROS Amber (ecranele serii, 2+1 calculat cu prețurile reale), NEUROS Flow (cel mai explicativ, cu specialistul și cele trei configurații).
 - Nu există testimoniale, ratinguri, certificări noi sau promisiuni medicale. Locul pentru testimoniale există, dar nu se afișează gol.
 - Sunt folosite doar faptele deja prezente pe paginile de produs.
+
+## Fluxul de cumpărare și NEUROS Amber în familia Biohack Tech (29.09.2026)
+
+- Landingul NEUROS Amber folosește acum suprafețele, tipografia, liniile și butonul roșu ale site-ului. Căldura vine din fotografiile cu lentile, dintr-o singură culoare de accent (chihlimbar), dintr-o lumină caldă discretă în hero și în secțiunea de seară și din panoul cald al ofertei 2+1. Nu mai are fundal crem și maro peste tot.
+- Pe landingul NEUROS Amber se poate alege și numărul de perechi. La 3 perechi, totalul arată direct reducerea 2+1, calculată de același motor ca în coș.
+- În coș, beneficiul este partea cea mai vizibilă („și primești 20% reducere.”, „și primești 2+1 gratis.”), cu suma exactă economisită. Butoanele ofertei sunt teal, ca să nu concureze cu „Finalizează comanda”.
