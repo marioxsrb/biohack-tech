@@ -4,6 +4,7 @@
  * Every call here is an upsert or keyed by ids we store, so retries never duplicate.
  */
 import 'server-only'
+import { attributionSummary } from '@/lib/attribution'
 import type { GhlConfig } from '@/server/config'
 import { customerName, type Order } from '@/server/orders/model'
 
@@ -83,6 +84,8 @@ export const CONTACT_FIELDS = {
   recoveryUrl: 'contact.bt_recovery_url',
   /** The site's own unsubscribe link for marketing emails (never GHL's DND, which would also block order emails). */
   unsubscribeUrl: 'contact.bt_unsubscribe_url',
+  /** Where the latest order came from: "site", or "landing brain-flow · facebook / paid / campanie". */
+  lastOrderSource: 'contact.bt_last_order_source',
 } as const
 
 /**
@@ -94,8 +97,18 @@ export const TAGS = {
   company: 'bt-client-firma',
   /** Present only while the site allows a checkout recovery email (consent, still unpaid, link valid). W2 starts on it. */
   recovery: 'bt-recuperare-eligibil',
+  /** A withdrawal was declared for a paid order (the product may still be on its way back). */
+  returnRequested: 'bt-retur-solicitat',
+  /** The returned product arrived back; the refund follows (W7 on Rambursată). */
+  returnReceived: 'bt-retur-primit',
 } as const
-const PRODUCT_TAG: Record<string, string> = { 'balance-wave': 'bt-cumparat-calm', 'brainlink-pro': 'bt-cumparat-focus', 'ochelari-biohack': 'bt-cumparat-amber' }
+/** One tag per product bought. Every catalog product must have one (tested). */
+export const PRODUCT_TAG: Record<string, string> = {
+  'balance-wave': 'bt-cumparat-calm',
+  'brainlink-pro': 'bt-cumparat-focus',
+  'ochelari-biohack': 'bt-cumparat-amber',
+  'brain-flow': 'bt-cumparat-brain-flow',
+}
 
 const PAYMENT_STATUS_RO: Record<Order['paymentStatus'], string> = {
   pending: 'în curs',
@@ -157,6 +170,7 @@ export function contactPayload(c: GhlConfig, o: Order, lifetime: { orders: numbe
       [CONTACT_FIELDS.lifetimeOrders, String(lifetime.orders)],
       [CONTACT_FIELDS.lifetimeValue, (lifetime.valueMinor / 100).toFixed(2)],
       [CONTACT_FIELDS.lastOrderUrl, `${siteUrl}/comanda/${o.publicToken}`],
+      [CONTACT_FIELDS.lastOrderSource, attributionSummary(o.attribution)],
     ]
       .map(([key, value]) => ({ key, fieldValue: value }))
       .concat(marketingFields(m)),
@@ -170,6 +184,8 @@ export function tagsFor(o: Order): string[] {
   const tags = new Set<string>([TAGS.client])
   for (const i of o.items) if (PRODUCT_TAG[i.productId]) tags.add(PRODUCT_TAG[i.productId])
   if (o.customer.buyerType === 'pj') tags.add(TAGS.company)
+  if (o.returnStatus) tags.add(TAGS.returnRequested)
+  if (o.returnStatus === 'received') tags.add(TAGS.returnReceived)
   return [...tags]
 }
 

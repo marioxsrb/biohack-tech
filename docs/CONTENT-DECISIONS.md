@@ -59,3 +59,7 @@ Sursa: `Biohack-Tech_Structura_si_Copy.docx` și folderul `poze/` din ZIP. Copy-
 - `neck-joy_02` și `neck-joy_03` sunt aproape identice; a rămas una.
 - Pe site-ul vechi, alt-urile a două poze BrainLink erau inversate (meditație / lucru la laptop). Aici sunt corecte.
 - Din 40 MB de PNG-uri au rămas 2 MB de WebP; `next/image` servește AVIF/WebP la dimensiunea potrivită.
+
+## Faza 3/4: Brain Flow devine produsul 4 (29.09.2026)
+
+Decizia de mai sus („Brain Flow, care nu se vinde”) este înlocuită la cerere: Brain Flow se vinde, cu trei configurații (1, 4, 13 zone). Păstrăm numele din sursă (fără marca NEUROS, nestatată pentru el), prețurile din sursă (de confirmat, vezi OPEN-POINTS) și doar faptele tehnice (810 nm, zone, telecomandă, baterie, consultație inițială). Studiile medicale și testimonialele din sursă nu sunt folosite. Pe pagina principală, cardurile trec de la trei la patru (două pe rând pe tabletă).

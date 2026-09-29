@@ -7,7 +7,8 @@ import { getDb } from '@/server/db'
 import { jobs } from '@/server/jobs/outbox'
 import { runDueJobs } from '@/server/jobs/runner'
 import { log } from '@/server/log'
-import { cancelOrder, confirmPayment, markDelivered, markProcessing, markShipped, recordRefund } from '@/server/orders/service'
+import { courier } from '@/server/fulfillment/courier'
+import { cancelOrder, confirmPayment, markDelivered, markProcessing, markReturnReceived, markReturnRequested, markShipped, recordRefund } from '@/server/orders/service'
 
 /**
  * Every action verifies the admin credentials itself. Server Actions are HTTP endpoints; the proxy's
@@ -45,12 +46,24 @@ export async function processingAction(f: FormData) {
 export async function shipAction(f: FormData) {
   await guard()
   const id = text(f, 'id')
-  const courier = text(f, 'courier', 60)
+  const courierName = text(f, 'courier', 60)
   const trackingNumber = text(f, 'tracking', 80)
   const url = text(f, 'trackingUrl', 400)
-  if (!courier || !trackingNumber) return
-  const trackingUrl = /^https:\/\//.test(url) ? url : undefined
-  await done(id, 'shipped', (await markShipped(id, 'admin', { courier, trackingNumber, trackingUrl })).changed)
+  if (!courierName || !trackingNumber) return
+  const trackingUrl = /^https:\/\//.test(url) ? url : courier().trackingUrl(courierName, trackingNumber)
+  await done(id, 'shipped', (await markShipped(id, 'admin', { courier: courierName, trackingNumber, trackingUrl })).changed)
+}
+
+export async function returnRequestedAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id')
+  await done(id, 'return_requested', (await markReturnRequested(id, 'admin', 'echipa')).changed)
+}
+
+export async function returnReceivedAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id')
+  await done(id, 'return_received', (await markReturnReceived(id, 'admin')).changed)
 }
 
 export async function deliveredAction(f: FormData) {

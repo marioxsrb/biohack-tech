@@ -1,91 +1,61 @@
-# Open points: what only you can provide
+# Open points
 
-Short on purpose. The full runbook is `docs/PRODUCTION-LAUNCH.md`.
+Updated 29 September 2026 (phase 3/4). Everything that is code is built; what is left needs an account, a credential, a person's decision or a production host. The full runbook is `docs/PRODUCTION-LAUNCH.md`.
 
-### NEUROS Focus price
-- **Needed:** confirmation of 2.490 lei (taken from the source material, the only price given in lei there).
-- **Used in:** `src/config/prices.ts` → site, cart, checkout, Stripe, FGO, GHL.
-- **If missing:** the product sells at 2.490 lei.
+## MUST FIX BEFORE PRODUCTION
 
-### Bank details
-- **Status:** provided in the local `.env.local` (IBAN valid). Set the same `BANK_*` values on the production host; `BANK_SWIFT` still optional.
-- **Used in:** checkout, order page, transfer email (`BANK_*`).
-- **If missing:** “Transfer bancar” shows “În curând”.
+1. **Production host and database.** A PostgreSQL database (`DATABASE_URL`) on the production host, with every variable from `.env.example` set there (the local `.env.local` is not deployed). Without it, checkout offers email/phone ordering only.
+2. **Stripe live.** Activated account, live keys, live webhook endpoint `https://biohack-tech.ro/api/webhooks/stripe` and its secret (runbook §8). Test mode works end to end today. Do not switch before the go-live procedure (§21).
+3. **Email sending domain.** Domain verified in GHL, `EMAIL_FROM`, `EMAIL_TRANSPORT=ghl` (planned 30 Sep). Without it no customer email goes out (order confirmation, transfer details, shipping, return, refund).
+4. **W1–W7 missing actions** (all Draft in Kerrsid, runbook §10.5): W1/W4 notification recipient, W3/W4/W5/W6/W7 task assignees, W2/W3/W6 sender, W6 review link. Test each with the test contact, then publish one by one.
+5. **FGO API credentials** in production (`FGO_*`). Without them every paid order is “Factură: Manual”.
+6. **Bank details on the host.** `BANK_BENEFICIARY`, `BANK_NAME`, `BANK_IBAN` (valid locally; set the same values in production).
+7. **`ADMIN_PASSWORD`** on the host (12+ characters). Without it /admin does not exist, so nobody can confirm a transfer or mark a shipment.
+8. **Domains (phase 4).** Connect `biohack-tech.ro`, `www`, and the four landing hostnames (runbook §27). No DNS has been changed.
+9. **Legal review** (items below under NEEDS BUSINESS INPUT, “Legal”), in particular the marketing-consent wording used for recovery, the order-button labels and the devices' regulatory status, before ads or marketing emails run.
+10. **GPSR product information** on each product page (Reg. (EU) 2023/988 art. 19): manufacturer name, postal and electronic address; EU responsible person if the manufacturer is outside the EU; product identifier; safety warnings in Romanian. None of it exists in the sources for any product, including Brain Flow.
 
-### Stripe live account
-- **Status:** test mode works end to end locally (test keys + Stripe CLI webhook secret).
-- **Needed:** activated account, live keys, live webhook endpoint secret (§8 of the runbook).
-- **Used in:** card payments.
-- **If missing:** “Card bancar” shows “În curând”.
+## NEEDS BUSINESS INPUT
 
-### Database
-- **Needed:** a PostgreSQL database (Railway recommended) → `DATABASE_URL`.
-- **Used in:** every order.
-- **If missing:** checkout offers email/phone ordering only.
+**Prices and product 4**
+- **NEUROS Focus price:** confirm 2.490 lei (the only lei price in the source).
+- **Brain Flow prices:** confirm 12.900 / 14.900 / 13.900 lei for 1 / 4 / 13 zones. The source lists 13 zones cheaper than 4 zones; kept as listed (`src/config/prices.ts`).
+- **Brain Flow is for sale:** an earlier content decision said it “nu se vinde”; phase 3/4 made it a sold product. Confirm before ads run.
+- **Brain Flow:** manufacturer, CE / regulatory documentation, what's in the box (the photos show goggles next to the remote; not claimed), supplier SKU if any, whether configurations change delivery time.
 
-### FGO
-- **Needed:** PRO/PREMIUM subscription, API user private key, invoice series, VAT rate (accountant), e-Factura setting.
-- **Used in:** automatic invoices after payment.
-- **If missing:** paid orders show “Factură: Manual” in /admin; invoice by hand.
+**Company and support**
+- **Return address** (`COMPANY_RETURN_ADDRESS`). Company identity is set from the data you provided (NEUROS EUROPE S.R.L., CUI 50323873, J2024001256321, Str. N. D. Cocea nr. 10, Sibiu); the return address was not given, so the site says it is sent to the customer.
+- **Support contact:** keep `contact@neuros.ro` and `+40 757 890 707` (from the source) or use Biohack Tech's own.
+- **Who pays the direct return cost** (if not stated, the law puts it on the seller) and any withdrawal exceptions.
+- **Commercial guarantee** beyond the legal 2 years? If yes, its certificate content (OUG 140/2021 art. 15).
 
-### GoHighLevel
-- **Status:** API configured locally; `npm run ghl:check` passes (pipeline, 8 stages, 14 fields, 6 `bt-` tags in NEUROS).
-- **Needed:**
-  - sending domain on biohack-tech.ro verified in GHL + `EMAIL_FROM` + `EMAIL_TRANSPORT=ghl` (planned for 30 Sep);
-  - workflows W1–W7 built in the folder “BiohackTech Ecommerce” from the build sheets in PRODUCTION-LAUNCH §10.5 (not created yet: the GHL workflow builder did not respond while the browser was in the background, and the API cannot create workflows).
-- **Needed for the workflows:**
-  - W1 team recipients;
-  - W4, W5, W7 assignee;
-  - W6 specialist and review link (e.g. Google Business profile);
-  - optional `GHL_WEBHOOK_SECRET` for W0.
-- **If missing:** no customer emails (launch blocker); orders still reach the pipeline.
+**Operations**
+- **Courier** (Fan Courier, Sameday, Cargus…). Today the manual provider: AWB typed in /admin. An API integration plugs into `src/server/fulfillment/courier.ts`.
+- **Shipping** stays free for all orders? (today: free, from the current site).
+- **Unpaid transfer orders:** set `TRANSFER_EXPIRY_DAYS` to cancel automatically, or keep manual cancellation after the W3 reminder.
+- **Card abandonment delay:** `ABANDON_AFTER_MINUTES` (default 60).
+- **People:** W1/W4 recipients, fulfilment person, specialist for onboarding calls (Calm, Focus, Brain Flow), review link.
 
-### Company identification (site footer, legal pages)
-- **Needed:** `COMPANY_LEGAL_NAME`, `COMPANY_CUI`, `COMPANY_REG_COM`, `COMPANY_ADDRESS` (+ `COMPANY_RETURN_ADDRESS` if returns go elsewhere), set on the host at build time.
-- **Used in:** footer, terms, privacy policy (controller), withdrawal form.
-- **If missing:** the pages say “Biohack Tech” with no legal identity (not legally ready to sell; /admin shows it as an error in production).
+**Marketing**
+- **Analytics ids:** GA4 / Clarity / Meta (`NEXT_PUBLIC_*`). The consent banner appears as soon as one is set.
+- **Ad campaigns:** use the UTM parameters `utm_source`, `utm_medium`, `utm_campaign` (+ `utm_content`, `utm_term`) on the landing links; they reach the order and `contact.bt_last_order_source`.
 
-### Legal and product information still to provide
-- **ANPC SAL pictogram** (Ordin ANPC 449/2022 as amended by Ordin 270/2026): the official image (from anpc.ro) on the home page, linked to https://reclamatiisal.anpc.ro. Today the footer has a text link only.
-- **Harmonised legal-guarantee notice** (Reg. (EU) 2025/1960, since 27 Sep 2026): the official label, displayed visibly. Today the checkout and `/garantie` state the 2-year legal guarantee in text.
-- **GPSR** (Reg. (EU) 2023/988 art. 19), on each product page:
-  - manufacturer name and postal + electronic address;
-  - EU responsible person if the manufacturer is outside the EU;
-  - product identifier;
-  - safety warnings in Romanian.
-- **Returns:**
-  - who pays the direct return cost (if not stated, the law puts it on the seller);
-  - the return address;
-  - any withdrawal exceptions (e.g. sealed hygiene items).
-- **Guarantee:** the site says “Garanție 2 ani”, which is the legal guarantee. Is there also a manufacturer's commercial guarantee? If so, its certificate content (OUG 140/2021 art. 15).
+**Legal (needs a person's legal judgement)**
+1. **Checkout recovery and the marketing checkbox.** Recovery emails rely on express consent; its wording covers “un memento dacă nu finalizez comanda”. Confirm it is valid consent. The existing-customer exception (Legea 506/2004 art. 12(2)) is **not** used.
+2. **Order button and contract conclusion** (OUG 34/2014 art. 8(2), as amended by OUG 18/2026): “Comandă cu obligație de plată” (transfer), “Plătește X lei” (card); the moment of conclusion stated in the terms.
+3. **Wellness claims and regulatory status** (MDR 2017/745) of every device, Brain Flow included (transcranial photobiomodulation): product copy, landing copy, the “nu înlocuiește sfatul medicului” disclaimer, CE documentation.
+4. **Privacy policy:** transfer mechanism and processor agreements for Stripe and GoHighLevel; retention periods; whether courier and hosting must be named; the landing attribution (UTM, no click ids, no cookie) described in the policy.
+5. **Company (PJ) buyers:** which consumer rights the terms extend to them.
+6. **Service emails without consent:** W6 P1 (after-delivery help) and W3 T1 (transfer reminder) treated as non-marketing. Confirm.
+7. **ANPC SAL pictogram** (Ordin ANPC 449/2022, amended by Ordin 270/2026) and the **harmonised legal-guarantee notice** (Reg. (EU) 2025/1960): official images to place; today text only.
 
-### Decisions
-- **Courier** and whether shipping stays free for all orders (today: free, from the current site).
-- **Unpaid transfer orders:**
-  - Today: GHL W3 reminder at 2 days, task at 5 days, cancellation by hand.
-  - `TRANSFER_EXPIRY_DAYS` automates the cancellation; the customer gets the cancellation email.
-- **Card checkout abandonment:** `ABANDON_AFTER_MINUTES` (default 60) before an unpaid card order counts as “Plată nefinalizată”. Recovery emails go only to addresses with marketing consent.
-- **Analytics:** GA4 / Clarity / Meta ids (`NEXT_PUBLIC_*`). The consent banner appears as soon as one is set.
-- **Support contact:** keep `contact@neuros.ro` and `+40 757 890 707` (from the source) or use Biohack Tech’s own.
-- **What’s in the box** for each product.
+## CAN IMPROVE AFTER LAUNCH
 
-### Admin access
-- **Needed:** `ADMIN_PASSWORD` (12+ characters; `ADMIN_USER` optional, default `admin`).
-- **Used in:** /admin (orders, transfer confirmation, shipping, retries).
-- **If missing:** /admin does not exist (404), so nobody can confirm a bank transfer or see failed syncs.
-
-## LEGAL REVIEW BEFORE GO-LIVE
-
-Only what needs a person's legal judgement; everything else is built and documented.
-
-1. **Checkout recovery and the marketing checkbox.** Recovery emails rely on express consent. Its wording covers “un memento dacă nu finalizez comanda”. Confirm that the wording is valid consent for recovery. The existing-customer exception (Legea 506/2004 art. 12(2)) is **not** used; decide whether to add it for completed purchases, which needs an explicit opt-out at checkout.
-2. **Order button and contract conclusion** (OUG 34/2014 art. 8(2), as amended by OUG 18/2026):
-   - labels: “Comandă cu obligație de plată” (transfer), “Plătește X lei” (card);
-   - the moment the contract is concluded, as stated in the terms (card: payment confirmed; transfer: confirmation email).
-3. **Wellness claims and the devices' regulatory status** (MDR 2017/745): product copy, the “nu înlocuiește sfatul medicului” disclaimer, CE documentation for each device.
-4. **Privacy policy specifics:**
-   - international transfer mechanism for Stripe and GoHighLevel/LeadConnector (DPF or SCCs) and the processor agreements;
-   - retention periods (accounting/fiscal, consent proofs, CRM);
-   - whether the courier and hosting must be named.
-5. **Company (PJ) buyers:** which consumer rights (withdrawal, legal guarantee) the terms extend to them.
-6. **Service emails without consent:** the after-delivery help email (W6 P1) and the transfer payment reminder (W3 T1) are treated as non-marketing. Confirm.
+- Courier API integration (automatic AWB, delivery tracking) through the courier adapter.
+- Upsell / cross-sell on the landings (extension point documented in runbook §26; only catalog prices, no discount logic yet).
+- Per-configuration photographs for Brain Flow (today the same gallery for 1, 4 and 13 zones).
+- A GHL workflow on `bt-retur-solicitat` / `bt-retur-primit` (tags are set; no workflow uses them yet).
+- W0 (GHL unsubscribe → site) once `GHL_WEBHOOK_SECRET` is set.
+- Landing reporting in GA4 by `lp` / UTM once analytics ids exist.
+- A dedicated product page layout for Brain Flow configurations (comparison table), if the business wants more than the picker.
+- Automatic FGO storno on full refunds (`FGO_AUTO_STORNO`), once the accountant agrees.

@@ -4,7 +4,7 @@
  * Whatever comes back from storage is validated: unknown products, unknown variants,
  * products without an approved price, bad quantities and duplicates are dropped or fixed.
  */
-import { isPurchasable, resolveLine, type ProductId } from '@/content/catalog'
+import { resolveLine, type ProductId } from '@/content/catalog'
 
 export type CartLine = { productId: ProductId; variantId?: string; quantity: number }
 
@@ -27,7 +27,7 @@ export function sanitize(raw: unknown): CartLine[] {
     if (typeof productId !== 'string') continue
     const v = typeof variantId === 'string' ? variantId : undefined
     const r = resolveLine(productId, v)
-    if (!r || !isPurchasable(r.product)) continue
+    if (!r || r.unit === null) continue
     const q = Math.min(MAX_QTY, Math.max(1, Math.floor(Number(quantity) || 1)))
     const key = lineKey({ productId: r.product.id, variantId: v })
     const prev = byKey.get(key)
@@ -81,7 +81,7 @@ export const cartStore = {
   },
   add(productId: ProductId, variantId: string | undefined, quantity = 1) {
     const r = resolveLine(productId, variantId)
-    if (!r || !isPurchasable(r.product)) return
+    if (!r || r.unit === null) return
     const key = lineKey({ productId, variantId })
     const current = cartStore.getSnapshot()
     const existing = current.find((l) => lineKey(l) === key)

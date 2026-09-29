@@ -98,7 +98,7 @@ export function ProductHero({ productId, intro }: Props) {
           <p className="mt-3 max-w-[30em] text-[17px] leading-snug text-text">{product.tagline}</p>
 
           <p className="mt-6 text-[30px] font-medium tracking-[-0.025em] text-ink">
-            <Price productId={product.id} />
+            <Price productId={product.id} variantId={variant?.id} />
             {purchasable && <span className="ml-3 align-middle text-[14px] font-normal tracking-normal text-muted">{terms.vat}</span>}
           </p>
 
@@ -177,7 +177,7 @@ export function ProductHero({ productId, intro }: Props) {
             <div className="min-w-0 flex-1">
               <p className="truncate text-[15px] font-medium text-ink">{product.name}</p>
               <p className="truncate text-[13.5px] text-muted">
-                <Price productId={product.id} />
+                <Price productId={product.id} variantId={variant?.id} />
                 {variant && ` · ${variantLabel(product, variant)}`}
               </p>
             </div>

@@ -11,7 +11,7 @@ import { Price } from '@/components/cart/Price'
 import { Wordmark } from './Wordmark'
 
 /**
- * Three products need no mega-menu: Produse (a short list), Despre noi, Coș.
+ * Four products need no mega-menu: Produse (a short list), Despre noi, Coș.
  * Two predictable states: over the homepage photograph (transparent, white text; a dark
  * translucent bar on phones) and everywhere else (solid light bar). One IntersectionObserver.
  */
@@ -123,9 +123,9 @@ export function Header() {
           </div>
         </nav>
 
-        {/* Product list: three lines of type, in the bar's own colours */}
+        {/* Product list: one line per product, in the bar's own colours */}
         <div id="product-menu" hidden={!menuOpen} className={`max-md:hidden ${dark ? 'shadow-[0_-1px_0_var(--color-dark-line)]' : 'shadow-[0_-1px_0_rgb(8_17_19/0.06)]'}`}>
-          <ul className="wrap grid grid-cols-3 gap-6 py-6">
+          <ul className="wrap grid grid-cols-2 gap-x-6 gap-y-2 py-6 lg:grid-cols-4">
             {products.map((p) => (
               <li key={p.id}>
                 <Link href={productHref(p)} onClick={() => setMenuOpen(false)} className="group flex items-center gap-4 rounded-[16px] p-2 transition-colors hover:bg-paper">

@@ -1,6 +1,6 @@
 # Biohack Tech: production launch runbook
 
-Written 26 September 2026 against commit “Launch pass”. Everything below refers to code that exists in this repository. Items marked **YOU** need an account, a credential or a business decision; nothing in them has been invented.
+Written 26 September 2026 against commit “Launch pass”; updated 29 September 2026 for phase 3/4 (product 4, advertising landings, attribution, returns). Everything below refers to code that exists in this repository. Items marked **YOU** need an account, a credential or a business decision; nothing in them has been invented.
 
 ---
 
@@ -8,19 +8,22 @@ Written 26 September 2026 against commit “Launch pass”. Everything below ref
 
 | Area | Status |
 |---|---|
-| Storefront (home, 3 product pages, cart page, checkout, order page, legal, 404) | Built, tested at 390/430/768/1024/1280/1440 |
-| Prices | NEUROS Calm 6.380 lei, NEUROS Amber 315 lei (approved), NEUROS Focus 2.490 lei (from source, confirm) |
+| Storefront (home, 4 product pages, cart page, checkout, order page, legal, 404) | Built, tested at 390/430/768/1024/1280/1440 |
+| Prices | NEUROS Calm 6.380 lei, NEUROS Amber 315 lei (approved), NEUROS Focus 2.490 lei (from source, confirm), Brain Flow 12.900 / 14.900 / 13.900 lei for 1 / 4 / 13 zones (from the previous site, **confirm**, §28) |
+| Advertising landings (4, one per product) | Built: `/lp/<slug>` locally, `<slug>.biohack-tech.ro` in production through host routing (§26); DNS not changed |
+| Attribution (landing + UTM → order → GHL) | Built; `contact.bt_last_order_source` in GHL |
 | Canonical orders (PostgreSQL) | Built and tested (PGlite + real PostgreSQL concurrency tests) |
 | Card payments (Stripe Payment Element, own checkout) | Built; **verified in Stripe TEST mode** with real test payments and real webhooks (`scripts/stripe-e2e.mjs`, 19/19). Needs live keys + live webhook for production |
 | Bank transfer | Built and tested end to end; real bank details verified locally (IBAN checksum, checkout, order page, instructions email). Production host needs the same `BANK_*` values |
 | FGO invoices | Built to the official FGO API v7.1 spec; tested against a mock (idempotency, outage, rejection). **Needs FGO API credentials; never called against FGO yet** |
 | GoHighLevel CRM + transactional email | Built on API v2 (2021-07-28); tested against a mock (idempotency, outage, permanent rejection, retry). **Needs token, location, pipeline, fields, sending domain; never called against GHL yet** |
 | Operations (/admin) | Built: orders, payment confirmation for transfers, shipping + AWB, delivery, cancel, refunds for transfers, failed-sync retry |
-| Courier integration | Not built (no courier chosen). AWB entered by hand in /admin |
+| Courier integration | Manual provider behind an adapter boundary (`src/server/fulfillment/courier.ts`); no courier chosen, none invented. AWB entered by hand in /admin |
+| Returns | Built: withdrawal → return requested (tag `bt-retur-solicitat`) → return received in /admin (email + tag `bt-retur-primit`) → refund (Stripe / recorded) → W7 (§29) |
 | Cookie consent | Built: banner + preferences + real script blocking (GA4, Clarity, Meta registry), proof log; no tool configured yet |
 | Email marketing consent, recovery, unsubscribe | Built: proof in DB, consent-gated recovery tag/link, unsubscribe page, GHL sync (§15) |
 | Legal pages + online withdrawal | Built (§16); company data and legal review pending |
-| GHL workflows W1–W7 | Specified (§10.5), **not yet created in GHL** |
+| GHL workflows W1–W7 | **Created in Kerrsid (NEUROS), folder “BiohackTech Ecommerce”, all Draft, 0 enrolled.** Missing actions isolated (§10.5) |
 
 **The store is not live-ready until the P0 items in §24 are done.** Most of them are accounts and credentials, not code.
 
@@ -33,7 +36,7 @@ Written 26 September 2026 against commit “Launch pass”. Everything below ref
 - Payment truth: only Stripe can mark a card order paid: the signed webhook, or the `stripe.reconcile` job (server-side retrieve, 10 minutes after the order and again before an order is marked abandoned) if the webhook was lost. The order page only reads; it never marks payments or starts workflows. Bank transfers become paid only when a person confirms the statement in /admin.
 - Side effects (CRM, invoice, email) go through a database outbox with unique keys: retried with backoff, never duplicated, visible in /admin when they fail.
 - Transactional emails are rendered by the site (HTML + text) and delivered through GoHighLevel.
-- 133 automated tests (consent, recovery eligibility, unsubscribe, cookie script blocking, withdrawal, money, cart, validation, order state machine, idempotency, webhook route and signatures, browser-closed payment, reconciliation, FGO/GHL mapping, email rendering, outbox retries and outages, abandonment, transfer expiry, admin authorization, the real three-product catalog end to end, concurrency on PostgreSQL) + `scripts/stripe-e2e.mjs` against Stripe test mode.
+- 158 automated tests (landing host mapping and proxy, Brain Flow variants and server pricing, payment matrix per configuration and method, attribution, fulfillment and return lifecycle, recovery with a variant, consent, recovery eligibility, unsubscribe, cookie script blocking, withdrawal, money, cart, validation, order state machine, idempotency, webhook route and signatures, browser-closed payment, reconciliation, FGO/GHL mapping, email rendering, outbox retries and outages, abandonment, transfer expiry, admin authorization, the real four-product catalog end to end, concurrency on PostgreSQL) + `scripts/stripe-e2e.mjs` against Stripe test mode.
 - /admin: HTTP Basic Auth in the proxy **and** inside every admin action (actions are HTTP endpoints; each verifies the credentials itself). Only bank transfers can be marked paid by a person; card money is confirmed by Stripe only.
 
 ## 3. What is blocked, and by what
@@ -220,7 +223,7 @@ Create it with these stages **in this order and with these exact names** (the si
 Opportunity: name `BHT-20260929-0007 · Prenume Nume`, value = order total in lei (minus refunds), status `open` (waiting), `won` (paid and later), `lost` (cancelled/refunded), `abandoned`. One opportunity per order: its id is stored on the order, and a lost id is recovered by searching the order number, so retries never duplicate it. Copy the pipeline id → `GHL_PIPELINE_ID`.
 
 ### 10.3 Contact custom fields
-Settings → Custom Fields → Contact, folder “BiohackTech Ecommerce” (all 14 exist in NEUROS since 29 Sep 2026; `npm run ghl:check` verifies). Create them so the **field keys** are exactly these (GHL derives the key from the name; name them `bt_customer_type` etc., then rename the label if you like; the key stays):
+Settings → Custom Fields → Contact, folder “BiohackTech Ecommerce” (all 15 exist in NEUROS since 29 Sep 2026; `npm run ghl:check` verifies). Create them so the **field keys** are exactly these (GHL derives the key from the name; name them `bt_customer_type` etc., then rename the label if you like; the key stays):
 
 | Key | Type | Purpose | Source | Example |
 |---|---|---|---|---|
@@ -238,6 +241,7 @@ Settings → Custom Fields → Contact, folder “BiohackTech Ecommerce” (all 
 | `contact.bt_last_order_url` | Single line | W3 link to the order page (opaque token) | Latest order | https://biohack-tech.ro/comanda/… |
 | `contact.bt_recovery_url` | Single line | W2 link; **empty unless recovery is allowed** | Recovery decision | https://biohack-tech.ro/reluare/… |
 | `contact.bt_unsubscribe_url` | Single line | Unsubscribe link in every marketing email | Consent subject | https://biohack-tech.ro/dezabonare/… |
+| `contact.bt_last_order_source` | Single line | Where the latest order came from (reporting, segmentation) | Validated order attribution | landing brain-flow · facebook / paid / lansare (or `site`) |
 
 Standard fields filled too: first/last name, email, phone, company name (PJ), address, city, county, postal code, country, source `biohack-tech.ro`.
 
@@ -245,7 +249,8 @@ Standard fields filled too: first/last name, email, phone, company name (PJ), ad
 
 ### 10.4 Tags (only these)
 - `bt-client`: has at least one paid order.
-- `bt-cumparat-calm`, `bt-cumparat-focus`, `bt-cumparat-amber`: bought that product (per-product education and cross-sell).
+- `bt-cumparat-calm`, `bt-cumparat-focus`, `bt-cumparat-amber`, `bt-cumparat-brain-flow`: bought that product (per-product education and cross-sell). A test fails if a catalog product has no tag.
+- `bt-retur-solicitat`: a withdrawal was declared for a paid order. `bt-retur-primit`: the returned product arrived back. Both set only by the site (§29).
 - `bt-client-firma`: bought as a company (PJ).
 - `bt-recuperare-eligibil`: **added and removed only by the site**. It is present only while a checkout recovery email is allowed (consent, still unpaid and abandoned, link valid). It starts W2. Never add it by hand or in a workflow.
 
@@ -254,7 +259,19 @@ Customer tags are added only after payment and never removed by the site; `bt-re
 
 ### 10.5 Workflows W1–W7 (GHL, folder “BiohackTech Ecommerce”)
 
-**Status on 29 Sep 2026: not created in GHL.** GHL's API cannot create workflows, and the Kerrsid workflow builder did not respond while the browser window was in the background (lists, folders and “Create workflow” ignored every action). The build sheets below are complete: build them in this order, all as **Draft**.
+**Status on 29 Sep 2026: all seven created in Kerrsid (NEUROS), folder “BiohackTech Ecommerce”, every one Draft, 0 enrolled.** Each is scoped to the pipeline “Comenzi Biohack Tech” or a `bt-` tag; none uses a generic trigger. Missing pieces are isolated in clearly named actions, to fill before publishing:
+
+| # | Kerrsid id | Missing before ON |
+|---|---|---|
+| W1 | ad1361c6-91f6-4fba-953b-5a47af5fb00e | notification recipient (placeholder: opportunity owner, action named “DESTINATAR DE SETAT”) |
+| W2 | 2cbd2762-3950-456a-8cf8-118f1fd64671 | email sender (`EMAIL_FROM`) |
+| W3 | 74216fee-9c80-45af-aa38-6d8595594b21 | email sender; task assignee |
+| W4 | 789ce616-1fc6-4c2a-a6a4-589af6db14f2 | notification recipient; task assignee |
+| W5 | cc6fae1a-b4d1-4ded-bef5-f949d1fe513c | task assignee |
+| W6 | 2249c005-0a58-408e-b1c3-03134aa84560 | email sender; specialist assignee; review link (placeholder `LINK-RECENZII-DE-SETAT`). Specialist branch already includes `bt-cumparat-brain-flow` |
+| W7 | 310fe79b-24f5-4901-a663-210879186e98 | task assignees |
+
+The build sheets below are what was built.
 
 **Rules for every BiohackTech workflow**
 - Transactional emails come from the site. No workflow sends an order confirmation, bank details, an invoice, a shipping notice, a cancellation or a refund email: the customer would get them twice.
@@ -445,6 +462,8 @@ Provide: **beneficiary** (legal name of the company), **IBAN** (RON account), **
 ## 14. Shipping setup
 
 **Built:** shipping cost per order (`shippingMinor`, currently 0 lei: “livrare gratuită în România”, the rule on the current site), delivery address separate from billing, courier name + AWB + tracking URL + shipped/delivered dates per order, shipping email with tracking, pipeline stages. The rule lives in one function (`shippingFor` in `src/server/orders/service.ts`) to change later for a fixed fee or a free-shipping threshold.
+
+**Courier boundary (built):** `src/server/fulfillment/courier.ts`. `COURIER_PROVIDER=manual` (the only provider): the team books the parcel in the courier's portal and types courier + AWB (+ optional tracking link) in /admin. A future API provider implements the same interface; the order still becomes “shipped” only through `markShipped()`, so emails, CRM and audit do not change.
 
 **Decisions (YOU):** courier (Fan Courier, Sameday, Cargus…), confirm free shipping for all orders, pickup schedule, whether to offer easybox/lockers, Romania only (the checkout accepts only Romanian counties). **Not built:** automatic AWB generation (needs the courier’s API account; P2), delivery tracking sync (P2). Today: create the AWB in the courier’s portal, paste it into /admin.
 
@@ -659,3 +678,76 @@ The ordered sequence:
 5. Push the AWB to the FGO invoice (`factura/awb`).
 6. Stock tracking (today the store assumes availability and shows no stock claims).
 7. Review collection and display (no reviews are shown until they exist).
+
+---
+
+## 26. ADVERTISING LANDING ARCHITECTURE
+
+One landing per product, for paid traffic only. Same app, same catalog, same checkout, same database.
+
+| Landing | Product | Production hostname | Local route |
+|---|---|---|---|
+| calm | NEUROS Calm (`balance-wave`) | `calm.biohack-tech.ro` | `/lp/calm` |
+| focus | NEUROS Focus (`brainlink-pro`) | `focus.biohack-tech.ro` | `/lp/focus` |
+| amber | NEUROS Amber (`ochelari-biohack`) | `amber.biohack-tech.ro` | `/lp/amber` |
+| brain-flow | Brain Flow (`brain-flow`) | `brain-flow.biohack-tech.ro` | `/lp/brain-flow` |
+
+**Routing.** `src/proxy.ts` + `src/lib/landing-hosts.ts`. The Host header is compared with an explicit allowlist built from `LANDING_SLUGS` and `LANDING_BASE_DOMAIN` (default `biohack-tech.ro`); nothing else is recognized (a forged or unknown host is the main site). On a landing hostname:
+- `/` is rewritten to `/lp/<slug>`;
+- `/checkout`, `/comanda/<token>`, `/api/checkout`, `/api/consent`, the legal pages, `/retragere` and framework files are served on the same host, so consent, cart and the Stripe return stay on one origin;
+- everything else (incl. `/admin`, `/api/webhooks/*`, `/api/jobs/*`, product pages) gets a 308 to the same path on `NEXT_PUBLIC_SITE_URL`;
+- every response carries `X-Robots-Tag: noindex, nofollow`.
+Locally, `<slug>.localhost:3000` works outside production (Chrome resolves it to 127.0.0.1).
+
+**Pages.** `src/app/(landing)/lp/[slug]/page.tsx` renders `components/landing/LandingPage.tsx` with data from `content/landings.ts` (copy, theme, photographs). Names, variants and prices come only from the catalog. The main site uses the `(site)` route group (header + footer); landings have their own minimal header and a legal footer (company line, legal pages, cookie settings, ANPC, withdrawal link). Not linked from the menu, footer, product grid or sitemap.
+
+**SEO.** `robots: noindex, nofollow`, canonical = the product page on the main domain, excluded from `sitemap.xml`, plus the header above. The main site's indexing is unchanged.
+
+**Direct checkout.** The offer's button links to `/checkout?item=<productId>[:<variantId>]&lp=<slug>&lp_host=<host>&utm_*`. Only ids travel. The checkout puts the item in the cart (never twice; existing cart lines are kept), removes `item` from the URL and prices everything from the catalog; the server prices the order again (`resolveOrderLines`). Brain Flow requires a configuration; the landing opens on 4 zones, and every chip shows its own price.
+
+**Attribution.** No cookie or localStorage is used for it. The URL carries `lp`, `lp_host` and `utm_source/medium/campaign/content/term`; click ids (gclid, fbclid) are not collected. The server keeps only a known landing, its real hostname (or the main host for `/lp/<slug>`), and UTM values cleaned to a safe alphabet, max 100 characters (`sanitizeAttribution`). Stored in `orders.attribution` (jsonb, migration 004), shown in /admin (“Sursa comenzii”), written to the `order.created` audit event, and synced to GHL as `contact.bt_last_order_source`.
+
+**Consent and analytics.** The landing uses the same `ConsentManager` and consent-gated `track()`: `view_item` on load, `select_variant` on each configuration/frame change (GA4 only), then the checkout's `begin_checkout`, `add_payment_info` and the order page's `purchase` (once per order, deduplicated). Nothing is sent without consent.
+
+**Copy rules.** Romanian, short sentences, no dash punctuation, only facts already on the product pages; no reviews, counters, countdowns, discounts or health promises (enforced by `tests/landing.test.ts`).
+
+**Extension point (documented only, not built): upsell / cross-sell.** A landing may later offer a second product on the offer panel. The only supported way: add `item` parameters to the same checkout link (`item=brain-flow:4-zone&item=ochelari-biohack:patrat-negru`); the checkout already accepts several, and the server prices each. No discount logic exists; any bundle price must first be a catalog price in `config/prices.ts`.
+
+## 27. Phase 4: domains to connect (no DNS change made)
+
+| Hostname | Points to | Purpose |
+|---|---|---|
+| `biohack-tech.ro` | the app | main store (canonical) |
+| `www.biohack-tech.ro` | the app | redirect to apex |
+| `calm.biohack-tech.ro` | the same app | NEUROS Calm landing |
+| `focus.biohack-tech.ro` | the same app | NEUROS Focus landing |
+| `amber.biohack-tech.ro` | the same app | NEUROS Amber landing |
+| `brain-flow.biohack-tech.ro` | the same app | Brain Flow landing |
+
+Add all six to the host (Railway → Networking) and the CNAME/ALIAS records it shows; set `LANDING_BASE_DOMAIN=biohack-tech.ro` (default). Stripe needs no change: the return URL is built from the page's own origin, and the webhook stays on the main domain. GHL links point to the main domain. Email DNS (SPF, DKIM, DMARC) is §11.
+
+## 28. Product 4: Brain Flow (evidence, decisions, conflicts)
+
+**Identified from:** the previous rebuild repository (`~/neuros-ecom`, `src/content/brain-flow.ts`, commit 2d1eae6 “v0 rebuild from the original site”, 20 Sep 2026) and its audit of the old live site (`docs/audit.md`: Brain Flow pages public but hidden from the menus, 12.900 / 14.900 / 13.900 lei). Photographs: the same files as `laser-cap_*` in the source ZIP (`08_Nefolosite-pe-site`).
+
+| Item | Value used | Source |
+|---|---|---|
+| Name | Brain Flow (no maker stated; not renamed to NEUROS) | source page |
+| Kind | Cască de fotobiomodulare transcraniană, infraroșu 810 nm | source page |
+| Variants (stable ids) | `1-zona` (1 zone), `4-zone` (4 zones), `13-zone` (13 zones) | source page |
+| Prices (VAT incl.) | 12.900 / 14.900 / 13.900 lei | source page |
+| Internal reference | `brain-flow/<variant>` (no supplier SKU exists in any source) | ours |
+| Specs | 810 nm; zones, frequency and duration adjustable; remote included; rechargeable battery, wireless; initial consultation | source page |
+
+**Conflicts, not resolved by us:**
+1. 13 zones (13.900 lei) costs **less** than 4 zones (14.900 lei). Kept exactly as the source lists it; needs business confirmation.
+2. `docs/CONTENT-DECISIONS.md` (earlier phase) says Brain Flow “nu se vinde”. Phase 3/4 makes it a sold product by instruction; confirm before ads run.
+3. The source page listed medical study topics (mood, anxiety, sleep). **Not reused**: the product page and landing make no health claim.
+4. Manufacturer, CE / regulatory status, GPSR data, box contents and warranty terms beyond the legal 2 years are unknown (OPEN-POINTS).
+
+## 29. Returns lifecycle (built)
+
+1. The customer declares withdrawal at `/retragere` (or by email/phone). A matching paid order gets `return_status = requested` automatically (`markReturnRequested`); the team can set it by hand in /admin for email/phone requests. CRM: tag `bt-retur-solicitat`.
+2. The parcel arrives back and is checked: /admin → “Produsul returnat a fost primit” (`markReturnReceived`). The customer gets the `return_received` email; linked withdrawal statements become `received`; CRM: tag `bt-retur-primit`.
+3. The refund is its own step: Stripe dashboard (card; the webhook records it) or “Înregistrează rambursarea” (transfer). The stage becomes *Rambursată*, W7 creates the FGO storno task.
+Every step is idempotent (a second call changes nothing) and audited in the order history. The return address is not set (OPEN-POINTS): the withdrawal email says it will be sent to the customer.

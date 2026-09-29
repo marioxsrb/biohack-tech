@@ -21,8 +21,9 @@ const PIPELINE = 'Comenzi Biohack Tech'
 const STAGES = ['Așteaptă transferul', 'Plată nefinalizată', 'Plătită, de pregătit', 'În pregătire', 'Expediată', 'Livrată', 'Anulată', 'Rambursată']
 const FIELDS = ['customer_type', 'last_order_number', 'last_order_date', 'last_order_value', 'last_order_products', 'last_payment_method',
   'last_payment_status', 'last_order_status', 'lifetime_orders', 'lifetime_value', 'marketing_consent', 'last_order_url', 'recovery_url',
-  'unsubscribe_url'].map((f) => `contact.bt_${f}`)
-const TAGS = ['bt-client', 'bt-client-firma', 'bt-cumparat-calm', 'bt-cumparat-focus', 'bt-cumparat-amber', 'bt-recuperare-eligibil']
+  'unsubscribe_url', 'last_order_source'].map((f) => `contact.bt_${f}`)
+const TAGS = ['bt-client', 'bt-client-firma', 'bt-cumparat-calm', 'bt-cumparat-focus', 'bt-cumparat-amber', 'bt-cumparat-brain-flow',
+  'bt-recuperare-eligibil', 'bt-retur-solicitat', 'bt-retur-primit']
 
 const get = async (path) => {
   const res = await fetch(`${BASE}${path}`, { headers: { Authorization: `Bearer ${TOKEN}`, Version: '2021-07-28', Accept: 'application/json' } })

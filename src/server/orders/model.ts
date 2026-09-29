@@ -6,6 +6,8 @@
  *   OrderStatus   where the order is in its life (to prepare, shipped...)
  *   PaymentStatus what we know about the money
  */
+import type { Attribution } from '@/lib/attribution'
+
 export const ORDER_STATUS = {
   pending: 'pending', // created, waiting for payment
   abandoned: 'abandoned', // card payment not completed in time (can still be paid)
@@ -39,6 +41,8 @@ export const INVOICE_STATUS = {
   manual: 'manual', // FGO not configured or manual policy: issue by hand
 } as const
 export type InvoiceStatus = (typeof INVOICE_STATUS)[keyof typeof INVOICE_STATUS]
+
+export type ReturnStatus = 'requested' | 'received'
 
 export type Address = { address: string; city: string; county: string; postalCode: string; country: 'RO' }
 
@@ -107,6 +111,12 @@ export type Order = {
   /** Opaque token of the recovery link (it only restores the cart), and when it stops working. */
   recoveryToken: string | null
   recoveryExpiresAt: Date | null
+  /** Validated campaign data from the checkout (landing, UTM). null = came through the main site. */
+  attribution: Attribution | null
+  /** After a withdrawal: the return was announced, then the product arrived back. */
+  returnStatus: ReturnStatus | null
+  returnRequestedAt: Date | null
+  returnReceivedAt: Date | null
   items: OrderItem[]
 }
 

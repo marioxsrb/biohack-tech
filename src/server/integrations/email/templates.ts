@@ -18,6 +18,7 @@ export type EmailTemplate =
   | 'order_cancelled'
   | 'refund_issued'
   | 'withdrawal_received'
+  | 'return_received'
 
 export const EMAIL_TEMPLATES: Record<EmailTemplate, { subject: (o: Order) => string; kind: 'transactional' }> = {
   order_confirmed: { subject: (o) => `Comanda ta Biohack Tech #${o.orderNumber}`, kind: 'transactional' },
@@ -28,6 +29,7 @@ export const EMAIL_TEMPLATES: Record<EmailTemplate, { subject: (o: Order) => str
   order_cancelled: { subject: (o) => `Comanda #${o.orderNumber} a fost anulată`, kind: 'transactional' },
   refund_issued: { subject: (o) => `Rambursare pentru comanda #${o.orderNumber}`, kind: 'transactional' },
   withdrawal_received: { subject: (o) => `Am primit cererea de retragere pentru comanda #${o.orderNumber}`, kind: 'transactional' },
+  return_received: { subject: (o) => `Am primit produsele returnate din comanda #${o.orderNumber}`, kind: 'transactional' },
 }
 
 /** The withdrawal statement being acknowledged (withdrawal_received only). */
@@ -165,6 +167,18 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
         ],
       }
     }
+    case 'return_received':
+      return {
+        lead: `Am primit produsele returnate din comanda #${o.orderNumber}.`,
+        blocks: [
+          p(
+            o.paymentStatus === 'refunded'
+              ? 'Rambursarea a fost deja procesată. Nu mai ai nimic de făcut.'
+              : 'Îți returnăm banii pe aceeași cale prin care ai plătit, în cel mult 14 zile de la cererea de retragere. Îți scriem când rambursarea este procesată.',
+          ),
+          p(`Pentru orice întrebare, scrie-ne la ${site.email}.`),
+        ],
+      }
     case 'refund_issued':
       return {
         lead: `Am procesat o rambursare de ${formatLei(o.refundedMinor)} pentru comanda #${o.orderNumber}.`,

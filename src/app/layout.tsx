@@ -3,8 +3,6 @@ import { Geist, Geist_Mono } from 'next/font/google'
 import { AddedPopup } from '@/components/cart/AddedPopup'
 import { CartProvider } from '@/components/cart/CartProvider'
 import { ConsentManager } from '@/components/consent/ConsentManager'
-import { Footer } from '@/components/site/Footer'
-import { Header } from '@/components/site/Header'
 import { site } from '@/config/site'
 import { JsonLd, organizationJsonLd } from '@/lib/seo'
 import './globals.css'
@@ -32,10 +30,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {/* First in the tab order, so the cookie choice is reachable before the page. */}
         <ConsentManager />
+        {/* Site chrome (header, footer) lives in (site)/layout; advertising landings in (landing) have their own. */}
         <CartProvider>
-          <Header />
-          <main id="main">{children}</main>
-          <Footer />
+          {children}
           <AddedPopup />
         </CartProvider>
         <JsonLd data={organizationJsonLd()} />

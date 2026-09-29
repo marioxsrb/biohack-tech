@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { isPurchasable, resolveLine, variantLabel, type Product, type ProductId, type Variant } from '@/content/catalog'
+import { resolveLine, variantLabel, type Product, type ProductId, type Variant } from '@/content/catalog'
 import { orderTotal } from '@/lib/money'
 import { cartStore, lineKey } from './cart-store'
 
@@ -36,7 +36,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const add = useCallback((productId: ProductId, variantId?: string, quantity = 1) => {
     const resolved = resolveLine(productId, variantId)
-    if (!resolved || !isPurchasable(resolved.product)) return false
+    if (!resolved || resolved.unit === null) return false
     cartStore.add(productId, variantId, quantity)
     setConfirmation({ key: lineKey({ productId, variantId }), quantity, at: Date.now() })
     const label = resolved.variant ? `${resolved.product.name}, ${variantLabel(resolved.product, resolved.variant)}` : resolved.product.name
@@ -69,7 +69,7 @@ export function useCart() {
     () =>
       stored.flatMap((l) => {
         const r = resolveLine(l.productId, l.variantId)
-        if (!r || !isPurchasable(r.product)) return []
+        if (!r || r.unit === null) return []
         return [
           {
             key: lineKey(l),
@@ -77,7 +77,7 @@ export function useCart() {
             variant: r.variant,
             variantLabel: r.variant ? variantLabel(r.product, r.variant) : undefined,
             quantity: l.quantity,
-            unit: r.product.price,
+            unit: r.unit,
           },
         ]
       }),

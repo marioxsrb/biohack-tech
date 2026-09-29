@@ -5,16 +5,16 @@ import { Price } from '@/components/cart/Price'
 import { productHref, products } from '@/content/catalog'
 
 /**
- * The three products, straight after the photograph. The panels rise over the hero's lower
- * edge (a static overlap, no scroll code), the middle one set lower for rhythm. Hovering a
+ * All products, straight after the photograph. The panels rise over the hero's lower
+ * edge (a static overlap, no scroll code), every second one set lower for rhythm. Hovering a
  * panel lifts its product and moves the arrow; Calm's red light brightens.
  */
 export function Discover() {
   return (
     <section id="produse" aria-label="Produse" className="relative z-10 -mt-[132px] scroll-mt-[calc(var(--nav-h)+16px)] max-md:-mt-[88px]">
-      <ul className="wrap grid gap-5 md:grid-cols-3 md:gap-6">
+      <ul className="wrap grid gap-5 md:grid-cols-2 md:gap-6 lg:grid-cols-4">
         {products.map((p, i) => (
-          <li key={p.id} className={i === 1 ? 'md:mt-16' : ''}>
+          <li key={p.id} className={i % 2 === 1 ? 'md:mt-16' : ''}>
             <Link
               href={productHref(p)}
               className="group relative flex h-full flex-col overflow-hidden rounded-[20px] bg-paper p-6 shadow-[0_30px_60px_-40px_rgba(8,17,19,.45)] transition-shadow duration-300 hover:shadow-[0_36px_70px_-36px_rgba(8,17,19,.5)] md:p-7"
@@ -24,8 +24,8 @@ export function Discover() {
                 <span className="font-mono text-[12px] tracking-[0.12em] text-muted">0{i + 1}</span>
               </span>
               <span className="mt-3 block">
-                <span className="block text-[13px] font-semibold tracking-[0.18em] text-muted">{p.brand}</span>
-                <span className="block text-[clamp(44px,4.6vw,68px)] leading-[0.95] font-medium tracking-[-0.05em] text-ink">{p.model}</span>
+                <span className="block text-[13px] font-semibold tracking-[0.18em] text-muted">{p.brand ?? '\u00a0'}</span>
+                <span className="block text-[clamp(40px,3.6vw,56px)] leading-[0.95] font-medium tracking-[-0.05em] text-ink">{p.model}</span>
               </span>
 
               <span className="relative mt-auto block aspect-[4/3] pt-4">
@@ -38,18 +38,19 @@ export function Discover() {
                     src={p.cutout.src}
                     alt={p.cutout.alt}
                     fill
-                    sizes="(min-width: 1152px) 340px, (min-width: 768px) 30vw, 90vw"
+                    sizes="(min-width: 1152px) 280px, (min-width: 768px) 45vw, 90vw"
                     className={`object-contain ${p.cutout.bleed === 'bottom' ? 'object-bottom' : ''}`}
                   />
                 </span>
               </span>
 
-              <span className="flex items-center justify-between border-t border-line pt-4">
-                <span className="text-[18px] font-medium tracking-[-0.015em] text-ink tabular-nums">
+              <span className="flex items-center justify-between gap-3 border-t border-line pt-4">
+                <span className="text-[18px] font-medium tracking-[-0.015em] whitespace-nowrap text-ink tabular-nums">
                   <Price productId={p.id} />
                 </span>
-                <span className="flex items-center gap-2 text-[15px] font-medium text-ink">
-                  Vezi produsul <Arrow className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+                {/* Four across on desktop: the arrow alone says it; the words stay for screen readers. */}
+                <span className="flex items-center gap-2 text-[15px] font-medium whitespace-nowrap text-ink">
+                  <span className="lg:sr-only">Vezi produsul</span> <Arrow className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
                 </span>
               </span>
             </Link>

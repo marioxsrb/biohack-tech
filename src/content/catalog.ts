@@ -5,11 +5,12 @@
  *
  * Naming: NEUROS is the maker (the neck device already carries the NEUROS logo; the
  * headset's app is Neuros Game). Each product is NEUROS + one short word for what it's for:
- * Calm, Focus, Amber. Biohack Tech is the store. Internal ids stay unchanged so carts
+ * Calm, Focus, Amber. Brain Flow keeps the name it had in the source (no maker is stated for it).
+ * Biohack Tech is the store. Internal ids stay unchanged so carts
  * saved before the rename still resolve.
  */
 import type { StaticImageData } from 'next/image'
-import { PRICES_RON } from '@/config/prices'
+import { PRICES_RON, type PriceEntry } from '@/config/prices'
 
 import glCatNegru1 from '@/assets/img/glasses/cat-eye-negru-1.webp'
 import glCatNegru2 from '@/assets/img/glasses/cat-eye-negru-2.webp'
@@ -47,6 +48,12 @@ import blGeanta from '@/assets/img/brainlink/casca-geanta.webp'
 import blTableta from '@/assets/img/brainlink/pillar-games.webp'
 import blRelaxare from '@/assets/img/brainlink/lifestyle-relaxare.webp'
 
+import bfCasca from '@/assets/img/brain-flow/casca.webp'
+import bfTelecomanda from '@/assets/img/brain-flow/casca-telecomanda.webp'
+import bfInterior from '@/assets/img/brain-flow/casca-interior.webp'
+import bfFemeie from '@/assets/img/brain-flow/lifestyle-femeie.webp'
+import bfFotoliu from '@/assets/img/brain-flow/fotoliu.webp'
+
 /**
  * `cutout`: transparent product shot, shown whole on a neutral stage.
  * `photo`: photography, fills its frame.
@@ -61,10 +68,15 @@ export type ProductImage = {
 }
 
 export type Variant = {
+  /** Stable id: stored in carts, orders, invoices and the CRM. Never rename one that has been sold. */
   id: string
   /** Option values, keyed by option id (e.g. { model: 'cat-eye', culoare: 'negru' }). */
   options: Record<string, string>
   images: ProductImage[]
+  /** Brain Flow: how many zones the configuration can activate. */
+  zones?: number
+  /** Price in bani for this configuration, when it differs per variant (config/prices.ts). */
+  price?: number | null
 }
 
 export type ProductOption = {
@@ -73,14 +85,15 @@ export type ProductOption = {
   values: { id: string; label: string; swatch?: string }[]
 }
 
-export type ProductId = 'ochelari-biohack' | 'balance-wave' | 'brainlink-pro'
+export type ProductId = 'ochelari-biohack' | 'balance-wave' | 'brainlink-pro' | 'brain-flow'
 
 export type Product = {
   id: ProductId
   /** URL segment. */
   slug: string
-  brand: 'NEUROS'
-  /** The one-word name: Calm, Focus, Amber. */
+  /** Maker shown above the model name. Brain Flow has no maker stated in the source, so none is shown. */
+  brand?: 'NEUROS'
+  /** The short name: Calm, Focus, Amber, Brain Flow. */
   model: string
   /** Full customer-facing name: "NEUROS Calm". */
   name: string
@@ -90,8 +103,13 @@ export type Product = {
   purpose: string
   /** One plain sentence. */
   tagline: string
-  /** Price in bani, VAT included. null = no approved price in lei yet (not purchasable). */
+  /**
+   * Price in bani, VAT included. null = no approved price in lei yet (not purchasable).
+   * With per-variant prices this is the lowest one ("de la"); the line price is `unitPrice()`.
+   */
   price: number | null
+  /** True when variants have different prices. */
+  variablePrice?: boolean
   /** The product on its own: listings, cart, popup, menu. */
   cutout: ProductImage
   /** The product in use: sharing image and editorial sections. */
@@ -100,6 +118,8 @@ export type Product = {
   images: ProductImage[]
   options?: ProductOption[]
   variants?: Variant[]
+  /** Button that sends the closing section back to the variant picker: "Alege rama". */
+  chooseLabel?: string
   /** Includes an onboarding consultation with a specialist (stated on the source site). */
   guidance: boolean
 }
@@ -107,8 +127,25 @@ export type Product = {
 const cut = (src: StaticImageData, alt: string, bleed?: 'bottom'): ProductImage => ({ src, alt, kind: 'cutout', bleed })
 const photo = (src: StaticImageData, alt: string): ProductImage => ({ src, alt, kind: 'photo' })
 
+/** Applies config/prices.ts to a product: one price, or one per variant plus the lowest as "de la". */
+function priced(p: Omit<Product, 'price'>): Product {
+  const entry: PriceEntry | undefined = PRICES_RON[p.id]
+  if (entry === null || entry === undefined || typeof entry === 'number') return { ...p, price: entry ?? null }
+  const variants = p.variants?.map((v) => ({ ...v, price: entry[v.id] ?? null }))
+  const known = (variants ?? []).map((v) => v.price).filter((x): x is number => typeof x === 'number')
+  return { ...p, variants, price: known.length ? Math.min(...known) : null, variablePrice: new Set(known).size > 1 }
+}
+
+const brainFlowGallery = [
+  cut(bfCasca, 'Brain Flow, casca albă cu LED-urile aprinse'),
+  photo(bfFemeie, 'Femeie relaxată pe canapea, purtând casca Brain Flow'),
+  cut(bfTelecomanda, 'Brain Flow lângă telecomanda inclusă'),
+  cut(bfInterior, 'Interiorul căștii Brain Flow, cu LED-urile, lângă telecomandă și ochelari'),
+  photo(bfFotoliu, 'Femeie într-un fotoliu, cu o cană în mână, lângă casca Brain Flow'),
+]
+
 /** Display order. Calm is the lead product on the source site. */
-export const products: Product[] = [
+const catalog: Omit<Product, 'price'>[] = [
   {
     id: 'balance-wave',
     slug: 'calm',
@@ -118,7 +155,6 @@ export const products: Product[] = [
     kind: 'Dispozitiv purtat la gât',
     purpose: 'Pentru relaxare',
     tagline: 'Se poartă la gât. Câteva minute de lumină roșie, apoi se oprește singur.',
-    price: PRICES_RON['balance-wave'],
     cutout: cut(bwActiv, 'NEUROS Calm, dispozitivul cu luminile roșii aprinse', 'bottom'),
     lifestyle: photo(bwCanapea, 'Femeie relaxată pe canapea, purtând NEUROS Calm la gât'),
     images: [
@@ -139,7 +175,6 @@ export const products: Product[] = [
     kind: 'Cască pentru antrenamentul atenției',
     purpose: 'Pentru focus',
     tagline: 'O cască ușoară și jocuri pe tabletă, pe care le controlezi prin atenție.',
-    price: PRICES_RON['brainlink-pro'],
     cutout: cut(blCasca, 'NEUROS Focus, casca văzută din unghi'),
     lifestyle: photo(blTableta, 'Tânăr pe canapea, purtând NEUROS Focus și jucând pe tabletă'),
     images: [
@@ -160,7 +195,6 @@ export const products: Product[] = [
     kind: 'Ochelari cu filtru pentru lumina albastră',
     purpose: 'Pentru ecrane',
     tagline: 'Ochelari care filtrează lumina albastră a ecranelor. Patru rame, același filtru.',
-    price: PRICES_RON['ochelari-biohack'],
     cutout: cut(glCatNegru1, 'NEUROS Amber cat eye, ramă neagră, lentile chihlimbar'),
     lifestyle: photo(glTerasa, 'Femeie pe o terasă, purtând NEUROS Amber cat eye bej'),
     images: [photo(glToate, 'Cele patru rame NEUROS Amber, așezate pe o masă')],
@@ -232,9 +266,43 @@ export const products: Product[] = [
         ],
       },
     ],
+    chooseLabel: 'Alege rama',
     guidance: false,
   },
+  {
+    id: 'brain-flow',
+    slug: 'brain-flow',
+    model: 'Brain Flow',
+    name: 'Brain Flow',
+    kind: 'Cască de fotobiomodulare, infraroșu 810 nm',
+    purpose: 'Pentru rutina de acasă',
+    tagline: 'O cască cu lumină infraroșie, folosită acasă, după un protocol stabilit cu un specialist.',
+    cutout: cut(bfCasca, 'Brain Flow, casca albă cu LED-urile aprinse'),
+    lifestyle: photo(bfFemeie, 'Femeie relaxată pe canapea, purtând casca Brain Flow'),
+    images: brainFlowGallery,
+    options: [
+      {
+        id: 'zone',
+        label: 'Configurație',
+        values: [
+          { id: '1-zona', label: '1 zonă' },
+          { id: '4-zone', label: '4 zone' },
+          { id: '13-zone', label: '13 zone' },
+        ],
+      },
+    ],
+    // Same helmet and the same photographs for every configuration: the source shows no per-configuration images.
+    variants: [
+      { id: '1-zona', options: { zone: '1-zona' }, zones: 1, images: brainFlowGallery },
+      { id: '4-zone', options: { zone: '4-zone' }, zones: 4, images: brainFlowGallery },
+      { id: '13-zone', options: { zone: '13-zone' }, zones: 13, images: brainFlowGallery },
+    ],
+    chooseLabel: 'Alege configurația',
+    guidance: true,
+  },
 ]
+
+export const products: Product[] = catalog.map(priced)
 
 export function getProduct(id: string): Product | undefined {
   return products.find((p) => p.id === id)
@@ -248,8 +316,15 @@ export function productHref(p: Product): string {
   return `/products/${p.slug}`
 }
 
+/** Has at least one approved price. A single line is priced with `unitPrice()`. */
 export function isPurchasable(p: Product): p is Product & { price: number } {
   return p.price !== null
+}
+
+/** What one unit of this product (and variant) costs, in bani. null = not for sale. */
+export function unitPrice(p: Product, v?: Variant): number | null {
+  if (p.variablePrice) return v?.price ?? null
+  return p.price
 }
 
 export function getVariant(p: Product, variantId?: string): Variant | undefined {
@@ -264,13 +339,21 @@ export function variantLabel(p: Product, v: Variant): string {
     .join(' · ')
 }
 
-/** Validates a cart line against the catalog. Returns null for unknown products or variants. */
-export function resolveLine(productId: string, variantId?: string) {
+/**
+ * Validates a cart line against the catalog and prices it. Returns null for unknown products or
+ * variants; `unit` is null when that line has no approved price.
+ */
+export function resolveLine(productId: string, variantId?: string): { product: Product; variant?: Variant; unit: number | null } | null {
   const product = getProduct(productId)
   if (!product) return null
   if (product.variants?.length) {
     const variant = getVariant(product, variantId)
-    return variant ? { product, variant } : null
+    return variant ? { product, variant, unit: unitPrice(product, variant) } : null
   }
-  return variantId ? null : { product, variant: undefined }
+  return variantId ? null : { product, variant: undefined, unit: unitPrice(product) }
+}
+
+/** Internal reference for a line: product id, plus the variant id when there is one. No supplier SKU is known. */
+export function lineRef(productId: string, variantId?: string | null): string {
+  return variantId ? `${productId}/${variantId}` : productId
 }

@@ -11,7 +11,7 @@ import { terms } from '@/config/site'
 type Props = { product: Product; content: ProductContent }
 
 /**
- * Below the buy area, in one fixed rhythm for all three products: a large photograph,
+ * Below the buy area, in one fixed rhythm for every product: a large photograph,
  * three short benefits, how it's used, (Amber) the four frames, the technology once,
  * a moment or two from real life, the details, and the product again with its button.
  */
@@ -241,7 +241,7 @@ function BuyAgain({ product }: { product: Product }) {
           <div className="mt-6">
             {product.variants && purchasable ? (
               <Link href="#cumpara" className="cta">
-                Alege rama <Arrow />
+                {product.chooseLabel ?? 'Alege varianta'} <Arrow />
               </Link>
             ) : (
               <AddToCartButton productId={product.id} />

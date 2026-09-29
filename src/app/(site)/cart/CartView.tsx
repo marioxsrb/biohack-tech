@@ -36,7 +36,7 @@ export function CartView() {
     return (
       <div className="max-w-[40em] py-6">
         <h1 className="text-[36px] tracking-[-0.035em] max-sm:text-[30px]">Coșul tău este gol.</h1>
-        <p className="sub mt-3">Alege unul dintre cele trei produse.</p>
+        <p className="sub mt-3">Alege unul dintre produsele noastre.</p>
         <ul className="mt-8 grid gap-2">
           {products.map((p) => (
             <li key={p.id}>

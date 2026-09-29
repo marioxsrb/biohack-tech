@@ -31,7 +31,7 @@ export function Hero() {
           Corp relaxat.
         </h1>
         <p className="mt-5 max-w-[26em] text-[clamp(16px,1.3vw,19px)] leading-snug text-white/85">
-          Trei produse pentru relaxare, focus și timpul petrecut în fața ecranelor.
+          Produse pentru relaxare, focus, ecrane și rutina de acasă.
         </p>
         <a href="#produse" className="cta mt-7">
           Vezi produsele <Arrow />

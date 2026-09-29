@@ -481,3 +481,21 @@ textarea.field { resize: vertical; }
 @media (max-width: 1023px) {
   html[data-buybar] body { padding-bottom: 76px; }
 }
+
+/* ---------- advertising landings (components/landing) ----------
+   Colours come from the landing's theme as --lp-* variables, set on the .lp root. */
+@layer components {
+  .lp-wrap {
+    max-width: 1232px;
+    margin-inline: auto;
+    padding-inline: var(--gut);
+  }
+  .lp :focus-visible { outline-color: var(--lp-accent); }
+  .lp-fade { animation: lp-fade 0.35s var(--ease-brand); }
+}
+@keyframes lp-fade {
+  from { opacity: 0; transform: scale(0.985); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lp-fade { animation: none; }
+}

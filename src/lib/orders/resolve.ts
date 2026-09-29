@@ -4,7 +4,7 @@
  * out of range rejects the whole order, so the customer never pays for a cart they didn't see.
  */
 import { lineKey, MAX_QTY } from '@/components/cart/cart-store'
-import { isPurchasable, resolveLine, variantLabel } from '@/content/catalog'
+import { resolveLine, variantLabel } from '@/content/catalog'
 import { orderTotal } from '@/lib/money'
 
 export type OrderLine = {
@@ -34,7 +34,7 @@ export function resolveOrderLines(raw: unknown): ResolvedOrder {
     const v = typeof variantId === 'string' && variantId ? variantId : undefined
     const r = resolveLine(productId, v)
     const q = Number(quantity)
-    if (!r || !isPurchasable(r.product) || !Number.isInteger(q) || q < 1 || q > MAX_QTY) return { ok: false, reason: 'BAD_LINE' }
+    if (!r || r.unit === null || !Number.isInteger(q) || q < 1 || q > MAX_QTY) return { ok: false, reason: 'BAD_LINE' }
 
     const key = lineKey({ productId: r.product.id, variantId: r.variant?.id })
     const prev = byKey.get(key)
@@ -47,7 +47,7 @@ export function resolveOrderLines(raw: unknown): ResolvedOrder {
       name: r.product.name,
       description: r.variant ? variantLabel(r.product, r.variant) : undefined,
       quantity: quantityTotal,
-      unitAmount: r.product.price,
+      unitAmount: r.unit,
     })
   }
 

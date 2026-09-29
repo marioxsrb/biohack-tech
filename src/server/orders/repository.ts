@@ -49,6 +49,10 @@ function toOrder(r: Row, items: OrderItem[]): Order {
     recoveryReason: (r.recovery_reason as string) ?? null,
     recoveryToken: (r.recovery_token as string) ?? null,
     recoveryExpiresAt: date(r.recovery_expires_at),
+    attribution: (r.attribution as Order['attribution']) ?? null,
+    returnStatus: (r.return_status as Order['returnStatus']) ?? null,
+    returnRequestedAt: date(r.return_requested_at),
+    returnReceivedAt: date(r.return_received_at),
     items,
   }
 }
@@ -123,19 +127,20 @@ export const orders = {
 
   async insert(
     q: Queryable,
-    o: Omit<Order, 'createdAt' | 'updatedAt' | 'refundedMinor' | 'paidAt' | 'cancelledAt' | 'cancelReason' | 'refundedAt' | 'fgoInvoiceSeries' | 'fgoInvoiceNumber' | 'fgoInvoiceLink' | 'fgoStornoNumber' | 'ghlContactId' | 'ghlOpportunityId' | 'courier' | 'trackingNumber' | 'trackingUrl' | 'shippedAt' | 'deliveredAt' | 'stripePaymentIntentId' | 'recoveryStatus' | 'recoveryReason' | 'recoveryToken' | 'recoveryExpiresAt'>,
+    o: Omit<Order, 'createdAt' | 'updatedAt' | 'refundedMinor' | 'paidAt' | 'cancelledAt' | 'cancelReason' | 'refundedAt' | 'fgoInvoiceSeries' | 'fgoInvoiceNumber' | 'fgoInvoiceLink' | 'fgoStornoNumber' | 'ghlContactId' | 'ghlOpportunityId' | 'courier' | 'trackingNumber' | 'trackingUrl' | 'shippedAt' | 'deliveredAt' | 'stripePaymentIntentId' | 'recoveryStatus' | 'recoveryReason' | 'recoveryToken' | 'recoveryExpiresAt' | 'returnStatus' | 'returnRequestedAt' | 'returnReceivedAt'>,
     idempotencyKey: string,
     termsAcceptedAt: Date,
   ) {
     await q.query(
       `insert into orders (id, order_number, public_token, idempotency_key, status, payment_status, payment_method, invoice_status,
         currency, subtotal_minor, shipping_minor, total_minor, email, phone, customer, billing_address, shipping_address, notes,
-        marketing_consent, terms_accepted_at)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)`,
+        marketing_consent, terms_accepted_at, attribution)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
       [
         o.id, o.orderNumber, o.publicToken, idempotencyKey, o.status, o.paymentStatus, o.paymentMethod, o.invoiceStatus,
         o.currency, o.subtotalMinor, o.shippingMinor, o.totalMinor, o.email, o.phone, JSON.stringify(o.customer),
         JSON.stringify(o.billingAddress), JSON.stringify(o.shippingAddress), o.notes, o.marketingConsent, termsAcceptedAt,
+        o.attribution ? JSON.stringify(o.attribution) : null,
       ],
     )
     for (const i of o.items) {

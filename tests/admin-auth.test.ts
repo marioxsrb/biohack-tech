@@ -31,7 +31,7 @@ describe('admin Server Actions check credentials themselves', () => {
     vi.doMock('next/cache', () => ({ revalidatePath: () => {} }))
     vi.stubEnv('ADMIN_USER', env.ADMIN_USER)
     vi.stubEnv('ADMIN_PASSWORD', env.ADMIN_PASSWORD)
-    const actions = await import('@/app/admin/actions')
+    const actions = await import('@/app/(site)/admin/actions')
     const form = new FormData()
     form.set('id', '00000000-0000-4000-8000-000000000000')
     for (const h of [null, 'Basic x', basic('ops:wrong-password-123'), basic('ops')]) {

@@ -7,21 +7,21 @@
  * order page, only when the server says the order is paid, and only once per order per browser.
  */
 import type { ResolvedLine } from '@/components/cart/CartProvider'
-import type { Product, Variant } from '@/content/catalog'
+import { lineRef, unitPrice, type Product, type Variant } from '@/content/catalog'
 import { consentStore } from '@/lib/consent/store'
 import { isLoaded } from '@/lib/consent/vendors'
 
-export type EcomEvent = 'view_item' | 'select_item' | 'add_to_cart' | 'view_cart' | 'begin_checkout' | 'add_payment_info' | 'purchase'
+export type EcomEvent = 'view_item' | 'select_item' | 'select_variant' | 'add_to_cart' | 'view_cart' | 'begin_checkout' | 'add_payment_info' | 'purchase'
 
 type Item = { item_id: string; item_name: string; item_variant?: string; price: number; quantity: number }
 
 const lei = (minor: number) => Math.round(minor) / 100
 
 export const itemOf = (p: Product, v?: Variant, variantLabel?: string, quantity = 1): Item => ({
-  item_id: v ? `${p.id}/${v.id}` : p.id,
+  item_id: lineRef(p.id, v?.id),
   item_name: p.name,
   ...(variantLabel && { item_variant: variantLabel }),
-  price: lei(p.price ?? 0),
+  price: lei(unitPrice(p, v) ?? p.price ?? 0),
   quantity,
 })
 

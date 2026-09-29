@@ -21,7 +21,7 @@ Stack: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, PostgreSQL
 src/
   config/        prices.ts (SINGURUL loc cu prețuri), site.ts (contact, termeni comerciali)
   content/       catalog (produse, variante, galerii), conținutul paginilor de produs, texte legale
-  components/    cart (store, confirmare compactă, buton, preț), product, home, site (header, footer)
+  components/    cart (store, confirmare compactă, buton, preț), product, home, site (header, footer), landing
   lib/           money (RON), checkout (formular + validare comună), orders/resolve (prețuri pe server), analytics
   server/        doar pe server:
     config.ts    variabile de mediu, validate; ce metode de plată sunt active
@@ -30,8 +30,10 @@ src/
     jobs/        outbox: sincronizări cu reîncercare (CRM, factură, email)
     integrations/stripe, fgo, ghl, email (șabloane + trimitere)
   app/
-    cart/, checkout/, comanda/[token]/     coș, checkout, pagina comenzii
-    admin/                                 operațiuni (Basic Auth)
+    (site)/                                magazinul, cu header și footer:
+      cart/, checkout/, comanda/[token]/   coș, checkout, pagina comenzii
+      admin/                               operațiuni (Basic Auth)
+    (landing)/lp/[slug]/                   landing-urile pentru reclame (fără meniu, noindex)
     api/checkout, api/webhooks/stripe, api/jobs/run, api/health
 tests/           vitest
 ```
@@ -42,7 +44,15 @@ Arhitectura, integrările și pașii de lansare: **docs/PRODUCTION-LAUNCH.md**.
 
 1. Pune imaginile în ZIP-ul sursă și adaugă o linie în `scripts/prepare-assets.py`, apoi `npm run assets`.
 2. Adaugă produsul în `content/catalog.ts` și prețul în `config/prices.ts` (în bani: 299 lei = `29900`).
+   Dacă variantele au prețuri diferite (Brain Flow: 1, 4, 13 zone), prețul este un obiect `{ idVariantă: bani }`;
+   produsul apare „de la” cel mai mic preț, iar serverul încasează prețul variantei alese. Id-urile variantelor nu se mai schimbă după prima vânzare.
 3. Adaugă conținutul paginii în `content/product-content.ts`. Secțiunile opționale (`use`, `lookbook`, `explain`) apar doar dacă există.
+4. Adaugă tag-ul GHL în `PRODUCT_TAG` (`server/integrations/ghl.ts`) și în `scripts/ghl-check.mjs`; un test pică dacă lipsește.
+5. Pentru reclame: adaugă landing-ul în `content/landings.ts` și slug-ul în `lib/landing-hosts.ts`.
+
+## Landing-uri pentru reclame
+
+Câte unul pe produs: `/lp/calm`, `/lp/focus`, `/lp/amber`, `/lp/brain-flow` local, respectiv `calm.biohack-tech.ro` etc. în producție (rutare după host în `src/proxy.ts`, doar hostnames din listă). Nu apar în meniu, footer, grilă sau sitemap și au `noindex`. Butonul duce direct în checkout cu id-urile produsului și ale variantei; serverul recalculează prețul. Parametrii UTM și landing-ul ajung în comandă și în GHL (`contact.bt_last_order_source`). Detalii: docs/PRODUCTION-LAUNCH.md §26.
 
 ## Mișcare
 

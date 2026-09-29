@@ -1,6 +1,8 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { connection } from 'next/server'
+import { getProduct, getVariant } from '@/content/catalog'
+import { attributionSummary } from '@/lib/attribution'
 import { formatLei } from '@/lib/money'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
@@ -10,7 +12,18 @@ import { marketing } from '@/server/marketing/consent'
 import { orders } from '@/server/orders/repository'
 import { withdrawals } from '@/server/orders/withdrawal'
 import { canMoveOrder, isPaid } from '@/server/orders/state'
-import { cancelAction, deliveredAction, markPaidAction, processingAction, refundAction, resyncCrmAction, retryJobsAction, shipAction } from '../../actions'
+import {
+  cancelAction,
+  deliveredAction,
+  markPaidAction,
+  processingAction,
+  refundAction,
+  resyncCrmAction,
+  retryJobsAction,
+  returnReceivedAction,
+  returnRequestedAction,
+  shipAction,
+} from '../../actions'
 import { INVOICE_LABEL, ORDER_LABEL, PAYMENT_LABEL, tone } from '../../labels'
 
 const dt = (d: Date | string | null) =>
@@ -45,18 +58,29 @@ export default async function AdminOrderPage({ params }: PageProps<'/admin/order
         <div className="space-y-5 lg:col-span-7">
           <Panel title="Produse">
             <ul className="divide-y divide-mist-2">
-              {o.items.map((i) => (
-                <li key={i.position} className="flex justify-between gap-4 py-2.5">
-                  <span>
-                    {i.quantity} × {i.productName}
-                    {i.variantName && <span className="text-muted"> · {i.variantName}</span>}
-                    <span className="block text-[13px] text-muted">
-                      {i.sku} · {formatLei(i.unitPriceMinor)} / buc.
+              {o.items.map((i) => {
+                const zones = getVariant(getProduct(i.productId) ?? ({} as never), i.variantId ?? undefined)?.zones
+                return (
+                  <li key={i.position} className="flex justify-between gap-4 py-2.5">
+                    <span>
+                      <span className="font-medium">
+                        {i.quantity} × {i.productName}
+                      </span>
+                      {i.variantName && (
+                        <span className="mt-1 flex flex-wrap gap-1.5">
+                          <span className="rounded-full bg-mist px-2.5 py-0.5 text-[13px]">Variantă: {i.variantName}</span>
+                          {zones && <span className="rounded-full bg-mist px-2.5 py-0.5 text-[13px]">{zones} {zones === 1 ? 'zonă' : 'zone'}</span>}
+                        </span>
+                      )}
+                      <span className="mt-1 block text-[13px] text-muted">
+                        Produs {i.productId}
+                        {i.variantId && ` · variantă ${i.variantId}`} · ref. {i.sku} · {formatLei(i.unitPriceMinor)} / buc.
+                      </span>
                     </span>
-                  </span>
-                  <span className="tabular-nums">{formatLei(i.lineTotalMinor)}</span>
-                </li>
-              ))}
+                    <span className="tabular-nums">{formatLei(i.lineTotalMinor)}</span>
+                  </li>
+                )
+              })}
             </ul>
             <p className="mt-2 flex justify-between border-t border-mist-2 pt-2 font-semibold">
               <span>Total (livrare {o.shippingMinor ? formatLei(o.shippingMinor) : 'gratuită'})</span>
@@ -82,6 +106,11 @@ export default async function AdminOrderPage({ params }: PageProps<'/admin/order
                 ['Adresă facturare', formatAddress(o.billingAddress)],
                 ['Adresă livrare', formatAddress(o.shippingAddress)],
                 ['Observații', o.notes || '–'],
+                ['Sursa comenzii', attributionSummary(o.attribution)],
+                ...(o.attribution?.landing
+                  ? ([['Landing', `${o.attribution.landingHost ?? ''}${o.attribution.landingPath ?? ''}`]] as [string, string][])
+                  : []),
+                ...Object.entries(o.attribution?.utm ?? {}).map(([k, v]) => [k, v] as [string, string]),
                 ['Bifă marketing la această comandă', o.marketingConsent ? 'Da' : 'Nu'],
                 ['Marketing email acum', consent ? `${consent.granted ? 'Acord' : 'Retras'} · ${dt(consent.at)} · ${consent.source} · ${consent.version}` : 'Fără acord'],
                 ...(o.recoveryStatus
@@ -93,6 +122,11 @@ export default async function AdminOrderPage({ params }: PageProps<'/admin/order
 
           {withdrawalList.length > 0 && (
             <Panel title="Cereri de retragere">
+              {o.returnStatus && (
+                <p className="mb-2 text-[14px]">
+                  Retur: <strong>{o.returnStatus === 'received' ? `primit ${dt(o.returnReceivedAt)}` : `solicitat ${dt(o.returnRequestedAt)}`}</strong>
+                </p>
+              )}
               <ul className="space-y-2 text-[14px]">
                 {withdrawalList.map((w) => (
                   <li key={w.id}>
@@ -159,6 +193,27 @@ export default async function AdminOrderPage({ params }: PageProps<'/admin/order
                   <input name="amount" inputMode="decimal" required placeholder={`ex. ${(o.totalMinor / 100).toFixed(2)}`} className="field !min-h-11 !py-2" aria-label="Total rambursat în lei" />
                   <button className="btn-secondary sm w-full">Înregistrează rambursarea</button>
                 </form>
+              )}
+              {(paid || o.paymentStatus === 'refunded') && o.returnStatus !== 'received' && (
+                <div className="space-y-2 rounded-[12px] bg-mist p-4">
+                  <p className="text-[14px] font-medium">Retur</p>
+                  <p className="text-[13.5px] text-text">
+                    {o.returnStatus === 'requested'
+                      ? `Solicitat la ${dt(o.returnRequestedAt)}. Marchează când coletul a ajuns înapoi și l-ai verificat.`
+                      : 'Pentru o retragere primită pe email sau telefon (cele din formular apar singure).'}
+                  </p>
+                  {!o.returnStatus && (
+                    <form action={returnRequestedAction}>
+                      <input type="hidden" name="id" value={o.id} />
+                      <button className="btn-secondary sm w-full">Marchează retur solicitat</button>
+                    </form>
+                  )}
+                  <form action={returnReceivedAction}>
+                    <input type="hidden" name="id" value={o.id} />
+                    <button className="btn-secondary sm w-full">Produsul returnat a fost primit</button>
+                  </form>
+                  <p className="text-[13px] text-muted">Rambursarea se face separat: din Stripe (card) sau din bancă, apoi înregistrată mai jos (transfer).</p>
+                </div>
               )}
               {canMoveOrder(o.status, 'cancelled') && (
                 <form action={cancelAction} className="space-y-2">

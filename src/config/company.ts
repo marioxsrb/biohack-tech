@@ -1,16 +1,17 @@
 /**
- * The seller's legal identification (Legea 365/2002 art. 5, OUG 34/2014 art. 6), from the environment
- * at build time. Public data, but only the company can confirm it, so nothing is filled in here.
- * A missing field is simply not shown (no placeholder text on the site); in production the readiness
- * report in /admin lists it as an error until it is set. See docs/OPEN-POINTS.md.
+ * The seller's legal identification (Legea 365/2002 art. 5, OUG 34/2014 art. 6). Public data, confirmed
+ * by the company on 29.09.2026; the environment can override each field. The return address was not
+ * given: it stays unset (not shown) until the company confirms it. See docs/OPEN-POINTS.md.
+ * The bank account (IBAN) is not here: it lives only in the environment (BANK_*), shown to customers
+ * on their own transfer order.
  */
-const v = (k: string) => process.env[k]?.trim() || undefined
+const v = (k: string, confirmed?: string) => process.env[k]?.trim() || confirmed
 
 export const company = {
-  legalName: v('COMPANY_LEGAL_NAME'),
-  cui: v('COMPANY_CUI'),
-  regCom: v('COMPANY_REG_COM'),
-  address: v('COMPANY_ADDRESS'),
+  legalName: v('COMPANY_LEGAL_NAME', 'NEUROS EUROPE S.R.L.'),
+  cui: v('COMPANY_CUI', '50323873'),
+  regCom: v('COMPANY_REG_COM', 'J2024001256321'),
+  address: v('COMPANY_ADDRESS', 'Str. N. D. Cocea, nr. 10, Sibiu, jud. Sibiu, România'),
   /** Where returned products go, when it differs from the registered office. */
   returnAddress: v('COMPANY_RETURN_ADDRESS'),
 }

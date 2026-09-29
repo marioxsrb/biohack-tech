@@ -12,6 +12,8 @@ import { jobs, type NewJob } from '@/server/jobs/outbox'
 import { log } from '@/server/log'
 import { marketing } from '@/server/marketing/consent'
 import { canSendAbandonedCheckoutEmail, newRecoveryToken, recoveryExpiry } from '@/server/marketing/recovery'
+import type { Attribution } from '@/lib/attribution'
+import { lineRef } from '@/content/catalog'
 import type { OrderForm } from '@/lib/checkout'
 import type { OrderLine } from '@/lib/orders/resolve'
 import { canMoveOrder, canMovePayment, isPaid } from './state'
@@ -31,6 +33,8 @@ type PlaceInput = {
   lines: OrderLine[]
   form: OrderForm
   attemptId: string
+  /** Validated by sanitizeAttribution(); not part of the idempotency key. */
+  attribution?: Attribution | null
 }
 
 /** Same attempt + same content = same order. A changed cart or form is a new order. */
@@ -84,13 +88,14 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
           shippingAddress: addressOf(f, true),
           notes: f.notes,
           marketingConsent: f.marketingConsent,
+          attribution: input.attribution ?? null,
           items: input.lines.map((l, i) => ({
             position: i + 1,
             productId: l.productId,
             variantId: l.variantId ?? null,
             productName: l.name,
             variantName: l.description ?? null,
-            sku: l.variantId ? `${l.productId}/${l.variantId}` : l.productId,
+            sku: lineRef(l.productId, l.variantId),
             quantity: l.quantity,
             unitPriceMinor: l.unitAmount,
             lineTotalMinor: l.unitAmount * l.quantity,
@@ -99,7 +104,12 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
         key,
         now,
       )
-      await orders.event(t, id, 'order.created', 'checkout', { method, total: subtotal + shipping, marketingConsent: f.marketingConsent })
+      await orders.event(t, id, 'order.created', 'checkout', {
+        method,
+        total: subtotal + shipping,
+        marketingConsent: f.marketingConsent,
+        ...(input.attribution && { attribution: input.attribution }),
+      })
       // Proof of the ticked box: exact wording, version, time, order. An unticked box records nothing.
       if (f.marketingConsent) await marketing.grant(t, { email: f.email, source: 'checkout', orderId: id, page: '/checkout' })
       const created = (await orders.byId(t, id))!
@@ -302,6 +312,34 @@ export function cancelOrder(orderId: string, source: Source, reason: string) {
   })
 }
 
+/**
+ * The customer withdrew from a paid order (online form, email or phone): a return is expected.
+ * Idempotent; the order's own state (shipped, delivered, ...) does not change.
+ */
+export function markReturnRequested(orderId: string, source: Source, via = 'formular') {
+  return transition(orderId, source, async (o) => {
+    if (o.returnStatus) return { skip: `return_${o.returnStatus}` }
+    if (!isPaid(o.paymentStatus)) return { skip: `payment_${o.paymentStatus}` }
+    return { patch: { return_status: 'requested', return_requested_at: new Date() }, event: 'return.requested', data: { via } }
+  })
+}
+
+/**
+ * The returned product arrived and was checked. The refund is a separate step (Stripe, or recorded here
+ * for a transfer), so the customer gets one message for the parcel and one for the money.
+ */
+export function markReturnReceived(orderId: string, source: Source) {
+  return transition(orderId, source, async (o, t) => {
+    if (o.returnStatus === 'received') return { skip: 'return_received' }
+    if (!isPaid(o.paymentStatus) && o.paymentStatus !== 'refunded') return { skip: `payment_${o.paymentStatus}` }
+    await t.query("update withdrawal_requests set status = 'received' where order_id = $1 and status <> 'received'", [o.id])
+    return {
+      patch: { return_status: 'received', return_received_at: new Date(), ...(o.returnRequestedAt ? {} : { return_requested_at: new Date() }) },
+      event: 'return.received',
+    }
+  })
+}
+
 /** Stripe reports the cumulative refunded amount; repeated reports of the same amount change nothing. */
 export function recordRefund(orderId: string, source: Source, refundedMinor: number) {
   return transition(orderId, source, async (o) => {
@@ -354,6 +392,10 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
       return crm()
     case 'order.shipped':
       return [...crm(), ...email('order_shipped')]
+    case 'return.requested':
+      return crm()
+    case 'return.received':
+      return [...crm(), ...email('return_received')]
     case 'payment.cancelled':
       // Never confirmed to the customer: only keep an existing CRM record in step.
       return o.ghlOpportunityId ? crm() : []

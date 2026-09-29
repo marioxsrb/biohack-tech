@@ -184,4 +184,16 @@ alter table orders add column if not exists recovery_token text unique;
 alter table orders add column if not exists recovery_expires_at timestamptz
 `,
   },
+  {
+    // Where an order came from (advertising landing, UTM parameters), validated server-side.
+    // Returns after a withdrawal: requested, then the product received back. Refunds stay on the payment axis.
+    id: '004_attribution_returns',
+    sql: `
+alter table orders add column if not exists attribution jsonb;
+alter table orders add column if not exists return_status text;
+alter table orders add column if not exists return_requested_at timestamptz;
+alter table orders add column if not exists return_received_at timestamptz;
+create index if not exists orders_return_status_idx on orders (return_status) where return_status is not null
+`,
+  },
 ]

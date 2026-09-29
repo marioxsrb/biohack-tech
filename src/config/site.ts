@@ -2,7 +2,7 @@ export const site = {
   name: 'Biohack Tech',
   url: (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://biohack-tech.ro').replace(/\/$/, ''),
   description:
-    'Dispozitive de wellness pentru minte și corp, de folosit acasă: NEUROS Calm, Focus și Amber. Livrare gratuită în România.',
+    'Dispozitive de wellness pentru minte și corp, de folosit acasă: NEUROS Calm, Focus, Amber și casca Brain Flow. Livrare gratuită în România.',
   tagline: 'Tehnologie din neuroștiință, pentru bunăstarea de zi cu zi.',
   email: 'contact@neuros.ro',
   phone: '+40 757 890 707',

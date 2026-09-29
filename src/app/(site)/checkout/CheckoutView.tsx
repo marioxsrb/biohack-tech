@@ -4,10 +4,12 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { cloneElement, useEffect, useRef, useState, useSyncExternalStore, type ReactElement, type ReactNode } from 'react'
 import { useCart, type ResolvedLine } from '@/components/cart/CartProvider'
+import { cartStore, type CartLine } from '@/components/cart/cart-store'
 import { Price } from '@/components/cart/Price'
 import { Thumb } from '@/components/cart/Thumb'
 import { Arrow, Bank, CardIcon, Lock, Mail } from '@/components/ui/icons'
-import { productHref, products } from '@/content/catalog'
+import { productHref, products, resolveLine } from '@/content/catalog'
+import { attributionParams } from '@/lib/attribution'
 import { site, terms } from '@/config/site'
 import { track } from '@/lib/analytics'
 import { MARKETING_CONSENT_TEXT } from '@/lib/consent/marketing'
@@ -40,11 +42,34 @@ const useHydrated = () =>
     () => false,
   )
 
+/**
+ * Direct checkout from an advertising landing: /checkout?item=<productId>[:<variantId>] (repeatable).
+ * Only ids arrive; unknown or unpriced ones are ignored, and the server prices the order again.
+ */
+function directItems(search: string): CartLine[] {
+  return new URLSearchParams(search).getAll('item').flatMap((raw) => {
+    const [productId, variantId] = raw.split(':')
+    const r = resolveLine(productId, variantId || undefined)
+    return r && r.unit !== null ? [{ productId: r.product.id, variantId: r.variant?.id, quantity: 1 }] : []
+  })
+}
+
 export function CheckoutView({ methods, stripeKey }: { methods: Methods; stripeKey: string | null }) {
   const hydrated = useHydrated()
   const { lines } = useCart()
+  const [direct] = useState(() => (typeof window === 'undefined' ? [] : directItems(window.location.search)))
 
-  if (!hydrated) return <div className="min-h-[60vh]" aria-busy="true" />
+  // Puts the landing's product in the cart (never twice), then drops ?item so a reload changes nothing.
+  // The campaign parameters stay in the URL until the order is placed.
+  useEffect(() => {
+    if (!direct.length) return
+    cartStore.restore(direct)
+    const url = new URL(window.location.href)
+    url.searchParams.delete('item')
+    window.history.replaceState(window.history.state, '', url)
+  }, [direct])
+
+  if (!hydrated || (direct.length > 0 && lines.length === 0)) return <div className="min-h-[60vh]" aria-busy="true" />
   if (lines.length === 0) return <EmptyCheckout />
   return <CheckoutForm lines={lines} methods={{ card: methods.card && !!stripeKey, transfer: methods.transfer }} stripeKey={stripeKey} />
 }
@@ -149,6 +174,8 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
           order: form,
           acceptedTerms: accepted,
           attemptId,
+          // Landing and UTM parameters from the URL, if any. The server validates them.
+          attribution: Object.fromEntries(attributionParams(window.location.search)),
         }),
       })
       const data = await res.json().catch(() => ({}))

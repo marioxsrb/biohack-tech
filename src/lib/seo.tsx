@@ -43,6 +43,18 @@ export function organizationJsonLd() {
   }
 }
 
+/** One price, or the range when configurations cost differently. */
+function offerPrice(p: Product & { price: number }) {
+  const prices = (p.variants ?? []).map((v) => v.price).filter((x): x is number => typeof x === 'number')
+  if (!p.variablePrice || !prices.length) return { '@type': 'Offer', price: (p.price / 100).toFixed(2) }
+  return {
+    '@type': 'AggregateOffer',
+    lowPrice: (Math.min(...prices) / 100).toFixed(2),
+    highPrice: (Math.max(...prices) / 100).toFixed(2),
+    offerCount: prices.length,
+  }
+}
+
 /** Product structured data. An offer is published only once the product has an approved RON price. */
 export function productJsonLd(p: Product, description: string, imageUrls: string[]) {
   const url = absolute(productHref(p))
@@ -52,14 +64,13 @@ export function productJsonLd(p: Product, description: string, imageUrls: string
     name: p.name,
     description,
     image: imageUrls,
-    brand: { '@type': 'Brand', name: p.brand },
+    ...(p.brand && { brand: { '@type': 'Brand', name: p.brand } }),
     category: p.purpose,
     url,
     ...(isPurchasable(p) && {
       offers: {
-        '@type': 'Offer',
         url,
-        price: (p.price / 100).toFixed(2),
+        ...offerPrice(p),
         priceCurrency: CURRENCY,
         seller: { '@type': 'Organization', name: site.name },
         shippingDetails: {

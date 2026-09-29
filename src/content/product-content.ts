@@ -21,6 +21,12 @@ import glToate from '@/assets/img/glasses/audience-stil.webp'
 import glBirou from '@/assets/img/glasses/result-focus.webp'
 import glSeara from '@/assets/img/glasses/result-seara.webp'
 
+import bfBarbat from '@/assets/img/brain-flow/lifestyle-barbat.webp'
+import bfTelecomanda from '@/assets/img/brain-flow/casca-telecomanda.webp'
+import bfInterior from '@/assets/img/brain-flow/casca-interior.webp'
+import bfBirou from '@/assets/img/brain-flow/birou-scris.webp'
+import bfConsultatie from '@/assets/img/brain-flow/consultatie.webp'
+
 export type Story = { title: string; text: string; image: ProductImage }
 
 export type ProductContent = {
@@ -210,6 +216,68 @@ export const productContent: Record<ProductId, ProductContent> = {
     faqs: [
       { q: 'Când îi port?', a: 'La birou, în fața ecranelor, și seara, când folosești telefonul sau laptopul.' },
       { q: 'Pot să îi returnez?', a: 'Da, în 14 zile de la primire.' },
+    ],
+  },
+
+  // Brain Flow: only what the source states (810 nm, 1/4/13 zones, adjustable protocol, remote, battery,
+  // initial consultation). No health outcome is claimed; the source's study list is not reused.
+  'brain-flow': {
+    seo: {
+      title: 'Brain Flow, cască cu lumină infraroșie 810 nm',
+      description: 'Brain Flow: cască de fotobiomodulare cu lumină infraroșie la 810 nm, în configurații cu 1, 4 sau 13 zone. Protocol stabilit cu un specialist. Livrare gratuită în România.',
+    },
+    intro: 'Alegi configurația cu 1, 4 sau 13 zone. La început, un specialist Biohack Tech stabilește cu tine zonele, durata și frecvența ședințelor.',
+    benefits: [
+      { title: 'Se folosește acasă', text: 'Fără fir, cu baterie reîncărcabilă.' },
+      { title: 'Protocolul tău', text: 'Zone, durată și frecvență, setate cu un specialist.' },
+      { title: 'Control simplu', text: 'Telecomandă inclusă. Sesiunea se oprește singură.' },
+    ],
+    scene: {
+      title: 'Ședința, în ritmul tău.',
+      text: 'Pui casca, confirmi zonele pe telecomandă și pornești sesiunea. Stai relaxat până se termină.',
+      image: photo(bfBarbat, 'Bărbat relaxat pe canapea, cu casca Brain Flow pe cap'),
+    },
+    use: {
+      title: 'Cum o folosești',
+      image: cut(bfTelecomanda, 'Brain Flow lângă telecomanda inclusă'),
+      steps: ['Stabilești protocolul cu specialistul, la început.', 'Pui casca și confirmi zonele pe telecomandă.', 'Pornești sesiunea. Casca se oprește la finalul timpului setat.'],
+    },
+    explain: {
+      title: 'Ce înseamnă fotobiomodulare?',
+      paragraphs: [
+        'Fotobiomodulare înseamnă lumină roșie sau infraroșie aplicată din exterior. Brain Flow folosește lumină infraroșie la 810 nm, aplicată prin scalp.',
+        'LED-urile sunt montate în interiorul căștii. Configurația aleasă stabilește câte zone poți activa în același protocol: 1, 4 sau 13.',
+        'Casca și tehnologia sunt aceleași în toate configurațiile. Diferă doar numărul de zone.',
+      ],
+      image: cut(bfInterior, 'Interiorul căștii Brain Flow, cu LED-urile, lângă telecomandă'),
+    },
+    moments: [
+      {
+        title: 'În rutina zilei.',
+        text: 'Ședințele se fac acasă, la ora aleasă de tine.',
+        image: photo(bfBirou, 'Bărbat scriind la birou, lângă casca Brain Flow'),
+      },
+      {
+        title: 'Nu începi singur.',
+        text: 'Consultația de început stabilește protocolul. Îl revizuiți periodic, împreună.',
+        image: photo(bfConsultatie, 'Consultație Biohack Tech: specialistul arată protocolul pe tabletă'),
+      },
+    ],
+    specs: [
+      { label: 'Tehnologie', value: 'Fotobiomodulare transcraniană (t-PBM)' },
+      { label: 'Lungime de undă', value: '810 nm, infraroșu apropiat' },
+      { label: 'Configurații', value: '1, 4 sau 13 zone selectabile' },
+      { label: 'Parametri reglabili', value: 'Zone active, frecvență, durata ședinței' },
+      { label: 'Control', value: 'Telecomandă inclusă' },
+      { label: 'Alimentare', value: 'Baterie reîncărcabilă, fără fir' },
+      { label: 'Ghidaj', value: 'Consultație inițială pentru configurarea protocolului' },
+      { label: 'Garanție', value: '2 ani' },
+    ],
+    faqs: [
+      { q: 'Ce diferă între configurații?', a: 'Casca și tehnologia sunt aceleași. Diferă câte zone poți activa în același protocol: 1, 4 sau 13.' },
+      { q: 'Cine stabilește protocolul?', a: 'Un specialist Biohack Tech, la consultația de început. Împreună alegeți zonele, durata și frecvența ședințelor.' },
+      { q: 'Este un tratament medical?', a: 'Nu. Brain Flow este un produs de wellness. Dacă ai o afecțiune sau urmezi un tratament, vorbește întâi cu medicul tău.' },
+      { q: 'Pot să o returnez?', a: 'Da, în 14 zile de la primire, ca orice produs cumpărat online.' },
     ],
   },
 }

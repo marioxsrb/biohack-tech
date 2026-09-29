@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { site } from '@/config/site'
+import { sanitizeAttribution } from '@/lib/attribution'
 import { normalizeOrder, validateOrder } from '@/lib/checkout'
 import { resolveOrderLines } from '@/lib/orders/resolve'
 import { getConfig, paymentMethods } from '@/server/config'
@@ -54,7 +55,9 @@ export async function POST(req: NextRequest) {
 
   let order
   try {
-    ;({ order } = await placeOrder({ lines: resolved.lines, form, attemptId }))
+    // Campaign data is optional and never trusted as sent: unknown landings, hosts and keys are dropped.
+    const attribution = sanitizeAttribution(body.attribution, new URL(site.url).host)
+    ;({ order } = await placeOrder({ lines: resolved.lines, form, attemptId, attribution }))
   } catch (e) {
     log.error('checkout.order_failed', { error: errText(e) })
     return fail(500, 'SERVER', `Nu am putut înregistra comanda. Nu ți s-a retras nimic. Încearcă din nou sau ${contact.charAt(0).toLowerCase()}${contact.slice(1)}`)
