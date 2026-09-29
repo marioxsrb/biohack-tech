@@ -81,14 +81,14 @@ export default async function AdminOrderPage({ params }: PageProps<'/admin/order
       )}
 
       <div className="mt-6 grid gap-5 lg:grid-cols-12">
-        <div className="space-y-5 lg:col-span-7">
+        <div className="min-w-0 space-y-5 lg:col-span-7">
           <Panel title="Produse">
             <ul className="divide-y divide-mist-2">
               {o.items.map((i) => {
                 const zones = getVariant(getProduct(i.productId) ?? ({} as never), i.variantId ?? undefined)?.zones
                 return (
                   <li key={i.position} className="flex justify-between gap-4 py-2.5">
-                    <span>
+                    <span className="min-w-0 [overflow-wrap:anywhere]">
                       <span className="font-medium">
                         {i.quantity} × {i.productName}
                       </span>
@@ -103,7 +103,7 @@ export default async function AdminOrderPage({ params }: PageProps<'/admin/order
                         {i.variantId && ` · variantă ${i.variantId}`} · ref. {i.sku} · {formatLei(i.unitPriceMinor)} / buc.
                       </span>
                     </span>
-                    <span className="text-right tabular-nums">
+                    <span className="text-right whitespace-nowrap tabular-nums">
                       {formatLei(i.lineTotalMinor)}
                       {i.discountMinor > 0 && (
                         <span className="block text-[13px] text-cyan-700">
@@ -205,7 +205,7 @@ export default async function AdminOrderPage({ params }: PageProps<'/admin/order
           </Panel>
         </div>
 
-        <div className="space-y-5 lg:col-span-5">
+        <div className="min-w-0 space-y-5 lg:col-span-5">
           <Panel title="Acțiuni">
             <div className="space-y-4">
               {o.paymentMethod === 'bank_transfer' && o.paymentStatus === 'awaiting_transfer' && o.status !== 'cancelled' && (
@@ -353,9 +353,9 @@ function Rows({ rows }: { rows: [string, string][] }) {
   return (
     <dl className="divide-y divide-mist-2">
       {rows.map(([k, v]) => (
-        <div key={k} className="grid grid-cols-[150px_1fr] gap-3 py-2">
+        <div key={k} className="grid grid-cols-[112px_minmax(0,1fr)] gap-3 py-2 sm:grid-cols-[150px_minmax(0,1fr)]">
           <dt className="text-muted">{k}</dt>
-          <dd className="break-words">{v}</dd>
+          <dd className="[overflow-wrap:anywhere]">{v}</dd>
         </div>
       ))}
     </dl>

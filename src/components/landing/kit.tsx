@@ -238,11 +238,11 @@ export function Help({ title, text }: { title: string; text: string }) {
  * The page's last word: one sentence and the way back to the purchase block. No price, offer or trust
  * list here: all of it is in the purchase block, one click away.
  */
-export function FinalCta({ title, cta, dark = false }: { title: string; cta: string; dark?: boolean }) {
+export function FinalCta({ title, cta }: { title: string; cta: string }) {
   return (
     <section aria-labelledby="final-title" className="lp-wrap pb-[var(--sec)]">
-      <div className={`flex flex-col items-start justify-between gap-6 rounded-[28px] px-[clamp(24px,4vw,48px)] py-[clamp(28px,4vw,44px)] md:flex-row md:items-center ${dark ? 'on-dark bg-[#0b0908]' : 'bg-[var(--lp-panel)]'}`}>
-        <h2 id="final-title" className={`max-w-[18em] text-[clamp(26px,2.8vw,38px)] leading-[1.05] tracking-[-0.035em] ${dark ? '!text-white' : 'text-[var(--lp-ink)]'}`}>
+      <div className={`flex flex-col items-start justify-between gap-6 rounded-[28px] px-[clamp(24px,4vw,48px)] py-[clamp(28px,4vw,44px)] md:flex-row md:items-center bg-[var(--lp-panel)]`}>
+        <h2 id="final-title" className={`max-w-[18em] text-[clamp(26px,2.8vw,38px)] leading-[1.05] tracking-[-0.035em] text-[var(--lp-ink)]`}>
           {title}
         </h2>
         <a href="#comanda" className="cta flex-none">

@@ -17,7 +17,7 @@ import canapea from '@/assets/img/balance-wave/lifestyle-canapea.webp'
 const CTA = 'Comandă NEUROS Calm'
 
 /**
- * NEUROS Calm: a warm, dark evening page. The story goes from the moment (evening, a few minutes for
+ * NEUROS Calm: the site's light pages, with one dark moment (the evening photograph in the hero). The story goes from the moment (evening, a few minutes for
  * yourself) to the object, why the neck, how it is used, where it fits, what arrives, and the purchase.
  * Copy stays within the product page (product-content.ts): no health outcome is promised.
  */
@@ -26,13 +26,13 @@ export function CalmLanding({ landing }: { landing: Landing }) {
   return (
     <LandingShell landing={landing} heroTone="light" cta="Comandă">
       {/* Hero: the evening photograph, the message on the dark side. */}
-      <section id="lp-hero" aria-labelledby="lp-title" className="relative isolate flex min-h-[min(100svh,900px)] items-end overflow-hidden max-md:min-h-0 max-md:flex-col max-md:items-stretch">
+      <section id="lp-hero" aria-labelledby="lp-title" className="on-dark relative isolate flex min-h-[min(100svh,900px)] items-end overflow-hidden bg-dark max-md:min-h-0 max-md:flex-col max-md:items-stretch">
         <div className="absolute inset-0 -z-10 max-md:relative max-md:aspect-[4/3]">
           <Image src={somn} alt="Femeie în pat, seara, cu ochii închiși, purtând NEUROS Calm la gât" fill priority placeholder="blur" sizes="100vw" className="object-cover object-[64%_50%]" />
-          <div aria-hidden className="absolute inset-0 bg-[linear-gradient(90deg,rgb(17_12_10/.9)_0%,rgb(17_12_10/.55)_40%,transparent_70%)] max-md:bg-[linear-gradient(0deg,#110c0a,transparent_40%)]" />
+          <div aria-hidden className="absolute inset-0 bg-[linear-gradient(90deg,rgb(8_17_19/.88)_0%,rgb(8_17_19/.5)_40%,transparent_70%)] max-md:bg-[linear-gradient(0deg,var(--color-dark),transparent_40%)]" />
         </div>
         <div className="lp-wrap w-full pt-28 pb-[clamp(56px,10vh,110px)] max-md:pt-2 max-md:pb-12">
-          <Kicker>{p.name} · pentru relaxare</Kicker>
+          <p className="text-[13px] font-semibold tracking-[0.14em] text-cyan uppercase">{p.name} · pentru relaxare</p>
           <h1 id="lp-title" className="mt-4 max-w-[10.5em] text-[clamp(42px,6vw,84px)] leading-[0.98] tracking-[-0.045em] !text-white">
             Câteva minute doar pentru tine, seara.
           </h1>
@@ -53,14 +53,14 @@ export function CalmLanding({ landing }: { landing: Landing }) {
       </section>
 
       {/* How it works: a light page inside the dark one, so the explanation reads calmly. */}
-      <section id="cum" aria-labelledby="cum-title" className="scroll-mt-10 bg-[#f7efe9] py-[var(--sec)] text-[#1d1512]">
+      <section id="cum" aria-labelledby="cum-title" className="scroll-mt-10 bg-paper py-[var(--sec)]">
         <div className="lp-wrap grid items-center gap-y-10 md:grid-cols-12 md:gap-x-12">
           <div className="md:col-span-6">
-            <p className="text-[13px] font-semibold tracking-[0.14em] text-[#a3392b] uppercase">Cum funcționează</p>
-            <h2 id="cum-title" className="mt-3 text-[clamp(32px,3.8vw,52px)] leading-[1.02] tracking-[-0.04em] !text-[#1d1512]">
+            <Kicker>Cum funcționează</Kicker>
+            <Title id="cum-title" className="mt-3">
               De ce la gât?
-            </h2>
-            <div className="mt-5 max-w-[30em] space-y-4 text-[17.5px] leading-relaxed text-[#4e3f38]">
+            </Title>
+            <div className="mt-5 max-w-[30em] space-y-4 text-[17.5px] leading-relaxed text-[var(--lp-muted)]">
               <p>Pe acolo trece nervul vag, cel mai lung nerv din corp. Leagă creierul de inimă, plămâni și digestie.</p>
               <p>Nervul vag are un rol în felul în care corpul trece din alertă în repaus.</p>
               <p>Acolo aplică NEUROS Calm lumina roșie. Metoda se numește fotobiomodulare.</p>
@@ -75,8 +75,7 @@ export function CalmLanding({ landing }: { landing: Landing }) {
       {/* How you use it: the back of the device (its one button) beside the three gestures. */}
       <section aria-labelledby="folosire" className="lp-wrap pt-[var(--sec)]">
         <div className="grid items-center gap-y-10 md:grid-cols-12 md:gap-x-12">
-          <div className="relative aspect-square overflow-hidden rounded-[32px] bg-[radial-gradient(circle_at_50%_70%,#3a1d17,#1d1512_65%)] md:col-span-6">
-            <span aria-hidden className="absolute inset-x-[15%] bottom-[10%] h-[40%] rounded-full bg-[radial-gradient(closest-side,rgb(255_90_70/.35),transparent)]" />
+          <div className="relative aspect-square overflow-hidden rounded-[32px] bg-[var(--lp-panel)] md:col-span-6">
             <Image src={spate} alt="NEUROS Calm văzut din spate, cu butonul de pornire" fill sizes="(min-width: 768px) 520px, 100vw" className="object-contain p-[16%]" />
           </div>
           <div className="md:col-span-6">
@@ -85,7 +84,7 @@ export function CalmLanding({ landing }: { landing: Landing }) {
               Trei gesturi.
             </Title>
             <Steps
-              className="mt-8 text-white md:!grid-cols-1"
+              className="mt-8 md:!grid-cols-1"
               items={[
                 { title: 'Îl așezi la gât.', text: 'Luminile stau pe ambele părți ale gâtului.' },
                 { title: 'Alegi durata.', text: 'Între 5 și 20 de minute. Intensitatea se reglează pe trepte.' },
@@ -133,7 +132,7 @@ export function CalmLanding({ landing }: { landing: Landing }) {
       <Testimonials productId={p.id} />
       <LandingFaq items={landing.faqs} />
       <Help title="Nu ești sigur că e pentru tine?" text="Spune-ne cum arată seara ta. Îți spunem sincer dacă NEUROS Calm are sens." />
-      <FinalCta dark title="Câteva minute pentru tine, în seara asta." cta={CTA} />
+      <FinalCta title="Câteva minute pentru tine, în seara asta." cta={CTA} />
     </LandingShell>
   )
 }

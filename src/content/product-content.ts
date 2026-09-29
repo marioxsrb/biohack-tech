@@ -73,7 +73,7 @@ export const productContent: Record<ProductId, ProductContent> = {
     ],
     scene: {
       title: 'Un moment doar pentru tine.',
-      text: 'Îl așezi la gât, alegi durata și te relaxezi. Mulți utilizatori simt gâtul și umerii mai relaxați încă din primele ședințe.',
+      text: 'Îl așezi la gât, alegi durata și te relaxezi.',
       image: photo(bwCalm, 'Femeie relaxată pe canapea, purtând NEUROS Calm la gât'),
     },
     use: {
@@ -197,7 +197,7 @@ export const productContent: Record<ProductId, ProductContent> = {
     moments: [
       {
         title: 'Pentru zilele lungi la birou.',
-        text: 'Filtrul reduce lumina albastră a monitorului. Mulți utilizatori spun că ochii obosesc mai greu.',
+        text: 'Filtrul reduce lumina albastră a monitorului.',
         image: photo(glBirou, 'Bărbat la birou, concentrat, purtând NEUROS Amber'),
       },
       {

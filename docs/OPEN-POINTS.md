@@ -13,7 +13,12 @@ Updated 29 September 2026 (phase 3/4). Everything that is code is built; what is
 7. **`ADMIN_PASSWORD`** on the host (12+ characters). Without it /admin does not exist, so nobody can confirm a transfer or mark a shipment.
 8. **Domains (phase 4).** Connect `biohack-tech.ro`, `www`, and the four landing hostnames (runbook §27). No DNS has been changed.
 9. **Legal review** (items below under NEEDS BUSINESS INPUT, “Legal”), in particular the marketing-consent wording used for recovery, the order-button labels and the devices' regulatory status, before ads or marketing emails run.
-10. **GPSR product information** on each product page (Reg. (EU) 2023/988 art. 19): manufacturer name, postal and electronic address; EU responsible person if the manufacturer is outside the EU; product identifier; safety warnings in Romanian. None of it exists in the sources for any product, including NEUROS Flow.
+10. **GPSR product information** (per product, none of it exists in the sources; not invented):
+    - NEUROS Calm: manufacturer name, postal and electronic address; EU responsible person if the manufacturer is outside the EU; model / type identifier; safety warnings and instructions in Romanian; box contents; regulatory status (wellness vs MDR).
+    - NEUROS Focus: the same; the source names the hardware model “BrainLink Pro” and “CE, FCC” but not the manufacturer, the certificates or the declaration of conformity; tablet requirement is stated.
+    - NEUROS Amber: manufacturer and address; EU responsible person; model identifiers per frame; lens / filter specification; care and safety notes; box contents (case, cloth?).
+    - NEUROS Flow: manufacturer and address; EU responsible person; model identifier per configuration; safety warnings (infrared light, eyes, contraindications as the manufacturer states them); instructions; box contents (the photos show goggles and a remote; only the remote is claimed); CE / regulatory documentation.
+   Original wording of this item: on each product page (Reg. (EU) 2023/988 art. 19): manufacturer name, postal and electronic address; EU responsible person if the manufacturer is outside the EU; product identifier; safety warnings in Romanian. None of it exists in the sources for any product, including NEUROS Flow.
 
 ## NEEDS BUSINESS INPUT
 

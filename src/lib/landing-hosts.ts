@@ -53,3 +53,19 @@ export function routeLanding(slug: LandingSlug, pathname: string): LandingRoute 
   if (LANDING_PASSTHROUGH.some((r) => r.test(pathname))) return { action: 'next' }
   return { action: 'redirect', path: pathname }
 }
+
+/**
+ * www → apex: `www.<main host>` answers with a permanent redirect to the same path on the main site
+ * (NEXT_PUBLIC_SITE_URL), so there is one canonical host. Returns null for every other host.
+ */
+export function wwwRedirect(hostHeader: string | null | undefined, siteUrl: string, pathAndQuery: string): string | null {
+  if (!hostHeader) return null
+  const host = hostHeader.trim().toLowerCase().replace(/:\d+$/, '')
+  let main: URL
+  try {
+    main = new URL(siteUrl)
+  } catch {
+    return null
+  }
+  return host === `www.${main.hostname}` ? `${main.origin}${pathAndQuery}` : null
+}

@@ -11,7 +11,12 @@
 import type { ProductId } from './catalog'
 import type { LandingSlug } from '@/lib/landing-hosts'
 
-/** Colour mood of a landing. Every theme keeps text contrast at WCAG AA or better. */
+/**
+ * A landing's colours. All four use the main site's palette (mist page, white panels, ink text, the
+ * site's lines and red button); only `accent` differs, for kickers and small details (the site's cyan,
+ * or the infrared red of NEUROS Flow). Product personality comes from photographs, copy and layout.
+ * Text contrast stays at WCAG AA or better.
+ */
 export type LandingTheme = {
   bg: string
   ink: string
@@ -35,7 +40,7 @@ export const landings: Landing[] = [
   {
     slug: 'calm',
     productId: 'balance-wave',
-    theme: { bg: '#110c0a', ink: '#fbf5f1', muted: '#cdbcb2', panel: '#1d1512', line: 'rgb(255 255 255 / 0.13)', accent: '#ff8b78' },
+    theme: { bg: '#f2f5f6', ink: '#0b1316', muted: '#4b5960', panel: '#ffffff', line: '#dce3e6', accent: '#0e7490' },
     meta: {
       title: 'NEUROS Calm: câteva minute de relaxare, acasă',
       description: 'NEUROS Calm se poartă la gât. 5-20 de minute de lumină roșie, apoi se oprește singur. Livrare gratuită în România.',
@@ -52,7 +57,7 @@ export const landings: Landing[] = [
   {
     slug: 'focus',
     productId: 'brainlink-pro',
-    theme: { bg: '#f3f7f8', ink: '#0b1316', muted: '#46555c', panel: '#ffffff', line: '#d9e2e6', accent: '#0e7490' },
+    theme: { bg: '#f2f5f6', ink: '#0b1316', muted: '#4b5960', panel: '#ffffff', line: '#dce3e6', accent: '#0e7490' },
     meta: {
       title: 'NEUROS Focus: antrenează-ți atenția prin joc',
       description: 'O cască ușoară și peste 10 jocuri pe tabletă, pe care le controlezi prin atenție. Livrare gratuită în România.',
@@ -69,8 +74,6 @@ export const landings: Landing[] = [
   {
     slug: 'amber',
     productId: 'ochelari-biohack',
-    // Exactly the site's palette (mist, ink, lines, the cyan accent, the red button). The warmth comes
-    // from the lens photographs and a little amber light; no brown surface, border or type.
     theme: { bg: '#f2f5f6', ink: '#0b1316', muted: '#4b5960', panel: '#ffffff', line: '#dce3e6', accent: '#0e7490' },
     meta: {
       title: 'NEUROS Amber: ochelari pentru ecrane, 2+1 gratis',
@@ -87,7 +90,7 @@ export const landings: Landing[] = [
   {
     slug: 'brain-flow',
     productId: 'brain-flow',
-    theme: { bg: '#ffffff', ink: '#101418', muted: '#4f5a63', panel: '#f5f3f2', line: '#e6e1df', accent: '#b0202c' },
+    theme: { bg: '#f2f5f6', ink: '#0b1316', muted: '#4b5960', panel: '#ffffff', line: '#dce3e6', accent: '#b0202c' },
     meta: {
       title: 'NEUROS Flow: cască cu lumină infraroșie, pentru acasă',
       description: 'NEUROS Flow: cască de fotobiomodulare cu lumină infraroșie la 810 nm, cu 1, 4 sau 13 zone. Protocol stabilit cu un specialist. Livrare gratuită în România.',

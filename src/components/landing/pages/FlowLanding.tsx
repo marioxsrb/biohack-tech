@@ -59,7 +59,7 @@ export function FlowLanding({ landing }: { landing: Landing }) {
       <section aria-labelledby="acasa" className="relative mt-[var(--sec)]">
         <div className="relative aspect-[21/9] max-md:aspect-[4/3]">
           <Image src={femeie} alt="Femeie relaxată pe canapea, purtând casca NEUROS Flow" fill placeholder="blur" sizes="100vw" className="object-cover object-[75%_40%]" />
-          <div aria-hidden className="absolute inset-0 bg-[linear-gradient(90deg,rgb(255_255_255/.92),rgb(255_255_255/.55)_38%,transparent_60%)] max-md:hidden" />
+          <div aria-hidden className="absolute inset-0 bg-[linear-gradient(90deg,rgb(242_245_246/.94),rgb(242_245_246/.6)_38%,transparent_60%)] max-md:hidden" />
         </div>
         <div className="lp-wrap md:absolute md:inset-0 md:flex md:items-center">
           <div className="max-w-[24em] max-md:pt-8">
@@ -92,7 +92,7 @@ export function FlowLanding({ landing }: { landing: Landing }) {
       </section>
 
       {/* How it goes: consultation first. */}
-      <section aria-labelledby="decurge" className="mt-[var(--sec)] bg-[#101418] py-[var(--sec)] text-white">
+      <section aria-labelledby="decurge" className="mt-[var(--sec)] bg-dark py-[var(--sec)] text-white">
         <div className="lp-wrap">
           <div className="grid items-end gap-y-8 lg:grid-cols-12 lg:gap-x-12">
             <div className="on-dark lg:col-span-6">

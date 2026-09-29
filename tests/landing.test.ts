@@ -9,7 +9,7 @@ import { checkoutHref } from '@/components/landing/checkout-link'
 import { getProduct, productHref } from '@/content/catalog'
 import { landings } from '@/content/landings'
 import { attributionParams, attributionSummary, sanitizeAttribution } from '@/lib/attribution'
-import { LANDING_SLUGS, landingForHost, routeLanding } from '@/lib/landing-hosts'
+import { LANDING_SLUGS, landingForHost, routeLanding, wwwRedirect } from '@/lib/landing-hosts'
 
 const BASE = 'biohack-tech.ro'
 const prod = (host: string) => landingForHost(host, BASE, false)
@@ -58,6 +58,14 @@ describe('what a landing hostname serves', () => {
   })
 })
 
+describe('www → apex', () => {
+  it('redirects www to the main host, keeps path and query; leaves every other host alone', () => {
+    expect(wwwRedirect('www.biohack-tech.ro', 'https://biohack-tech.ro', '/products/amber?utm_source=x')).toBe('https://biohack-tech.ro/products/amber?utm_source=x')
+    expect(wwwRedirect('WWW.biohack-tech.ro:443', 'https://biohack-tech.ro', '/')).toBe('https://biohack-tech.ro/')
+    for (const h of ['biohack-tech.ro', 'calm.biohack-tech.ro', 'www.evil.com', 'www.biohack-tech.ro.evil.com', null]) expect(wwwRedirect(h, 'https://biohack-tech.ro', '/')).toBeNull()
+  })
+})
+
 describe('the four landings', () => {
   it('one per product, same slug as the product page, not listed anywhere', () => {
     expect(landings.map((l) => [l.slug, l.productId])).toEqual([
@@ -77,6 +85,11 @@ describe('the four landings', () => {
     expect(text).not.toMatch(/[—–]/)
     expect(text).not.toMatch(/clienți mulțumiți|recenzi|★|stele|stoc limitat|ultimele bucăți|doar azi|ofertă expir|vindec|garantat|tratează|anxiet|depresi|insomni|studii arată|dovedit/i)
     expect(text).not.toContain('Brain Flow')
+  })
+
+  it('product pages: no unverifiable "users say" statements', () => {
+    const src = readFileSync(join(process.cwd(), 'src/content/product-content.ts'), 'utf8')
+    expect(src).not.toMatch(/utilizatori (spun|simt)|clienții spun|oamenii spun/i)
   })
 
   it('the checkout link carries ids and campaign parameters only', () => {

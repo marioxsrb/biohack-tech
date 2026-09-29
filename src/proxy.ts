@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { site } from '@/config/site'
 import { checkAdminAuth } from '@/lib/admin-auth'
-import { landingForHost, routeLanding } from '@/lib/landing-hosts'
+import { landingForHost, routeLanding, wwwRedirect } from '@/lib/landing-hosts'
 
 /**
  * Two jobs, before anything renders:
@@ -11,11 +11,15 @@ import { landingForHost, routeLanding } from '@/lib/landing-hosts'
  *    redirect to the main site for everything else. Landing responses are never indexed. Any other
  *    Host, including a forged one, is simply the main site.
  *
+ * 0. www.<main host> → 308 to the same path on the main host (one canonical host).
+ *
  * 2. /admin is behind HTTP Basic Auth (ADMIN_USER / ADMIN_PASSWORD). Without a password configured,
  *    the area does not exist. Serve the site over HTTPS only (it is, in production).
  */
 export function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl
+  const www = wwwRedirect(req.headers.get('host'), site.url, `${pathname}${search}`)
+  if (www) return NextResponse.redirect(www, 308)
   const landing = landingForHost(req.headers.get('host'))
 
   if (landing) {
