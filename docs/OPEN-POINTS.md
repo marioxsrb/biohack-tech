@@ -35,7 +35,7 @@ Updated 29 September 2026 (phase 3/4). Everything that is code is built; what is
 
 **Company and support**
 - **Return address** (`COMPANY_RETURN_ADDRESS`). Company identity is set from the data you provided (NEUROS EUROPE S.R.L., CUI 50323873, J2024001256321, Str. N. D. Cocea nr. 10, Sibiu); the return address was not given, so the site says it is sent to the customer.
-- **Support contact:** keep `contact@neuros.ro` and `+40 757 890 707` (from the source) or use Biohack Tech's own.
+- **Support contact:** decided 29 Sep 2026: `contact@biohack-tech.ro` (central, `src/config/site.ts`); phone `+40 757 890 707` (the only number in the project; confirm it is staffed for Biohack Tech).
 - **Who pays the direct return cost** (if not stated, the law puts it on the seller) and any withdrawal exceptions.
 - **Commercial guarantee** beyond the legal 2 years? If yes, its certificate content (OUG 140/2021 art. 15).
 

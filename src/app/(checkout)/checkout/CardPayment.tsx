@@ -44,6 +44,10 @@ export function CardPayment({ publishableKey, amount, apiRef }: { publishableKey
         mode: 'payment',
         amount,
         currency: 'ron',
+        // Must match the server's PaymentIntent exactly (api/checkout: a Stripe customer and
+        // setup_future_usage=on_session, so the card can be offered again right after payment).
+        // Without it Stripe refuses every confirmation from this form.
+        setupFutureUsage: 'on_session',
         // Only what the server's PaymentIntent accepts (card, incl. Apple Pay / Google Pay). Without this,
         // Stripe shows every method enabled in the dashboard (Klarna, Revolut Pay...), which would then fail.
         paymentMethodTypes: ['card'],
@@ -113,7 +117,13 @@ function Bridge({ amount, apiRef, failed }: { amount: number; apiRef: RefObject<
             payment_method_data: { billing_details: { ...billing, address: { ...billing.address, line2: '' } } },
           },
         })
-        return error ? (error.message ?? 'Plata nu a putut fi finalizată. Încearcă din nou sau alege transferul bancar.') : null
+        if (!error) return null
+        // The customer sees Stripe's own words only for problems they can fix (card declined, wrong
+        // number, authentication). Anything else is ours: a calm message here, the detail in the console
+        // during development only.
+        if (error.type === 'card_error' || error.type === 'validation_error') return error.message ?? 'Plata nu a putut fi finalizată. Verifică datele cardului.'
+        if (process.env.NODE_ENV !== 'production') console.error('[checkout] stripe.confirmPayment', error.type, error.code, error.message)
+        return 'Plata cu cardul nu a putut fi pornită. Nu s-a efectuat nicio plată. Încearcă din nou sau alege transferul bancar.'
       },
     }
     return () => {

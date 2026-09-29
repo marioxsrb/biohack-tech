@@ -4,7 +4,7 @@ export const site = {
   description:
     'Dispozitive de wellness pentru minte și corp, de folosit acasă: NEUROS Calm, Focus, Amber și casca NEUROS Flow. Livrare gratuită în România.',
   tagline: 'Tehnologie din neuroștiință, pentru bunăstarea de zi cu zi.',
-  email: 'contact@neuros.ro',
+  email: 'contact@biohack-tech.ro',
   phone: '+40 757 890 707',
   phoneHref: 'tel:+40757890707',
   locale: 'ro_RO',

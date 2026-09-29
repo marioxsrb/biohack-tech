@@ -60,8 +60,11 @@ export async function POST(req: NextRequest) {
     const attribution = sanitizeAttribution(body.attribution, new URL(site.url).host)
     ;({ order } = await placeOrder({ lines: resolved.lines, form, attemptId, attribution }))
   } catch (e) {
-    log.error('checkout.order_failed', { error: errText(e) })
-    return fail(500, 'SERVER', `Nu am putut înregistra comanda. Nu ți s-a retras nimic. Încearcă din nou sau ${contact.charAt(0).toLowerCase()}${contact.slice(1)}`)
+    // The customer gets a calm sentence and a short reference; the cause (database, schema...) stays in
+    // the server log under the same reference. No personal data in either.
+    const ref = crypto.randomUUID().slice(0, 8)
+    log.error('checkout.order_failed', { ref, stage: 'order', error: errText(e) })
+    return fail(500, 'SERVER', `Comanda nu a putut fi înregistrată. Nu s-a efectuat nicio plată. Încearcă din nou; dacă problema continuă, scrie-ne la ${site.email} (cod ${ref}).`, { ref })
   }
   kickJobs()
 
@@ -95,7 +98,8 @@ export async function POST(req: NextRequest) {
     }
     return NextResponse.json({ method: 'card', orderNumber: order.orderNumber, token: order.publicToken, clientSecret: pi.client_secret })
   } catch (e) {
-    log.error('checkout.stripe_failed', { orderId: order.id, orderNumber: order.orderNumber, error: errText(e), status: e instanceof StripeError ? e.status : undefined })
-    return fail(502, 'PAYMENT_PROVIDER', 'Nu am putut porni plata cu cardul. Nu ți s-a retras nimic. Încearcă din nou în câteva minute.')
+    const ref = crypto.randomUUID().slice(0, 8)
+    log.error('checkout.stripe_failed', { ref, stage: 'payment_intent', orderId: order.id, orderNumber: order.orderNumber, error: errText(e), status: e instanceof StripeError ? e.status : undefined })
+    return fail(502, 'PAYMENT_PROVIDER', `Plata cu cardul nu a putut fi pornită. Nu s-a efectuat nicio plată. Încearcă din nou în câteva minute (cod ${ref}).`, { ref })
   }
 }
