@@ -2,6 +2,8 @@ import type { NextConfig } from 'next'
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Self-hosted on cPanel (Phusion Passenger): a self-contained server.js with only the traced node_modules.
+  output: 'standalone',
   poweredByHeader: false,
   // A second local instance (the Stripe TEST environment, scripts/stripe-test.mjs) builds into its own folder.
   ...(process.env.NEXT_DIST_DIR && { distDir: process.env.NEXT_DIST_DIR }),
