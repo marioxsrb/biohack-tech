@@ -23,7 +23,7 @@ describe('the four-product catalog', () => {
   it('sells NEUROS Calm, Focus, Amber and NEUROS Flow; NEUROS Flow "from" its lowest configuration', () => {
     expect(products.map((p) => [p.id, p.slug, p.name, p.price])).toEqual([
       ['balance-wave', 'calm', 'NEUROS Calm', 638000],
-      ['brainlink-pro', 'focus', 'NEUROS Focus', 249000],
+      ['brainlink-pro', 'focus', 'NEUROS Focus', 79000],
       ['ochelari-biohack', 'amber', 'NEUROS Amber', 31500],
       ['brain-flow', 'brain-flow', 'NEUROS Flow', 1290000],
     ])
@@ -87,22 +87,22 @@ describe('the four-product catalog', () => {
       form: person,
       attemptId: 'catalog-1',
     })
-    expect(order.totalMinor).toBe(638000 + 249000 + 2 * 31500)
+    expect(order.totalMinor).toBe(638000 + 79000 + 2 * 31500)
     expect(order.items.map((i) => [i.productName, i.variantName, i.quantity, i.unitPriceMinor])).toEqual([
       ['NEUROS Calm', null, 1, 638000],
-      ['NEUROS Focus', null, 1, 249000],
+      ['NEUROS Focus', null, 1, 79000],
       ['NEUROS Amber', 'Unisex pătrat · Maro', 2, 31500],
     ])
     const c = getConfig()
     expect(invoicePayload(c.fgo!, order).Continut.map((l) => [l.Denumire, l.NrProduse, l.PretTotal])).toEqual([
       ['NEUROS Calm', 1, 6380],
-      ['NEUROS Focus', 1, 2490],
+      ['NEUROS Focus', 1, 790],
       ['NEUROS Amber (Unisex pătrat · Maro)', 2, 630],
     ])
     const products = contactPayload(c.ghl!, order, { orders: 1, valueMinor: order.totalMinor }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, c.siteUrl).customFields.find((f) => f.key === 'contact.bt_last_order_products')!
     expect(products.fieldValue).toBe('1 x NEUROS Calm, 1 x NEUROS Focus, 2 x NEUROS Amber (Unisex pătrat · Maro)')
     const mail = renderEmail('order_confirmed', order, { siteUrl: c.siteUrl, bank: c.bank })
-    for (const s of ['NEUROS Calm', 'NEUROS Focus', 'NEUROS Amber', '6.380 lei', '2.490 lei', '630 lei', '9.500 lei', order.orderNumber, 'Plata a fost confirmată']) expect(mail.text).toContain(s)
+    for (const s of ['NEUROS Calm', 'NEUROS Focus', 'NEUROS Amber', '6.380 lei', '790 lei', '630 lei', '7.800 lei', order.orderNumber, 'Plata a fost confirmată']) expect(mail.text).toContain(s)
   })
 
   it('the bank-transfer email has beneficiary, IBAN, bank, exact amount and the order number as reference', async () => {

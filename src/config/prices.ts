@@ -18,8 +18,8 @@ export type PriceEntry = number | null | Readonly<Record<string, number | null>>
 export const PRICES_RON: Record<ProductId, PriceEntry> = {
   // NEUROS Calm. Approved 26.09.2026: 6.380 lei.
   'balance-wave': 638000,
-  // NEUROS Focus. Source material: 2.490 RON (the only price given in lei in the source).
-  'brainlink-pro': 249000,
+  // NEUROS Focus. Set 30.09.2026: 790 lei (a new list price, not a reduction: no comparison price is shown).
+  'brainlink-pro': 79000,
   // NEUROS Amber, all four frames. Approved 26.09.2026: 315 lei.
   'ochelari-biohack': 31500,
   // NEUROS Flow, per configuration. Source: the product page of the previous site (docs/audit.md in

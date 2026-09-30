@@ -67,7 +67,7 @@ describe('GoHighLevel mapping', () => {
     expect(c).toMatchObject({ locationId: 'loc1', firstName: 'Ana', lastName: 'Popescu', email: 'ana@exemplu.ro', companyName: 'Exemplu SRL', country: 'RO' })
     const f = Object.fromEntries(c.customFields.map((x) => [x.key, x.fieldValue]))
     expect(f['contact.bt_last_order_number']).toBe(order.orderNumber)
-    expect(f['contact.bt_last_order_value']).toBe('4980.00')
+    expect(f['contact.bt_last_order_value']).toBe('1580.00')
     expect(f['contact.bt_last_order_products']).toBe('2 x NEUROS Focus')
     expect(f['contact.bt_customer_type']).toBe('Persoană juridică')
     expect(f['contact.bt_lifetime_value']).toBe('12345.00')

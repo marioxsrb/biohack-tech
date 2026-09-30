@@ -23,14 +23,14 @@ Updated 29 September 2026 (phase 3/4). Everything that is code is built; what is
 ## NEEDS BUSINESS INPUT
 
 **Prices and product 4**
-- **NEUROS Focus price:** confirm 2.490 lei (the only lei price in the source).
+- **NEUROS Focus price:** decided 30.09.2026: 790 lei (canonical list price, no comparison price).
 - **NEUROS Flow prices:** confirm 12.900 / 14.900 / 13.900 lei for 1 / 4 / 13 zones. The source lists 13 zones cheaper than 4 zones; kept as listed (`src/config/prices.ts`).
 - **NEUROS Flow is for sale:** an earlier content decision said it “nu se vinde”; phase 3/4 made it a sold product. Confirm before ads run.
 - **NEUROS Flow:** manufacturer, CE / regulatory documentation, what's in the box (the photos show goggles next to the remote; not claimed), supplier SKU if any, whether configurations change delivery time.
 
 **Promotions and the post-purchase offer (phase 3.5)**
 - Confirm the two promotions as built: 20% for 3+ units of Calm / Focus / NEUROS Flow (Amber excluded), and Amber 2+1 gratis; how long they run (the site says “atât timp cât sunt afișate pe site”).
-- Confirm the post-purchase pairs in `src/config/upsell.ts` (e.g. Calm → Amber) and the 30-minute window.
+- Post-purchase pairs decided 30.09.2026 (`src/config/upsell.ts`: Calm → Amber, Focus; Flow → Calm, Focus; Focus → Amber, Calm; Amber → Calm, Focus); confirm the 30-minute window.
 - Customer testimonials: none are used (the source's were unverifiable). To show real ones, add them to `src/content/home.ts` with written consent and a source.
 
 **Company and support**

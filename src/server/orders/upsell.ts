@@ -1,11 +1,11 @@
 /**
- * The post-purchase offer, server side. After a card payment that Stripe confirmed, the customer may add
- * ONE product with the same card, as a separate linked order (own PaymentIntent, own invoice). Nothing
- * here can change the parent order: it is already paid, and its payment is never touched.
+ * The post-purchase offer, server side. After a card payment that Stripe confirmed, the customer may choose
+ * ONE of the offered products and add it with the same card, as a separate linked order (own PaymentIntent,
+ * own invoice). Nothing here can change the parent order: it is already paid, and its payment is never touched.
  *
  * Safety:
  *   - only for a paid card checkout order, while the offer is open (upsell_status 'offered', not expired);
- *   - only the product the site offers for that order (anything else the browser sends is refused);
+ *   - only one of the products the site offers for that order (anything else the browser sends is refused);
  *   - an explicit accept request is required; viewing or refreshing the page never charges;
  *   - one linked order per parent (unique index) and one PaymentIntent per linked order (idempotency key),
  *     so double clicks and retries cannot charge twice;
@@ -15,7 +15,7 @@ import 'server-only'
 import { UPSELL_WINDOW_MINUTES } from '@/config/upsell'
 import { getProduct, getVariant, unitPrice, variantLabel } from '@/content/catalog'
 import { resolveOrderLines } from '@/lib/orders/resolve'
-import { upsellFor } from '@/lib/upsell'
+import { upsellsFor } from '@/lib/upsell'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { StripeError, stripe } from '@/server/integrations/stripe'
@@ -34,19 +34,24 @@ export type UpsellOffer = {
   expiresAt: Date
 }
 
-/** The offer for a parent order, or null when none may be shown. Pure apart from the clock. */
-export function offerFor(o: Order, now = new Date()): UpsellOffer | null {
-  if (o.kind !== 'checkout' || o.paymentMethod !== 'card' || !isPaid(o.paymentStatus) || o.status === 'cancelled') return null
-  if (o.upsellStatus !== 'offered' || !o.upsellExpiresAt || o.upsellExpiresAt.getTime() <= now.getTime()) return null
-  if (!o.stripeCustomerId || !o.stripePaymentMethodId) return null
-  const pick = upsellFor(o.items.map((i) => i.productId))
-  const p = pick && getProduct(pick.productId)
-  if (!pick || !p || p.price === null) return null
-  const variants = (p.variants ?? []).flatMap((v) => {
-    const price = unitPrice(p, v)
-    return price === null ? [] : [{ id: v.id, label: variantLabel(p, v), priceMinor: price }]
+/**
+ * The offers for a parent order (at most two; the customer chooses one), or an empty list when none may
+ * be shown. Pure apart from the clock.
+ */
+export function offersFor(o: Order, now = new Date()): UpsellOffer[] {
+  if (o.kind !== 'checkout' || o.paymentMethod !== 'card' || !isPaid(o.paymentStatus) || o.status === 'cancelled') return []
+  if (o.upsellStatus !== 'offered' || !o.upsellExpiresAt || o.upsellExpiresAt.getTime() <= now.getTime()) return []
+  if (!o.stripeCustomerId || !o.stripePaymentMethodId) return []
+  const expiresAt = o.upsellExpiresAt
+  return upsellsFor(o.items.map((i) => i.productId)).flatMap((pick) => {
+    const p = getProduct(pick.productId)
+    if (!p || p.price === null) return []
+    const variants = (p.variants ?? []).flatMap((v) => {
+      const price = unitPrice(p, v)
+      return price === null ? [] : [{ id: v.id, label: variantLabel(p, v), priceMinor: price }]
+    })
+    return [{ productId: p.id, name: p.name, reason: pick.reason, variants, priceMinor: p.price, expiresAt }]
   })
-  return { productId: p.id, name: p.name, reason: pick.reason, variants, priceMinor: p.price, expiresAt: o.upsellExpiresAt }
 }
 
 export type UpsellResult =
@@ -92,9 +97,9 @@ export async function acceptUpsell(token: string, productId: unknown, variantId:
   const existing = await orders.childOf(db, parent.id)
   if (existing) return continueUpsell(existing)
 
-  const offer = offerFor(parent)
+  // Only one of the products offered for this order; accepting one closes the offer (one linked order).
+  const offer = offersFor(parent).find((x) => x.productId === productId)
   if (!offer) return { state: 'closed', message: CLOSED }
-  if (productId !== offer.productId) return { state: 'closed', message: CLOSED }
   const v = typeof variantId === 'string' && variantId ? variantId : undefined
   const product = getProduct(offer.productId)!
   if (product.variants?.length ? !getVariant(product, v) : v) return { state: 'closed', message: CLOSED }

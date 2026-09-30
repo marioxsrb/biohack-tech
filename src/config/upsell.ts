@@ -1,11 +1,15 @@
 /**
- * THE ONLY PLACE the post-purchase offer is configured. After a confirmed card payment the customer may
- * see ONE optional offer: the first product in the list for what they bought that is not already in the
- * order. Prices are the normal catalog prices (no special upsell discount exists).
+ * THE ONLY PLACE the complementary products are configured, for every placement (cart, checkout and the
+ * offer after payment, through `lib/recommend.ts`). For each product, its two complements in order;
+ * a cart or order with several products merges its lists and drops what it already has. After payment the
+ * customer may choose ONE of up to two products. Prices are the normal catalog prices (no upsell discount).
  *
- * Why these pairs: Amber is the everyday screen companion to any device and the natural small addition;
- * Calm and Focus complement each other (relaxation / attention). NEUROS Flow is never offered after a
- * purchase: it is chosen with a specialist, not in one click.
+ *   NEUROS Calm  → NEUROS Amber, NEUROS Focus
+ *   NEUROS Focus → NEUROS Amber, NEUROS Calm
+ *   NEUROS Amber → NEUROS Calm, NEUROS Focus
+ *   NEUROS Flow  → NEUROS Calm, NEUROS Focus
+ *
+ * NEUROS Flow is never a complementary suggestion: it is chosen with a specialist, not in one click.
  */
 import type { ProductId } from '@/content/catalog'
 
@@ -25,8 +29,8 @@ export const UPSELL_MAP: Record<ProductId, UpsellCandidate[]> = {
     { productId: 'brainlink-pro', reason: 'Antrenează-ți atenția prin jocuri pe tabletă, cu NEUROS Focus.' },
   ],
   'brain-flow': [
-    { productId: 'ochelari-biohack', reason: 'Pentru serile cu ecrane, o pereche NEUROS Amber completează rutina de acasă.' },
     { productId: 'balance-wave', reason: 'NEUROS Calm adaugă câteva minute de relaxare, purtat la gât.' },
+    { productId: 'brainlink-pro', reason: 'NEUROS Focus adaugă antrenamentul atenției, prin jocuri pe tabletă.' },
   ],
 }
 

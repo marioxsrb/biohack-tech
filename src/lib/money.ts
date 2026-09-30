@@ -1,6 +1,6 @@
 /**
  * Money is stored in bani (integer minor units of the leu). One currency: RON.
- * Presentation follows Romanian convention: "2.490 lei", "2.490,50 lei".
+ * Presentation follows Romanian convention: "6.380 lei", "6.380,50 lei".
  */
 export const CURRENCY = 'RON' as const
 

@@ -20,7 +20,7 @@ const { getConfig } = await import('@/server/config')
 const { invoicePayload } = await import('@/server/integrations/fgo')
 const { contactPayload, STAGES } = await import('@/server/integrations/ghl')
 const { renderEmail } = await import('@/server/integrations/email/templates')
-const { offerFor } = await import('@/server/orders/upsell')
+const { offersFor } = await import('@/server/orders/upsell')
 const { enquiries } = await import('@/server/enquiries')
 const { signPayload } = await import('@/server/integrations/stripe')
 const { POST: checkout } = await import('@/app/api/checkout/route')
@@ -152,11 +152,11 @@ describe('discounted orders agree everywhere', () => {
       attemptId: 'tr-1',
     })
     const o = (await orders.byToken(db, (await res.json()).token))!
-    const eligible = 2 * 638000 + 249000
-    const expected = eligible - 305000 + 2 * 31500
+    const eligible = 2 * 638000 + 79000
+    const expected = eligible - 271000 + 2 * 31500
     expect(o.totalMinor).toBe(expected)
     const c = getConfig()
-    expect(renderEmail('transfer_instructions', o, { siteUrl: c.siteUrl, bank: c.bank }).text).toContain('Suma: 12.830 lei')
+    expect(renderEmail('transfer_instructions', o, { siteUrl: c.siteUrl, bank: c.bank }).text).toContain('Suma: 11.470 lei')
     await svc.confirmPayment(o.id, 'admin')
     expect((await orders.byId(db, o.id))!.paymentStatus).toBe('paid')
     // A full refund is the discounted total, not the list price.
@@ -177,15 +177,15 @@ describe('post-purchase offer', () => {
   }
 
   it.each([
-    ['balance-wave', undefined, 'ochelari-biohack'],
-    ['brainlink-pro', undefined, 'ochelari-biohack'],
-    ['ochelari-biohack', 'cat-eye-negru', 'balance-wave'],
-    ['brain-flow', '13-zone', 'ochelari-biohack'],
-  ])('paid %s (%s) → offers %s', async (productId, variantId, offered) => {
+    ['balance-wave', undefined, ['ochelari-biohack', 'brainlink-pro']],
+    ['brainlink-pro', undefined, ['ochelari-biohack', 'balance-wave']],
+    ['ochelari-biohack', 'cat-eye-negru', ['balance-wave', 'brainlink-pro']],
+    ['brain-flow', '13-zone', ['balance-wave', 'brainlink-pro']],
+  ])('paid %s (%s) → offers %j', async (productId, variantId, offered) => {
     const o = await paidCard(productId, variantId)
     expect(o.upsellStatus).toBe('offered')
     expect(o.stripePaymentMethodId).toBe('pm_1')
-    expect(offerFor(o)?.productId).toBe(offered)
+    expect(offersFor(o).map((x) => x.productId)).toEqual(offered)
   })
 
   it('accept: exactly one extra payment, a linked paid order, its own invoice and CRM record; the parent is untouched', async () => {
@@ -219,6 +219,21 @@ describe('post-purchase offer', () => {
     expect(w.outcome).toBe('already_paid')
   })
 
+  it('two choices, one purchase: the second product can be chosen; accepting one closes the offer (one linked order)', async () => {
+    const parent = await paidCard('brain-flow', '13-zone')
+    expect(offersFor(parent).map((o) => o.productId)).toEqual(['balance-wave', 'brainlink-pro'])
+    expect((await act(parent.publicToken, 'accept', { productId: 'ochelari-biohack', variantId: 'patrat-maro' })).state).toBe('closed')
+    expect((await act(parent.publicToken, 'accept', { productId: 'brainlink-pro' })).state).toBe('paid')
+    // The other choice afterwards only reports the existing linked order: no second child, no second charge.
+    expect((await act(parent.publicToken, 'accept', { productId: 'balance-wave' })).state).toBe('paid')
+    expect(upsellCalls()).toHaveLength(1)
+    expect(Number(upsellCalls()[0].form!.get('amount'))).toBe(79000)
+    const p = (await orders.byId(db, parent.id))!
+    expect([p.paymentStatus, p.upsellStatus]).toEqual(['paid', 'accepted'])
+    expect(offersFor(p)).toEqual([])
+    expect((await orders.childOf(db, parent.id))!.items.map((i) => [i.productId, i.unitPriceMinor])).toEqual([['brainlink-pro', 79000]])
+  })
+
   it('refuses another product, a tampered price, a bank-transfer order, an unpaid or expired order, and an unknown token', async () => {
     const parent = await paidCard()
     expect((await act(parent.publicToken, 'accept', { productId: 'brain-flow', variantId: '4-zone' })).state).toBe('closed')
@@ -231,7 +246,7 @@ describe('post-purchase offer', () => {
     const tr = await post(checkout, '/api/checkout', { lines: [{ productId: 'balance-wave', quantity: 1 }], order: { ...person, paymentMethod: 'transfer' }, acceptedTerms: true, attemptId: 'tr-up' })
     const trOrder = (await orders.byToken(db, (await tr.json()).token))!
     await svc.confirmPayment(trOrder.id, 'admin')
-    expect(offerFor((await orders.byId(db, trOrder.id))!)).toBeNull()
+    expect(offersFor((await orders.byId(db, trOrder.id))!)).toEqual([])
     expect((await act(trOrder.publicToken, 'accept', { productId: 'ochelari-biohack', variantId: 'patrat-maro' })).state).toBe('closed')
 
     const unpaid = await placeCard([{ productId: 'brainlink-pro', quantity: 1 }])
@@ -322,7 +337,7 @@ describe('post-purchase offer', () => {
     await drain()
     const p = (await orders.byId(db, parent.id))!
     expect([p.upsellStatus, p.stripePaymentMethodId]).toEqual(['expired', null])
-    expect(offerFor(p)).toBeNull()
+    expect(offersFor(p)).toEqual([])
   })
 })
 

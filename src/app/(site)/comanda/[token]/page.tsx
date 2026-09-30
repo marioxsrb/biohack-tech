@@ -11,7 +11,7 @@ import { getDb } from '@/server/db'
 import { customerName, formatAddress, type Order } from '@/server/orders/model'
 import { orders } from '@/server/orders/repository'
 import { isPaid } from '@/server/orders/state'
-import { offerFor } from '@/server/orders/upsell'
+import { offersFor } from '@/server/orders/upsell'
 import { CopyButton, OrderEffects, WaitForPayment } from './OrderClient'
 import { PostPurchaseOffer } from './PostPurchaseOffer'
 
@@ -44,7 +44,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/co
   const placed = paid || transfer
   // The offer exists only for a card payment Stripe already confirmed (never from URL parameters).
   const db = await getDb()
-  const offer = c.stripe ? offerFor(order) : null
+  const offers = c.stripe ? offersFor(order) : []
   const child = order.kind === 'checkout' ? await orders.childOf(db, order.id) : null
   const parent = order.parentOrderId ? await orders.byId(db, order.parentOrderId) : null
   const items = order.items.map((i) => lineKey({ productId: i.productId as never, variantId: i.variantId ?? undefined }))
@@ -89,12 +89,12 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/co
             Ai adăugat și {child.items.map((i) => (i.variantName ? `${i.productName} (${i.variantName})` : i.productName)).join(', ')}: comanda separată #{child.orderNumber}, plătită.
           </p>
         )}
-        {offer && !child && c.stripe && (
+        {offers.length > 0 && !child && c.stripe && (
           <PostPurchaseOffer
             token={order.publicToken}
             orderNumber={order.orderNumber}
             publishableKey={c.stripe.publishableKey}
-            offer={{ productId: offer.productId, name: offer.name, reason: offer.reason, variants: offer.variants, priceMinor: offer.priceMinor }}
+            offers={offers.map((o) => ({ productId: o.productId, name: o.name, reason: o.reason, variants: o.variants, priceMinor: o.priceMinor }))}
           />
         )}
         {transfer && <p className="sub mt-4">Comanda este înregistrată și așteaptă plata. O pregătim imediat ce suma ajunge în cont.</p>}

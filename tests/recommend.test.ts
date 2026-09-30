@@ -7,17 +7,50 @@ import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { amberModels, amberTotals, pairsToLines } from '@/lib/amber-pairs'
 import { recommend } from '@/lib/recommend'
-import { upsellFor } from '@/lib/upsell'
+import { upsellsFor } from '@/lib/upsell'
 import { sanitizeAttribution } from '@/lib/attribution'
 
 const L = (productId: string, quantity = 1, variantId?: string) => ({ productId, variantId, quantity })
 const ids = (r: { productId: string }[]) => r.map((x) => x.productId)
 
 describe('recommendations: one engine, deterministic', () => {
-  it('post-purchase keeps the agreed map: Calm → Amber, Focus → Amber, Amber → Calm, NEUROS Flow → Amber; never NEUROS Flow', () => {
-    expect([['balance-wave'], ['brainlink-pro'], ['ochelari-biohack'], ['brain-flow']].map((p) => upsellFor(p)?.productId)).toEqual(['ochelari-biohack', 'ochelari-biohack', 'balance-wave', 'ochelari-biohack'])
-    expect(upsellFor(['balance-wave', 'ochelari-biohack'])?.productId).toBe('brainlink-pro')
-    for (const set of [['balance-wave'], ['brainlink-pro'], ['ochelari-biohack'], ['balance-wave', 'brainlink-pro', 'ochelari-biohack']]) expect(upsellFor(set)?.productId).not.toBe('brain-flow')
+  // The final matrix, the same for cart, checkout and after payment (complementary products only).
+  // The products offered (a 20% row whose image is a product already there offers the picker, not that product).
+  const cross = (set: string[], placement: 'cart' | 'checkout' | 'post_purchase') => ids(recommend(set.map((p) => L(p, 1, p === 'brain-flow' ? '4-zone' : p === 'ochelari-biohack' ? 'cat-eye-bej' : undefined)), placement).filter((r) => !set.includes(r.productId)))
+  const [CALM, FOCUS, AMBER, FLOW] = ['balance-wave', 'brainlink-pro', 'ochelari-biohack', 'brain-flow']
+  it.each([
+    [[CALM], [AMBER, FOCUS]],
+    [[FLOW], [CALM, FOCUS]],
+    [[FOCUS], [AMBER, CALM]],
+    [[AMBER], [CALM, FOCUS]],
+    [[CALM, AMBER], [FOCUS]],
+    [[CALM, FOCUS], [AMBER]],
+    [[FLOW, CALM], [FOCUS]],
+    [[FLOW, FOCUS], [CALM]],
+    [[CALM, FOCUS, AMBER], []],
+  ])('matrix %j → %j, in the cart, in checkout and after payment', (set, expected) => {
+    for (const placement of ['cart', 'post_purchase'] as const) expect(cross(set, placement)).toEqual(expected)
+    // Checkout shows two; a promotion row may take a place, the complements keep their order.
+    const checkout = recommend(set.map((p) => L(p, 1, p === FLOW ? '4-zone' : p === AMBER ? 'cat-eye-bej' : undefined)), 'checkout')
+    expect(checkout.length).toBeLessThanOrEqual(2)
+    expect(expected.slice(0, 2 - checkout.filter((r) => r.kind === 'complete_offer').length).every((id) => checkout.some((r) => r.productId === id))).toBe(true)
+    expect(ids(checkout)).not.toContain(FLOW)
+    // Never a duplicate, never a product already there as a plain complement, never NEUROS Flow.
+    const cart = recommend(set.map((p) => L(p)), 'cart')
+    expect(new Set(ids(cart)).size).toBe(cart.length)
+    for (const r of cart.filter((x) => x.kind === 'cross_sell')) expect(set).not.toContain(r.productId)
+  })
+
+  it('post-payment: up to two choices, never a promotion completion, never NEUROS Flow', () => {
+    expect([[CALM], [FLOW], [FOCUS], [AMBER]].map((p) => upsellsFor(p).map((x) => x.productId))).toEqual([
+      [AMBER, FOCUS],
+      [CALM, FOCUS],
+      [AMBER, CALM],
+      [CALM, FOCUS],
+    ])
+    expect(upsellsFor([CALM, FOCUS]).map((x) => x.productId)).toEqual([AMBER])
+    expect(upsellsFor([CALM, FOCUS, AMBER])).toEqual([])
+    expect(recommend([L(CALM), L(FOCUS)], 'post_purchase').map((x) => x.kind)).not.toContain('complete_offer')
   })
 
   it('never suggests what is already in the cart (without a promotion reason)', () => {
@@ -38,7 +71,8 @@ describe('recommendations: one engine, deterministic', () => {
   it('20% one away: a single suggestion that opens the picker for the missing product (never three product rows)', () => {
     const r = recommend([L('balance-wave'), L('brainlink-pro')], 'cart')
     expect(r.filter((x) => x.kind === 'complete_offer')).toEqual([expect.objectContaining({ add: 'bundle', slots: 1, promotionId: 'trei-produse-20' })])
-    expect(recommend([L('balance-wave'), L('brain-flow', 1, '4-zone')], 'cart')[0]).toMatchObject({ productId: 'brainlink-pro', add: 'bundle', slots: 1 })
+    // With NEUROS Flow the matrix product (Focus) is the missing one: offered directly, as the completion.
+    expect(recommend([L('balance-wave'), L('brain-flow', 1, '4-zone')], 'cart')[0]).toMatchObject({ productId: 'brainlink-pro', kind: 'complete_offer', add: 'direct' })
   })
 
   it('Amber beyond the first 2+1: suggested again only when the next free pair is one pair away (5, 8...), never at 3, 4, 6, 7', () => {
@@ -52,9 +86,21 @@ describe('recommendations: one engine, deterministic', () => {
     expect(recommend([L('ochelari-biohack', 2, 'cat-eye-bej')], 'post_purchase').map((x) => x.kind)).not.toContain('complete_offer')
   })
 
-  it('checkout shows at most two, post-payment one', () => {
+  it('promotion first, complements as the fallback: Calm + Focus → the 20% picker, then NEUROS Amber', () => {
+    expect(recommend([L('balance-wave'), L('brainlink-pro')], 'checkout').map((x) => [x.kind, x.add, x.productId])).toEqual([
+      ['complete_offer', 'bundle', 'balance-wave'],
+      ['cross_sell', 'amber_pairs', 'ochelari-biohack'],
+    ])
+    // NEUROS Flow + Calm: the product the matrix suggests (Focus) is also the one that completes the 20%: one row, added directly.
+    expect(recommend([L('brain-flow', 1, '4-zone'), L('balance-wave')], 'cart').map((x) => [x.kind, x.add, x.productId])).toEqual([['complete_offer', 'direct', 'brainlink-pro']])
+    expect(recommend([L('brain-flow', 1, '4-zone'), L('brainlink-pro')], 'checkout').map((x) => [x.kind, x.add, x.productId])).toEqual([['complete_offer', 'direct', 'balance-wave']])
+    // Nothing left to complement: the 20% picker only.
+    expect(recommend([L('balance-wave'), L('brainlink-pro'), L('ochelari-biohack', 1, 'cat-eye-bej')], 'cart').map((x) => [x.kind, x.add])).toEqual([['complete_offer', 'bundle']])
+  })
+
+  it('checkout shows at most two, post-payment two choices', () => {
     expect(recommend([L('balance-wave'), L('brainlink-pro'), L('ochelari-biohack', 2, 'cat-eye-bej')], 'checkout')).toHaveLength(2)
-    expect(recommend([L('balance-wave')], 'post_purchase')).toHaveLength(1)
+    expect(recommend([L('balance-wave')], 'post_purchase')).toHaveLength(2)
   })
 })
 

@@ -7,7 +7,7 @@ import { resolveOrderLines } from '@/lib/orders/resolve'
 import { allocate, percentOf, priceLines, promotionHints, promotionProgress } from '@/lib/promotions'
 
 const CALM = 638000
-const FOCUS = 249000
+const FOCUS = 79000
 const AMBER = 31500
 const BF = { '1-zona': 1290000, '4-zone': 1490000, '13-zone': 1390000 }
 

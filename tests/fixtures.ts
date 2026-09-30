@@ -4,6 +4,6 @@
  */
 export const TEST_PRICES = {
   'balance-wave': null as number | null,
-  'brainlink-pro': 249000,
+  'brainlink-pro': 79000,
   'ochelari-biohack': 19950,
 }

@@ -48,7 +48,7 @@ describe('NEUROS Amber 2+1 at any quantity', () => {
 })
 
 describe('20% for 3 products', () => {
-  const P = { calm: 638000, focus: 249000, flow1: 1290000 }
+  const P = { calm: 638000, focus: 79000, flow1: 1290000 }
   it('wording at 0, 1, 2, 3 eligible units', () => {
     const b = (lines: { productId: string; quantity: number; unitAmount: number }[]) => bundleCopy(promotionProgress(lines.map((l, i) => ({ key: String(i), ...l }))).find((p) => p.kind === 'bundle_percent') ?? null)
     expect(b([]).headline).toBe('Alege 3 produse. Primești 20% reducere.')
@@ -81,6 +81,8 @@ describe('20% for 3 products', () => {
     const t = bundleTotals([], picks)
     const sub = P.calm + P.focus + P.flow1
     expect(t).toMatchObject({ subtotalMinor: sub, discountMinor: Math.floor((sub * 20 + 50) / 100), units: 3 })
+    // With NEUROS Focus at 790 lei: 6.380 + 790 + 12.900 = 20.070 lei, − 20% (4.014 lei) = 16.056 lei.
+    expect(t).toMatchObject({ subtotalMinor: 2007000, discountMinor: 401400, totalMinor: 1605600 })
     const server = resolveOrderLines(bundleToLines(picks))
     expect(server.ok && [server.subtotal, server.discount, server.total]).toEqual([t.subtotalMinor, t.discountMinor, t.totalMinor])
   })

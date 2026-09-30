@@ -20,20 +20,31 @@ export type OfferView = {
 type Step = 'offer' | 'confirm' | 'working' | 'done' | 'failed' | 'declined'
 
 /**
- * The optional offer after a confirmed card payment. Two explicit steps before anything is charged:
- * "Adaugă la comandă", then "Da, plătește X lei" with the amount and the card stated. The server
- * decides the price and charges the card Stripe kept for this order; if the bank asks for
- * authentication, Stripe's own step opens here. The first order is paid either way.
+ * The optional offer after a confirmed card payment: up to two complementary products, the customer
+ * chooses one (accepting it closes the offer). Two explicit steps before anything is charged:
+ * "Adaugă la comandă", then "Da, plătește X lei" with the amount and the card stated. A product with
+ * variants (NEUROS Amber frames) needs one chosen first. The server decides the price and charges the
+ * card Stripe kept for this order; if the bank asks for authentication, Stripe's own step opens here.
+ * The first order is paid either way.
  */
-export function PostPurchaseOffer({ token, orderNumber, offer, publishableKey }: { token: string; orderNumber: string; offer: OfferView; publishableKey: string }) {
+export function PostPurchaseOffer({ token, orderNumber, offers, publishableKey }: { token: string; orderNumber: string; offers: OfferView[]; publishableKey: string }) {
   const router = useRouter()
+  const [chosen, setChosen] = useState(offers[0].productId)
+  const offer = offers.find((o) => o.productId === chosen) ?? offers[0]
   const product = getProduct(offer.productId)!
-  const [variantId, setVariantId] = useState(offer.variants[0]?.id)
+  // One configuration is chosen for the customer only when there is exactly one.
+  const [variantId, setVariantId] = useState<string | undefined>(offer.variants.length === 1 ? offer.variants[0].id : undefined)
   const [step, setStep] = useState<Step>('offer')
   const [message, setMessage] = useState('')
   const variant = product.variants?.find((v) => v.id === variantId)
+  const needsVariant = offer.variants.length > 0 && !variant
+  const variantLabel = offer.variants.length > 1 ? offer.variants.find((v) => v.id === variantId)?.label : undefined
   const price = offer.variants.find((v) => v.id === variantId)?.priceMinor ?? offer.priceMinor
   const image = variant?.images.find((i) => i.kind === 'cutout') ?? product.cutout
+  const choose = (o: OfferView) => {
+    setChosen(o.productId)
+    setVariantId(o.variants.length === 1 ? o.variants[0].id : undefined)
+  }
 
   const call = async (body: object) => {
     const res = await fetch('/api/upsell', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ token, ...body }) })
@@ -87,9 +98,33 @@ export function PostPurchaseOffer({ token, orderNumber, offer, publishableKey }:
         </div>
         <div>
           <h2 id="offer-title" className="text-[clamp(22px,2.4vw,28px)] leading-tight tracking-[-0.025em]">
-            Vrei să adaugi și {offer.name}?
+            {offers.length > 1 && step === 'offer' ? 'Completează rutina' : `Vrei să adaugi și ${offer.name}?`}
           </h2>
-          <p className="mt-2 max-w-[34em] text-[16px] leading-relaxed text-text">{offer.reason}</p>
+          {offers.length > 1 && step === 'offer' && (
+            <fieldset className="mt-4">
+              <legend className="sr-only">Alege produsul</legend>
+              <div className="grid grid-cols-2 gap-2">
+                {offers.map((o) => {
+                  const on = o.productId === offer.productId
+                  return (
+                    <button
+                      key={o.productId}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => choose(o)}
+                      className={`min-h-14 rounded-[14px] px-4 py-2.5 text-left transition-[background-color,box-shadow] ${
+                        on ? 'bg-paper shadow-[inset_0_0_0_2px_var(--color-cyan-700)]' : 'bg-mist shadow-[inset_0_0_0_1px_var(--color-line)] hover:shadow-[inset_0_0_0_1px_var(--color-ink)]'
+                      }`}
+                    >
+                      <span className="block text-[15px] font-semibold text-ink">{o.name}</span>
+                      <span className="block text-[14px] text-muted tabular-nums">{formatLei(o.priceMinor)}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </fieldset>
+          )}
+          <p className="mt-3 max-w-[34em] text-[16px] leading-relaxed text-text">{offer.reason}</p>
 
           {step === 'done' ? (
             <p className="mt-5 flex items-center gap-2 text-[16px] font-medium text-cyan-700" role="status">
@@ -103,7 +138,7 @@ export function PostPurchaseOffer({ token, orderNumber, offer, publishableKey }:
             <>
               {offer.variants.length > 1 && step === 'offer' && (
                 <fieldset className="mt-4">
-                  <legend className="text-[14.5px] text-muted">Alege varianta</legend>
+                  <legend className="text-[14.5px] text-muted">{offer.productId === 'ochelari-biohack' ? 'Alege rama' : 'Alege varianta'}</legend>
                   <div className="mt-2 flex flex-wrap gap-2">
                     {offer.variants.map((v) => (
                       <button
@@ -127,7 +162,7 @@ export function PostPurchaseOffer({ token, orderNumber, offer, publishableKey }:
 
               {step === 'offer' ? (
                 <div className="mt-5 flex flex-wrap items-center gap-3">
-                  <button type="button" className="cta" onClick={() => setStep('confirm')}>
+                  <button type="button" className="cta" onClick={() => setStep('confirm')} disabled={needsVariant} aria-disabled={needsVariant}>
                     Adaugă la comandă <Arrow />
                   </button>
                   <button type="button" className="btn-secondary" onClick={decline}>
@@ -137,7 +172,8 @@ export function PostPurchaseOffer({ token, orderNumber, offer, publishableKey }:
               ) : (
                 <div className="mt-5 rounded-[16px] bg-mist p-4">
                   <p className="text-[15px] leading-relaxed text-ink">
-                    Plătești <strong>{formatLei(price)}</strong> cu același card folosit la comanda #{orderNumber}. Primești o comandă separată și o factură separată; le putem expedia împreună.
+                    Plătești <strong>{formatLei(price)}</strong> pentru {offer.name}
+                    {variantLabel ? ` (${variantLabel})` : ''} cu același card folosit la comanda #{orderNumber}. Primești o comandă separată și o factură separată; le putem expedia împreună.
                   </p>
                   <div className="mt-4 flex flex-wrap items-center gap-3">
                     <button type="button" className="cta" onClick={accept} disabled={step === 'working'} aria-busy={step === 'working'}>

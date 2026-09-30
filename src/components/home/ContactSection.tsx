@@ -1,6 +1,5 @@
 import { ContactForm } from '@/components/contact/ContactForm'
 import { Mail, Phone } from '@/components/ui/icons'
-import { companyLine } from '@/config/company'
 import { site, terms } from '@/config/site'
 
 /**
@@ -32,7 +31,6 @@ export function ContactSection() {
               </a>
             </li>
           </ul>
-          {companyLine() && <p className="relative mt-auto pt-8 text-[13px] leading-relaxed text-white/55">{companyLine()}</p>}
         </div>
         <div className="bg-paper p-[clamp(24px,3.6vw,48px)] lg:col-span-7 lg:rounded-l-[28px]">
           <p className="text-[20px] font-medium tracking-[-0.02em] text-ink">Scrie-ne</p>

@@ -16,7 +16,7 @@ import type { Attribution } from '@/lib/attribution'
 import { lineRef } from '@/content/catalog'
 import type { OrderForm } from '@/lib/checkout'
 import { priceLines } from '@/lib/promotions'
-import { upsellFor } from '@/lib/upsell'
+import { upsellsFor } from '@/lib/upsell'
 import { UPSELL_WINDOW_MINUTES } from '@/config/upsell'
 import type { OrderLine } from '@/lib/orders/resolve'
 import { canMoveOrder, canMovePayment, isPaid } from './state'
@@ -209,7 +209,7 @@ export function confirmPayment(orderId: string, source: Source, reported?: { amo
     // A paid card checkout order with a card Stripe kept for on-session use gets the optional
     // post-purchase offer for a limited time. Only ids are stored, never card data.
     const offer =
-      o.kind === 'checkout' && o.paymentMethod === 'card' && o.stripeCustomerId && reported?.paymentMethodId && upsellFor(o.items.map((i) => i.productId))
+      o.kind === 'checkout' && o.paymentMethod === 'card' && o.stripeCustomerId && reported?.paymentMethodId && upsellsFor(o.items.map((i) => i.productId)).length
         ? { stripe_payment_method_id: reported.paymentMethodId, upsell_status: 'offered', upsell_expires_at: new Date(Date.now() + UPSELL_WINDOW_MINUTES * 60_000) }
         : {}
     return {

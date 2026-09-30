@@ -9,7 +9,7 @@ Written 26 September 2026 against commit “Launch pass”; updated 29 September
 | Area | Status |
 |---|---|
 | Storefront (home, 4 product pages, cart page, checkout, order page, legal, 404) | Built, tested at 390/430/768/1024/1280/1440 |
-| Prices | NEUROS Calm 6.380 lei, NEUROS Amber 315 lei (approved), NEUROS Focus 2.490 lei (from source, confirm), NEUROS Flow 12.900 / 14.900 / 13.900 lei for 1 / 4 / 13 zones (from the previous site, **confirm**, §28) |
+| Prices | NEUROS Calm 6.380 lei, NEUROS Amber 315 lei (approved), NEUROS Focus 790 lei (set 30.09.2026), NEUROS Flow 12.900 / 14.900 / 13.900 lei for 1 / 4 / 13 zones (from the previous site, **confirm**, §28) |
 | Advertising landings (4, one per product) | Built: `/lp/<slug>` locally, `<slug>.biohack-tech.ro` in production through host routing (§26); DNS not changed |
 | Attribution (landing + UTM → order → GHL) | Built; `contact.bt_last_order_source` in GHL |
 | Canonical orders (PostgreSQL) | Built and tested (PGlite + real PostgreSQL concurrency tests) |
@@ -578,7 +578,7 @@ Use a staging deployment with `APP_ENV=staging`, Stripe **test** keys, the **FGO
 | # | Flow | Steps | Verify |
 |---|---|---|---|
 | 1 | PF, card | NEUROS Calm → add → popup “Finalizează comanda” → PF → card `4242 4242 4242 4242`, any future date, any CVC | Order page “Plata este confirmată”; /admin: Plătită, Factură Emisă; GHL: contact, fields, tags `bt-client` + `bt-cumparat-calm`, opportunity in “Plătită, de pregătit”, value 6380; emails: confirmation + invoice (one each) |
-| 2 | PJ, card + 3-D Secure | NEUROS Amber Unisex pătrat Maro ×2 + NEUROS Focus → PJ with a real CUI → card `4000 0027 6000 3184` → complete the challenge | FGO test invoice on the company with CUI, lines with the exact variant; totals 2.490 + 630 |
+| 2 | PJ, card + 3-D Secure | NEUROS Amber Unisex pătrat Maro ×2 + NEUROS Focus → PJ with a real CUI → card `4000 0027 6000 3184` → complete the challenge | FGO test invoice on the company with CUI, lines with the exact variant; totals 790 + 630 |
 | 3 | Declined card | card `4000 0000 0000 0002` | Message in checkout, nothing charged; order stays “Card eșuat”; retry with 4242 on the same page → paid; one order, one invoice |
 | 4 | Webhook without browser | Pay, then close the tab before the redirect | Order paid within seconds (webhook) |
 | 5 | Webhook replay | Stripe Dashboard → the event → Resend | No second invoice, email or opportunity |
@@ -661,7 +661,7 @@ The ordered sequence:
 6. `ADMIN_PASSWORD` set; domain + HTTPS; staging test orders §20 flows 1, 3, 5, 6, 7 passed.
 
 **P1: fix before or immediately after launch**
-1. Confirm the NEUROS Focus price (2.490 lei, from the source material).
+1. NEUROS Focus price: 790 lei (decided 30.09.2026; nothing to confirm).
 2. GHL workflows W1, W3, W4 and W7 live on day one; W5 and W6 in the first week; W2 after the legal review.
 3. Uptime monitor + log alerts (§22).
 4. Courier choice and packing routine; free-shipping rule confirmed.
@@ -808,9 +808,9 @@ Defined once in `src/config/promotions.ts`, applied by the pure engine `src/lib/
 
 ## 30b. Suggestions and the NEUROS Amber 2+1 picker (29 Sep 2026)
 
-**One engine** (`src/lib/recommend.ts`) for every placement: cart, checkout, post-payment (and the product page / homepage offers). Deterministic rules: (1) finish a promotion one step away (the next Amber pair, then a third product for the 20%; not after payment), (2) the complementary pairs of `config/upsell.ts`, (3) never what is already there unless a promotion needs it. NEUROS Flow is suggested only to complete the 20% in the cart/checkout, with its configuration picker; never as an impulse suggestion, never after payment. The post-payment offer (`upsellFor`) now calls the same engine; its map is unchanged.
+**One engine** (`src/lib/recommend.ts`) for every placement: cart, checkout, post-payment (and the product page / homepage offers). Deterministic rules: (1) finish a promotion one step away (the next Amber pair, then a third product for the 20%; not after payment), (2) the complementary products of `config/upsell.ts`, merged over every product in the cart / order and deduplicated, (3) never what is already there unless a promotion needs it. The matrix (same in cart, checkout and after payment): Calm → Amber, Focus; Flow → Calm, Focus; Focus → Amber, Calm; Amber → Calm, Focus. NEUROS Amber is not a complement of NEUROS Flow, also in a mixed cart (Flow + Calm → Focus; Flow + Focus → Calm). NEUROS Flow is suggested only to complete the 20% in the cart/checkout, with its configuration picker; never as an impulse suggestion, never after payment. The post-payment offer (`upsellsFor`) calls the same engine.
 
-**Where.** Cart: lines → summary (totals, offer progress, “Finalizează comanda”) → “Completează oferta” (finishing an offer) or “Completează rutina” (complementary), up to 3, below the button. Checkout: “Mai ai un pas până la ofertă” or “Completează rutina” (up to 2) after the summary and before the terms and the payment button; folded on phones, open from tablets up. Post-payment: “Comanda ta este confirmată.” first, then the one optional offer (two explicit steps, unchanged payment safety). Simple products are added in place; NEUROS Amber opens the 2+1 picker; NEUROS Flow its configuration picker. Adding keeps the checkout form, the payment method, the landing and UTM parameters; prices come from the catalog and the server prices the order again.
+**Where.** Cart: lines → summary (totals, offer progress, “Finalizează comanda”) → “Completează oferta” (finishing an offer) or “Completează rutina” (complementary), up to 3, below the button. Checkout: “Mai ai un pas până la ofertă” or “Completează rutina” (up to 2) after the summary and before the terms and the payment button; folded on phones, open from tablets up. Post-payment: “Comanda ta este confirmată.” first, then the optional offer: up to two products to choose from, one can be bought (two explicit steps, unchanged payment safety). Simple products are added in place; NEUROS Amber opens the 2+1 picker; NEUROS Flow its configuration picker. Adding keeps the checkout form, the payment method, the landing and UTM parameters; prices come from the catalog and the server prices the order again.
 
 **NEUROS Amber 2+1 picker** (`components/offers/OfferSheets.tsx`, logic in `lib/amber-pairs.ts`): opens in place from the homepage offer, the product page offer, cart and checkout suggestions (full-screen sheet on phones). Three slots (“Perechea 1–3”), each a frame (Cat eye / Unisex pătrat, with photos) and a colour that exists for it (cat eye: negru, bej; pătrat: negru, maro). Totals from the promotion engine, including pairs already in the cart. One button adds all pairs at once (`cartStore.addMany`, all or nothing); identical pairs become one line with that quantity. Closing adds nothing. When the cart already has Amber, it asks only for the missing pairs.
 
@@ -826,9 +826,9 @@ Defined once in `src/config/promotions.ts`, applied by the pure engine `src/lib/
 
 ## 31. Post-purchase offer (phase 3.5, built)
 
-**Flow.** Checkout → card payment confirmed by Stripe (webhook or reconcile, never by the page) → the order page shows “Comanda ta este confirmată.” first, then, below, one optional offer. The offer requires two explicit clicks: “Adaugă la comandă”, then “Da, plătește X lei” with the amount and the card stated. “Nu, mulțumesc” ends it. Bank-transfer orders never get it.
+**Flow.** Checkout → card payment confirmed by Stripe (webhook or reconcile, never by the page) → the order page shows “Comanda ta este confirmată.” first, then, below, one optional offer with up to two products to choose from (NEUROS Amber needs a frame chosen first). The offer requires two explicit clicks: “Adaugă la comandă”, then “Da, plătește X lei” with the amount and the card stated. “Nu, mulțumesc” ends it. Bank-transfer orders never get it.
 
-**What is offered.** `src/config/upsell.ts` (`UPSELL_MAP`): the first product in the list for what was bought that is not already in the order. Calm → Amber, Focus; Focus → Amber, Calm; Amber → Calm, Focus; NEUROS Flow → Amber, Calm. NEUROS Flow is never offered after a purchase (it is chosen with a specialist). Normal catalog price and normal promotion rules; no special upsell discount.
+**What is offered.** `src/config/upsell.ts` (`UPSELL_MAP`) through `lib/recommend.ts`: the complementary products of what was bought, not already in the order, at most two; the customer chooses one, and accepting it closes the offer (still one linked order per parent). Calm → Amber, Focus; Focus → Amber, Calm; Amber → Calm, Focus; NEUROS Flow → Calm, Focus. NEUROS Flow is never offered after a purchase (it is chosen with a specialist). Normal catalog price and normal promotion rules; no special upsell discount.
 
 **Stripe.** Card checkout orders get a Stripe Customer, and the PaymentIntent uses `setup_future_usage=on_session`, so Stripe keeps the card for on-session reuse only. The checkout states it next to the card field and in /privacy-policy and /plati. The webhook/reconcile stores only `payment_method` and `customer` ids; card data never reaches us. The offer PaymentIntent is created and confirmed server-side with that customer + payment method, without `off_session`, so Stripe applies SCA: `requires_action` → the page opens Stripe's authentication step (`handleNextAction`) → the server re-reads the PaymentIntent from Stripe. The card is **detached** as soon as the offer is settled (paid, declined, failed) or after `UPSELL_WINDOW_MINUTES` (30) with no answer (`upsell.release` job).
 

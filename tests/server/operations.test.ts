@@ -124,7 +124,7 @@ describe('bank transfer → operations', () => {
     expect(String(instructions.message)).toContain(TEST_ENV.BANK_BENEFICIARY)
     expect(String(instructions.message)).toContain('RO49 AAAA 1B31 0075 9384 0000')
     expect(String(instructions.message)).toContain(`Comanda ${order.orderNumber}`)
-    expect(String(instructions.message)).toContain('2.490 lei')
+    expect(String(instructions.message)).toContain('790 lei')
 
     const first = await svc.confirmPayment(order.id, 'admin')
     const again = await svc.confirmPayment(order.id, 'admin')

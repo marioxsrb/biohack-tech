@@ -45,7 +45,7 @@ beforeEach(() => {
 
 const LANDINGS = [
   { slug: 'calm', pick: { productId: 'balance-wave' as const }, name: 'NEUROS Calm', unit: 638000 },
-  { slug: 'focus', pick: { productId: 'brainlink-pro' as const }, name: 'NEUROS Focus', unit: 249000 },
+  { slug: 'focus', pick: { productId: 'brainlink-pro' as const }, name: 'NEUROS Focus', unit: 79000 },
   { slug: 'amber', pick: { productId: 'ochelari-biohack' as const, variantId: 'patrat-maro', quantity: 3 }, name: 'NEUROS Amber', unit: 31500 },
   { slug: 'brain-flow', pick: { productId: 'brain-flow' as const, variantId: '13-zone' }, name: 'NEUROS Flow', unit: 1390000 },
 ] as const
@@ -152,7 +152,7 @@ describe('attribution and promotions survive the handoff', () => {
     p.cartStore.add('brain-flow', '1-zona', 1, 'product')
     const lines = p.cartStore.getSnapshot()
     const shown = priceLines(
-      lines.map((l) => ({ key: `${l.productId}:${l.variantId ?? ''}`, productId: l.productId, quantity: l.quantity, unitAmount: { 'balance-wave': 638000, 'brainlink-pro': 249000, 'ochelari-biohack': 31500, 'brain-flow': 1290000 }[l.productId] })),
+      lines.map((l) => ({ key: `${l.productId}:${l.variantId ?? ''}`, productId: l.productId, quantity: l.quantity, unitAmount: { 'balance-wave': 638000, 'brainlink-pro': 79000, 'ochelari-biohack': 31500, 'brain-flow': 1290000 }[l.productId] })),
     )
     const server = resolveOrderLines(lines)
     expect(server.ok).toBe(true)

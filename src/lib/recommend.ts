@@ -5,7 +5,9 @@
  * Order of the rules:
  *   1. Finish a promotion that is one step away (a third eligible product for the 20%, the next
  *      Amber pair for 2+1). Promotions only exist inside one order, so not after payment.
- *   2. The complementary pairs from `config/upsell.ts` (the same map the post-payment offer always used).
+ *   2. The complementary products from `config/upsell.ts`, merged over the products in the cart / order
+ *      and deduplicated. NEUROS Amber is not a complement of NEUROS Flow, also when Flow shares the cart
+ *      with another product (Flow + Calm → Focus, Flow + Focus → Calm).
  *   3. Never suggest what is already there, unless quantity matters for a promotion (step 1).
  * NEUROS Flow is only suggested to complete the 20% in the cart (with its configuration picker), never
  * as an impulse cross-sell and never after payment: it is chosen with a specialist.
@@ -30,7 +32,7 @@ export type Recommendation = {
   slots?: number
 }
 
-const LIMIT: Record<Placement, number> = { cart: 3, checkout: 2, post_purchase: 1, product_page: 1, homepage: 1 }
+const LIMIT: Record<Placement, number> = { cart: 3, checkout: 2, post_purchase: 2, product_page: 1, homepage: 1 }
 const AMBER: ProductId = 'ochelari-biohack'
 const FLOW: ProductId = 'brain-flow'
 
@@ -50,6 +52,11 @@ export function recommend(lines: RecLine[], placement: Placement, limit = LIMIT[
     if (out.length < limit && !out.some((o) => o.productId === r.productId) && getProduct(r.productId)?.price != null) out.push(r)
   }
 
+  // The complementary products of what is there, merged and deduplicated (NEUROS Amber is not a complement
+  // of NEUROS Flow, also when Flow shares the cart with another product).
+  const excluded = (id: ProductId) => id === FLOW || (id === AMBER && inCart.has(FLOW))
+  const complements = [...new Map(lines.flatMap((l) => UPSELL_MAP[l.productId as ProductId] ?? []).filter((c) => !inCart.has(c.productId) && !excluded(c.productId)).map((c) => [c.productId, c])).values()]
+
   // 1. Finish a promotion (inside one order only).
   if (placement !== 'post_purchase') {
     const progress = promotionProgress(lines.map((l, i) => ({ key: `${l.productId}:${l.variantId ?? ''}:${i}`, productId: l.productId, quantity: l.quantity, unitAmount: priceOf(l) })))
@@ -58,25 +65,28 @@ export function recommend(lines: RecLine[], placement: Placement, limit = LIMIT[
     if (amber) push({ productId: AMBER, kind: 'complete_offer', promotionId: amber.id, add: 'amber_pairs', slots: amber.missing, reason: amber.missing === 1 ? 'Încă o pereche și a treia este gratuită.' : `Mai alege ${amber.missing} perechi pentru 2+1.` })
     const bundle = progress.find((p) => p.kind === 'bundle_percent' && p.state === 'close')
     if (bundle) {
-      // One suggestion that opens the 3-product picker (asking only for the missing product); its image is
-      // the first eligible product not already in the cart.
-      const ids = ([...bundle.products] as ProductId[]).sort((a, b) => Number(a === FLOW) - Number(b === FLOW) || Number(inCart.has(a)) - Number(inCart.has(b)))
-      push({ productId: ids[0], kind: 'complete_offer', promotionId: bundle.id, add: 'bundle', slots: bundle.missing, reason: 'Al treilea produs activează reducerea de 20%.' })
+      const reason = 'Al treilea produs activează reducerea de 20%.'
+      // When a complementary product is itself the missing product (NEUROS Flow + Calm → Focus), it is
+      // offered directly; otherwise one suggestion opens the 3-product picker (asking only for the missing
+      // product), its image the first eligible product not already in the cart.
+      const direct = bundle.missing === 1 ? complements.find((c) => (bundle.products as string[]).includes(c.productId) && !getProduct(c.productId)?.variants?.length) : undefined
+      if (direct) push({ productId: direct.productId, kind: 'complete_offer', promotionId: bundle.id, add: 'direct', reason })
+      else {
+        const ids = ([...bundle.products] as ProductId[]).sort((a, b) => Number(a === FLOW) - Number(b === FLOW) || Number(inCart.has(a)) - Number(inCart.has(b)))
+        push({ productId: ids[0], kind: 'complete_offer', promotionId: bundle.id, add: 'bundle', slots: bundle.missing, reason })
+      }
     }
   }
 
-  // 2. Complementary products, from the products in the cart / order, in their order.
-  for (const l of lines) {
-    for (const c of UPSELL_MAP[l.productId as ProductId] ?? []) {
-      if (inCart.has(c.productId) || c.productId === FLOW) continue
-      push({
-        productId: c.productId,
-        kind: 'cross_sell',
-        add: placement === 'post_purchase' ? 'direct' : addMode(c.productId),
-        slots: c.productId === AMBER ? 3 : undefined,
-        reason: c.reason,
-      })
-    }
+  // 2. Complementary products, in the order of the products in the cart / order.
+  for (const c of complements) {
+    push({
+      productId: c.productId,
+      kind: 'cross_sell',
+      add: placement === 'post_purchase' ? 'direct' : addMode(c.productId),
+      slots: c.productId === AMBER ? 3 : undefined,
+      reason: c.reason,
+    })
   }
 
   // 3. Nothing in the cart that points anywhere (e.g. only Amber and all its pairs): suggest nothing.
