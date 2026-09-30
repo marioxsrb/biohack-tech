@@ -40,7 +40,7 @@ export function FlowLanding({ landing }: { landing: Landing }) {
           </p>
           <div className="relative mx-auto mt-6 aspect-[3/2] w-[min(640px,100%)]">
             <span aria-hidden className="absolute inset-[12%] rounded-full bg-[radial-gradient(closest-side,rgb(214_52_60/.22),transparent)]" />
-            <Image src={casca} alt="NEUROS Flow, casca albă cu LED-urile aprinse" fill priority sizes="(min-width: 768px) 640px, 100vw" className="object-contain" />
+            <Image src={casca} alt="NEUROS Flow, casca albă cu LED-urile aprinse" fill preload sizes="(min-width: 768px) 640px, 100vw" className="object-contain" />
           </div>
           <p className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-2">
             <span className="text-[30px] font-medium tracking-[-0.03em] tabular-nums">de la {p.price !== null && formatLei(p.price)}</span>
@@ -98,7 +98,7 @@ export function FlowLanding({ landing }: { landing: Landing }) {
             <div className="on-dark lg:col-span-6">
               <p className="text-[13px] font-semibold tracking-[0.14em] text-[#ff8a8f] uppercase">Cum decurge</p>
               <h2 id="decurge" className="mt-3 text-[clamp(32px,3.6vw,48px)] leading-[1.02] tracking-[-0.04em] !text-white">
-                Nu începi singur.
+                Începi cu un specialist.
               </h2>
               <p className="mt-4 max-w-[28em] text-[17px] leading-relaxed text-white/80">
                 La consultația de început, un specialist Biohack Tech stabilește cu tine zonele, durata și frecvența ședințelor.
@@ -113,7 +113,7 @@ export function FlowLanding({ landing }: { landing: Landing }) {
             items={[
               { title: 'Consultație și protocol.', text: 'Zonele, frecvența și durata ședințelor.' },
               { title: 'Pui casca și confirmi zonele.', text: 'Pe telecomandă vezi zonele active și durata.' },
-              { title: 'Sesiunea rulează singură.', text: 'Casca se oprește la final. Protocolul îl revizuiți periodic.' },
+              { title: 'Ședința rulează singură.', text: 'Casca se oprește la final. Protocolul îl revizuiți periodic.' },
             ]}
           />
         </div>
@@ -165,7 +165,7 @@ export function FlowLanding({ landing }: { landing: Landing }) {
       <Testimonials productId={p.id} />
       <LandingFaq items={landing.faqs} />
       <Help title="Vorbește cu un specialist înainte să alegi." text="Spune-ne ce vrei să urmărești. Îți explicăm configurațiile și cum decurge consultația de început." />
-      <FinalCta title="Începi cu o consultație, nu singur." cta={CTA} />
+      <FinalCta title="Începi cu o consultație." cta={CTA} />
     </LandingShell>
   )
 }

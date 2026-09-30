@@ -48,9 +48,9 @@ export function FocusLanding({ landing }: { landing: Landing }) {
           </div>
           <div className="relative lg:col-span-7">
             <div className="relative aspect-[4/3] overflow-hidden rounded-[32px] bg-white">
-              <Image src={studio} alt="NEUROS Focus, casca, fotografiată în studio" fill priority placeholder="blur" sizes="(min-width: 1152px) 660px, 100vw" className="object-cover" />
+              <Image src={studio} alt="NEUROS Focus, casca, fotografiată în studio" fill preload placeholder="blur" sizes="(min-width: 1152px) 660px, 100vw" className="object-cover" />
             </div>
-            <div className="absolute -bottom-10 -left-6 w-[44%] overflow-hidden rounded-[22px] shadow-[0_30px_60px_-30px_rgba(8,17,19,.55)] ring-4 ring-[var(--lp-bg)] max-sm:-left-2 max-sm:w-[50%]">
+            <div className="absolute -bottom-10 -left-6 w-[44%] overflow-hidden rounded-[22px] shadow-[0_30px_60px_-30px_rgba(8,17,19,.55)] ring-4 ring-[var(--lp-bg)] max-sm:left-3 max-sm:-bottom-8 max-sm:w-[46%]">
               <div className="relative aspect-[4/3]">
                 <Image src={tableta} alt="Tânăr pe canapea, purtând NEUROS Focus și jucând pe tabletă" fill placeholder="blur" sizes="300px" className="object-cover object-[65%_50%]" />
               </div>
@@ -63,7 +63,7 @@ export function FocusLanding({ landing }: { landing: Landing }) {
       <section id="cum" aria-labelledby="cum-title" className="lp-wrap scroll-mt-10 pt-[calc(var(--sec)*0.6)]">
         <Kicker>Cum funcționează</Kicker>
         <Title id="cum-title" className="mt-3 max-w-[14em]">
-          Casca citește atenția. Aplicația o face joc.
+          Casca citește atenția. Aplicația o transformă în joc.
         </Title>
         <div className="mt-10 grid items-center gap-y-10 lg:grid-cols-12 lg:gap-x-12">
           <div className="relative aspect-[16/9] overflow-hidden rounded-[28px] bg-[#f6f6f6] lg:col-span-7">
@@ -121,7 +121,7 @@ export function FocusLanding({ landing }: { landing: Landing }) {
         productId={p.id}
         cta={CTA}
         title="NEUROS Focus, gata de joc."
-        text="Casca vine acasă. Aplicația Neuros Game o instalezi pe tableta ta."
+        text="Casca ajunge la tine acasă. Aplicația Neuros Game o instalezi pe tableta ta."
         details={[
           ['Senzori', '3 senzori EEG'],
           ['Aplicație', 'Neuros Game: peste 10 jocuri și meditații ghidate'],

@@ -13,7 +13,7 @@ export default function ContactPage() {
   return (
     <section className="pt-[calc(var(--nav-h)+var(--sec))] pb-[var(--sec)]">
       <div className="wrap">
-        <h1 className="max-w-[10em] text-[clamp(40px,5.4vw,78px)] leading-[0.98] tracking-[-0.045em]">Hai să vorbim.</h1>
+        <h1 className="max-w-[10em] text-[clamp(40px,5.4vw,78px)] leading-[0.98] tracking-[-0.045em]">Scrie-ne sau sună-ne.</h1>
         <p className="mt-6 max-w-[30em] text-[19px] leading-relaxed text-text">
           Vrei o recomandare, ai o întrebare despre comandă sau ai nevoie de ajutor după ce ai primit produsul? Îți răspundem {terms.responseTime}.
         </p>

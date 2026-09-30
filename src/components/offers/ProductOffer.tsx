@@ -20,7 +20,7 @@ export function ProductOffer({ productId, className = '' }: { productId: Product
         <div className="min-w-0">
           <p className="text-[16px] leading-snug font-semibold text-ink">
             <span className="mr-2 inline-flex rounded-full bg-cyan-700 px-2 py-0.5 align-[1px] text-[12.5px] font-semibold text-white">{p.badge}</span>
-            {amber ? 'Alege 3 perechi. Plătești 2.' : 'La 3 produse, 20% reducere.'}
+            {amber ? 'Alege 3 perechi. Plătești 2.' : 'Alege 3 produse. Primești 20%.'}
           </p>
           <p className="mt-1 text-[14.5px] leading-snug text-text">{p.line}</p>
         </div>

@@ -72,6 +72,8 @@ export function productJsonLd(p: Product, description: string, imageUrls: string
         url,
         ...offerPrice(p),
         priceCurrency: CURRENCY,
+        availability: 'https://schema.org/InStock',
+        itemCondition: 'https://schema.org/NewCondition',
         seller: { '@type': 'Organization', name: site.name },
         shippingDetails: {
           '@type': 'OfferShippingDetails',

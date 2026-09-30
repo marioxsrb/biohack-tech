@@ -75,7 +75,7 @@ export function PostPurchaseOffer({ token, orderNumber, offers, publishableKey }
         setStep('failed')
       }
     } catch {
-      setMessage('Nu ne-am putut conecta. Comanda ta inițială rămâne confirmată; nu s-a mai plătit nimic.')
+      setMessage('Nu ne-am putut conecta. Comanda ta inițială rămâne confirmată. Nu s-a mai plătit nimic.')
       setStep('failed')
     }
   }
@@ -173,7 +173,7 @@ export function PostPurchaseOffer({ token, orderNumber, offers, publishableKey }
                 <div className="mt-5 rounded-[16px] bg-mist p-4">
                   <p className="text-[15px] leading-relaxed text-ink">
                     Plătești <strong>{formatLei(price)}</strong> pentru {offer.name}
-                    {variantLabel ? ` (${variantLabel})` : ''} cu același card folosit la comanda #{orderNumber}. Primești o comandă separată și o factură separată; le putem expedia împreună.
+                    {variantLabel ? ` (${variantLabel})` : ''} cu același card folosit la comanda #{orderNumber}. Primești o comandă separată și o factură separată. Le putem expedia împreună.
                   </p>
                   <div className="mt-4 flex flex-wrap items-center gap-3">
                     <button type="button" className="cta" onClick={accept} disabled={step === 'working'} aria-busy={step === 'working'}>

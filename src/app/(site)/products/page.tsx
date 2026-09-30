@@ -5,7 +5,7 @@ import { pageMetadata } from '@/lib/seo'
 export const metadata: Metadata = pageMetadata({
   title: 'Produse',
   description:
-    'NEUROS Calm pentru relaxare, NEUROS Focus pentru concentrare și NEUROS Amber pentru ecrane. Livrare gratuită în România, retur în 14 zile.',
+    'NEUROS Calm pentru relaxare, NEUROS Focus pentru concentrare, NEUROS Amber pentru ecrane și NEUROS Flow, casca cu lumină infraroșie. Livrare gratuită în România, retur în 14 zile.',
   path: '/products',
 })
 

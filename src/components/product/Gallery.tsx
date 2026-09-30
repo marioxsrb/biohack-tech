@@ -74,7 +74,7 @@ export function Gallery({ images, label, wide }: Props) {
                     alt={img.alt}
                     fill
                     sizes="(min-width: 1152px) 640px, (min-width: 768px) 56vw, 100vw"
-                    priority={i === 0}
+                    preload={i === 0}
                     placeholder={img.kind === 'photo' ? 'blur' : 'empty'}
                     className={img.kind === 'photo' ? 'object-cover' : `object-contain ${img.bleed === 'bottom' ? 'object-bottom' : ''}`}
                   />

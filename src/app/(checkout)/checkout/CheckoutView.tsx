@@ -353,8 +353,8 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
                     <div className={form.paymentMethod === 'card' ? 'mt-4' : 'hidden'}>
                       <CardPayment publishableKey={stripeKey} amount={total} apiRef={card} />
                       <p className="mt-3 text-[13px] leading-relaxed text-muted">
-                        După plată îți putem propune un produs opțional. Stripe păstrează cardul asociat acestei comenzi 30 de minute, ca să-l poți adăuga doar dacă vrei,
-                        confirmând din nou. Noi nu vedem și nu stocăm datele cardului.
+                        După plată îți putem propune un produs opțional. Îl adaugi doar dacă vrei, cu o nouă confirmare. Stripe păstrează cardul pentru această comandă 30
+                        de minute. Noi nu vedem și nu stocăm datele cardului.
                       </p>
                     </div>
                   )}

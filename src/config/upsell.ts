@@ -17,7 +17,7 @@ export type UpsellCandidate = { productId: ProductId; reason: string }
 
 export const UPSELL_MAP: Record<ProductId, UpsellCandidate[]> = {
   'balance-wave': [
-    { productId: 'ochelari-biohack', reason: 'Seara, după ședința cu NEUROS Calm, ecranele rămân mai blânde cu ochelarii NEUROS Amber.' },
+    { productId: 'ochelari-biohack', reason: 'Seara, după ședința cu NEUROS Calm, ochelarii NEUROS Amber filtrează lumina albastră a ecranelor.' },
     { productId: 'brainlink-pro', reason: 'NEUROS Focus completează relaxarea cu antrenamentul atenției, prin jocuri pe tabletă.' },
   ],
   'brainlink-pro': [

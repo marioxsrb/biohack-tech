@@ -39,7 +39,7 @@ export function amberCopy(p: Pick<PromotionProgress, 'units' | 'freeUnits' | 'un
 
 export function bundleCopy(p: Pick<PromotionProgress, 'units' | 'untilNext' | 'savedMinor' | 'active'> | null): OfferCopy {
   if (!p || p.units === 0) return { tone: 'discover', headline: 'Alege 3 produse. Primești 20% reducere.' }
-  if (p.active) return { tone: 'active', headline: 'Reducerea de 20% este activă', detail: `Economisești ${formatLei(p.savedMinor)}.` }
+  if (p.active) return { tone: 'active', headline: 'Reducerea de 20% este activă.', detail: `Economisești ${formatLei(p.savedMinor)}.` }
   return p.untilNext === 1
     ? { tone: 'progress', headline: 'Mai alege 1 produs pentru 20% reducere.' }
     : { tone: 'progress', headline: `Mai alege ${p.untilNext} produse pentru 20% reducere.` }

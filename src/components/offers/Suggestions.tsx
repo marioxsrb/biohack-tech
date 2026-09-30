@@ -64,22 +64,22 @@ export function Suggestions({ placement, className = '' }: { placement: 'cart' |
         const label =
           r.add === 'amber_pairs' ? (r.slots === 3 ? 'Alege 3 perechi' : r.slots === 1 ? 'Alege perechea' : `Alege ${r.slots} perechi`) : bundle ? (r.slots === 1 ? 'Alege produsul' : 'Alege produsele') : r.add === 'variant' ? 'Alege configurația' : 'Adaugă'
         return (
-          <li key={r.productId} className="flex items-center gap-3 py-3">
-            <Thumb image={p.cutout} sizes="64px" className="h-12 w-16 bg-mist" />
+          <li key={r.productId} className="flex items-start gap-3 py-3.5">
+            <Thumb image={p.cutout} sizes="64px" className="h-12 w-16 flex-none bg-mist" />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[15px] leading-tight font-medium text-ink">{bundle ? 'NEUROS Calm, Focus sau Flow' : p.name}</p>
+              <p className="text-[15px] leading-tight font-medium text-ink">{bundle ? 'NEUROS Calm, Focus sau Flow' : p.name}</p>
               {!bundle && (
                 <p className="mt-0.5 text-[13.5px] leading-snug text-muted tabular-nums">
                   <Price productId={p.id} />
                   {r.add === 'amber_pairs' && ' / pereche'}
                 </p>
               )}
-              <p className={`mt-0.5 line-clamp-2 text-[13px] leading-snug ${r.kind === 'complete_offer' ? 'font-medium text-cyan-700' : 'text-muted'}`}>{r.reason}</p>
+              <p className={`mt-0.5 text-[13px] leading-snug ${r.kind === 'complete_offer' ? 'font-medium text-cyan-700' : 'text-muted'}`}>{r.reason}</p>
+              <button type="button" onClick={() => act(r)} className={`btn-secondary sm mt-2.5 !min-h-10 !px-3 !text-[14px] ${added === r.productId ? '!text-cyan-700' : ''}`} aria-label={`${label}: ${bundle ? '20% la 3 produse' : p.name}`}>
+                {added === r.productId ? <Check className="h-4 w-4" /> : r.add === 'direct' ? <Plus className="h-4 w-4" /> : null}
+                {added === r.productId ? 'Adăugat' : label}
+              </button>
             </div>
-            <button type="button" onClick={() => act(r)} className={`btn-secondary sm flex-none !min-h-10 !px-3 !text-[14px] ${added === r.productId ? '!text-cyan-700' : ''}`} aria-label={`${label}: ${bundle ? '20% la 3 produse' : p.name}`}>
-              {added === r.productId ? <Check className="h-4 w-4" /> : r.add === 'direct' ? <Plus className="h-4 w-4" /> : null}
-              {added === r.productId ? 'Adăugat' : label}
-            </button>
           </li>
         )
       })}

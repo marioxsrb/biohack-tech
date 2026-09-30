@@ -33,6 +33,9 @@ export function LandingShell({ landing, heroTone, cta, children }: { landing: La
   const light = heroTone === 'light'
   return (
     <div style={themeVars(landing.theme)} className="lp min-h-dvh bg-[var(--lp-bg)] text-[var(--lp-ink)]">
+        <a href="#main" className="sr-only z-[300] rounded-md bg-paper px-4 py-2 text-ink focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
+          Sari la conținut
+        </a>
       <header className="absolute inset-x-0 top-0 z-30">
         <div className="lp-wrap flex h-16 items-center justify-between">
           <span className={light ? 'text-white' : 'text-[var(--lp-ink)]'}>
@@ -240,9 +243,9 @@ export function Help({ title, text }: { title: string; text: string }) {
  */
 export function FinalCta({ title, cta }: { title: string; cta: string }) {
   return (
-    <section aria-labelledby="final-title" className="lp-wrap pb-[var(--sec)]">
-      <div className={`flex flex-col items-start justify-between gap-6 rounded-[28px] px-[clamp(24px,4vw,48px)] py-[clamp(28px,4vw,44px)] md:flex-row md:items-center bg-[var(--lp-panel)]`}>
-        <h2 id="final-title" className={`max-w-[18em] text-[clamp(26px,2.8vw,38px)] leading-[1.05] tracking-[-0.035em] text-[var(--lp-ink)]`}>
+    <section id="final" aria-labelledby="final-title" className="lp-wrap pb-[var(--sec)]">
+      <div className="flex flex-col items-start justify-between gap-6 border-t border-[var(--lp-line)] pt-[clamp(32px,5vw,56px)] md:flex-row md:items-center">
+        <h2 id="final-title" className="max-w-[18em] text-[clamp(28px,3vw,40px)] leading-[1.05] tracking-[-0.035em] text-[var(--lp-ink)]">
           {title}
         </h2>
         <a href="#comanda" className="cta flex-none">

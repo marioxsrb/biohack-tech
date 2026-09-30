@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Arrow, Check } from '@/components/ui/icons'
 import { site } from '@/config/site'
 import { attributionParams } from '@/lib/attribution'
@@ -20,6 +20,11 @@ export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
   const [reply, setReply] = useState('')
   const [startedAt] = useState(() => Date.now())
+  // The confirmation replaces the form: focus moves to it, so it is announced and the keyboard is not lost.
+  const sentRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (state === 'sent') sentRef.current?.focus()
+  }, [state])
   const [attemptId, setAttemptId] = useState(() => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : String(Date.now())))
   const honeypot = useRef<HTMLInputElement>(null)
 
@@ -71,7 +76,7 @@ export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light
 
   if (state === 'sent') {
     return (
-      <div role="status" className="flex min-h-[320px] flex-col items-start justify-center rounded-[20px] bg-mist p-8">
+      <div ref={sentRef} tabIndex={-1} role="status" className="flex min-h-[320px] outline-none flex-col items-start justify-center rounded-[20px] bg-mist p-8">
         <span className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-700 text-white">
           <Check className="h-6 w-6" />
         </span>

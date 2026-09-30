@@ -292,7 +292,7 @@ function VariantPicker({ productId, placement, onClose }: { productId: ProductId
           )
         })}
       </div>
-      <p className="mt-4 text-[14.5px] text-text">Casca e aceeași; diferă câte zone poți activa. Protocolul îl stabilești cu un specialist la consultația de început.</p>
+      <p className="mt-4 text-[14.5px] text-text">Casca e aceeași. Diferă câte zone poți activa. Protocolul îl stabilești cu un specialist la consultația de început.</p>
     </Sheet>
   )
 }

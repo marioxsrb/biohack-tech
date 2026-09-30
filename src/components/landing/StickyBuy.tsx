@@ -14,13 +14,15 @@ export function StickyBuy({ name, productId, cta }: { name: string; productId: P
     const hero = document.getElementById('lp-hero')
     const buy = document.getElementById('comanda')
     if (!hero || !buy) return
+    // Hidden where the page already offers the action or needs the space: the hero, the purchase block,
+    // the help form and the closing call to action.
+    const watched = [hero, buy, document.getElementById('ajutor'), document.getElementById('final')].filter((e): e is HTMLElement => !!e)
     const seen = new Map<Element, boolean>()
     const io = new IntersectionObserver((entries) => {
       entries.forEach((e) => seen.set(e.target, e.isIntersecting))
-      setShow(!seen.get(hero) && !seen.get(buy))
+      setShow(watched.every((e) => !seen.get(e)))
     })
-    io.observe(hero)
-    io.observe(buy)
+    watched.forEach((e) => io.observe(e))
     return () => io.disconnect()
   }, [])
   return (

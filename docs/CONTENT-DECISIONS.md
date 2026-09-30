@@ -22,9 +22,9 @@ Copy-ul din ZIP e materie primă. A fost rescris pentru cineva care vede produsu
 
 | Înainte | Acum |
 | --- | --- |
-| Stimularea nervului vag prin photobiomodulare duală | Se poartă la gât. Câteva minute de lumină roșie, când ai nevoie de liniște. |
+| Stimularea nervului vag prin fotobiomodulare duală | Se poartă la gât. Câteva minute de lumină roșie, când ai nevoie de liniște. |
 | Neuromodulare EEG · 3 electrozi · 10+ jocuri | O cască ușoară și jocuri pe tabletă pe care le controlezi cu atenția. |
-| Antrenament mental EEG | Pentru focus |
+| Antrenament mental EEG | Pentru concentrare |
 
 Scoase de pe pagina principală: tabelul de comparație, „Cum comanzi”, FAQ-ul general, secțiunea „Abordare”, numerotarea 01/02/03, faptele tehnice din fiecare rând de produs. De pe paginile de produs: diagrama explodată (etichete ilizibile), blocul de contact repetat, lista de studii desfășurată (acum ascunsă sub „Vezi studiile”).
 

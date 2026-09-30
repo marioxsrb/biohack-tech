@@ -174,7 +174,7 @@ const catalog: Omit<Product, 'price'>[] = [
     model: 'Focus',
     name: 'NEUROS Focus',
     kind: 'Cască pentru antrenamentul atenției',
-    purpose: 'Pentru focus',
+    purpose: 'Pentru concentrare',
     tagline: 'O cască ușoară și jocuri pe tabletă, pe care le controlezi prin atenție.',
     cutout: cut(blCasca, 'NEUROS Focus, casca văzută din unghi'),
     lifestyle: photo(blTableta, 'Tânăr pe canapea, purtând NEUROS Focus și jucând pe tabletă'),

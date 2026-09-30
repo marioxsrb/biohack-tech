@@ -98,7 +98,7 @@ export const landings: Landing[] = [
     faqs: [
       { q: 'Ce configurație aleg?', a: 'Casca și tehnologia sunt aceleași. Diferă câte zone poți activa în același protocol: 1, 4 sau 13. Dacă nu știi, scrie-ne și alegem împreună.' },
       { q: 'Cine stabilește protocolul?', a: 'Un specialist Biohack Tech, la consultația de început. Împreună alegeți zonele, durata și frecvența ședințelor.' },
-      { q: 'Cum se folosește acasă?', a: 'Pui casca, confirmi zonele pe telecomandă și pornești sesiunea. Casca se oprește la finalul timpului setat.' },
+      { q: 'Cum se folosește acasă?', a: 'Pui casca, confirmi zonele pe telecomandă și pornești ședința. Casca se oprește la finalul timpului setat.' },
       { q: 'Are fir?', a: 'Nu. Casca are baterie reîncărcabilă și funcționează fără fir.' },
       { q: 'Este un tratament medical?', a: 'Nu. NEUROS Flow este un produs de wellness. Dacă ai o afecțiune sau urmezi un tratament, vorbește întâi cu medicul tău.' },
       { q: 'Pot să o returnez?', a: 'Da. Ai 14 zile de la primire să te răzgândești.' },

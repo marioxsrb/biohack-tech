@@ -143,7 +143,7 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
             const img = v.images.find((i) => i.kind === 'cutout') ?? product.cutout
             const label = variantLabel(product, v)
             return (
-              <li key={v.id} className={`flex flex-col rounded-[20px] bg-paper p-3 transition-shadow duration-200 sm:p-4 ${q ? 'shadow-[inset_0_0_0_2px_var(--color-ink)]' : 'shadow-[inset_0_0_0_1px_var(--lp-line)]'}`}>
+              <li key={v.id} className={`flex flex-col rounded-[20px] bg-paper p-3 transition-shadow duration-200 sm:p-4 ${q ? 'shadow-[inset_0_0_0_2px_var(--color-ink)]' : 'hover:shadow-[inset_0_0_0_1px_var(--lp-line)]'}`}>
                 <div className="relative aspect-[16/10] rounded-[14px] bg-[var(--lp-bg)]">
                   <Image src={img.src} alt={img.alt} fill sizes="(min-width: 1024px) 360px, 45vw" className="object-contain p-[10%]" />
                   {q > 0 && (
@@ -204,7 +204,7 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
                     {variantLabel(product, l.variant)} <span className="text-[var(--lp-muted)]">× {l.quantity}</span>
                   </span>
                   <span className="text-ink tabular-nums">{formatLei(l.unit * l.quantity)}</span>
-                  <button type="button" onClick={() => change(l.variant.id, 0)} aria-label={`Scoate ${variantLabel(product, l.variant)}`} className="-mr-2 flex h-9 w-9 items-center justify-center rounded-full text-[var(--lp-muted)] hover:text-ink">
+                  <button type="button" onClick={() => change(l.variant.id, 0)} aria-label={`Scoate ${variantLabel(product, l.variant)}`} className="-mr-2 flex h-11 w-11 items-center justify-center rounded-full text-[var(--lp-muted)] hover:text-ink">
                     <Close className="h-4 w-4" />
                   </button>
                 </li>

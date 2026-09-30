@@ -86,7 +86,7 @@ export const productContent: Record<ProductId, ProductContent> = {
       paragraphs: [
         'Pe acolo trece nervul vag, cel mai lung nerv din corp. Leagă creierul de inimă, plămâni și digestie.',
         'Nervul vag are un rol în felul în care corpul trece din alertă în repaus.',
-        'NEUROS Calm folosește photobiomodulare: lumină roșie aplicată pe piele, din ambele părți ale gâtului.',
+        'NEUROS Calm folosește fotobiomodulare: lumină roșie aplicată pe piele, din ambele părți ale gâtului.',
       ],
       image: photo(bwNervVag, 'Ilustrație: nervul vag pornește din creier și ajunge la inimă, plămâni și digestie'),
     },
@@ -98,7 +98,7 @@ export const productContent: Record<ProductId, ProductContent> = {
       },
     ],
     specs: [
-      { label: 'Tehnologie', value: 'Photobiomodulare duală (lumină roșie)' },
+      { label: 'Tehnologie', value: 'Fotobiomodulare duală (lumină roșie)' },
       { label: 'Unde se aplică', value: 'La gât, în zona nervului vag' },
       { label: 'Durată', value: '5-20 de minute, la alegere' },
       { label: 'Intensitate', value: 'Reglabilă pe trepte' },
@@ -108,18 +108,18 @@ export const productContent: Record<ProductId, ProductContent> = {
     faqs: [
       { q: 'Pot să lucrez în timp ce îl port?', a: 'Da. Poți citi, medita sau lucra ușor în timpul ședinței.' },
       { q: 'Mă ajută cineva să încep?', a: 'Da. Un specialist Biohack Tech îți recomandă durata și programul potrivite pentru tine.' },
-      { q: 'Este un tratament medical?', a: 'NEUROS Calm este un produs de wellness. Pentru o afecțiune, vorbește întâi cu medicul tău.' },
+      { q: 'Este un tratament medical?', a: 'Nu. NEUROS Calm este un produs de wellness. Pentru o afecțiune, vorbește întâi cu medicul tău.' },
     ],
   },
 
   'brainlink-pro': {
     seo: {
-      title: 'NEUROS Focus, pentru focus',
+      title: 'NEUROS Focus, pentru concentrare',
       description: 'NEUROS Focus: o cască ușoară și peste 10 jocuri pe tabletă, pe care le controlezi prin atenție. Livrare gratuită în România.',
     },
     intro: 'Pui casca și deschizi aplicația Neuros Game pe tabletă. Jocurile răspund la cât de atent ești.',
     benefits: [
-      { title: 'Antrenezi focusul', text: 'Prin jocuri scurte, pe tabletă.' },
+      { title: 'Antrenezi concentrarea', text: 'Prin jocuri scurte, pe tabletă.' },
       { title: 'Și calmul', text: 'Meditații ghidate, cu feedback în timp real.' },
       { title: 'Îți vezi progresul', text: 'Fiecare sesiune rămâne salvată.' },
     ],
@@ -180,7 +180,7 @@ export const productContent: Record<ProductId, ProductContent> = {
     },
     intro: 'Lentilele de culoarea chihlimbarului filtrează lumina albastră de la monitor, telefon și becuri LED. Rama e ușoară, pentru toată ziua.',
     benefits: [
-      { title: 'Ochi mai odihniți', text: 'La birou, după ore în fața ecranului.' },
+      { title: 'Mai puțină lumină albastră', text: 'La birou, în orele din fața ecranului.' },
       { title: 'Seri mai liniștite', text: 'Lumina ecranelor devine mai blândă.' },
       { title: 'Patru rame', text: 'Cat eye sau unisex pătrat, în trei culori.' },
     ],
@@ -230,17 +230,17 @@ export const productContent: Record<ProductId, ProductContent> = {
     benefits: [
       { title: 'Se folosește acasă', text: 'Fără fir, cu baterie reîncărcabilă.' },
       { title: 'Protocolul tău', text: 'Zone, durată și frecvență, setate cu un specialist.' },
-      { title: 'Control simplu', text: 'Telecomandă inclusă. Sesiunea se oprește singură.' },
+      { title: 'Control simplu', text: 'Telecomandă inclusă. Ședința se oprește singură.' },
     ],
     scene: {
       title: 'Ședința, în ritmul tău.',
-      text: 'Pui casca, confirmi zonele pe telecomandă și pornești sesiunea. Stai relaxat până se termină.',
+      text: 'Pui casca, confirmi zonele pe telecomandă și pornești ședința. Stai relaxat până se termină.',
       image: photo(bfBarbat, 'Bărbat relaxat pe canapea, cu casca NEUROS Flow pe cap'),
     },
     use: {
       title: 'Cum o folosești',
       image: cut(bfTelecomanda, 'NEUROS Flow lângă telecomanda inclusă'),
-      steps: ['Stabilești protocolul cu specialistul, la început.', 'Pui casca și confirmi zonele pe telecomandă.', 'Pornești sesiunea. Casca se oprește la finalul timpului setat.'],
+      steps: ['Stabilești protocolul cu specialistul, la început.', 'Pui casca și confirmi zonele pe telecomandă.', 'Pornești ședința. Casca se oprește la finalul timpului setat.'],
     },
     explain: {
       title: 'Ce înseamnă fotobiomodulare?',
@@ -258,7 +258,7 @@ export const productContent: Record<ProductId, ProductContent> = {
         image: photo(bfBirou, 'Bărbat scriind la birou, lângă casca NEUROS Flow'),
       },
       {
-        title: 'Nu începi singur.',
+        title: 'Începi cu un specialist.',
         text: 'Consultația de început stabilește protocolul. Îl revizuiți periodic, împreună.',
         image: photo(bfConsultatie, 'Consultație Biohack Tech: specialistul arată protocolul pe tabletă'),
       },

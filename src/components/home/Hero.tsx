@@ -10,7 +10,7 @@ export function Hero() {
         src={hero}
         alt="Femeie relaxată pe canapea, cu NEUROS Calm la gât"
         fill
-        priority
+        preload
         placeholder="blur"
         sizes="100vw"
         className="hero-img -z-10 object-cover object-[68%_30%] max-sm:object-[74%_22%]"

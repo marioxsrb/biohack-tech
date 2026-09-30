@@ -30,7 +30,7 @@ export function AmberLanding({ landing }: { landing: Landing }) {
         <div className="lp-wrap pt-24 pb-[var(--sec)] max-sm:pt-20">
           <div className="grid items-center gap-y-10 lg:grid-cols-12 lg:gap-x-12">
             <div className="relative aspect-[16/11] overflow-hidden rounded-[32px] lg:col-span-7 max-sm:-mx-[var(--gut)] max-sm:rounded-none">
-              <Image src={terasa} alt="Femeie pe o terasă, la apus, purtând NEUROS Amber cat eye bej" fill priority placeholder="blur" sizes="(min-width: 1152px) 680px, 100vw" className="object-cover object-[72%_40%]" />
+              <Image src={terasa} alt="Femeie pe o terasă, la apus, purtând NEUROS Amber cat eye bej" fill preload placeholder="blur" sizes="(min-width: 1152px) 680px, 100vw" className="object-cover object-[72%_40%]" />
             </div>
             <div className="lg:col-span-5">
               <Kicker>{p.name} · pentru ecrane</Kicker>

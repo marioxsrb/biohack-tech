@@ -10,6 +10,9 @@ import { CheckoutHeader } from '@/components/checkout/CheckoutHeader'
 export default function CheckoutLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
+      <a href="#main" className="sr-only z-[300] rounded-md bg-paper px-4 py-2 text-ink focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
+        Sari la conținut
+      </a>
       <Suspense fallback={<CheckoutHeader />}>
         <CheckoutHeader live />
       </Suspense>

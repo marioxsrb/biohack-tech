@@ -28,7 +28,7 @@ export function CalmLanding({ landing }: { landing: Landing }) {
       {/* Hero: the evening photograph, the message on the dark side. */}
       <section id="lp-hero" aria-labelledby="lp-title" className="on-dark relative isolate flex min-h-[min(100svh,900px)] items-end overflow-hidden bg-dark max-md:min-h-0 max-md:flex-col max-md:items-stretch">
         <div className="absolute inset-0 -z-10 max-md:relative max-md:aspect-[4/3]">
-          <Image src={somn} alt="Femeie în pat, seara, cu ochii închiși, purtând NEUROS Calm la gât" fill priority placeholder="blur" sizes="100vw" className="object-cover object-[64%_50%]" />
+          <Image src={somn} alt="Femeie în pat, seara, cu ochii închiși, purtând NEUROS Calm la gât" fill preload placeholder="blur" sizes="100vw" className="object-cover object-[64%_50%]" />
           <div aria-hidden className="absolute inset-0 bg-[linear-gradient(90deg,rgb(8_17_19/.88)_0%,rgb(8_17_19/.5)_40%,transparent_70%)] max-md:bg-[linear-gradient(0deg,var(--color-dark),transparent_40%)]" />
         </div>
         <div className="lp-wrap w-full pt-28 pb-[clamp(56px,10vh,110px)] max-md:pt-2 max-md:pb-12">
@@ -131,7 +131,7 @@ export function CalmLanding({ landing }: { landing: Landing }) {
 
       <Testimonials productId={p.id} />
       <LandingFaq items={landing.faqs} />
-      <Help title="Nu ești sigur că e pentru tine?" text="Spune-ne cum arată seara ta. Îți spunem sincer dacă NEUROS Calm are sens." />
+      <Help title="Nu ești sigur că e pentru tine?" text="Spune-ne cum arată seara ta. Îți spunem sincer dacă NEUROS Calm ți se potrivește." />
       <FinalCta title="Câteva minute pentru tine, în seara asta." cta={CTA} />
     </LandingShell>
   )

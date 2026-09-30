@@ -54,7 +54,7 @@ describe('20% for 3 products', () => {
     expect(b([]).headline).toBe('Alege 3 produse. Primești 20% reducere.')
     expect(b([{ productId: 'balance-wave', quantity: 1, unitAmount: P.calm }]).headline).toBe('Mai alege 2 produse pentru 20% reducere.')
     expect(b([{ productId: 'balance-wave', quantity: 2, unitAmount: P.calm }]).headline).toBe('Mai alege 1 produs pentru 20% reducere.')
-    expect(b([{ productId: 'balance-wave', quantity: 3, unitAmount: P.calm }])).toMatchObject({ tone: 'active', headline: 'Reducerea de 20% este activă' })
+    expect(b([{ productId: 'balance-wave', quantity: 3, unitAmount: P.calm }])).toMatchObject({ tone: 'active', headline: 'Reducerea de 20% este activă.' })
   })
 
   it('asks only for the missing products: 0 → 3 slots, 1 → 2, 2 → 1, 3+ → none; Amber does not count', () => {

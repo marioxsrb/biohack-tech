@@ -63,7 +63,7 @@ export type UpsellResult =
   | { state: 'closed'; message: string }
 
 const CLOSED = 'Oferta nu mai este disponibilă. Comanda ta este confirmată și nu s-a mai plătit nimic.'
-const FAILED = 'Plata pentru produsul adăugat nu a reușit și nu ți s-a retras nimic pentru el. Comanda ta inițială rămâne confirmată.'
+const FAILED = 'Plata pentru produsul adăugat nu a reușit și nu ai plătit nimic pentru el. Comanda ta inițială rămâne confirmată.'
 
 /** Maps the linked order's current state to what the page shows. */
 async function stateOf(child: Order): Promise<UpsellResult> {

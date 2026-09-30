@@ -74,7 +74,7 @@ function Tile({ p, when, tint, wide }: { p: Product; when: string; tint: string;
         ) : (
           <AddToCartButton productId={p.id} size="sm" />
         )}
-        <Link href={productHref(p)} className="text-[14.5px] font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink">
+        <Link href={productHref(p)} className="inline-flex min-h-11 items-center px-1 text-[14.5px] font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink">
           Detalii
         </Link>
       </div>
@@ -85,7 +85,7 @@ function Tile({ p, when, tint, wide }: { p: Product; when: string; tint: string;
       src={p.cutout.src}
       alt={p.cutout.alt}
       fill
-      sizes={wide ? '(min-width: 1152px) 360px, (min-width: 640px) 50vw, 90vw' : '(min-width: 1152px) 440px, 90vw'}
+      sizes={wide ? '(min-width: 1152px) 360px, (min-width: 640px) 50vw, 90vw' : '(min-width: 1152px) 440px, (min-width: 1024px) 40vw, 90vw'}
       className={`object-contain transition-transform duration-500 ease-[var(--ease-brand)] group-hover:scale-[1.04] ${p.cutout.bleed === 'bottom' ? 'object-bottom' : ''}`}
     />
   )

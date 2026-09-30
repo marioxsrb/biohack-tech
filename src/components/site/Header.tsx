@@ -117,6 +117,8 @@ export function Header() {
               onClick={() => sheetRef.current?.showModal()}
               className="-mr-2.5 flex h-11 w-11 items-center justify-center md:hidden"
               aria-label="Deschide meniul"
+              aria-haspopup="dialog"
+              aria-controls="meniu"
             >
               <Menu className="h-6 w-6" />
             </button>
@@ -151,7 +153,7 @@ export function Header() {
         </div>
       </header>
 
-      <dialog ref={sheetRef} aria-label="Meniu" className="menu-sheet">
+      <dialog ref={sheetRef} id="meniu" aria-label="Meniu" className="menu-sheet">
         <div className="flex h-full flex-col">
           <div className="wrap flex h-[var(--nav-h)] w-full flex-none items-center justify-between">
             <Link href="/" onClick={closeSheet} className="flex h-11 items-center">

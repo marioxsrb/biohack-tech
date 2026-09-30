@@ -18,7 +18,7 @@ export const why = {
   image: photo(glSeara, 'Femeie în pat, seara, citind pe tabletă cu ochelarii NEUROS Amber'),
   points: [
     { title: 'Câteva minute, la ora ta', text: 'NEUROS Calm și NEUROS Flow se folosesc în ședințe scurte, acasă. NEUROS Amber se poartă ca orice ochelari.' },
-    { title: 'Nu începi singur', text: 'Pentru NEUROS Calm, Focus și Flow, un specialist Biohack Tech îți recomandă programul potrivit.' },
+    { title: 'Te ajută un specialist', text: 'Pentru NEUROS Calm, Focus și Flow, un specialist Biohack Tech îți recomandă programul potrivit.' },
     { title: 'Cumperi fără grijă', text: 'Livrare gratuită în România, 14 zile să te răzgândești și garanție de 2 ani.' },
   ],
 }
@@ -31,7 +31,7 @@ export const rhythm = {
   title: 'Aceeași zi. Alt ritm.',
   intro: 'Aceleași momente din zi. Diferența e că ai un instrument făcut pentru fiecare.',
   without: 'Fără o rutină',
-  with: 'Cu BiohackTech în rutină',
+  with: 'Cu Biohack Tech în rutină',
   rows: [
     { moment: 'Relaxare', without: 'Te oprești când se termină ziua, nu când alegi tu.', with: 'Seara, 5-20 de minute de lumină roșie cu NEUROS Calm, la aceeași oră.' },
     { moment: 'Atenție', without: 'Concentrarea depinde de ce se întâmplă în jur.', with: 'O sesiune de joc cu NEUROS Focus, care înaintează doar când ești atent.' },
@@ -110,7 +110,7 @@ export const faq: FaqGroup[] = [
     items: [
       {
         q: 'Cum funcționează reducerea de 20%?',
-        a: 'Când ai în coș cel puțin 3 produse NEUROS Calm, NEUROS Focus sau NEUROS Flow, în orice combinație (și de același fel), primești 20% reducere la ele. NEUROS Amber nu intră în calcul. Reducerea apare automat în coș.',
+        a: 'Când ai în coș cel puțin 3 produse NEUROS Calm, NEUROS Focus sau NEUROS Flow, în orice combinație, primești 20% reducere la ele. Pot fi și trei bucăți din același produs. NEUROS Amber nu intră în calcul. Reducerea apare automat în coș.',
       },
       {
         q: 'Cum funcționează 2+1 gratis la NEUROS Amber?',

@@ -42,7 +42,7 @@ export const PROMOTIONS: Promotion[] = [
     id: 'trei-produse-20',
     label: '20% la 3 produse',
     badge: '20% la 3 produse',
-    line: 'Cu oricare 3 produse NEUROS Calm, NEUROS Focus sau NEUROS Flow în coș, primești 20% reducere la ele.',
+    line: 'NEUROS Calm, Focus sau Flow, în orice combinație. Reducerea apare în coș.',
     products: ['balance-wave', 'brainlink-pro', 'brain-flow'],
     minUnits: 3,
     percent: 20,

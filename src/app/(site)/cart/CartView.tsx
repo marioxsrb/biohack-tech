@@ -67,7 +67,7 @@ export function CartView() {
         Coșul tău <span className="text-muted">({count})</span>
       </h1>
       {/* Order: the lines, then the summary (totals, the offer that is close, the button), then suggestions. */}
-      <div className="mt-6 grid gap-y-4 md:mt-8 md:grid-cols-12 md:gap-x-8 lg:gap-x-12">
+      <div className="mt-6 grid grid-cols-1 gap-y-4 md:mt-8 md:grid-cols-12 md:gap-x-8 lg:gap-x-12">
         <ul className="rounded-[20px] bg-paper px-6 md:col-span-7 md:self-start max-sm:px-4" aria-label="Produse în coș">
           {lines.map((l) => (
             <li key={l.key} className="grid grid-cols-[112px_1fr] gap-5 border-b border-mist-2 py-6 last:border-0 max-sm:grid-cols-[72px_1fr] max-sm:gap-3.5 max-sm:py-4">

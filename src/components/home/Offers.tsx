@@ -39,7 +39,7 @@ export function Offers() {
           <OfferTrigger offer="bundle" placement="homepage" label="Alege 3 produse pentru 20% reducere" className="group mt-7 grid w-full cursor-pointer grid-cols-3 items-start gap-3 text-left">
             {bundleProducts.map((p) => (
               <span key={p.id} className="block">
-                <span className="relative block aspect-square rounded-[16px] bg-white/[0.06] shadow-[inset_0_0_0_1px_rgb(255_255_255/.08)] transition-colors duration-200 group-hover:bg-white/[0.1]">
+                <span className="relative block aspect-square rounded-[16px] bg-mist transition-colors duration-200 group-hover:bg-paper">
                   <Image src={p.cutout.src} alt="" fill sizes="140px" className={`object-contain p-[14%] transition-transform duration-300 group-hover:scale-[1.03] ${p.cutout.bleed === 'bottom' ? 'object-bottom pb-0' : ''}`} />
                 </span>
                 <span className="mt-2 block text-center text-[14px] font-medium text-white/85 group-hover:text-white">{p.model}</span>

@@ -115,7 +115,7 @@ function readBank(issues: ConfigIssue[]): BankConfig | null {
   return { iban: formatIban(iban), bank, beneficiary, swift: str('BANK_SWIFT') }
 }
 
-function readFgo(issues: ConfigIssue[], siteUrl: string): FgoConfig | null {
+function readFgo(appEnv: AppEnv, issues: ConfigIssue[], siteUrl: string): FgoConfig | null {
   const codUnic = str('FGO_COD_UNIC')
   const privateKey = str('FGO_PRIVATE_KEY')
   const serie = str('FGO_SERIE')
@@ -130,6 +130,8 @@ function readFgo(issues: ConfigIssue[], siteUrl: string): FgoConfig | null {
     return null
   }
   const env = str('FGO_ENV') === 'production' ? 'production' : 'test'
+  // Reported (it shows in /api/health): a production site invoicing on FGO's test server issues no real invoices.
+  if (appEnv === 'production' && env !== 'production') issues.push({ area: 'fgo', level: 'error', message: 'APP_ENV=production, dar FGO_ENV nu este production: facturile se emit pe serverul de test FGO.' })
   return {
     apiBase: str('FGO_API_BASE') ?? (env === 'production' ? 'https://api.fgo.ro/v1' : 'https://api-testuat.fgo.ro/v1'),
     codUnic,
@@ -210,7 +212,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     localDb,
     stripe: readStripe(appEnv, issues),
     bank: readBank(issues),
-    fgo: isolated ? null : readFgo(issues, siteUrl),
+    fgo: isolated ? null : readFgo(appEnv, issues, siteUrl),
     ghl,
     email: { transport, replyTo: str('EMAIL_REPLY_TO'), fileDir: str('EMAIL_FILE_DIR') ?? '.data/emails' },
     admin: adminPassword && adminPassword.length >= 12 ? { user: adminUser ?? 'admin', password: adminPassword } : null,

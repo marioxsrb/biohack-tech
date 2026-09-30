@@ -72,13 +72,13 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/co
               : placed
                 ? 'Mulțumim pentru comandă.'
               : cardPending
-                ? 'Confirmăm plata.'
+                ? 'Verificăm plata.'
                 : 'Plata nu a fost finalizată.'}
         </h1>
 
         {paid && order.status !== 'cancelled' && (
           <p className="sub mt-4">
-            Plata este confirmată. Confirmarea a plecat pe {order.email}. Pregătim coletul în {terms.processingDays}.
+            Plata este confirmată. Ți-am trimis confirmarea pe {order.email}. Pregătim coletul în {terms.processingDays}.
           </p>
         )}
         {parent && (
@@ -106,7 +106,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/co
         )}
         {cardFailed && (
           <>
-            <p className="sub mt-4">Nu ți s-a retras nimic. Produsele sunt tot în coș și poți încerca din nou, cu cardul sau prin transfer bancar.</p>
+            <p className="sub mt-4">Nu s-a efectuat nicio plată. Produsele sunt tot în coș și poți încerca din nou, cu cardul sau prin transfer bancar.</p>
             <Link href="/checkout" className="cta mt-6">
               Încearcă din nou <Arrow />
             </Link>
