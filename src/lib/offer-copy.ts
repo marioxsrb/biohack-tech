@@ -37,10 +37,18 @@ export function amberCopy(p: Pick<PromotionProgress, 'units' | 'freeUnits' | 'un
   return { tone: 'active', headline, detail }
 }
 
-export function bundleCopy(p: Pick<PromotionProgress, 'units' | 'untilNext' | 'savedMinor' | 'active'> | null): OfferCopy {
-  if (!p || p.units === 0) return { tone: 'discover', headline: 'Alege 3 produse. Primești 20% reducere.' }
-  if (p.active) return { tone: 'active', headline: 'Reducerea de 20% este activă.', detail: `Economisești ${formatLei(p.savedMinor)}.` }
-  return p.untilNext === 1
-    ? { tone: 'progress', headline: 'Mai alege 1 produs pentru 20% reducere.' }
-    : { tone: 'progress', headline: `Mai alege ${p.untilNext} produse pentru 20% reducere.` }
+const produse = (n: number) => (n === 1 ? '1 produs' : `${n} produse`)
+
+/** 10% at 2 eligible products, 20% from 3: the first step is a prompt, 10% is earned with a nudge to 20%. */
+export function bundleCopy(p: Pick<PromotionProgress, 'units' | 'untilNext' | 'savedMinor' | 'active' | 'percent' | 'nextPercent'> | null): OfferCopy {
+  if (!p || p.units === 0) return { tone: 'discover', headline: 'Alege 2 produse pentru 10% sau 3 pentru 20% reducere.' }
+  if (p.active) {
+    const headline = `Reducerea de ${p.percent}% este activă.`
+    const detail = `Economisești ${formatLei(p.savedMinor)}.`
+    if (!p.nextPercent) return { tone: 'active', headline, detail }
+    return p.untilNext === 1
+      ? { tone: 'active', headline, detail, nudge: `Mai adaugă 1 produs și primești ${p.nextPercent}% la toate.` }
+      : { tone: 'active', headline, detail, quiet: `Încă ${produse(p.untilNext)} până la ${p.nextPercent}% reducere.` }
+  }
+  return { tone: 'progress', headline: `Mai alege ${produse(p.untilNext)} pentru ${p.nextPercent}% reducere.` }
 }

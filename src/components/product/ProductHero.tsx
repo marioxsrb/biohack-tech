@@ -112,7 +112,7 @@ export function ProductHero({ productId, intro }: Props) {
                   </li>
                 ))}
               </ul>
-              <ProductOffer productId={product.id} className="mt-6 max-w-[34em]" />
+              <ProductOffer productId={product.id} variantId={variant?.id} className="mt-6 max-w-[34em]" />
             </>
           )}
 

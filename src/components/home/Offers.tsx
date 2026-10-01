@@ -15,8 +15,10 @@ export function Offers() {
   const amber = PROMOTIONS.find((p) => p.kind === 'buy_x_get_y')!
   const bundleProducts = bundle.products.map((id) => getProduct(id)!)
   const amberProduct = getProduct(amber.products[0])!
-  const percent = bundle.kind === 'bundle_percent' ? bundle.percent : 0
-  const minUnits = bundle.kind === 'bundle_percent' ? bundle.minUnits : 0
+  const top = bundle.kind === 'bundle_percent' ? bundle.tiers[bundle.tiers.length - 1] : null
+  const first = bundle.kind === 'bundle_percent' ? bundle.tiers[0] : null
+  const percent = top?.percent ?? 0
+  const minUnits = top?.minUnits ?? 0
 
   return (
     <section aria-labelledby="offers-title" className="wrap pt-[var(--sec)]">
@@ -34,7 +36,9 @@ export function Offers() {
               {percent}% <span className="text-[0.45em] tracking-[-0.02em] text-cyan">reducere</span>
             </span>
           </h3>
-          <p className="mt-4 max-w-[26em] text-[16px] leading-relaxed text-white/80">Oricare trei: același produs sau combinate. Reducerea se aplică la toate trei.</p>
+          <p className="mt-4 max-w-[26em] text-[16px] leading-relaxed text-white/80">
+            Oricare trei: același produs sau combinate. Reducerea se aplică la toate trei.{first && first !== top && ` La ${first.minUnits} produse primești ${first.percent}%.`}
+          </p>
           {/* The products are the way in: the image opens the 3-product picker, like the button. */}
           <OfferTrigger offer="bundle" placement="homepage" label="Alege 3 produse pentru 20% reducere" className="group mt-7 grid w-full cursor-pointer grid-cols-3 items-start gap-3 text-left">
             {bundleProducts.map((p) => (

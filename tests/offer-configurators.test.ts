@@ -51,9 +51,9 @@ describe('20% for 3 products', () => {
   const P = { calm: 638000, focus: 79000, flow1: 1290000 }
   it('wording at 0, 1, 2, 3 eligible units', () => {
     const b = (lines: { productId: string; quantity: number; unitAmount: number }[]) => bundleCopy(promotionProgress(lines.map((l, i) => ({ key: String(i), ...l }))).find((p) => p.kind === 'bundle_percent') ?? null)
-    expect(b([]).headline).toBe('Alege 3 produse. Primești 20% reducere.')
-    expect(b([{ productId: 'balance-wave', quantity: 1, unitAmount: P.calm }]).headline).toBe('Mai alege 2 produse pentru 20% reducere.')
-    expect(b([{ productId: 'balance-wave', quantity: 2, unitAmount: P.calm }]).headline).toBe('Mai alege 1 produs pentru 20% reducere.')
+    expect(b([]).headline).toBe('Alege 2 produse pentru 10% sau 3 pentru 20% reducere.')
+    expect(b([{ productId: 'balance-wave', quantity: 1, unitAmount: P.calm }]).headline).toBe('Mai alege 1 produs pentru 10% reducere.')
+    expect(b([{ productId: 'balance-wave', quantity: 2, unitAmount: P.calm }])).toMatchObject({ tone: 'active', headline: 'Reducerea de 10% este activă.', nudge: 'Mai adaugă 1 produs și primești 20% la toate.' })
     expect(b([{ productId: 'balance-wave', quantity: 3, unitAmount: P.calm }])).toMatchObject({ tone: 'active', headline: 'Reducerea de 20% este activă.' })
   })
 

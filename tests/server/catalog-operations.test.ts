@@ -87,7 +87,8 @@ describe('the four-product catalog', () => {
       form: person,
       attemptId: 'catalog-1',
     })
-    expect(order.totalMinor).toBe(638000 + 79000 + 2 * 31500)
+    // Calm + Focus are 2 eligible products: 10% off them (71.700 bani); Amber does not count.
+    expect(order.totalMinor).toBe(638000 + 79000 - 71700 + 2 * 31500)
     expect(order.items.map((i) => [i.productName, i.variantName, i.quantity, i.unitPriceMinor])).toEqual([
       ['NEUROS Calm', null, 1, 638000],
       ['NEUROS Focus', null, 1, 79000],
@@ -95,14 +96,14 @@ describe('the four-product catalog', () => {
     ])
     const c = getConfig()
     expect(invoicePayload(c.fgo!, order).Continut.map((l) => [l.Denumire, l.NrProduse, l.PretTotal])).toEqual([
-      ['NEUROS Calm', 1, 6380],
-      ['NEUROS Focus', 1, 790],
+      ['NEUROS Calm, 10% la 2 produse: -638.00 lei', 1, 5742],
+      ['NEUROS Focus, 10% la 2 produse: -79.00 lei', 1, 711],
       ['NEUROS Amber (Unisex pătrat · Maro)', 2, 630],
     ])
     const products = contactPayload(c.ghl!, order, { orders: 1, valueMinor: order.totalMinor }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, c.siteUrl).customFields.find((f) => f.key === 'contact.bt_last_order_products')!
     expect(products.fieldValue).toBe('1 x NEUROS Calm, 1 x NEUROS Focus, 2 x NEUROS Amber (Unisex pătrat · Maro)')
     const mail = renderEmail('order_confirmed', order, { siteUrl: c.siteUrl, bank: c.bank })
-    for (const s of ['NEUROS Calm', 'NEUROS Focus', 'NEUROS Amber', '6.380 lei', '790 lei', '630 lei', '7.800 lei', order.orderNumber, 'Plata a fost confirmată']) expect(mail.text).toContain(s)
+    for (const s of ['NEUROS Calm', 'NEUROS Focus', 'NEUROS Amber', '6.380 lei', '790 lei', '630 lei', '10% la 2 produse', '7.083 lei', order.orderNumber, 'Plata a fost confirmată']) expect(mail.text).toContain(s)
   })
 
   it('the bank-transfer email has beneficiary, IBAN, bank, exact amount and the order number as reference', async () => {

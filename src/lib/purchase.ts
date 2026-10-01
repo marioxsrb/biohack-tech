@@ -31,7 +31,7 @@ export const ENTRY_LABEL: Record<EntrySource, string> = {
   cart_cross_sell: 'recomandare în coș',
   checkout_cross_sell: 'recomandare în checkout',
   amber_configurator: 'configuratorul NEUROS Amber 2+1',
-  bundle_configurator: 'configuratorul 20% la 3 produse',
+  bundle_configurator: 'configuratorul de reduceri (10% la 2, 20% la 3 produse)',
 }
 
 export type Selection = { productId: ProductId; variantId?: string; quantity: number; source?: EntrySource }

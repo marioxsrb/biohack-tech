@@ -5,7 +5,7 @@
  */
 import { PROMOTIONS, type BundlePercent } from '@/config/promotions'
 import { getProduct, unitPrice, type ProductId } from '@/content/catalog'
-import { priceLines } from './promotions'
+import { priceLines, tierFor, topTier } from './promotions'
 
 export const BUNDLE = PROMOTIONS.find((p): p is BundlePercent => p.kind === 'bundle_percent')!
 
@@ -16,7 +16,7 @@ const isEligible = (id: string) => (BUNDLE.products as string[]).includes(id)
 /** Eligible units already in the cart, and how many more the 20% needs (0 once it applies). */
 export function bundleNeeds(cart: { productId: string; quantity: number }[]) {
   const units = cart.filter((l) => isEligible(l.productId)).reduce((n, l) => n + l.quantity, 0)
-  return { units, missing: Math.max(0, BUNDLE.minUnits - units) }
+  return { units, missing: Math.max(0, topTier(BUNDLE).minUnits - units) }
 }
 
 /** A pick is complete when its product is eligible and, for a product with configurations, one is chosen. */
@@ -53,5 +53,6 @@ export function bundleTotals(cart: { productId: string; variantId?: string; quan
   ]
   const r = priceLines(lines.map((l, i) => ({ key: `${l.productId}:${l.variantId ?? ''}:${i}`, productId: l.productId, quantity: l.quantity, unitAmount: priceOf(l.productId, l.variantId) })))
   const units = lines.reduce((n, l) => n + l.quantity, 0)
-  return { subtotalMinor: r.subtotalMinor, discountMinor: r.discountMinor, totalMinor: r.totalMinor, units }
+  const percent = (tierFor(BUNDLE, units) ?? topTier(BUNDLE)).percent
+  return { subtotalMinor: r.subtotalMinor, discountMinor: r.discountMinor, totalMinor: r.totalMinor, units, percent }
 }

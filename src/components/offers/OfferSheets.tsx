@@ -378,7 +378,7 @@ function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose:
             )}
             <dt className="text-muted">Subtotal</dt>
             <dd className="text-right tabular-nums">{formatLei(totals.subtotalMinor)}</dd>
-            <dt className="font-medium text-ink">Reducere 20%</dt>
+            <dt className="font-medium text-ink">Reducere {totals.percent}%</dt>
             <dd className="text-right font-medium text-ink tabular-nums">{totals.discountMinor ? `−${formatLei(totals.discountMinor)}` : '0 lei'}</dd>
             <dt className="pt-1 text-[16px] font-semibold text-ink">Total după reducere</dt>
             <dd className="pt-1 text-right text-[20px] font-medium tracking-[-0.02em] text-ink tabular-nums">{formatLei(totals.totalMinor)}</dd>

@@ -6,7 +6,7 @@
  * Every discount is also split across the lines it came from (`lineDiscounts`), so an invoice that
  * lists line totals adds up to exactly what the customer paid.
  */
-import { PROMOTIONS, type Promotion } from '@/config/promotions'
+import { PROMOTIONS, type BundlePercent, type BundleTier, type Promotion } from '@/config/promotions'
 
 export type PricedLine = { key: string; productId: string; quantity: number; unitAmount: number }
 
@@ -46,14 +46,24 @@ export function allocate(amount: number, weights: number[]): number[] {
 /** p% of an amount in bani, rounded half up, integers only. */
 export const percentOf = (amount: number, percent: number) => Math.floor((amount * percent + 50) / 100)
 
-function applyOne(p: Promotion, lines: PricedLine[]): { amount: number; perLine: number[] } | null {
+/** The highest tier `units` reaches, or null below the first one. */
+export const tierFor = (p: BundlePercent, units: number): BundleTier | null => [...p.tiers].reverse().find((t) => units >= t.minUnits) ?? null
+
+/** The tier after `units` (what one or more units would unlock), or null once the top tier applies. */
+export const nextTier = (p: BundlePercent, units: number): BundleTier | null => p.tiers.find((t) => units < t.minUnits) ?? null
+
+/** The top tier: the offer's headline (3 products, 20%). */
+export const topTier = (p: BundlePercent): BundleTier => p.tiers[p.tiers.length - 1]
+
+function applyOne(p: Promotion, lines: PricedLine[]): { amount: number; perLine: number[]; label: string } | null {
   const own = lines.filter((l) => (p.products as string[]).includes(l.productId))
   const units = own.reduce((n, l) => n + l.quantity, 0)
   if (p.kind === 'bundle_percent') {
-    if (units < p.minUnits) return null
+    const tier = tierFor(p, units)
+    if (!tier) return null
     const base = own.map((l) => l.unitAmount * l.quantity)
-    const amount = percentOf(base.reduce((s, b) => s + b, 0), p.percent)
-    return { amount, perLine: allocate(amount, base) }
+    const amount = percentOf(base.reduce((s, b) => s + b, 0), tier.percent)
+    return { amount, perLine: allocate(amount, base), label: tier.label }
   }
   // Buy X get Y: the free units are the cheapest ones, so the customer always gets the stated deal,
   // whatever the frames cost. That amount is then spread over the eligible lines in proportion to their
@@ -62,7 +72,7 @@ function applyOne(p: Promotion, lines: PricedLine[]): { amount: number; perLine:
   if (!free) return null
   const cheapest = own.flatMap((l) => Array.from({ length: l.quantity }, () => l.unitAmount)).sort((a, b) => a - b)
   const amount = cheapest.slice(0, free).reduce((s, x) => s + x, 0)
-  return { amount, perLine: allocate(amount, own.map((l) => l.unitAmount * l.quantity)) }
+  return { amount, perLine: allocate(amount, own.map((l) => l.unitAmount * l.quantity)), label: p.label }
 }
 
 export function priceLines(lines: PricedLine[], promotions: Promotion[] = PROMOTIONS): Pricing {
@@ -73,7 +83,7 @@ export function priceLines(lines: PricedLine[], promotions: Promotion[] = PROMOT
   for (const p of promotions) {
     const r = applyOne(p, lines)
     if (!r || !r.amount) continue
-    applied.push({ id: p.id, label: p.label, amountMinor: r.amount })
+    applied.push({ id: p.id, label: r.label, amountMinor: r.amount })
     const own = lines.filter((l) => (p.products as string[]).includes(l.productId))
     own.forEach((l, i) => {
       if (!r.perLine[i]) return
@@ -96,11 +106,12 @@ export function promotionHints(lines: Pick<PricedLine, 'productId' | 'quantity'>
   for (const p of promotions) {
     const units = lines.filter((l) => (p.products as string[]).includes(l.productId)).reduce((n, l) => n + l.quantity, 0)
     if (p.kind === 'bundle_percent') {
-      if (units === 0 || units >= p.minUnits) continue
-      const missing = p.minUnits - units
+      const next = nextTier(p, units)
+      if (units === 0 || !next) continue
+      const missing = next.minUnits - units
       hints.push({
         id: p.id,
-        text: `Mai adaugă ${missing === 1 ? 'un produs' : `${missing} produse`} NEUROS Calm, NEUROS Focus sau NEUROS Flow și primești ${p.percent}% reducere la toate.`,
+        text: `Mai adaugă ${missing === 1 ? 'un produs' : `${missing} produse`} NEUROS Calm, NEUROS Focus sau NEUROS Flow și primești ${next.percent}% reducere la toate.`,
       })
     } else {
       const inGroup = units % p.group
@@ -137,9 +148,14 @@ export type PromotionProgress = {
   state: 'active' | 'close' | 'far'
   /** 2+1: free units already earned (3 → 1, 6 → 2, 9 → 3...). 0 for the percentage rule. */
   freeUnits: number
-  /** Units until the next reward: the 20% itself, or the next free unit of 2+1 (never 0 for 2+1). */
+  /** Percentage rule: the percent applied now (0 below the first tier) and the next tier's percent (0 at the top). */
+  percent: number
+  nextPercent: number
+  /** Units until the next reward: the next percentage tier (0 at the top), or the next free unit of 2+1 (never 0 for 2+1). */
   untilNext: number
 }
+
+const pricingLabel = (pricing: Pricing, p: Promotion) => pricing.promotions.find((a) => a.id === p.id)?.label ?? p.label
 
 export function promotionProgress(lines: PricedLine[], promotions: Promotion[] = PROMOTIONS): PromotionProgress[] {
   const pricing = priceLines(lines, promotions)
@@ -148,13 +164,17 @@ export function promotionProgress(lines: PricedLine[], promotions: Promotion[] =
     const units = lines.filter((l) => (p.products as string[]).includes(l.productId)).reduce((n, l) => n + l.quantity, 0)
     if (!units) continue
     const saved = pricing.promotions.find((a) => a.id === p.id)?.amountMinor ?? 0
-    const target = p.kind === 'bundle_percent' ? p.minUnits : p.group
-    const missing = p.kind === 'bundle_percent' ? Math.max(0, p.minUnits - units) : units % p.group >= p.pay ? p.group - (units % p.group) : 0
+    const bundle = p.kind === 'bundle_percent'
+    const target = bundle ? topTier(p).minUnits : p.group
+    const missing = bundle ? Math.max(0, target - units) : units % p.group >= p.pay ? p.group - (units % p.group) : 0
     const active = saved > 0
     const state = missing === 1 ? 'close' : active ? 'active' : 'far'
-    const freeUnits = p.kind === 'buy_x_get_y' ? Math.floor(units / p.group) * (p.group - p.pay) : 0
-    const untilNext = p.kind === 'bundle_percent' ? Math.max(0, p.minUnits - units) : p.group - (units % p.group)
-    out.push({ id: p.id, kind: p.kind, label: p.label, products: p.products, units, missing: missing || (active ? 0 : target - (units % target)), target, active, savedMinor: saved, state, freeUnits, untilNext })
+    const freeUnits = bundle ? 0 : Math.floor(units / p.group) * (p.group - p.pay)
+    const next = bundle ? nextTier(p, units) : null
+    const untilNext = bundle ? (next ? next.minUnits - units : 0) : p.group - (units % p.group)
+    const percent = bundle ? (tierFor(p, units)?.percent ?? 0) : 0
+    const label = pricingLabel(pricing, p)
+    out.push({ id: p.id, kind: p.kind, label, products: p.products, units, missing: missing || (active ? 0 : target - (units % target)), target, active, savedMinor: saved, state, freeUnits, untilNext, percent, nextPercent: next?.percent ?? 0 })
   }
   return out
 }

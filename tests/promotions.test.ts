@@ -27,16 +27,17 @@ function order(...lines: L[]) {
 }
 const promo = (r: ReturnType<typeof order>, id: string) => r.promotions.find((p) => p.id === id)?.amountMinor ?? 0
 
-describe('20% for 3+ eligible units', () => {
+describe('10% for 2, 20% for 3+ eligible units', () => {
   it.each([
     ['1 Calm', [calm(1)], 0],
-    ['2 Calm', [calm(2)], 0],
+    ['2 Calm: 10%', [calm(2)], percentOf(2 * CALM, 10)],
+    ['1 Calm + 1 Focus: 10%', [calm(1), focus(1)], percentOf(CALM + FOCUS, 10)],
     ['3 Calm', [calm(3)], percentOf(3 * CALM, 20)],
     ['4 Calm', [calm(4)], percentOf(4 * CALM, 20)],
     ['2 Calm + 1 Focus', [calm(2), focus(1)], percentOf(2 * CALM + FOCUS, 20)],
     ['1 Calm + 1 Focus + 1 NEUROS Flow 4 zone', [calm(1), focus(1), bf('4-zone')], percentOf(CALM + FOCUS + BF['4-zone'], 20)],
     ['3 NEUROS Flow, one of each configuration', [bf('1-zona'), bf('4-zone'), bf('13-zone')], percentOf(BF['1-zona'] + BF['4-zone'] + BF['13-zone'], 20)],
-    ['2 Calm + 1 Amber: Amber does not count', [calm(2), amber(1)], 0],
+    ['2 Calm + 1 Amber: Amber does not count (10%, not 20%)', [calm(2), amber(1)], percentOf(2 * CALM, 10)],
     ['3 Amber: never triggers the 20%', [amber(3)], 0],
   ])('%s', (_, lines, expected) => {
     expect(promo(order(...(lines as L[])), 'trei-produse-20')).toBe(expected)
@@ -45,6 +46,11 @@ describe('20% for 3+ eligible units', () => {
   it('exact amounts: 3 Calm pay 15.312 lei instead of 19.140 lei', () => {
     const r = order(calm(3))
     expect([r.subtotal, r.discount, r.total]).toEqual([1914000, 382800, 1531200])
+  })
+
+  it('the order names the tier that applied, never both', () => {
+    expect(order(calm(2)).promotions.map((p) => p.label)).toEqual(['10% la 2 produse'])
+    expect(order(calm(3)).promotions.map((p) => p.label)).toEqual(['20% la 3 produse'])
   })
 
   it('never discounts Amber, even next to 3 eligible units', () => {
@@ -132,9 +138,9 @@ describe('hints', () => {
 describe('progress towards the offers', () => {
   const prog = (...l: L[]) =>
     promotionProgress(order(...l).lines.map((x) => ({ key: x.key, productId: x.productId, quantity: x.quantity, unitAmount: x.unitAmount }))).map((p) => [p.id, p.state, p.missing, p.active])
-  it('20%: far at 1, close at 2, active from 3', () => {
+  it('bundle: far at 1, 10% active and close to 20% at 2, 20% active from 3', () => {
     expect(prog(calm(1))).toEqual([['trei-produse-20', 'far', 2, false]])
-    expect(prog(calm(2))).toEqual([['trei-produse-20', 'close', 1, false]])
+    expect(prog(calm(2))).toEqual([['trei-produse-20', 'close', 1, true]])
     expect(prog(calm(2), focus(1))).toEqual([['trei-produse-20', 'active', 0, true]])
   })
   it('Amber 2+1: far at 1, close at 2, active at 3, active and close again at 5', () => {

@@ -199,7 +199,9 @@ describe('pages', () => {
     expect(hero.indexOf('<ProductOffer')).toBeLessThan(hero.indexOf('<AddToCartButton'))
     const offer = read('src/components/offers/ProductOffer.tsx')
     expect(offer).toContain("openAmber('product_page', 3)")
-    expect(offer).toContain("openBundle('product_page')")
+    // NEUROS Calm, Focus, Flow: the tier cards add this product straight to the cart, no picker.
+    expect(offer).toContain('add(productId, variantId, t.minUnits)')
+    expect(offer).not.toContain('openBundle')
   })
   it('checkout: the suggestion module is the only product surface, before the payment decision', () => {
     const v = read('src/app/(checkout)/checkout/CheckoutView.tsx')

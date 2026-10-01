@@ -75,7 +75,7 @@ export function orderSegments(o: SegmentInput): OrderSegments {
   const promotions: Record<string, PromotionSegment> = {}
   for (const p of PROMOTIONS) {
     const units = o.items.filter((i) => (p.products as string[]).includes(i.productId)).reduce((n, i) => n + i.quantity, 0)
-    const threshold = p.kind === 'bundle_percent' ? p.minUnits : p.group
+    const threshold = p.kind === 'bundle_percent' ? p.tiers[0].minUnits : p.group
     const applied = o.promotions.find((a) => a.id === p.id)
     promotions[p.id] = { eligible: units > 0, units, qualified: units >= threshold, applied: !!applied && applied.amountMinor > 0, amountMinor: applied?.amountMinor ?? 0 }
   }
