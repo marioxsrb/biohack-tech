@@ -5,9 +5,9 @@ import { AddToCartButton } from '@/components/cart/AddToCartButton'
 import { Price } from '@/components/cart/Price'
 import { ProductOffer } from '@/components/offers/ProductOffer'
 import { QuantityStepper } from '@/components/cart/QuantityStepper'
-import { Check } from '@/components/ui/icons'
+import { Check, Phone } from '@/components/ui/icons'
 import { getProduct, isPurchasable, variantLabel, type ProductId } from '@/content/catalog'
-import { terms } from '@/config/site'
+import { site, terms } from '@/config/site'
 import { Gallery } from './Gallery'
 
 type Props = { productId: ProductId; intro: string }
@@ -168,6 +168,25 @@ export function ProductHero({ productId, intro }: Props) {
           ) : (
             <p className="mt-3 max-w-[30em] text-[15px] text-text">Prețul în lei se anunță în curând. Scrie-ne și îți răspundem în cel mult 24 de ore.</p>
           )}
+
+          {/* A direct call: on a phone `tel:` opens the dialer with the number filled in. */}
+          <a
+            href={site.phoneHref}
+            aria-label={`Sună un specialist Biohack Tech la ${site.phone}`}
+            className="group mt-3 flex min-h-14 items-center gap-3 rounded-[14px] bg-paper px-4 py-2.5 shadow-[inset_0_0_0_1px_var(--color-line)] transition-shadow duration-150 hover:shadow-[inset_0_0_0_1.5px_var(--color-ink)]"
+          >
+            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-cyan-50 text-cyan-700">
+              <Phone className="h-[18px] w-[18px]" aria-hidden />
+            </span>
+            <span className="min-w-0 flex-1 leading-snug">
+              <span className="block text-[15.5px] font-semibold text-ink">Sună un specialist</span>
+              <span className="block text-[14px] text-muted">Te ajutăm să alegi, gratuit</span>
+            </span>
+            <span className="flex-none text-[14.5px] font-semibold whitespace-nowrap text-cyan-700 tabular-nums group-hover:text-ink">
+              <span className="max-[420px]:hidden">{site.phone}</span>
+              <span className="hidden max-[420px]:inline">Sună</span>
+            </span>
+          </a>
 
           <p className="mt-7 max-w-[32em] border-t border-mist-2 pt-6 text-[16.5px] leading-relaxed text-text">{intro}</p>
         </div>
