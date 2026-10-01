@@ -545,11 +545,13 @@ See the short **LEGAL REVIEW BEFORE GO-LIVE** list in `docs/OPEN-POINTS.md`.
 | Build | `npm run build` |
 | Start | `npm start` (listens on `$PORT`, default 3000) |
 | Health check | `GET /api/health` → 200 when the database is reachable and at least one payment method is active; 503 otherwise (JSON lists what is missing, no secrets) |
-| Background jobs | In-process every 60 s on a long-running host (Railway). On serverless hosts set `JOBS_INTERVAL=off` and call `POST /api/jobs/run` with `Authorization: Bearer $CRON_SECRET` every minute |
+| Background jobs | **Vercel (production):** the in-process timer is off automatically (`VERCEL=1`); Vercel Cron calls `GET /api/jobs/run` every 5 minutes (`vercel.json`) with `Authorization: Bearer $CRON_SECRET` (set `CRON_SECRET` in the project). Work right after a request runs via `after()`. Long-running hosts: in-process every 60 s; other schedulers may `POST` the same endpoint |
 | Persistent storage | Only PostgreSQL. No local disk needed in production |
 | Instances | 1 is enough; more are safe (outbox claims use `FOR UPDATE SKIP LOCKED`) |
 
-Railway: New project → Deploy from GitHub repo → add PostgreSQL → set variables (§7) → Settings → Healthcheck path `/api/health` → Networking → custom domain.
+**Vercel (chosen host):** import the private GitHub repo → Pro plan (commercial use, cron more often than daily) → PostgreSQL from the Marketplace (Neon, EU/Frankfurt) as `DATABASE_URL` with `sslmode=require` → variables (§7, plus `CRON_SECRET`) → functions run in `fra1` (`vercel.json`) → Domains: `biohack-tech.ro`, `www` (redirect to apex) and the four landing hosts (§27).
+
+Railway (alternative): New project → Deploy from GitHub repo → add PostgreSQL → set variables (§7) → Settings → Healthcheck path `/api/health` → Networking → custom domain.
 
 ## 18. DNS
 
@@ -566,7 +568,7 @@ Railway: New project → Deploy from GitHub repo → add PostgreSQL → set vari
 |---|---|---|---|
 | Stripe (live) | `https://biohack-tech.ro/api/webhooks/stripe` | `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.canceled`, `charge.refunded` | `STRIPE_WEBHOOK_SECRET` |
 | Stripe (test, staging) | `https://<staging-host>/api/webhooks/stripe` | same | staging `STRIPE_WEBHOOK_SECRET` |
-| External cron (only if serverless) | `https://biohack-tech.ro/api/jobs/run` (POST) | every minute | `Authorization: Bearer $CRON_SECRET` |
+| Vercel Cron | `https://biohack-tech.ro/api/jobs/run` (GET; other schedulers: POST) | every 5 minutes (`vercel.json`) | `Authorization: Bearer $CRON_SECRET` |
 | GoHighLevel | none needed | – | – |
 | FGO | none (FGO has no webhooks; we call it) | – | – |
 | Courier | future `/api/webhooks/courier` (P2) | – | – |

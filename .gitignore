@@ -2,8 +2,11 @@ node_modules
 .next
 .next-*
 out
-.env*.local
-.env
+# every environment file holds secrets; only the documented template is tracked
+.env*
+!.env.example
+# Vercel CLI project link and pulled environment
+.vercel
 *.tsbuildinfo
 next-env.d.ts
 .DS_Store
