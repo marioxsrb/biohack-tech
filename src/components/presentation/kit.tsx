@@ -50,17 +50,26 @@ export function PresentationShell({ landing, heroTone, children }: { landing: La
   )
 }
 
-/** The price in the hero, as information: the amount and what it includes, with no button beside it. */
+/**
+ * The price in the hero, as information: a soft panel that sets it apart from the text around it
+ * without competing with the headline. No button beside it.
+ */
 export function HeroPrice({ amount, from, light, center }: { amount: number | null; from?: boolean; light?: boolean; center?: boolean }) {
   if (amount === null) return null
   return (
-    <p className={`mt-7 flex flex-wrap items-center gap-x-4 gap-y-2 ${center ? 'justify-center' : ''}`}>
-      <span className={`text-[30px] font-medium tracking-[-0.03em] tabular-nums ${light ? 'text-white' : ''}`}>
-        {from && 'de la '}
-        {formatLei(amount)}
-      </span>
-      <span className={`text-[14px] ${light ? 'text-white/70' : 'text-[var(--lp-muted)]'}`}>{terms.vat} · livrare gratuită</span>
-    </p>
+    <div className={`mt-7 flex ${center ? 'justify-center' : ''}`}>
+      <p
+        className={`inline-flex flex-wrap items-baseline gap-x-3 gap-y-1 rounded-[18px] px-5 py-3 ${
+          light ? 'bg-white/10 shadow-[inset_0_0_0_1px_rgb(255_255_255/.18)] backdrop-blur-md' : 'bg-[var(--lp-panel)] shadow-[inset_0_0_0_1px_var(--lp-line)]'
+        }`}
+      >
+        <span className={`text-[34px] font-semibold tracking-[-0.035em] tabular-nums ${light ? 'text-white' : 'text-[var(--lp-ink)]'}`}>
+          {from && <span className="mr-1.5 text-[17px] font-medium tracking-normal">de la</span>}
+          {formatLei(amount)}
+        </span>
+        <span className={`text-[14px] ${light ? 'text-white/75' : 'text-[var(--lp-muted)]'}`}>{terms.vat} · livrare gratuită</span>
+      </p>
+    </div>
   )
 }
 

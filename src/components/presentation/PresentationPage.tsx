@@ -119,7 +119,7 @@ function Frames({ p }: { p: Product }) {
                 <Image src={img.src} alt={img.alt} fill sizes="(min-width: 1024px) 260px, 45vw" className="object-contain p-[10%]" />
               </div>
               <p className="mt-3 text-[16px] leading-snug font-medium sm:text-[17px]">{variantLabel(p, v)}</p>
-              {price !== null && <p className="text-[15px] text-[var(--lp-muted)] tabular-nums">{formatLei(price)}</p>}
+              {price !== null && <p className="mt-0.5 text-[17px] font-semibold tracking-[-0.01em] tabular-nums">{formatLei(price)}</p>}
             </li>
           )
         })}
@@ -148,7 +148,7 @@ function Configurations({ p }: { p: Product }) {
               <span className="block text-[40px] leading-none font-medium tracking-[-0.05em] tabular-nums md:text-[56px]">{n?.big}</span>
               <span className="mt-2 block text-[17px] font-semibold">{variantLabel(p, v)}</span>
               {n && <span className="mt-2 block text-[15px] leading-snug text-[var(--lp-muted)]">{n.text}</span>}
-              {price !== null && <span className="mt-auto block pt-4 text-[22px] font-medium tracking-[-0.02em] tabular-nums md:pt-6">{formatLei(price)}</span>}
+              {price !== null && <span className="mt-auto block pt-4 text-[24px] font-semibold tracking-[-0.025em] tabular-nums md:pt-6">{formatLei(price)}</span>}
             </li>
           )
         })}
