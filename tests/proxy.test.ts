@@ -41,6 +41,22 @@ describe('proxy', () => {
     expect(admin.status).toBe(401)
   })
 
+  it('serves the presentation page at /prezentare on a landing hostname, outside the language tree, never indexed', async () => {
+    const res = await run('https://calm.biohack-tech.ro/prezentare?utm_source=x', 'calm.biohack-tech.ro')
+    expect(getRewrittenUrl(res)).toBe('https://calm.biohack-tech.ro/prezentare/calm?utm_source=x')
+    expect(res.headers.get('x-robots-tag')).toBe('noindex, nofollow')
+    // Another landing's presentation is not reachable from this hostname.
+    const other = await run('https://calm.biohack-tech.ro/prezentare/focus', 'calm.biohack-tech.ro')
+    expect(other.status).toBe(308)
+  })
+
+  it('previews the presentation pages on the main host at /lp/<slug>/prezentare, never indexed', async () => {
+    const res = await run('https://biohack-tech.ro/lp/brain-flow/prezentare', 'biohack-tech.ro')
+    expect(getRewrittenUrl(res)).toBe('https://biohack-tech.ro/prezentare/brain-flow')
+    expect(res.headers.get('x-robots-tag')).toBe('noindex, nofollow')
+    expect(getRewrittenUrl(await run('https://biohack-tech.ro/lp/nope/prezentare', 'biohack-tech.ro'))).toBe('https://biohack-tech.ro/ro/lp/nope/prezentare')
+  })
+
   it('the main-site copies under /lp are not indexed', async () => {
     const res = await run('https://biohack-tech.ro/lp/amber', 'biohack-tech.ro')
     expect(res.headers.get('x-robots-tag')).toBe('noindex, nofollow')

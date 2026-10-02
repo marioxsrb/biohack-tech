@@ -44,11 +44,16 @@ const LANDING_PASSTHROUGH = [
   /^\/(icon\.svg|favicon\.ico|robots\.txt)$/,
 ]
 
-export type LandingRoute = { action: 'rewrite'; path: string } | { action: 'next' } | { action: 'redirect'; path: string }
+/** `bare`: the target lives outside the language tree (the presentation page), so it gets no /ro prefix. */
+export type LandingRoute = { action: 'rewrite'; path: string; bare?: true } | { action: 'next' } | { action: 'redirect'; path: string }
+
+/** The presentation page of a landing: information only, at /prezentare on its hostname. */
+export const presentationPath = (slug: LandingSlug) => `/prezentare/${slug}`
 
 /** What a landing hostname does with a path. Pure, so it is tested without a server. */
 export function routeLanding(slug: LandingSlug, pathname: string): LandingRoute {
   if (pathname === '/' || pathname === '') return { action: 'rewrite', path: `/lp/${slug}` }
+  if (pathname === '/prezentare' || pathname === '/prezentare/') return { action: 'rewrite', path: presentationPath(slug), bare: true }
   if (pathname === `/lp/${slug}` || pathname === `/lp/${slug}/`) return { action: 'redirect', path: '/' }
   if (LANDING_PASSTHROUGH.some((r) => r.test(pathname))) return { action: 'next' }
   return { action: 'redirect', path: pathname }

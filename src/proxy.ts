@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { site } from '@/config/site'
 import { checkAdminAuth } from '@/lib/admin-auth'
-import { landingForHost, routeLanding, wwwRedirect } from '@/lib/landing-hosts'
+import { isLandingSlug, landingForHost, presentationPath, routeLanding, wwwRedirect } from '@/lib/landing-hosts'
 import { defaultLocale, splitLocale } from '@/i18n/locales'
 
 /**
@@ -9,8 +9,9 @@ import { defaultLocale, splitLocale } from '@/i18n/locales'
  *
  * 1. Advertising landings. A request whose Host is one of the landing hostnames in the allowlist
  *    (lib/landing-hosts.ts) gets its landing at "/", the checkout and order pages it needs, and a
- *    redirect to the main site for everything else. Landing responses are never indexed. Any other
- *    Host, including a forged one, is simply the main site.
+ *    redirect to the main site for everything else. Its presentation page (information only, no purchase)
+ *    is at /prezentare. Landing responses are never indexed. Any other Host, including a forged one, is
+ *    simply the main site.
  *
  * 0. www.<main host> → 308 to the same path on the main host (one canonical host).
  *
@@ -30,6 +31,11 @@ function serve(req: NextRequest, locale: string, path: string, search: string) {
   return NextResponse.rewrite(new URL(`/${locale}${path === '/' ? '' : path}${search}`, req.url))
 }
 
+function noindex(res: NextResponse) {
+  res.headers.set('X-Robots-Tag', 'noindex, nofollow')
+  return res
+}
+
 export function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl
   const www = wwwRedirect(req.headers.get('host'), site.url, `${pathname}${search}`)
@@ -46,11 +52,19 @@ export function proxy(req: NextRequest) {
       const to = route.path === '/' ? new URL(`/${search}`, req.url) : new URL(`${route.path}${search}`, main)
       return NextResponse.redirect(to, 308)
     }
-    // Landings and the purchase path they use are Romanian.
-    const res = serve(req, defaultLocale, route.action === 'rewrite' ? route.path : pathname, search)
+    // Landings and the purchase path they use are Romanian; the presentation page sits outside the language tree.
+    const res =
+      route.action === 'rewrite' && route.bare
+        ? NextResponse.rewrite(new URL(`${route.path}${search}`, req.url))
+        : serve(req, defaultLocale, route.action === 'rewrite' ? route.path : pathname, search)
     res.headers.set('X-Robots-Tag', 'noindex, nofollow')
     return res
   }
+
+  // Presentation pages on the main host: /lp/<slug>/prezentare, for previews. Never indexed.
+  const presentation = /^\/lp\/([\w-]+)\/prezentare\/?$/.exec(pathname)?.[1]
+  if (presentation && isLandingSlug(presentation)) return noindex(NextResponse.rewrite(new URL(`${presentationPath(presentation)}${search}`, req.url)))
+  if (/^\/prezentare\//.test(pathname)) return noindex(NextResponse.next())
 
   const { locale, path } = splitLocale(pathname)
   if (locale === defaultLocale && pathname !== path) return NextResponse.redirect(new URL(`${path}${search}`, req.url), 308)

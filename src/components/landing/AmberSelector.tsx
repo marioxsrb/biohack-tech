@@ -104,7 +104,7 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
   const c = amberCopy(progress ?? null)
   const status =
     units === 0
-      ? { big: 'Alege prima pereche.', small: 'La 3 perechi, una este gratuită. Poți combina ramele.' }
+      ? { big: 'Alege prima pereche.', small: 'La 3 perechi, una este gratuită. Combină ramele cum vrei.' }
       : c.tone === 'active'
         ? { big: c.headline, small: [`Plătești ${formatLei(pricing.totalMinor)} în loc de ${formatLei(pricing.subtotalMinor)}.`, c.nudge ?? c.quiet].filter(Boolean).join(' ') }
         : { big: c.headline, small: '' }
@@ -132,7 +132,7 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
           </h2>
         </div>
         <p className="max-w-[26em] text-[17px] leading-relaxed text-[var(--lp-muted)]">
-          Poți combina ramele: una pentru birou, una pentru seară. Aceleași lentile chihlimbar la toate, {formatLei(unitPrice(product, variants[0]) ?? 0)} perechea.
+          Combină ramele cum vrei: una pentru birou, una pentru seară. Toate au aceleași lentile chihlimbar. O pereche costă {formatLei(unitPrice(product, variants[0]) ?? 0)}.
         </p>
       </div>
 
@@ -195,7 +195,7 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
 
           <h3 className="mt-5 text-[15px] font-semibold text-ink">Selecția ta</h3>
           {lines.length === 0 ? (
-            <p className="mt-2 text-[15px] text-[var(--lp-muted)]">Nicio pereche încă.</p>
+            <p className="mt-2 text-[15px] text-[var(--lp-muted)]">Aici apar perechile alese.</p>
           ) : (
             <ul className="mt-2 divide-y divide-[var(--lp-line)]">
               {lines.map((l) => (

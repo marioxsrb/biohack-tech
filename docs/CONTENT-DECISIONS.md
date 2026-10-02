@@ -105,7 +105,7 @@ Ordinea: hero, produsele (cu oferta lor, discret), ideea de brand cu cele patru 
 - Reguli de scris: cuvinte simple, o idee pe propoziție, formulări pozitive (fără negații în textul vizibil). Disclaimerul medical a devenit „Pentru o afecțiune, cere întâi sfatul medicului.”; întrebarea „Este un tratament medical? Nu.” a devenit „Ce fel de produs este?”.
 - Afirmațiile rămân la nivel de wellness, la intensitatea „te poate ajuta”. Partea de „pierdere” descrie ziua (stres, notificări, ecrane), nu un efect medical.
 - SEO: titluri și descrieri cu termenii căutați (lumină roșie, nerv vag, cască EEG, lumina albastră, infraroșu 810 nm, relaxare, concentrare).
-- Landingurile (`/lp/*`) vor fi rescrise separat.
+- Landingurile au fost rescrise după aceleași reguli (vezi mai jos).
 
 ## Engleză (02.10.2026)
 
@@ -121,3 +121,21 @@ Ordinea: hero, produsele (cu oferta lor, discret), ideea de brand cu cele patru 
 - Preloader la prima pagină dintr-o vizită (o dată pe filă): doar logo-ul „BIOHACK TECH”, literă cu literă, și o linie care se umple, cu o lumină care trece pe ea; apoi cortina urcă peste fotografie. Se mișcă doar prin transform și opacity, ca să rămână fluid cât timp pagina se încarcă dedesubt. Așteaptă evenimentul `load` și minimum 2,4 secunde; după 8 secunde site-ul apare oricum. Fără JavaScript, la a doua pagină din vizită, pe landinguri și în checkout nu apare. Cu „reduce motion” are doar fade.
 - Lighthouse mobil, build de producție: performanță 89 → 93 (home) și 92 → 93 (produs), restul 100. CSS-ul vine în HTML (`inlineCss`), fotografia principală are `fetchPriority="high"`, fontul mono nu mai e preîncărcat, trei etichete ARIA nu mai contrazic textul vizibil.
 - A doua trecere, pe toate paginile publice: prima imagine din /products și fotografia din Despre noi se încarcă imediat, cu prioritate; coșul își păstrează înălțimea cât citește coșul salvat (CLS 0,058 → 0). Lighthouse mobil: 92-96 performanță pe toate paginile, 100 accesibilitate, bune practici și SEO (coșul are noindex intenționat).
+
+## Copy rescris pe landinguri (02.10.2026)
+
+- Aceleași reguli ca pe site: cuvinte simple, o idee pe propoziție, formulări pozitive, fără liniuțe și fără vocabular tipic AI. Afirmațiile rămân la „te poate ajuta”.
+- Fiecare hero pornește de la ce pierzi în zi și spune apoi ce face produsul: stresul care se adună în corp (Calm), atenția risipită printre notificări (Focus), orele în lumina ecranelor (Amber), ședințele cu lumină infraroșie acasă, la ora ta (Flow). Titlurile principale au rămas.
+- Fără negații în textul vizibil: „Este un tratament medical? Nu.” a devenit „Ce fel de produs este?”, „Diferă lentilele între rame? Nu.” a devenit „Ce diferă între rame?”, „Are fir?” a devenit „Cum se alimentează?”, „Nu ești sigur…” a devenit „Vrei să afli dacă ți se potrivește?”. Footerul: „Pentru o afecțiune, cere întâi sfatul medicului.”
+- Etichete și titluri SEO cu termenii căutați: lumină roșie, nerv vag, cască EEG, lumina albastră, infraroșu 810 nm. Landingurile rămân neindexate (noindex), titlurile contează la distribuire.
+- Imaginea din hero are `fetchPriority="high"` și se încarcă imediat, ca pe site. Lighthouse mobil, build de producție: performanță 92-94, accesibilitate și bune practici 100. SEO 69 vine doar din noindex, care e intenționat.
+
+## Pagini de prezentare (02.10.2026)
+
+- Fiecare landing are o pagină de prezentare la `/prezentare` pe subdomeniul lui (`calm.biohack-tech.ro/prezentare`, `focus…`, `amber…`, `brain-flow…`). Pe domeniul principal, pentru previzualizare: `/lp/<slug>/prezentare`.
+- Doar informații: povestea produsului (aceleași secțiuni și același text ca pe landing), detaliile tehnice, întrebările despre produs și un contact. Fără preț, fără buton de cumpărare, fără oferte, fără coș și fără întrebările despre retur sau 2+1.
+- Niciun link spre biohack-tech.ro: header-ul are doar logo-ul (fără link) și „Contact”, footer-ul are datele firmei și nota de wellness. Singurele linkuri sunt emailul, telefonul și, pe NEUROS Focus, studiile externe despre biofeedback.
+- Pagina nu colectează date: contactul e doar prin email și telefon (fără formular), fără cookie-uri și fără instrumente de analiză. De aceea nu are banner de cookies și nici linkuri spre politici.
+- Neindexate (`noindex` în pagină și în header), fără canonical spre magazin.
+- Optimizare: layout propriu (`app/prezentare`), separat de site. Nu încarcă coșul, ofertele, managerul de cookies sau comutatorul de limbă. Pagini statice. Pe NEUROS Focus se mai încarcă doar playerul video. Lighthouse mobil, build de producție: performanță 95-96, accesibilitate și bune practici 100, TBT 0, CLS 0. SEO 66 vine doar din noindex.
+- Textul secțiunilor stă într-un singur loc (`components/landing/stories`), folosit și de landing și de prezentare.
