@@ -509,3 +509,124 @@ textarea.field { resize: vertical; }
 .field.soft:hover { box-shadow: inset 0 0 0 1px var(--color-line); }
 .field.soft:focus { background-color: var(--color-paper); box-shadow: inset 0 0 0 2px var(--color-cyan-700), 0 0 0 4px rgb(6 182 212 / 0.14); }
 .field[aria-invalid='true'] { box-shadow: inset 0 0 0 2px var(--color-red-dark); }
+
+/* ============================================================
+   PRELOADER (components/site/Preloader.tsx)
+   Hidden unless the inline script sets <html data-pl="on">. "out" lifts the curtain, "done" removes it.
+   Only transform and opacity move, so the compositor keeps it smooth while the page loads underneath.
+   ============================================================ */
+#preloader { display: none; }
+html[data-pl='on'] #preloader,
+html[data-pl='out'] #preloader {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 30px;
+  overflow: hidden;
+  background: var(--color-dark);
+  color: #fff;
+  will-change: transform;
+}
+html[data-pl='on'] { overflow: hidden; }
+/* The page waits underneath: its own entrance plays as the curtain lifts. */
+html[data-pl='on'] .hero-img,
+html[data-pl='on'] .hero-copy { animation-play-state: paused; }
+
+.pl-glow {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(80vw, 680px);
+  aspect-ratio: 1;
+  margin: calc(min(80vw, 680px) / -2) 0 0 calc(min(80vw, 680px) / -2);
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgb(6 182 212 / 0.17), transparent);
+  will-change: transform, opacity;
+  animation: pl-breathe 3.4s ease-in-out infinite;
+}
+.pl-mark {
+  position: relative;
+  display: flex;
+  font-size: clamp(28px, 4.6vw, 48px);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+.pl-gap { width: 0.42em; }
+.pl-l {
+  display: inline-block;
+  will-change: transform, opacity;
+  animation: pl-letter 1s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i) * 55ms + 150ms);
+}
+.pl-track {
+  position: relative;
+  width: min(220px, 50vw);
+  height: 1px;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.14);
+  animation: pl-rise 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.5s both;
+}
+.pl-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--color-cyan);
+  transform-origin: left;
+  transform: scaleX(0);
+  will-change: transform;
+  animation: pl-fill 2.3s cubic-bezier(0.3, 0.6, 0.2, 1) 0.4s forwards;
+}
+/* A light that runs along the line while it fills (on the track, so the fill's scale never stretches it). */
+.pl-track::after {
+  content: '';
+  position: absolute;
+  inset: -1px auto -1px 0;
+  width: 40px;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.7), transparent);
+  will-change: transform;
+  animation: pl-shine 1.4s ease-in-out 0.6s infinite;
+}
+
+/* Lift: the mark rises and fades, the line completes, then the whole curtain slides up off the page. */
+html[data-pl='out'] #preloader {
+  pointer-events: none;
+  transform: translate3d(0, -100%, 0);
+  transition: transform 1.05s cubic-bezier(0.76, 0, 0.24, 1) 0.35s;
+}
+html[data-pl='out'] .pl-fill { animation: none; transform: scaleX(1); transition: transform 0.3s ease-out; }
+html[data-pl='out'] .pl-track::after { animation: none; opacity: 0; }
+html[data-pl='out'] .pl-mark,
+html[data-pl='out'] .pl-track {
+  opacity: 0;
+  transform: translate3d(0, -18px, 0);
+  transition: opacity 0.45s ease 0.2s, transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.2s;
+}
+
+@keyframes pl-letter {
+  from { opacity: 0; transform: translate3d(0, 0.6em, 0) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pl-fill { to { transform: scaleX(0.9); } }
+@keyframes pl-shine {
+  from { transform: translateX(-40px); }
+  to { transform: translateX(240px); }
+}
+@keyframes pl-rise {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pl-breathe {
+  0%, 100% { opacity: 0.65; transform: scale(0.94); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pl-l, .pl-track { animation: pl-fade 0.6s ease both; animation-delay: 0s; }
+  .pl-glow, .pl-track::after { animation: none; }
+  html[data-pl='out'] #preloader { transform: none; opacity: 0; transition: opacity 0.6s ease; }
+  @keyframes pl-fade { from { opacity: 0; } to { opacity: 1; } }
+}

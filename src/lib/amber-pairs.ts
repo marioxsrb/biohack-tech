@@ -4,6 +4,7 @@
  * different frames stay separate lines. Nothing here reads or writes the cart.
  */
 import { getProduct, unitPrice, variantLabel, type ProductId } from '@/content/catalog'
+import type { Locale } from '@/i18n/locales'
 import { priceLines } from './promotions'
 
 export const AMBER_ID: ProductId = 'ochelari-biohack'
@@ -11,8 +12,8 @@ export const AMBER_ID: ProductId = 'ochelari-biohack'
 export type AmberModel = { id: string; label: string; colours: { id: string; label: string; swatch?: string; variantId: string }[] }
 
 /** Models and, per model, only the colours that exist as a sold variant. */
-export function amberModels(): AmberModel[] {
-  const p = getProduct(AMBER_ID)!
+export function amberModels(locale: Locale = 'ro'): AmberModel[] {
+  const p = getProduct(AMBER_ID, locale)!
   const model = p.options?.find((o) => o.id === 'model')?.values ?? []
   const colour = p.options?.find((o) => o.id === 'culoare')?.values ?? []
   return model
@@ -29,8 +30,8 @@ export function amberModels(): AmberModel[] {
     .filter((m) => m.colours.length)
 }
 
-export const amberLabel = (variantId: string) => {
-  const p = getProduct(AMBER_ID)!
+export const amberLabel = (variantId: string, locale: Locale = 'ro') => {
+  const p = getProduct(AMBER_ID, locale)!
   const v = p.variants?.find((x) => x.id === variantId)
   return v ? variantLabel(p, v) : variantId
 }

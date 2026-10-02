@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { resolveLine, variantLabel, type Product, type ProductId, type Variant } from '@/content/catalog'
+import { useLocale } from '@/i18n/LocaleProvider'
 import { priceLines, promotionHints, promotionProgress } from '@/lib/promotions'
 import { sourceForPath, type EntrySource } from '@/lib/purchase'
 import { cartStore, lineKey } from './cart-store'
@@ -38,23 +39,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
 
   const dismissConfirmation = useCallback(() => setConfirmation(null), [])
+  const locale = useLocale()
 
   const add = useCallback((productId: ProductId, variantId?: string, quantity = 1, source?: EntrySource) => {
-    const resolved = resolveLine(productId, variantId)
+    const resolved = resolveLine(productId, variantId, locale)
     if (!resolved || resolved.unit === null) return false
     cartStore.add(productId, variantId, quantity, source ?? sourceForPath(window.location.pathname))
     setConfirmation({ key: lineKey({ productId, variantId }), quantity, at: Date.now() })
     const label = resolved.variant ? `${resolved.product.name}, ${variantLabel(resolved.product, resolved.variant)}` : resolved.product.name
-    setAnnouncement(`${label} a fost adăugat în coș.`)
+    setAnnouncement(locale === 'en' ? `${label} was added to your cart.` : `${label} a fost adăugat în coș.`)
     return true
-  }, [])
+  }, [locale])
 
   const addMany = useCallback((picks: { productId: ProductId; variantId?: string; quantity?: number }[], source?: EntrySource) => {
     if (!cartStore.addMany(picks, source ?? sourceForPath(window.location.pathname))) return false
     const n = picks.reduce((s, p) => s + (p.quantity ?? 1), 0)
-    setAnnouncement(`${n === 1 ? 'O pereche a fost adăugată' : `${n} perechi au fost adăugate`} în coș.`)
+    setAnnouncement(locale === 'en' ? `${n === 1 ? '1 pair was' : `${n} pairs were`} added to your cart.` : `${n === 1 ? 'O pereche a fost adăugată' : `${n} perechi au fost adăugate`} în coș.`)
     return true
-  }, [])
+  }, [locale])
 
   const value = useMemo(
     () => ({ confirmation, dismissConfirmation, announcement, add, addMany }),
@@ -76,11 +78,13 @@ export function useCart() {
   if (!ui) throw new Error('useCart must be used inside <CartProvider>')
 
   const stored = useSyncExternalStore(cartStore.subscribe, cartStore.getSnapshot, cartStore.getServerSnapshot)
+  // Names and variant labels in the visitor's language; the stored cart and the order hold ids only.
+  const locale = useLocale()
 
   const lines = useMemo<ResolvedLine[]>(
     () =>
       stored.flatMap((l) => {
-        const r = resolveLine(l.productId, l.variantId)
+        const r = resolveLine(l.productId, l.variantId, locale)
         if (!r || r.unit === null) return []
         return [
           {
@@ -94,7 +98,7 @@ export function useCart() {
           },
         ]
       }),
-    [stored],
+    [stored, locale],
   )
 
   const count = lines.reduce((n, l) => n + l.quantity, 0)

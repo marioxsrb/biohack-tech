@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Check, Mail, Plus } from '@/components/ui/icons'
 import { getProduct, isPurchasable, type ProductId } from '@/content/catalog'
 import { site } from '@/config/site'
+import { useLocale, useUi } from '@/i18n/LocaleProvider'
 import { useCart } from './CartProvider'
 
 type Props = {
@@ -24,7 +25,9 @@ type Props = {
 export function AddToCartButton({ productId, variantId, quantity = 1, className = '', size = 'md', onAdded }: Props) {
   const { add } = useCart()
   const [added, setAdded] = useState(false)
-  const product = getProduct(productId)!
+  const locale = useLocale()
+  const ui = useUi()
+  const product = getProduct(productId, locale)!
 
   useEffect(() => {
     if (!added) return
@@ -34,8 +37,8 @@ export function AddToCartButton({ productId, variantId, quantity = 1, className 
 
   if (!isPurchasable(product)) {
     return (
-      <a href={`mailto:${site.email}?subject=${encodeURIComponent(`Preț ${product.name}`)}`} className={`btn-secondary ${size === 'sm' ? 'sm' : ''} ${className}`}>
-        <Mail /> Întreabă de preț
+      <a href={`mailto:${site.email}?subject=${encodeURIComponent(`${locale === 'en' ? 'Price' : 'Preț'} ${product.name}`)}`} className={`btn-secondary ${size === 'sm' ? 'sm' : ''} ${className}`}>
+        <Mail /> {ui.askPrice}
       </a>
     )
   }
@@ -53,10 +56,10 @@ export function AddToCartButton({ productId, variantId, quantity = 1, className 
     >
       <span className="grid">
         <span className={`flex items-center justify-center gap-[inherit] [grid-area:1/1] transition-opacity duration-150 ${added ? 'invisible opacity-0' : ''}`}>
-          Adaugă în coș <Plus />
+          {ui.addToCart} <Plus />
         </span>
         <span aria-hidden={!added} className={`flex items-center justify-center gap-[inherit] [grid-area:1/1] transition-opacity duration-150 ${added ? '' : 'invisible opacity-0'}`}>
-          <Check className="check-pop" /> Adăugat în coș
+          <Check className="check-pop" /> {ui.addedToCart}
         </span>
       </span>
     </button>

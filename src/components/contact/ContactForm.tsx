@@ -1,11 +1,47 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { useEffect, useRef, useState } from 'react'
 import { Arrow, Check } from '@/components/ui/icons'
 import { site } from '@/config/site'
 import { attributionParams } from '@/lib/attribution'
-import { ENQUIRY_LIMITS, ENQUIRY_TOPICS, normalizeEnquiry, validateEnquiry, type EnquiryField, type EnquiryTopic } from '@/lib/enquiry'
+import { useLocale } from '@/i18n/LocaleProvider'
+import { ENQUIRY_LIMITS, ENQUIRY_TOPICS, ENQUIRY_TOPICS_EN, normalizeEnquiry, validateEnquiry, type EnquiryField, type EnquiryTopic } from '@/lib/enquiry'
+
+const COPY = {
+  ro: {
+    failed: `Mesajul a rămas netrimis. Scrie-ne la ${site.email}.`,
+    thanks: 'Mulțumim. Am primit mesajul.',
+    reply: 'Îți răspundem pe email, în cel mult 24 de ore.',
+    reference: 'Referința ta:',
+    another: 'Trimite alt mesaj',
+    name: 'Nume',
+    phone: 'Telefon',
+    optional: '(opțional)',
+    topic: 'Despre ce ne scrii',
+    message: 'Mesaj',
+    privacy: 'Folosim datele doar ca să îți răspundem la acest mesaj. Detalii în',
+    privacyLink: 'politica de confidențialitate',
+    sending: 'Se trimite…',
+    send: 'Trimite mesajul',
+  },
+  en: {
+    failed: `Your message was not sent. Write to us at ${site.email}.`,
+    thanks: 'Thank you. We got your message.',
+    reply: 'We will reply by email within 24 hours.',
+    reference: 'Your reference:',
+    another: 'Send another message',
+    name: 'Name',
+    phone: 'Phone',
+    optional: '(optional)',
+    topic: 'What is it about',
+    message: 'Message',
+    privacy: 'We use your details only to reply to this message. Read more in our',
+    privacyLink: 'privacy policy',
+    sending: 'Sending…',
+    send: 'Send message',
+  },
+}
 
 const EMPTY = { name: '', email: '', phone: '', topic: 'produse' as EnquiryTopic, message: '' }
 
@@ -15,6 +51,9 @@ const EMPTY = { name: '', email: '', phone: '', topic: 'produse' as EnquiryTopic
  * page keep simple bots out without a puzzle for people.
  */
 export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light' | 'dark'; compact?: boolean }) {
+  const locale = useLocale()
+  const t = COPY[locale]
+  const topics = locale === 'en' ? ENQUIRY_TOPICS_EN : ENQUIRY_TOPICS
   const [form, setForm] = useState(EMPTY)
   const [errors, setErrors] = useState<Partial<Record<EnquiryField, string>>>({})
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle')
@@ -33,7 +72,7 @@ export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     if (state === 'sending') return
-    const found = validateEnquiry(normalizeEnquiry(form))
+    const found = validateEnquiry(normalizeEnquiry(form), locale)
     setErrors(found)
     const first = Object.keys(found)[0]
     if (first) return document.getElementById(`c-${first}`)?.focus()
@@ -53,13 +92,14 @@ export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        if (data.fields) setErrors(data.fields)
-        throw new Error(data.message)
+        // The server answers in Romanian; on the English site the same checks are shown in English.
+        if (data.fields) setErrors(locale === 'en' ? validateEnquiry(normalizeEnquiry(form), 'en') : data.fields)
+        throw new Error(locale === 'en' ? '' : data.message)
       }
       setReply(data.reference)
       setState('sent')
     } catch (err) {
-      setReply(err instanceof Error && err.message ? err.message : `Nu am putut trimite mesajul. Scrie-ne la ${site.email}.`)
+      setReply(err instanceof Error && err.message ? err.message : t.failed)
       setState('error')
     }
   }
@@ -80,9 +120,9 @@ export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light
         <span className="flex h-12 w-12 items-center justify-center rounded-full bg-cyan-700 text-white">
           <Check className="h-6 w-6" />
         </span>
-        <p className="mt-5 text-[26px] leading-tight tracking-[-0.03em] text-ink">Mulțumim. Am primit mesajul.</p>
-        <p className="mt-2 max-w-[30em] text-[16px] leading-relaxed text-text">Îți răspundem pe email, în cel mult 24 de ore.</p>
-        <p className="mt-3 rounded-full bg-paper px-3 py-1 font-mono text-[13px] tracking-[0.04em] text-muted">Referința ta: {reply}</p>
+        <p className="mt-5 text-[26px] leading-tight tracking-[-0.03em] text-ink">{t.thanks}</p>
+        <p className="mt-2 max-w-[30em] text-[16px] leading-relaxed text-text">{t.reply}</p>
+        <p className="mt-3 rounded-full bg-paper px-3 py-1 font-mono text-[13px] tracking-[0.04em] text-muted">{t.reference} {reply}</p>
         <button
           type="button"
           className="tlink mt-5"
@@ -92,7 +132,7 @@ export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light
             setState('idle')
           }}
         >
-          Trimite alt mesaj <Arrow />
+          {t.another} <Arrow />
         </button>
       </div>
     )
@@ -102,7 +142,7 @@ export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light
     <form onSubmit={submit} noValidate aria-busy={state === 'sending'} className="grid gap-5 sm:grid-cols-2">
       <div>
         <label htmlFor="c-name" className={label}>
-          Nume
+          {t.name}
         </label>
         <input {...a11y('name')} className="field soft mt-2" autoComplete="name" value={form.name} onChange={set('name')} maxLength={ENQUIRY_LIMITS.name + 20} required />
         {err('name')}
@@ -116,26 +156,26 @@ export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light
       </div>
       <div>
         <label htmlFor="c-phone" className={label}>
-          Telefon <span className={dark ? 'font-normal text-white/70' : 'font-normal text-muted'}>(opțional)</span>
+          {t.phone} <span className={dark ? 'font-normal text-white/70' : 'font-normal text-muted'}>{t.optional}</span>
         </label>
         <input {...a11y('phone')} className="field soft mt-2" type="tel" inputMode="tel" autoComplete="tel" value={form.phone} onChange={set('phone')} />
         {err('phone')}
       </div>
       <div>
         <label htmlFor="c-topic" className={label}>
-          Despre ce ne scrii
+          {t.topic}
         </label>
         <select id="c-topic" className="field soft mt-2" value={form.topic} onChange={set('topic')}>
-          {(Object.keys(ENQUIRY_TOPICS) as EnquiryTopic[]).map((t) => (
-            <option key={t} value={t}>
-              {ENQUIRY_TOPICS[t]}
+          {(Object.keys(ENQUIRY_TOPICS) as EnquiryTopic[]).map((k) => (
+            <option key={k} value={k}>
+              {topics[k]}
             </option>
           ))}
         </select>
       </div>
       <div className="sm:col-span-2">
         <label htmlFor="c-message" className={label}>
-          Mesaj
+          {t.message}
         </label>
         <textarea {...a11y('message')} rows={compact ? 4 : 6} style={{ minHeight: compact ? 110 : 150 }} className="field soft mt-2 resize-y" value={form.message} onChange={set('message')} maxLength={ENQUIRY_LIMITS.message + 200} required />
         {err('message')}
@@ -147,9 +187,9 @@ export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light
       </div>
       <div className="sm:col-span-2">
         <p className={`text-[14px] leading-relaxed ${dark ? 'text-white/75' : 'text-muted'}`}>
-          Folosim datele doar ca să-ți răspundem la acest mesaj. Nu te abonăm la nimic. Detalii în{' '}
+          {t.privacy}{' '}
           <Link href="/privacy-policy" className="underline underline-offset-4">
-            politica de confidențialitate
+            {t.privacyLink}
           </Link>
           .
         </p>
@@ -159,7 +199,7 @@ export function ContactForm({ tone = 'light', compact = false }: { tone?: 'light
           </p>
         )}
         <button className="cta mt-5 w-full sm:w-auto" disabled={state === 'sending'}>
-          {state === 'sending' ? 'Se trimite…' : 'Trimite mesajul'} <Arrow />
+          {state === 'sending' ? t.sending : t.send} <Arrow />
         </button>
       </div>
     </form>

@@ -1,8 +1,10 @@
 import Image from 'next/image'
-import { why } from '@/content/home'
+import { homeContent } from '@/content/home'
+import { getLocale } from '@/i18n/server'
 
 /** After the products, the reason to buy here: one photograph, three verified facts. */
-export function Why() {
+export async function Why() {
+  const { why } = homeContent[await getLocale()]
   return (
     <section aria-labelledby="why-title" className="wrap pt-[var(--sec)]">
       <div className="grid items-center gap-y-10 lg:grid-cols-12 lg:gap-x-12">

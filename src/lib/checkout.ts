@@ -140,36 +140,79 @@ export function isValidCui(input: string): boolean {
 
 const isCounty = (c: string) => (COUNTIES as readonly string[]).includes(c)
 
-export function validateOrder(o: OrderForm, acceptedTerms: boolean, available?: Record<PaymentMethod, boolean>): FieldErrors {
+/** Validation messages, in the visitor's language. The server validates with Romanian (the default). */
+const MSG = {
+  ro: {
+    firstName: 'Completează prenumele.',
+    lastName: 'Completează numele.',
+    emailEmpty: 'Completează adresa de email.',
+    email: 'Verifică adresa de email. Exemplu: nume@exemplu.ro',
+    phoneEmpty: 'Completează numărul de telefon, pentru curier.',
+    phone: 'Verifică numărul de telefon. Exemplu: 0722 123 456',
+    company: 'Completează denumirea firmei.',
+    cuiEmpty: 'Completează codul fiscal (CUI).',
+    cui: 'Verifică codul fiscal. Poate începe cu RO, urmat de cifre.',
+    office: 'Completează adresa sediului: strada și numărul.',
+    address: 'Completează adresa: strada și numărul.',
+    city: 'Completează localitatea.',
+    county: 'Alege județul.',
+    postalCode: 'Codul poștal are 6 cifre.',
+    shipAddress: 'Completează adresa de livrare: strada și numărul.',
+    paymentMethod: 'Această metodă de plată nu este disponibilă încă. Alege alta.',
+    acceptedTerms: 'Bifează acordul cu termenii ca să plasezi comanda.',
+  },
+  en: {
+    firstName: 'Enter your first name.',
+    lastName: 'Enter your last name.',
+    emailEmpty: 'Enter your email address.',
+    email: 'Check your email address. Example: name@example.com',
+    phoneEmpty: 'Enter your phone number, for the courier.',
+    phone: 'Check your phone number. Example: 0722 123 456',
+    company: 'Enter the company name.',
+    cuiEmpty: 'Enter the tax code (CUI).',
+    cui: 'Check the tax code. It can start with RO, followed by digits.',
+    office: 'Enter the registered office address: street and number.',
+    address: 'Enter your address: street and number.',
+    city: 'Enter the town or city.',
+    county: 'Choose the county.',
+    postalCode: 'The postcode has 6 digits.',
+    shipAddress: 'Enter the delivery address: street and number.',
+    paymentMethod: 'This payment method is coming soon. Please choose another one.',
+    acceptedTerms: 'Tick the box to accept the terms and place your order.',
+  },
+}
+
+export function validateOrder(o: OrderForm, acceptedTerms: boolean, available?: Record<PaymentMethod, boolean>, locale: 'ro' | 'en' = 'ro'): FieldErrors {
+  const m = MSG[locale]
   const e: FieldErrors = {}
-  if (o.firstName.length < 1) e.firstName = 'Completează prenumele.'
-  if (o.lastName.length < 1) e.lastName = 'Completează numele.'
-  if (!o.email) e.email = 'Completează adresa de email.'
-  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(o.email)) e.email = 'Verifică adresa de email. Exemplu: nume@exemplu.ro'
+  if (o.firstName.length < 1) e.firstName = m.firstName
+  if (o.lastName.length < 1) e.lastName = m.lastName
+  if (!o.email) e.email = m.emailEmpty
+  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(o.email)) e.email = m.email
   const digits = o.phone.replace(/\D/g, '')
-  if (!digits) e.phone = 'Completează numărul de telefon, pentru curier.'
-  else if (digits.length < 9 || digits.length > 15) e.phone = 'Verifică numărul de telefon. Exemplu: 0722 123 456'
+  if (!digits) e.phone = m.phoneEmpty
+  else if (digits.length < 9 || digits.length > 15) e.phone = m.phone
 
   if (o.buyerType === 'pj') {
-    if (o.company.length < 2) e.company = 'Completează denumirea firmei.'
-    if (!o.cui) e.cui = 'Completează codul fiscal (CUI).'
-    else if (!isValidCui(o.cui)) e.cui = 'Verifică codul fiscal. Poate începe cu RO, urmat de cifre.'
+    if (o.company.length < 2) e.company = m.company
+    if (!o.cui) e.cui = m.cuiEmpty
+    else if (!isValidCui(o.cui)) e.cui = m.cui
   }
 
   const office = o.buyerType === 'pj'
-  if (o.address.length < 5) e.address = office ? 'Completează adresa sediului: strada și numărul.' : 'Completează adresa: strada și numărul.'
-  if (o.city.length < 2) e.city = 'Completează localitatea.'
-  if (!isCounty(o.county)) e.county = 'Alege județul.'
-  if (!/^\d{6}$/.test(o.postalCode)) e.postalCode = 'Codul poștal are 6 cifre.'
+  if (o.address.length < 5) e.address = office ? m.office : m.address
+  if (o.city.length < 2) e.city = m.city
+  if (!isCounty(o.county)) e.county = m.county
+  if (!/^\d{6}$/.test(o.postalCode)) e.postalCode = m.postalCode
 
   if (!o.sameAddress) {
-    if (o.shipAddress.length < 5) e.shipAddress = 'Completează adresa de livrare: strada și numărul.'
-    if (o.shipCity.length < 2) e.shipCity = 'Completează localitatea.'
-    if (!isCounty(o.shipCounty)) e.shipCounty = 'Alege județul.'
-    if (!/^\d{6}$/.test(o.shipPostalCode)) e.shipPostalCode = 'Codul poștal are 6 cifre.'
+    if (o.shipAddress.length < 5) e.shipAddress = m.shipAddress
+    if (o.shipCity.length < 2) e.shipCity = m.city
+    if (!isCounty(o.shipCounty)) e.shipCounty = m.county
+    if (!/^\d{6}$/.test(o.shipPostalCode)) e.shipPostalCode = m.postalCode
   }
 
-  if (available && !available[o.paymentMethod]) e.paymentMethod = 'Această metodă de plată nu este disponibilă încă. Alege alta.'
-  if (!acceptedTerms) e.acceptedTerms = 'Bifează acordul cu termenii ca să plasezi comanda.'
+  if (available && !available[o.paymentMethod]) e.paymentMethod = m.paymentMethod
+  if (!acceptedTerms) e.acceptedTerms = m.acceptedTerms
   return e
 }

@@ -10,6 +10,7 @@
  * The two apply to separate products, so one unit is never discounted twice.
  */
 import type { ProductId } from '@/content/catalog'
+import type { Locale } from '@/i18n/locales'
 
 /** How a promotion is presented: a short mark next to prices, one plain sentence where there is room. */
 type Copy = { badge: string; line: string }
@@ -68,3 +69,21 @@ export const PROMOTIONS: Promotion[] = [
     pay: 2,
   },
 ]
+
+/**
+ * English for the /en site. Orders keep the Romanian labels above; these only change what a visitor reads.
+ * Keyed by the Romanian label, so a label taken from a computed price (a tier) translates too.
+ */
+const EN: Record<string, string> = {
+  '10% la 2 produse, 20% la 3 produse': '10% off 2 products, 20% off 3',
+  '10% la 2 produse': '10% off 2 products',
+  '20% la 3 produse': '20% off 3 products',
+  'Până la 20% reducere': 'Up to 20% off',
+  'NEUROS Calm, Focus sau Flow, în orice combinație. Reducerea apare în coș.': 'NEUROS Calm, Focus or Flow, in any mix. The discount shows in the cart.',
+  'NEUROS Amber 2+1 gratis': 'NEUROS Amber 3 for 2',
+  '2+1 gratis': '3 for 2',
+  'La fiecare 3 perechi NEUROS Amber, una este gratuită. Poți combina ramele.': 'In every 3 pairs of NEUROS Amber, one is free. You can mix the frames.',
+}
+
+/** A promotion text (label, badge, line, tier label) in the visitor's language. */
+export const promoText = (ro: string, locale: Locale = 'ro'): string => (locale === 'en' ? (EN[ro] ?? ro) : ro)

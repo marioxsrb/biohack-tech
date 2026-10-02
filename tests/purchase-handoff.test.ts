@@ -102,7 +102,7 @@ describe('landing → checkout: the selection survives', () => {
   })
 
   it('the checkout reads ?item from the router, not from window.location during render', () => {
-    const src = readFileSync(join(process.cwd(), 'src/app/(checkout)/checkout/CheckoutView.tsx'), 'utf8')
+    const src = readFileSync(join(process.cwd(), 'src/app/[lang]/(checkout)/checkout/CheckoutView.tsx'), 'utf8')
     expect(src).toContain('useSearchParams()')
     expect(src).not.toMatch(/useState\(\s*\(\)\s*=>[^)]*window\.location\.search/)
   })
@@ -223,7 +223,7 @@ describe('the checkout is focused', () => {
   const read = (f: string) => readFileSync(join(process.cwd(), f), 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')
 
   it('has its own layout: no site header, footer, product lists or catalog links', () => {
-    const layout = read('src/app/(checkout)/layout.tsx')
+    const layout = read('src/app/[lang]/(checkout)/layout.tsx')
     expect(layout).not.toMatch(/components\/site\/(Header|Footer)/)
     for (const f of ['src/components/checkout/CheckoutHeader.tsx', 'src/components/checkout/CheckoutFooter.tsx']) {
       const src = read(f)

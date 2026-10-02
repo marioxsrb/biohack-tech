@@ -1,28 +1,36 @@
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { AddToCartButton } from '@/components/cart/AddToCartButton'
 import { Price } from '@/components/cart/Price'
 import { Faq } from '@/components/ui/Faq'
 import { Arrow, External } from '@/components/ui/icons'
 import { isPurchasable, type Product } from '@/content/catalog'
 import type { ProductContent, Story } from '@/content/product-content'
-import { terms } from '@/config/site'
+import type { Locale } from '@/i18n/locales'
+import { ui } from '@/i18n/ui'
 
-type Props = { product: Product; content: ProductContent }
+type Props = { product: Product; content: ProductContent; locale: Locale }
+
+const COPY = {
+  ro: { short: 'Pe scurt', chooseFrame: 'Alege rama', studies: 'Vezi studiile', newTab: ' (se deschide într-o filă nouă)', details: 'Detalii', faq: 'Întrebări frecvente', chooseVariant: 'Alege varianta' },
+  en: { short: 'In short', chooseFrame: 'Choose the frame', studies: 'See the studies', newTab: ' (opens in a new tab)', details: 'Details', faq: 'Questions', chooseVariant: 'Choose an option' },
+}
+type Copy = (typeof COPY)['ro']
 
 /**
  * Below the buy area, in one fixed rhythm for every product: a large photograph,
  * three short benefits, how it's used, (Amber) the four frames, the technology once,
  * a moment or two from real life, the details, and the product again with its button.
  */
-export function ProductSections({ product, content: c }: Props) {
+export function ProductSections({ product, content: c, locale }: Props) {
+  const t = COPY[locale]
   return (
     <>
       <Cinematic story={c.scene} />
-      <Benefits items={c.benefits} />
+      <Benefits items={c.benefits} t={t} />
       {c.use && <Use use={c.use} />}
-      {c.lookbook && <Lookbook lookbook={c.lookbook} />}
-      {c.explain && <Explain explain={c.explain} />}
+      {c.lookbook && <Lookbook lookbook={c.lookbook} t={t} />}
+      {c.explain && <Explain explain={c.explain} t={t} />}
       {c.moments.length > 0 && (
         <div className="py-[calc(var(--sec)*0.5)]">
           {c.moments.map((s, i) => (
@@ -30,8 +38,8 @@ export function ProductSections({ product, content: c }: Props) {
           ))}
         </div>
       )}
-      <Details content={c} />
-      <BuyAgain product={product} />
+      <Details content={c} t={t} />
+      <BuyAgain product={product} t={t} locale={locale} />
     </>
   )
 }
@@ -55,9 +63,9 @@ function Cinematic({ story }: { story: Story }) {
 }
 
 /** Three short benefits, each with a check. Nothing else. */
-function Benefits({ items }: { items: ProductContent['benefits'] }) {
+function Benefits({ items, t }: { items: ProductContent['benefits']; t: Copy }) {
   return (
-    <section aria-label="Pe scurt" className="wrap pt-[calc(var(--sec)*0.6)] pb-[calc(var(--sec)*0.3)]">
+    <section aria-label={t.short} className="wrap pt-[calc(var(--sec)*0.6)] pb-[calc(var(--sec)*0.3)]">
       <ul className="grid gap-x-6 gap-y-6 sm:grid-cols-3">
         {items.map((b) => (
           <li key={b.title} className="border-t border-line pt-5 max-sm:pt-4">
@@ -99,7 +107,7 @@ function Use({ use }: { use: NonNullable<ProductContent['use']> }) {
 }
 
 /** Amber: the four frames together, large, with one line. */
-function Lookbook({ lookbook }: { lookbook: NonNullable<ProductContent['lookbook']> }) {
+function Lookbook({ lookbook, t }: { lookbook: NonNullable<ProductContent['lookbook']>; t: Copy }) {
   return (
     <section aria-labelledby="lookbook-title" className="wrap py-[calc(var(--sec)*0.5)]">
       <div className="grid grid-cols-1 items-center gap-y-6 md:grid-cols-12 md:gap-x-6">
@@ -109,7 +117,7 @@ function Lookbook({ lookbook }: { lookbook: NonNullable<ProductContent['lookbook
           </h2>
           <p className="mt-4 max-w-[24em] text-[17px] leading-relaxed text-text">{lookbook.text}</p>
           <Link href="#cumpara" className="tlink mt-6">
-            Alege rama <Arrow />
+            {t.chooseFrame} <Arrow />
           </Link>
         </div>
         <div className="relative aspect-[4/3] overflow-hidden rounded-[24px] md:col-span-8 max-sm:-mx-[var(--gut)] max-sm:rounded-none">
@@ -121,7 +129,7 @@ function Lookbook({ lookbook }: { lookbook: NonNullable<ProductContent['lookbook
 }
 
 /** The technology, once, in plain words. The image sits on its own background colour. */
-function Explain({ explain }: { explain: NonNullable<ProductContent['explain']> }) {
+function Explain({ explain, t }: { explain: NonNullable<ProductContent['explain']>; t: Copy }) {
   return (
     <section aria-labelledby="explain-title" className="wrap py-[calc(var(--sec)*0.5)]">
       <div className="grid grid-cols-1 items-center gap-y-8 md:grid-cols-12 md:gap-x-6">
@@ -149,7 +157,7 @@ function Explain({ explain }: { explain: NonNullable<ProductContent['explain']> 
           {explain.studies && (
             <details className="faq group mt-4">
               <summary className="tlink min-h-11 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-                Vezi studiile <Arrow className="transition-transform duration-200 group-open:rotate-90" />
+                {t.studies} <Arrow className="transition-transform duration-200 group-open:rotate-90" />
               </summary>
               <div className="faq-body">
                 <ul className="pb-1">
@@ -158,7 +166,7 @@ function Explain({ explain }: { explain: NonNullable<ProductContent['explain']> 
                       <a href={s.href} target="_blank" rel="noopener noreferrer" className="group/l inline-flex min-h-11 items-center gap-2 py-1 text-[15px] text-text hover:text-ink">
                         <External className="h-4 w-4 flex-none text-muted group-hover/l:text-cyan-700" />
                         <span className="underline decoration-line underline-offset-4">{s.label}</span>
-                        <span className="sr-only"> (se deschide într-o filă nouă)</span>
+                        <span className="sr-only">{t.newTab}</span>
                       </a>
                     </li>
                   ))}
@@ -190,13 +198,13 @@ function Moment({ story, flip }: { story: Story; flip: boolean }) {
 }
 
 /** Specifications and a short FAQ, side by side: reference material, set quietly. */
-function Details({ content: c }: { content: ProductContent }) {
+function Details({ content: c, t }: { content: ProductContent; t: Copy }) {
   return (
     <section aria-labelledby="specs-title" className="py-[calc(var(--sec)*0.8)]">
       <div className="wrap grid grid-cols-1 gap-y-14 md:grid-cols-12 md:gap-x-6">
         <div className="md:col-span-5">
           <h2 id="specs-title" className="text-[26px] tracking-[-0.03em]">
-            Detalii
+            {t.details}
           </h2>
           <dl className="mt-6">
             {c.specs.map((s) => (
@@ -208,7 +216,7 @@ function Details({ content: c }: { content: ProductContent }) {
           </dl>
         </div>
         <div className="md:col-span-6 md:col-start-7">
-          <h2 className="text-[26px] tracking-[-0.03em]">Întrebări frecvente</h2>
+          <h2 className="text-[26px] tracking-[-0.03em]">{t.faq}</h2>
           <div className="mt-6">
             <Faq items={c.faqs} />
           </div>
@@ -219,7 +227,7 @@ function Details({ content: c }: { content: ProductContent }) {
 }
 
 /** Closing purchase: the product, large, on a white panel, with its price and one button. */
-function BuyAgain({ product }: { product: Product }) {
+function BuyAgain({ product, t, locale }: { product: Product; t: Copy; locale: Locale }) {
   const img = product.cutout
   const bleed = img.bleed === 'bottom'
   const purchasable = isPurchasable(product)
@@ -236,19 +244,19 @@ function BuyAgain({ product }: { product: Product }) {
           </h2>
           <p className="mt-4 text-[24px] font-medium tracking-[-0.02em] text-ink">
             <Price productId={product.id} />
-            {purchasable && <span className="ml-3 align-middle text-[14px] font-normal tracking-normal text-muted">{terms.vat}</span>}
+            {purchasable && <span className="ml-3 align-middle text-[14px] font-normal tracking-normal text-muted">{ui[locale].vat}</span>}
           </p>
           <div className="mt-6">
             {product.variants && purchasable ? (
               <Link href="#cumpara" className="cta">
-                {product.chooseLabel ?? 'Alege varianta'} <Arrow />
+                {product.chooseLabel ?? t.chooseVariant} <Arrow />
               </Link>
             ) : (
               <AddToCartButton productId={product.id} />
             )}
           </div>
           <p className="mt-4 text-[15px] text-text">
-            Livrare gratuită · Retur în {terms.returnDays} zile
+            {ui[locale].freeDelivery} · {ui[locale].returns}
           </p>
         </div>
       </div>

@@ -1,16 +1,36 @@
 import Image from 'next/image'
 import { Arrow } from '@/components/ui/icons'
+import { getLocale } from '@/i18n/server'
 import hero from '@/assets/img/balance-wave/lifestyle-canapea.webp'
 
+const COPY = {
+  ro: {
+    alt: 'Femeie relaxată pe canapea, cu NEUROS Calm la gât',
+    line1: 'Mai calm seara.',
+    line2: 'Mai atent ziua.',
+    cta: 'Alege produsul',
+    help: 'Te ajutăm să alegi',
+  },
+  en: {
+    alt: 'Relaxed woman on a sofa, with NEUROS Calm around her neck',
+    line1: 'Calmer evenings.',
+    line2: 'Sharper days.',
+    cta: 'Choose a product',
+    help: 'Help me choose',
+  },
+}
+
 /** The campaign photograph, one line, one action. Rendered by the server; no script needed. */
-export function Hero() {
+export async function Hero() {
+  const t = COPY[await getLocale()]
   return (
     <section className="relative isolate flex h-[92svh] max-h-[960px] min-h-[600px] items-end overflow-hidden bg-dark text-white">
       <Image
         src={hero}
-        alt="Femeie relaxată pe canapea, cu NEUROS Calm la gât"
+        alt={t.alt}
         fill
-        preload
+        loading="eager"
+        fetchPriority="high"
         placeholder="blur"
         sizes="100vw"
         className="hero-img -z-10 object-cover object-[68%_30%] max-sm:object-[74%_22%]"
@@ -25,20 +45,17 @@ export function Hero() {
 
       
       <div className="hero-copy wrap w-full pb-[clamp(64px,11vh,120px)] max-md:pb-[56px]">
-        <h1 className="max-w-[9em] text-[clamp(46px,6.4vw,92px)] leading-[0.96] tracking-[-0.045em] !text-white">
-          Minte limpede.
+        <h1 className="max-w-[9em] text-[clamp(52px,6.9vw,100px)] leading-[0.96] tracking-[-0.045em] !text-white">
+          {t.line1}
           <br />
-          Corp relaxat.
+          {t.line2}
         </h1>
-        <p className="mt-5 max-w-[26em] text-[clamp(16px,1.3vw,19px)] leading-snug text-white/85">
-          Patru dispozitive NEUROS, pentru relaxare, atenție, ecrane și lumină infraroșie acasă.
-        </p>
-        <div className="on-dark mt-7 flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="on-dark mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
           <a href="#produse" className="cta">
-            Alege produsul <Arrow />
+            {t.cta} <Arrow />
           </a>
           <a href="#contact" className="tlink">
-            Nu știi ce să alegi? <Arrow />
+            {t.help} <Arrow />
           </a>
         </div>
       </div>

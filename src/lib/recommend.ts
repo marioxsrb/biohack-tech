@@ -14,6 +14,7 @@
  */
 import { UPSELL_MAP } from '@/config/upsell'
 import { getProduct, unitPrice, type ProductId } from '@/content/catalog'
+import type { Locale } from '@/i18n/locales'
 import { promotionProgress } from './promotions'
 
 export type Placement = 'cart' | 'checkout' | 'post_purchase' | 'product_page' | 'homepage'
@@ -91,4 +92,26 @@ export function recommend(lines: RecLine[], placement: Placement, limit = LIMIT[
 
   // 3. Nothing in the cart that points anywhere (e.g. only Amber and all its pairs): suggest nothing.
   return out
+}
+
+/** English for the reasons above (config/upsell.ts and the offer lines), keyed by the Romanian text. */
+const REASON_EN: Record<string, string> = {
+  'Seara, după ședința cu NEUROS Calm, ochelarii NEUROS Amber filtrează lumina albastră a ecranelor.': 'In the evening, after your NEUROS Calm session, NEUROS Amber glasses filter the blue light of screens.',
+  'NEUROS Focus completează relaxarea cu antrenamentul atenției, prin jocuri pe tabletă.': 'NEUROS Focus adds attention training to your relaxation, with games on a tablet.',
+  'Pentru orele de lucru la ecran dintre sesiunile cu NEUROS Focus.': 'For your hours at the screen between NEUROS Focus sessions.',
+  'NEUROS Calm completează antrenamentul atenției cu câteva minute de relaxare.': 'NEUROS Calm adds a few minutes of relaxation to your attention training.',
+  'Câteva minute de relaxare seara, cu NEUROS Calm purtat la gât.': 'A few minutes of relaxation in the evening, with NEUROS Calm worn around your neck.',
+  'Antrenează-ți atenția prin jocuri pe tabletă, cu NEUROS Focus.': 'Train your attention with games on a tablet, with NEUROS Focus.',
+  'NEUROS Calm adaugă câteva minute de relaxare, purtat la gât.': 'NEUROS Calm adds a few minutes of relaxation, worn around your neck.',
+  'NEUROS Focus adaugă antrenamentul atenției, prin jocuri pe tabletă.': 'NEUROS Focus adds attention training, with games on a tablet.',
+  'Încă o pereche și a treia este gratuită.': 'One more pair and the third one is free.',
+  'Al treilea produs activează reducerea de 20%.': 'A third product unlocks the 20% discount.',
+}
+
+/** A recommendation's reason in the visitor's language (the engine itself works in Romanian). */
+export function reasonText(r: Pick<Recommendation, 'reason' | 'add' | 'slots'>, locale: Locale = 'ro'): string {
+  if (locale !== 'en') return r.reason
+  if (REASON_EN[r.reason]) return REASON_EN[r.reason]
+  if (r.add === 'amber_pairs' && r.slots) return `Choose ${r.slots} more pairs for 3 for 2.`
+  return r.reason
 }

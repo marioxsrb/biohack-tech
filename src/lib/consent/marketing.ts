@@ -13,3 +13,10 @@ export type MarketingConsentVersion = keyof typeof MARKETING_CONSENT_TEXTS
 
 export const MARKETING_CONSENT_VERSION: MarketingConsentVersion = 'mkt-2026-09-29'
 export const MARKETING_CONSENT_TEXT = MARKETING_CONSENT_TEXTS[MARKETING_CONSENT_VERSION]
+
+/**
+ * What an English visitor reads for the current version. It is a translation of the Romanian text above,
+ * which stays the recorded proof: the consent and its version are the same in both languages.
+ */
+export const MARKETING_CONSENT_TEXT_EN =
+  'I want to receive emails from Biohack Tech with news, offers and tips, including a reminder if I leave my order unfinished. I can unsubscribe at any time.'

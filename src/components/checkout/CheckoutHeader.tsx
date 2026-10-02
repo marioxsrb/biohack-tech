@@ -1,10 +1,11 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { useSearchParams } from 'next/navigation'
 import { Lock, Phone } from '@/components/ui/icons'
 import { Wordmark } from '@/components/site/Wordmark'
 import { site } from '@/config/site'
+import { useLocale } from '@/i18n/LocaleProvider'
 import { isLandingSlug } from '@/lib/landing-hosts'
 
 /**
@@ -21,6 +22,7 @@ function Live() {
 }
 
 function Bar({ home }: { home: string }) {
+  const en = useLocale() === 'en'
   return (
     <header className="border-b border-line bg-paper">
       <div className="wrap flex h-16 items-center justify-between gap-4">
@@ -30,11 +32,11 @@ function Bar({ home }: { home: string }) {
         <div className="flex items-center gap-5 text-[14px] text-muted">
           <a href={site.phoneHref} className="flex min-h-11 items-center gap-2 hover:text-ink">
             <Phone className="h-4 w-4" />
-            <span className="max-sm:sr-only">Ajutor: </span>
+            <span className="max-sm:sr-only">{en ? 'Help: ' : 'Ajutor: '}</span>
             {site.phone}
           </a>
           <span className="flex items-center gap-2 max-sm:hidden">
-            <Lock className="h-4 w-4" /> Plată securizată
+            <Lock className="h-4 w-4" /> {en ? 'Secure payment' : 'Plată securizată'}
           </span>
         </div>
       </div>

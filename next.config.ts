@@ -6,6 +6,12 @@ const nextConfig: NextConfig = {
   // A second local instance (the Stripe TEST environment, scripts/stripe-test.mjs) builds into its own folder.
   ...(process.env.NEXT_DIST_DIR && { distDir: process.env.NEXT_DIST_DIR }),
   turbopack: { root: process.cwd() },
+  // Pages live under app/[lang]; a URL that matches no route at all gets app/global-not-found.tsx.
+  experimental: {
+    globalNotFound: true,
+    // The stylesheet (Tailwind, ~17 KB compressed) arrives inside the HTML: no render-blocking request.
+    inlineCss: true,
+  },
   // Database drivers load native/wasm code at runtime; keep them out of the server bundle.
   serverExternalPackages: ['pg', '@electric-sql/pglite'],
   images: {

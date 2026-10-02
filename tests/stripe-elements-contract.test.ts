@@ -14,11 +14,11 @@ const read = (f: string) => readFileSync(join(process.cwd(), f), 'utf8')
 describe('card payment: browser and server agree with Stripe', () => {
   it('Payment Element declares setupFutureUsage on_session, like the PaymentIntent', () => {
     expect(read('src/server/integrations/stripe.ts')).toMatch(/setup_future_usage: 'on_session'/)
-    expect(read('src/app/(checkout)/checkout/CardPayment.tsx')).toMatch(/setupFutureUsage: 'on_session'/)
+    expect(read('src/app/[lang]/(checkout)/checkout/CardPayment.tsx')).toMatch(/setupFutureUsage: 'on_session'/)
   })
 
   it('internal Stripe errors never reach the customer verbatim; card problems do (localized by Stripe)', () => {
-    const src = read('src/app/(checkout)/checkout/CardPayment.tsx')
+    const src = read('src/app/[lang]/(checkout)/checkout/CardPayment.tsx')
     expect(src).toMatch(/error\.type === 'card_error' \|\| error\.type === 'validation_error'/)
     expect(src).toContain('Plata cu cardul nu a putut fi pornită. Nu s-a efectuat nicio plată.')
   })

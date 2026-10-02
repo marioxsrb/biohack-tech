@@ -3,6 +3,7 @@
 import { Check } from '@/components/ui/icons'
 import { getProduct, unitPrice, type ProductId } from '@/content/catalog'
 import { formatLei } from '@/lib/money'
+import { useLocale } from '@/i18n/LocaleProvider'
 import { amberCopy, bundleCopy } from '@/lib/offer-copy'
 import { priceLines, type PromotionProgress } from '@/lib/promotions'
 import type { ResolvedLine } from './CartProvider'
@@ -13,12 +14,13 @@ import type { ResolvedLine } from './CartProvider'
  * All amounts come from the promotion engine. The ways to act live in the suggestions below the button.
  */
 export function OfferProgress({ progress, lines, compact = false, className = '' }: { progress: PromotionProgress[]; lines: ResolvedLine[]; compact?: boolean; actions?: boolean; className?: string }) {
+  const locale = useLocale()
   if (!progress.length) return null
   return (
     <div className={`space-y-2.5 ${className}`} aria-live="polite">
       {progress.map((p) => {
         const amber = p.kind === 'buy_x_get_y'
-        const c = amber ? amberCopy(p) : bundleCopy(p)
+        const c = amber ? amberCopy(p, locale) : bundleCopy(p, locale)
         const oneAway = c.tone === 'progress' ? p.untilNext === 1 : !!c.nudge
         const gain = oneAway ? nextGain(p, lines) : 0
         return (
@@ -38,7 +40,7 @@ export function OfferProgress({ progress, lines, compact = false, className = ''
             {oneAway && (
               <div className={`rounded-[16px] bg-cyan-50 shadow-[inset_0_0_0_1.5px_var(--color-cyan-700)] ${compact ? 'px-4 py-3' : 'p-5'}`}>
                 <p className={`leading-snug font-semibold tracking-[-0.02em] text-cyan-700 ${compact ? 'text-[17px]' : 'text-[20px]'}`}>{c.nudge ?? c.headline}</p>
-                {gain > 0 && <p className="mt-1 text-[14px] text-text">{amber ? `Perechea gratuită: ${formatLei(gain)}.` : `Economisești cel puțin ${formatLei(gain)}.`}</p>}
+                {gain > 0 && <p className="mt-1 text-[14px] text-text">{amber ? (locale === 'en' ? `Your free pair: ${formatLei(gain)}.` : `Perechea gratuită: ${formatLei(gain)}.`) : locale === 'en' ? `You save at least ${formatLei(gain)}.` : `Economisești cel puțin ${formatLei(gain)}.`}</p>}
               </div>
             )}
 

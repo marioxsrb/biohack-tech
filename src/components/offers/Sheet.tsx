@@ -3,6 +3,7 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { Close } from '@/components/ui/icons'
+import { useUi } from '@/i18n/LocaleProvider'
 
 /**
  * A modal sheet: full screen on phones (header and footer always in view, content scrolls between them),
@@ -12,6 +13,7 @@ import { Close } from '@/components/ui/icons'
 export function Sheet({ open, onClose, title, label, children, footer }: { open: boolean; onClose: () => void; title: ReactNode; label: string; children: ReactNode; footer?: ReactNode }) {
   const closeRef = useRef<HTMLButtonElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
+  const ui = useUi()
 
   useEffect(() => {
     if (!open) return
@@ -54,7 +56,7 @@ export function Sheet({ open, onClose, title, label, children, footer }: { open:
       >
         <div className="flex flex-none items-center justify-between gap-4 border-b border-line bg-paper px-5 py-3 sm:px-7 sm:py-4">
           <div className="min-w-0">{title}</div>
-          <button ref={closeRef} type="button" onClick={onClose} aria-label="Închide" className="-mr-2 flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink hover:bg-mist">
+          <button ref={closeRef} type="button" onClick={onClose} aria-label={ui.close} className="-mr-2 flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink hover:bg-mist">
             <Close className="h-5 w-5" />
           </button>
         </div>

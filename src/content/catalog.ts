@@ -12,6 +12,8 @@
  */
 import type { StaticImageData } from 'next/image'
 import { PRICES_RON, type PriceEntry } from '@/config/prices'
+import type { Locale } from '@/i18n/locales'
+import { altEn, optionLabelEn, productTextEn } from './catalog-en'
 
 import glCatNegru1 from '@/assets/img/glasses/cat-eye-negru-1.webp'
 import glCatNegru2 from '@/assets/img/glasses/cat-eye-negru-2.webp'
@@ -153,9 +155,9 @@ const catalog: Omit<Product, 'price'>[] = [
     brand: 'NEUROS',
     model: 'Calm',
     name: 'NEUROS Calm',
-    kind: 'Dispozitiv purtat la gât',
+    kind: 'Dispozitiv cu lumină roșie, purtat la gât',
     purpose: 'Pentru relaxare',
-    tagline: 'Se poartă la gât. Câteva minute de lumină roșie, apoi se oprește singur.',
+    tagline: 'Se poartă la gât. Îți oferă câteva minute de lumină roșie și liniște. Se oprește singur.',
     cutout: cut(bwActiv, 'NEUROS Calm, dispozitivul cu luminile roșii aprinse', 'bottom'),
     lifestyle: photo(bwCanapea, 'Femeie relaxată pe canapea, purtând NEUROS Calm la gât'),
     images: [
@@ -173,9 +175,9 @@ const catalog: Omit<Product, 'price'>[] = [
     brand: 'NEUROS',
     model: 'Focus',
     name: 'NEUROS Focus',
-    kind: 'Cască pentru antrenamentul atenției',
+    kind: 'Cască EEG pentru antrenamentul atenției',
     purpose: 'Pentru concentrare',
-    tagline: 'O cască ușoară și jocuri pe tabletă, pe care le controlezi prin atenție.',
+    tagline: 'O cască ușoară, cu jocuri pe tabletă. Le controlezi cu atenția ta. Așa îți antrenezi concentrarea.',
     cutout: cut(blCasca, 'NEUROS Focus, casca văzută din unghi'),
     lifestyle: photo(blTableta, 'Tânăr pe canapea, purtând NEUROS Focus și jucând pe tabletă'),
     images: [
@@ -195,7 +197,7 @@ const catalog: Omit<Product, 'price'>[] = [
     name: 'NEUROS Amber',
     kind: 'Ochelari cu filtru pentru lumina albastră',
     purpose: 'Pentru ecrane',
-    tagline: 'Ochelari care filtrează lumina albastră a ecranelor. Patru rame, același filtru.',
+    tagline: 'Filtrează lumina albastră a ecranelor. Ochii tăi primesc o lumină mai blândă. Alegi din patru rame.',
     cutout: cut(glCatNegru1, 'NEUROS Amber cat eye, ramă neagră, lentile chihlimbar'),
     lifestyle: photo(glTerasa, 'Femeie pe o terasă, purtând NEUROS Amber cat eye bej'),
     images: [photo(glToate, 'Cele patru rame NEUROS Amber, așezate pe o masă')],
@@ -278,7 +280,7 @@ const catalog: Omit<Product, 'price'>[] = [
     name: 'NEUROS Flow',
     kind: 'Cască de fotobiomodulare, infraroșu 810 nm',
     purpose: 'Pentru rutina de acasă',
-    tagline: 'O cască cu lumină infraroșie, folosită acasă, după un protocol stabilit cu un specialist.',
+    tagline: 'O cască cu lumină infraroșie, pentru acasă. Un specialist stabilește protocolul împreună cu tine.',
     cutout: cut(bfCasca, 'NEUROS Flow, casca albă cu LED-urile aprinse'),
     lifestyle: photo(bfFemeie, 'Femeie relaxată pe canapea, purtând casca NEUROS Flow'),
     images: brainFlowGallery,
@@ -304,14 +306,33 @@ const catalog: Omit<Product, 'price'>[] = [
   },
 ]
 
+/** Romanian: the source of truth, and what orders, invoices and the CRM store. */
 export const products: Product[] = catalog.map(priced)
 
-export function getProduct(id: string): Product | undefined {
-  return products.find((p) => p.id === id)
+const enImage = (i: ProductImage): ProductImage => ({ ...i, alt: altEn(i.alt) })
+
+/** The same products with the English text a visitor reads on /en. Ids, prices and images are identical. */
+const productsEn: Product[] = products.map((p) => ({
+  ...p,
+  ...productTextEn[p.id],
+  cutout: enImage(p.cutout),
+  lifestyle: enImage(p.lifestyle),
+  images: p.images.map(enImage),
+  options: p.options?.map((o) => ({ ...o, label: optionLabelEn[o.label] ?? o.label, values: o.values.map((v) => ({ ...v, label: optionLabelEn[v.label] ?? v.label })) })),
+  variants: p.variants?.map((v) => ({ ...v, images: v.images.map(enImage) })),
+}))
+
+/** Every product, in the visitor's language (Romanian by default). */
+export function productsIn(locale: Locale = 'ro'): Product[] {
+  return locale === 'en' ? productsEn : products
 }
 
-export function getProductBySlug(slug: string): Product | undefined {
-  return products.find((p) => p.slug === slug)
+export function getProduct(id: string, locale: Locale = 'ro'): Product | undefined {
+  return productsIn(locale).find((p) => p.id === id)
+}
+
+export function getProductBySlug(slug: string, locale: Locale = 'ro'): Product | undefined {
+  return productsIn(locale).find((p) => p.slug === slug)
 }
 
 export function productHref(p: Product): string {
@@ -345,8 +366,8 @@ export function variantLabel(p: Product, v: Variant): string {
  * Validates a cart line against the catalog and prices it. Returns null for unknown products or
  * variants; `unit` is null when that line has no approved price.
  */
-export function resolveLine(productId: string, variantId?: string): { product: Product; variant?: Variant; unit: number | null } | null {
-  const product = getProduct(productId)
+export function resolveLine(productId: string, variantId?: string, locale: Locale = 'ro'): { product: Product; variant?: Variant; unit: number | null } | null {
+  const product = getProduct(productId, locale)
   if (!product) return null
   if (product.variants?.length) {
     const variant = getVariant(product, variantId)

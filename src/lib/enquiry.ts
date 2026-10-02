@@ -8,6 +8,15 @@ export const ENQUIRY_TOPICS = {
 } as const
 export type EnquiryTopic = keyof typeof ENQUIRY_TOPICS
 
+/** The topics as an English visitor reads them. The stored topic is the key; the CRM keeps the Romanian label. */
+export const ENQUIRY_TOPICS_EN: Record<EnquiryTopic, string> = {
+  produse: 'A question about the products',
+  alegere: 'Which product suits me',
+  comanda: 'An order I placed',
+  retur: 'Returns or warranty',
+  altceva: 'Something else',
+}
+
 export type EnquiryInput = { name: string; email: string; phone: string; topic: EnquiryTopic; message: string }
 export type EnquiryField = keyof EnquiryInput
 
@@ -27,13 +36,33 @@ export function normalizeEnquiry(raw: Record<string, unknown>): EnquiryInput {
   }
 }
 
-export function validateEnquiry(e: EnquiryInput): Partial<Record<EnquiryField, string>> {
+const ENQUIRY_MSG = {
+  ro: {
+    name: 'Scrie-ne cum te numești.',
+    nameLong: 'Numele este prea lung.',
+    email: 'Adresa de email nu pare corectă.',
+    phone: 'Numărul de telefon nu pare corect.',
+    message: 'Scrie-ne câteva cuvinte despre ce ai nevoie.',
+    messageLong: `Mesajul poate avea cel mult ${ENQUIRY_LIMITS.message} de caractere.`,
+  },
+  en: {
+    name: 'Tell us your name.',
+    nameLong: 'The name is too long.',
+    email: 'Check your email address.',
+    phone: 'Check your phone number.',
+    message: 'Write us a few words about what you need.',
+    messageLong: `The message can have up to ${ENQUIRY_LIMITS.message} characters.`,
+  },
+}
+
+export function validateEnquiry(e: EnquiryInput, locale: 'ro' | 'en' = 'ro'): Partial<Record<EnquiryField, string>> {
+  const m = ENQUIRY_MSG[locale]
   const err: Partial<Record<EnquiryField, string>> = {}
-  if (e.name.length < 2) err.name = 'Scrie-ne cum te numești.'
-  else if (e.name.length > ENQUIRY_LIMITS.name) err.name = 'Numele este prea lung.'
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.email) || e.email.length > ENQUIRY_LIMITS.email) err.email = 'Adresa de email nu pare corectă.'
-  if (e.phone && (e.phone.replace(/\D/g, '').length < 9 || e.phone.length > ENQUIRY_LIMITS.phone)) err.phone = 'Numărul de telefon nu pare corect.'
-  if (e.message.length < 10) err.message = 'Scrie-ne câteva cuvinte despre ce ai nevoie.'
-  else if (e.message.length > ENQUIRY_LIMITS.message) err.message = `Mesajul poate avea cel mult ${ENQUIRY_LIMITS.message} de caractere.`
+  if (e.name.length < 2) err.name = m.name
+  else if (e.name.length > ENQUIRY_LIMITS.name) err.name = m.nameLong
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e.email) || e.email.length > ENQUIRY_LIMITS.email) err.email = m.email
+  if (e.phone && (e.phone.replace(/\D/g, '').length < 9 || e.phone.length > ENQUIRY_LIMITS.phone)) err.phone = m.phone
+  if (e.message.length < 10) err.message = m.message
+  else if (e.message.length > ENQUIRY_LIMITS.message) err.message = m.messageLong
   return err
 }

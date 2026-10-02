@@ -1,51 +1,69 @@
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { AddToCartButton } from '@/components/cart/AddToCartButton'
 import { Price } from '@/components/cart/Price'
 import { PromoNote } from '@/components/cart/PromoNote'
 import { Arrow } from '@/components/ui/icons'
 import { getProduct, productHref, type Product, type ProductId } from '@/content/catalog'
-import { terms } from '@/config/site'
+import { getLocale, getUi } from '@/i18n/server'
+import type { Locale } from '@/i18n/locales'
+import type { Ui } from '@/i18n/ui'
 
 /**
  * The one place the four products are introduced. An editorial, asymmetric shelf: a wide stage and a
  * narrow one per row, swapped on the second row, each product on its own quiet colour. Every tile says
  * when it is used, what it is, the price, the offer, and one next step.
  */
-const SHELF: { id: ProductId; when: string; tint: string; wide: boolean }[] = [
-  { id: 'balance-wave', when: 'Seara · relaxare', tint: '#f4e9e6', wide: true },
-  { id: 'brainlink-pro', when: 'La birou · atenție', tint: '#e5f1f4', wide: false },
-  { id: 'ochelari-biohack', when: 'La ecrane · zi și seară', tint: '#f5ecdc', wide: false },
-  { id: 'brain-flow', when: 'Acasă · fotobiomodulare', tint: '#efedeb', wide: true },
+const SHELF: { id: ProductId; when: Record<Locale, string>; tint: string; wide: boolean }[] = [
+  { id: 'balance-wave', when: { ro: 'Pentru stres · seara', en: 'For stress · evenings' }, tint: '#f4e9e6', wide: true },
+  { id: 'brainlink-pro', when: { ro: 'Pentru concentrare · la birou', en: 'For focus · at work' }, tint: '#e5f1f4', wide: false },
+  { id: 'ochelari-biohack', when: { ro: 'Pentru ochi · la ecrane', en: 'For your eyes · at screens' }, tint: '#f5ecdc', wide: false },
+  { id: 'brain-flow', when: { ro: 'Lumină infraroșie · acasă', en: 'Infrared light · at home' }, tint: '#efedeb', wide: true },
 ]
 
-export function Discover() {
+const COPY = {
+  ro: {
+    title: 'Produsele NEUROS',
+    intro: 'Livrare gratuită în România. Până la 20% reducere când iei mai multe.',
+    view: (name: string) => `${name}: vezi produsul`,
+  },
+  en: {
+    title: 'NEUROS products',
+    intro: 'Free delivery in Romania. Up to 20% off when you buy more than one.',
+    view: (name: string) => `${name}: view the product`,
+  },
+}
+
+export async function Discover() {
+  const locale = await getLocale()
+  const t = COPY[locale]
+  const ui = await getUi()
   return (
     <section id="produse" aria-labelledby="produse-title" className="wrap scroll-mt-[calc(var(--nav-h)+16px)] pt-[calc(var(--sec)*0.8)]">
       <div className="flex flex-wrap items-end justify-between gap-x-10 gap-y-3">
         <h2 id="produse-title" className="max-w-[12em] text-[clamp(34px,4vw,54px)] leading-[1] tracking-[-0.045em]">
-          Patru produse. Fiecare cu momentul lui.
+          {t.title}
         </h2>
-        <p className="max-w-[26em] text-[17px] leading-relaxed text-text">Alege după momentul din zi în care vrei să îl folosești.</p>
+        <p className="max-w-[26em] text-[17px] leading-relaxed text-text">{t.intro}</p>
       </div>
 
       <ul className="mt-10 grid gap-5 lg:grid-cols-12">
         {SHELF.map((s) => (
-          <Tile key={s.id} p={getProduct(s.id)!} when={s.when} tint={s.tint} wide={s.wide} />
+          <Tile key={s.id} p={getProduct(s.id, locale)!} when={s.when[locale]} tint={s.tint} wide={s.wide} view={t.view} ui={ui} />
         ))}
       </ul>
 
       <ul className="mt-8 grid gap-x-6 gap-y-2 text-[15px] text-text sm:grid-cols-2 lg:flex lg:justify-between">
-        <li>✓ Plată cu cardul sau prin transfer bancar</li>
-        <li>✓ Livrare gratuită în România</li>
-        <li>✓ {terms.returnDays} zile să te răzgândești</li>
-        <li>✓ Garanție {terms.warrantyYears} ani</li>
+        <li>✓ {ui.payment}</li>
+        <li>✓ {ui.freeDeliveryRo}</li>
+        <li>✓ {ui.changeMind}</li>
+        <li>✓ {ui.warranty}</li>
       </ul>
     </section>
   )
 }
 
-function Tile({ p, when, tint, wide }: { p: Product; when: string; tint: string; wide: boolean }) {
+function Tile({ p, when, tint, wide, view, ui }: { p: Product; when: string; tint: string; wide: boolean; view: (name: string) => string; ui: Ui }) {
   const choose = !!p.variants?.length
   const head = (
     <>
@@ -75,7 +93,7 @@ function Tile({ p, when, tint, wide }: { p: Product; when: string; tint: string;
           <AddToCartButton productId={p.id} size="sm" />
         )}
         <Link href={productHref(p)} className="inline-flex min-h-11 items-center px-1 text-[14.5px] font-medium text-ink underline decoration-ink/30 underline-offset-4 hover:decoration-ink">
-          Detalii
+          {ui.details}
         </Link>
       </div>
     </div>
@@ -100,14 +118,14 @@ function Tile({ p, when, tint, wide }: { p: Product; when: string; tint: string;
             {head}
             <div className="mt-auto pt-6 sm:pt-8">{buy}</div>
           </div>
-          <Link href={productHref(p)} aria-label={`${p.name}: vezi produsul`} className={`relative block min-h-[190px] cursor-pointer sm:min-h-[260px] ${p.cutout.bleed === 'bottom' ? 'mx-[6%] mt-[6%]' : 'm-[8%]'}`}>
+          <Link href={productHref(p)} aria-label={view(p.name)} className={`relative block min-h-[190px] cursor-pointer sm:min-h-[260px] ${p.cutout.bleed === 'bottom' ? 'mx-[6%] mt-[6%]' : 'm-[8%]'}`}>
             {image}
           </Link>
         </div>
       ) : (
         <div className={`flex h-full flex-col ${pad}`}>
           <div className="relative z-10">{head}</div>
-          <Link href={productHref(p)} aria-label={`${p.name}: vezi produsul`} className="relative my-4 block min-h-[170px] flex-1 cursor-pointer sm:my-6 sm:min-h-[200px]">
+          <Link href={productHref(p)} aria-label={view(p.name)} className="relative my-4 block min-h-[170px] flex-1 cursor-pointer sm:my-6 sm:min-h-[200px]">
             {image}
           </Link>
           <div className="relative z-10">{buy}</div>

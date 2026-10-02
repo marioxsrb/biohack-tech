@@ -3,7 +3,7 @@
  * section typography, steps, specifications, product FAQ, the help block and the closing decision. Each
  * landing composes its own story from these; colours come from its theme (--lp-*).
  */
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import type { ReactNode } from 'react'
 import { CookieSettingsButton } from '@/components/consent/ConsentManager'
 import { ContactForm } from '@/components/contact/ContactForm'

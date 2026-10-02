@@ -1,55 +1,84 @@
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { CookieSettingsButton } from '@/components/consent/ConsentManager'
 import { Arrow, Mail, Phone } from '@/components/ui/icons'
-import { productHref, products } from '@/content/catalog'
+import { productHref, productsIn } from '@/content/catalog'
 import { legalPages } from '@/content/legal'
 import { companyLine } from '@/config/company'
-import { site, terms } from '@/config/site'
+import { site } from '@/config/site'
+import { getLocale, getUi } from '@/i18n/server'
+import type { Locale } from '@/i18n/locales'
 import { Wordmark } from './Wordmark'
 
 const page = (slug: string) => legalPages.find((p) => p.slug === slug)!
 
-const help = [
-  { href: `/${page('politica-livrare').slug}`, label: 'Livrare' },
-  { href: `/${page('plati').slug}`, label: 'Plăți' },
-  { href: `/${page('politica-retur').slug}`, label: 'Retur și retragere' },
-  { href: `/${page('garantie').slug}`, label: 'Garanție și reclamații' },
+type FooterLink = { href: string; label: Record<Locale, string> }
+
+const help: FooterLink[] = [
+  { href: `/${page('politica-livrare').slug}`, label: { ro: 'Livrare', en: 'Delivery' } },
+  { href: `/${page('plati').slug}`, label: { ro: 'Plăți', en: 'Payments' } },
+  { href: `/${page('politica-retur').slug}`, label: { ro: 'Retur și retragere', en: 'Returns and withdrawal' } },
+  { href: `/${page('garantie').slug}`, label: { ro: 'Garanție și reclamații', en: 'Warranty and complaints' } },
   // OUG 34/2014 art. 11^1: the online withdrawal function, reachable from every page.
-  { href: '/retragere', label: 'Retrage-te din contract aici' },
-  { href: '/intrebari-frecvente', label: 'Întrebări frecvente' },
-  { href: '/contact-us', label: 'Contact' },
-  { href: '/about-us', label: 'Despre noi' },
+  { href: '/retragere', label: { ro: 'Retrage-te din contract aici', en: 'Withdraw from the contract here' } },
+  { href: '/intrebari-frecvente', label: { ro: 'Întrebări frecvente', en: 'FAQ' } },
+  { href: '/contact-us', label: { ro: 'Contact', en: 'Contact' } },
+  { href: '/about-us', label: { ro: 'Despre noi', en: 'About us' } },
 ]
 
-const legal = [
-  { href: `/${page('terms-of-service').slug}`, label: 'Termeni și condiții' },
-  { href: `/${page('privacy-policy').slug}`, label: 'Confidențialitate' },
-  { href: `/${page('politica-cookies').slug}`, label: 'Politica de cookies' },
+const legal: FooterLink[] = [
+  { href: `/${page('terms-of-service').slug}`, label: { ro: 'Termeni și condiții', en: 'Terms and conditions' } },
+  { href: `/${page('privacy-policy').slug}`, label: { ro: 'Confidențialitate', en: 'Privacy' } },
+  { href: `/${page('politica-cookies').slug}`, label: { ro: 'Politica de cookies', en: 'Cookie policy' } },
 ]
+
+const COPY = {
+  ro: {
+    line1: 'Mai calm seara.',
+    line2: 'Mai atent ziua.',
+    products: 'Vezi produsele',
+    productsTitle: 'Produse',
+    help: 'Ajutor',
+    newTab: ' (se deschide într-o filă nouă)',
+    sal: 'ANPC SAL, soluționarea alternativă a litigiilor',
+  },
+  en: {
+    line1: 'Calmer evenings.',
+    line2: 'Sharper days.',
+    products: 'See the products',
+    productsTitle: 'Products',
+    help: 'Help',
+    newTab: ' (opens in a new tab)',
+    sal: 'ANPC SAL, alternative dispute resolution',
+  },
+}
 
 /**
  * The ending: the opening line returns on the dark surface, then everything practical in
  * four short columns (products, help, legal, contact). On phones the columns pair up.
  */
-export function Footer() {
+export async function Footer() {
+  const locale = await getLocale()
+  const t = COPY[locale]
+  const ui = await getUi()
+  const products = productsIn(locale)
   return (
     <footer className="on-dark bg-dark text-dark-muted">
       <div className="wrap pt-[calc(var(--sec)*0.8)] pb-10">
         <div className="flex flex-col gap-8 md:flex-row md:items-end md:justify-between">
           <p className="text-[clamp(40px,5.6vw,80px)] leading-[0.96] font-medium tracking-[-0.045em] text-white">
-            Minte limpede.
+            {t.line1}
             <br />
-            Corp relaxat.
+            {t.line2}
           </p>
           <Link href="/products" className="cta self-start md:self-auto">
-            Vezi produsele <Arrow />
+            {t.products} <Arrow />
           </Link>
         </div>
 
         <div className="mt-16 grid grid-cols-2 gap-x-6 gap-y-10 border-t border-dark-line pt-10 text-[15px] md:grid-cols-12 max-sm:mt-12">
           <nav aria-labelledby="ft-products" className="col-span-2 md:col-span-4">
             <h2 id="ft-products" className="text-[13px] font-semibold tracking-[0.12em] text-white uppercase">
-              Produse
+              {t.productsTitle}
             </h2>
             <ul className="mt-4 space-y-1">
               {products.map((p) => (
@@ -65,13 +94,13 @@ export function Footer() {
 
           <nav aria-labelledby="ft-help" className="md:col-span-2">
             <h2 id="ft-help" className="text-[13px] font-semibold tracking-[0.12em] text-white uppercase">
-              Ajutor
+              {t.help}
             </h2>
             <ul className="mt-4">
               {help.map((l) => (
                 <li key={l.href}>
                   <Link href={l.href} className="flex min-h-10 items-center hover:text-white">
-                    {l.label}
+                    {l.label[locale]}
                   </Link>
                 </li>
               ))}
@@ -86,7 +115,7 @@ export function Footer() {
               {legal.map((l) => (
                 <li key={l.href}>
                   <Link href={l.href} className="flex min-h-10 items-center hover:text-white">
-                    {l.label}
+                    {l.label[locale]}
                   </Link>
                 </li>
               ))}
@@ -96,13 +125,13 @@ export function Footer() {
               <li>
                 <a href="https://anpc.ro" target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center hover:text-white">
                   ANPC
-                  <span className="sr-only"> (se deschide într-o filă nouă)</span>
+                  <span className="sr-only">{t.newTab}</span>
                 </a>
               </li>
               <li>
                 <a href="https://reclamatiisal.anpc.ro" target="_blank" rel="noopener noreferrer" className="flex min-h-10 items-center hover:text-white">
-                  ANPC SAL, soluționarea alternativă a litigiilor
-                  <span className="sr-only"> (se deschide într-o filă nouă)</span>
+                  {t.sal}
+                  <span className="sr-only">{t.newTab}</span>
                 </a>
               </li>
             </ul>
@@ -122,7 +151,7 @@ export function Footer() {
                 </a>
               </li>
             </ul>
-            <p className="mt-3">Îți răspundem {terms.responseTime}.</p>
+            <p className="mt-3">{ui.replyTime}.</p>
           </div>
         </div>
 
@@ -133,7 +162,7 @@ export function Footer() {
           </div>
           <div className="max-w-[46em] space-y-1 md:text-right">
             {companyLine() && <p>{companyLine()}</p>}
-            <p>Produse de wellness pentru uz zilnic. Nu înlocuiesc sfatul medicului.</p>
+            <p>{ui.wellness}</p>
           </div>
         </div>
       </div>

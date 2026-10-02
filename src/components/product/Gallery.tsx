@@ -4,6 +4,26 @@ import Image from 'next/image'
 import { useEffect, useRef, useState } from 'react'
 import { Arrow } from '@/components/ui/icons'
 import type { ProductImage } from '@/content/catalog'
+import { useLocale } from '@/i18n/LocaleProvider'
+
+const COPY = {
+  ro: {
+    role: 'galerie',
+    stage: (label: string, n: number, of: number) => `${label}, imaginea ${n} din ${of}. Folosește săgețile pentru a schimba imaginea.`,
+    prev: 'Imaginea anterioară',
+    next: 'Imaginea următoare',
+    pick: 'Alege imaginea',
+    thumb: (n: number, alt: string) => `Imaginea ${n}: ${alt}`,
+  },
+  en: {
+    role: 'gallery',
+    stage: (label: string, n: number, of: number) => `${label}, image ${n} of ${of}. Use the arrow keys to change the image.`,
+    prev: 'Previous image',
+    next: 'Next image',
+    pick: 'Choose an image',
+    thumb: (n: number, alt: string) => `Image ${n}: ${alt}`,
+  },
+}
 
 type Props = {
   images: ProductImage[]
@@ -18,6 +38,7 @@ type Props = {
  * Cutouts sit whole, with a little air; photographs fill the stage.
  */
 export function Gallery({ images, label, wide }: Props) {
+  const t = COPY[useLocale()]
   const track = useRef<HTMLDivElement>(null)
   const [active, setActive] = useState(0)
 
@@ -47,13 +68,13 @@ export function Gallery({ images, label, wide }: Props) {
   }
 
   return (
-    <div role="region" aria-roledescription="galerie" aria-label={label} className="gallery-in">
+    <div role="region" aria-roledescription={t.role} aria-label={label} className="gallery-in">
       <div className="relative">
         <div
           ref={track}
           className={`flex aspect-[5/4] snap-x snap-mandatory overflow-x-auto overscroll-x-contain rounded-[24px] bg-paper [scrollbar-width:none] max-sm:rounded-[20px] [&::-webkit-scrollbar]:hidden ${wide ? 'max-sm:aspect-[16/11]' : 'max-sm:aspect-square'}`}
           tabIndex={0}
-          aria-label={`${label}, imaginea ${active + 1} din ${images.length}. Folosește săgețile pentru a schimba imaginea.`}
+          aria-label={t.stage(label, active + 1, images.length)}
           onKeyDown={(e) => {
             if (e.key === 'ArrowRight') {
               e.preventDefault()
@@ -74,7 +95,8 @@ export function Gallery({ images, label, wide }: Props) {
                     alt={img.alt}
                     fill
                     sizes="(min-width: 1152px) 640px, (min-width: 768px) 56vw, 100vw"
-                    preload={i === 0}
+                    loading={i === 0 ? 'eager' : 'lazy'}
+                    fetchPriority={i === 0 ? 'high' : 'auto'}
                     placeholder={img.kind === 'photo' ? 'blur' : 'empty'}
                     className={img.kind === 'photo' ? 'object-cover' : `object-contain ${img.bleed === 'bottom' ? 'object-bottom' : ''}`}
                   />
@@ -86,10 +108,10 @@ export function Gallery({ images, label, wide }: Props) {
 
         {images.length > 1 && (
           <>
-            <button type="button" onClick={() => go(active - 1)} className="gal-arrow left-4" aria-label="Imaginea anterioară">
+            <button type="button" onClick={() => go(active - 1)} className="gal-arrow left-4" aria-label={t.prev}>
               <Arrow className="h-4 w-4 rotate-180" />
             </button>
-            <button type="button" onClick={() => go(active + 1)} className="gal-arrow right-4" aria-label="Imaginea următoare">
+            <button type="button" onClick={() => go(active + 1)} className="gal-arrow right-4" aria-label={t.next}>
               <Arrow className="h-4 w-4" />
             </button>
             {/* Phones: which image this is, in numbers, plus dots. Thumbnails are hidden there. */}
@@ -106,13 +128,13 @@ export function Gallery({ images, label, wide }: Props) {
       </div>
 
       {images.length > 1 && (
-        <ul className="mt-3 flex gap-2 max-sm:hidden" aria-label="Alege imaginea">
+        <ul className="mt-3 flex gap-2 max-sm:hidden" aria-label={t.pick}>
           {images.map((img, i) => (
             <li key={img.src.src} className="max-w-[88px] min-w-0 flex-1">
               <button
                 type="button"
                 onClick={() => go(i)}
-                aria-label={`Imaginea ${i + 1}: ${img.alt}`}
+                aria-label={t.thumb(i + 1, img.alt)}
                 aria-current={i === active}
                 className={`relative block aspect-[5/4] w-full overflow-hidden rounded-[12px] bg-paper transition-[box-shadow,opacity] duration-200 ${
                   i === active ? 'shadow-[0_0_0_2px_var(--color-ink)]' : 'opacity-75 hover:opacity-100'

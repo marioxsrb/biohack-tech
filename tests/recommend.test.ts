@@ -191,11 +191,11 @@ describe('pages', () => {
   const read = (f: string) => readFileSync(join(process.cwd(), f), 'utf8')
   it('homepage shelf: the product image is a link to the product page', () => {
     const src = read('src/components/home/Discover.tsx')
-    expect(src.match(/<Link href=\{productHref\(p\)\} aria-label=\{`\$\{p\.name\}: vezi produsul`\}/g)?.length).toBe(2)
+    expect(src.match(/<Link href=\{productHref\(p\)\} aria-label=\{view\(p\.name\)\}/g)?.length).toBe(2)
   })
   it('product page: the offer sits under the price and trust row; Amber opens the pair picker in place', () => {
     const hero = read('src/components/product/ProductHero.tsx')
-    expect(hero.indexOf('Garanție')).toBeLessThan(hero.indexOf('<ProductOffer'))
+    expect(hero.indexOf('ui.warranty')).toBeLessThan(hero.indexOf('<ProductOffer'))
     expect(hero.indexOf('<ProductOffer')).toBeLessThan(hero.indexOf('<AddToCartButton'))
     const offer = read('src/components/offers/ProductOffer.tsx')
     expect(offer).toContain("openAmber('product_page', 3)")
@@ -204,7 +204,7 @@ describe('pages', () => {
     expect(offer).not.toContain('openBundle')
   })
   it('checkout: the suggestion module is the only product surface, before the payment decision', () => {
-    const v = read('src/app/(checkout)/checkout/CheckoutView.tsx')
+    const v = read('src/app/[lang]/(checkout)/checkout/CheckoutView.tsx')
     expect(v.indexOf('<Suggestions placement="checkout"')).toBeGreaterThan(v.indexOf('<Totals'))
     expect(v.indexOf('<Suggestions placement="checkout"')).toBeLessThan(v.indexOf('f-acceptedTerms'))
   })

@@ -1,10 +1,12 @@
-import { rhythm } from '@/content/home'
+import { homeContent } from '@/content/home'
+import { getLocale } from '@/i18n/server'
 
 /**
  * "Aceeași zi. Alt ritm.": four moments of the same day, read across. Left, the day as it happens (quiet
  * type); right, the same moment with a deliberate tool (strong type on dark). Typography, no icons.
  */
-export function Rhythm() {
+export async function Rhythm() {
+  const { rhythm } = homeContent[await getLocale()]
   return (
     <section aria-labelledby="rhythm-title" className="wrap pt-[var(--sec)]">
       <h2 id="rhythm-title" className="text-[clamp(34px,4vw,54px)] leading-[1] tracking-[-0.045em]">

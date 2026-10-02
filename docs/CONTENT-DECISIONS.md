@@ -98,3 +98,26 @@ Ordinea: hero, produsele (cu oferta lor, discret), ideea de brand cu cele patru 
 - Prețul apare în hero, în locul unde alegi (bloc de comandă / selector) și în bara fixă de pe telefon. Secțiunea finală are o frază și un buton, fără preț.
 - NEUROS Amber folosește exact paleta site-ului; căldura vine din fotografii și dintr-un accent chihlimbar mic (eticheta 2+1, progresul). Fără suprafețe, borduri sau texte maro.
 - Checkout-ul nu mai arată meniul și lista de produse, nici venind de pe site, nici de pe un landing.
+
+## Copy rescris pe site-ul principal (02.10.2026)
+
+- Unghiul: ce pierd oamenii zi de zi (calmul, atenția, serile liniștite) și ce le aduce fiecare produs. Hero: „Mai calm seara. Mai atent ziua.”, repetat în footer. Titlurile de secțiune spun direct ce e acolo (Produsele NEUROS, Oferte, Înainte și după NEUROS), fără sloganuri și fără vocabular tipic AI (vezi Wikipedia: Signs of AI writing).
+- Reguli de scris: cuvinte simple, o idee pe propoziție, formulări pozitive (fără negații în textul vizibil). Disclaimerul medical a devenit „Pentru o afecțiune, cere întâi sfatul medicului.”; întrebarea „Este un tratament medical? Nu.” a devenit „Ce fel de produs este?”.
+- Afirmațiile rămân la nivel de wellness, la intensitatea „te poate ajuta”. Partea de „pierdere” descrie ziua (stres, notificări, ecrane), nu un efect medical.
+- SEO: titluri și descrieri cu termenii căutați (lumină roșie, nerv vag, cască EEG, lumina albastră, infraroșu 810 nm, relaxare, concentrare).
+- Landingurile (`/lp/*`) vor fi rescrise separat.
+
+## Engleză (02.10.2026)
+
+- Româna păstrează adresele de acum (`/products/calm`), engleza are prefixul `/en` (`/en/products/calm`). Intern, toate paginile stau sub `app/[lang]`; proxy-ul trimite adresele fără prefix la `/ro`, iar un `/ro/...` tastat redirecționează permanent la adresa fără prefix. Fiecare pagină are o singură adresă publică pe limbă, `hreflang` către cealaltă și `x-default` pe română.
+- Comutatorul „RO · EN” stă în header, lângă coș, pe orice ecran: o pastilă mică, cu limba curentă plină. Duce la aceeași pagină în cealaltă limbă. Site-ul nu ghicește limba după browser.
+- Traduse: pagina principală, produsele, paginile de produs, Despre noi, Contact, Întrebări, coșul, ofertele, checkout-ul, bannerul de cookies. Rămân în română: textele legale (pe `/en` au o notă că versiunea română este cea care obligă, iar canonical-ul arată spre română), landingurile, pagina comenzii și emailurile.
+- Comenzile, facturile și CRM-ul primesc în continuare denumirile în română. Engleza schimbă doar ce citește vizitatorul (`content/catalog-en.ts`, `promoText`, obiectele `{ ro, en }` din componente).
+- Oferta NEUROS Amber se numește în engleză „3 for 2”. Prețurile rămân în lei.
+- „Înainte și după NEUROS” (fost „Aceeași zi. Alt ritm.” / „Când le folosești”) compară viața fără produse cu viața cu produse, doar prin beneficii. Instrucțiunile de folosire stau pe paginile de produs.
+
+## Preloader și optimizare (02.10.2026)
+
+- Preloader la prima pagină dintr-o vizită (o dată pe filă): doar logo-ul „BIOHACK TECH”, literă cu literă, și o linie care se umple, cu o lumină care trece pe ea; apoi cortina urcă peste fotografie. Se mișcă doar prin transform și opacity, ca să rămână fluid cât timp pagina se încarcă dedesubt. Așteaptă evenimentul `load` și minimum 2,4 secunde; după 8 secunde site-ul apare oricum. Fără JavaScript, la a doua pagină din vizită, pe landinguri și în checkout nu apare. Cu „reduce motion” are doar fade.
+- Lighthouse mobil, build de producție: performanță 89 → 93 (home) și 92 → 93 (produs), restul 100. CSS-ul vine în HTML (`inlineCss`), fotografia principală are `fetchPriority="high"`, fontul mono nu mai e preîncărcat, trei etichete ARIA nu mai contrazic textul vizibil.
+- A doua trecere, pe toate paginile publice: prima imagine din /products și fotografia din Despre noi se încarcă imediat, cu prioritate; coșul își păstrează înălțimea cât citește coșul salvat (CLS 0,058 → 0). Lighthouse mobil: 92-96 performanță pe toate paginile, 100 accesibilitate, bune practici și SEO (coșul are noindex intenționat).

@@ -1,14 +1,22 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { useCart } from '@/components/cart/CartProvider'
 import { Bag, Chevron, Close, Menu } from '@/components/ui/icons'
-import { productHref, products } from '@/content/catalog'
+import { productHref, productsIn } from '@/content/catalog'
 import { Price } from '@/components/cart/Price'
+import { useLocale, useUi } from '@/i18n/LocaleProvider'
+import { splitLocale } from '@/i18n/locales'
+import { LanguageSwitch } from './LanguageSwitch'
 import { Wordmark } from './Wordmark'
+
+const COPY = {
+  ro: { nav: 'Principal', products: 'Produse', about: 'Despre noi', contact: 'Contact', cart: 'Coș', cartLabel: (n: number) => (n ? `Coș, ${n} ${n === 1 ? 'produs' : 'produse'}` : 'Coș, gol'), openMenu: 'Deschide meniul', closeMenu: 'Închide meniul', menu: 'Meniu' },
+  en: { nav: 'Main', products: 'Products', about: 'About us', contact: 'Contact', cart: 'Cart', cartLabel: (n: number) => (n ? `Cart, ${n} ${n === 1 ? 'item' : 'items'}` : 'Cart, empty'), openMenu: 'Open the menu', closeMenu: 'Close the menu', menu: 'Menu' },
+}
 
 /**
  * Four products need no mega-menu: Produse (a short list), Despre noi, Coș.
@@ -18,6 +26,10 @@ import { Wordmark } from './Wordmark'
 export function Header() {
   const { count } = useCart()
   const pathname = usePathname()
+  const locale = useLocale()
+  const t = COPY[locale]
+  const ui = useUi()
+  const products = productsIn(locale)
   const [overHero, setOverHero] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const navRef = useRef<HTMLElement>(null)
@@ -47,7 +59,7 @@ export function Header() {
   }, [menuOpen])
 
   // Only the homepage has the photograph; elsewhere the bar is always the light one.
-  const dark = overHero && pathname === '/' && !menuOpen
+  const dark = overHero && splitLocale(pathname).path === '/' && !menuOpen
   const closeSheet = () => sheetRef.current?.close()
 
   return (
@@ -56,7 +68,7 @@ export function Header() {
         href="#main"
         className="sr-only z-[300] rounded-md bg-paper px-4 py-2 text-ink focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
       >
-        Sari la conținut
+        {ui.skipToContent}
       </a>
       <header
         ref={navRef}
@@ -67,7 +79,7 @@ export function Header() {
             : 'bg-mist/95 text-ink shadow-[0_1px_0_rgb(8_17_19/0.07)] backdrop-blur-[14px]'
         }`}
       >
-        <nav aria-label="Principal" className="wrap flex h-[var(--nav-h)] items-center gap-8">
+        <nav aria-label={t.nav} className="wrap flex h-[var(--nav-h)] items-center gap-8">
           <Link href="/" className="flex h-11 flex-none items-center">
             <Wordmark tone={dark ? 'dark' : 'light'} />
           </Link>
@@ -82,30 +94,31 @@ export function Header() {
                 onMouseEnter={() => setMenuOpen(true)}
                 className="nav-link flex items-center gap-1.5 py-2.5"
               >
-                Produse
+                {t.products}
                 <Chevron className={`h-3.5 w-3.5 transition-transform duration-200 ${menuOpen ? 'rotate-180' : ''}`} />
               </button>
             </li>
             <li>
               <Link href="/about-us" className="nav-link inline-block py-2.5">
-                Despre noi
+                {t.about}
               </Link>
             </li>
             <li>
               <Link href="/contact-us" className="nav-link inline-block py-2.5">
-                Contact
+                {t.contact}
               </Link>
             </li>
           </ul>
 
           <div className="ml-auto flex items-center gap-1 md:ml-0">
+            <LanguageSwitch dark={dark} className="mr-2 max-md:mr-1" />
             <Link
               href="/cart"
               className={`relative -mr-3 flex h-11 items-center gap-2 rounded-full px-3 transition-colors max-md:mr-0 ${dark ? 'hover:bg-white/10' : 'hover:bg-ink/5'}`}
-              aria-label={count ? `Coș, ${count} ${count === 1 ? 'produs' : 'produse'}` : 'Coș, gol'}
+              aria-label={t.cartLabel(count)}
             >
               <Bag className="h-[22px] w-[22px]" />
-              <span className="text-[15px] font-medium">Coș</span>
+              <span className="text-[15px] font-medium max-[380px]:sr-only">{t.cart}</span>
               {count > 0 && (
                 <span key={count} className="cart-bump flex h-5 min-w-5 items-center justify-center rounded-full bg-red-dark px-1.5 text-[12px] font-semibold tabular-nums text-white">
                   {count}
@@ -116,7 +129,7 @@ export function Header() {
               type="button"
               onClick={() => sheetRef.current?.showModal()}
               className="-mr-2.5 flex h-11 w-11 items-center justify-center md:hidden"
-              aria-label="Deschide meniul"
+              aria-label={t.openMenu}
               aria-haspopup="dialog"
               aria-controls="meniu"
             >
@@ -153,13 +166,13 @@ export function Header() {
         </div>
       </header>
 
-      <dialog ref={sheetRef} id="meniu" aria-label="Meniu" className="menu-sheet">
+      <dialog ref={sheetRef} id="meniu" aria-label={t.menu} className="menu-sheet">
         <div className="flex h-full flex-col">
           <div className="wrap flex h-[var(--nav-h)] w-full flex-none items-center justify-between">
             <Link href="/" onClick={closeSheet} className="flex h-11 items-center">
               <Wordmark tone="dark" />
             </Link>
-            <button type="button" onClick={closeSheet} className="-mr-2.5 flex h-11 w-11 items-center justify-center text-white" aria-label="Închide meniul">
+            <button type="button" onClick={closeSheet} className="-mr-2.5 flex h-11 w-11 items-center justify-center text-white" aria-label={t.closeMenu}>
               <Close className="h-6 w-6" />
             </button>
           </div>
@@ -179,12 +192,12 @@ export function Header() {
             <ul className="mt-12 space-y-1 text-[18px]">
               <li>
                 <Link href="/about-us" onClick={closeSheet} className="block py-2 text-white/85">
-                  Despre noi
+                  {t.about}
                 </Link>
               </li>
               <li>
                 <Link href="/contact-us" onClick={closeSheet} className="block py-2 text-white/85">
-                  Contact
+                  {t.contact}
                 </Link>
               </li>
             </ul>

@@ -7,8 +7,30 @@ import { ProductOffer } from '@/components/offers/ProductOffer'
 import { QuantityStepper } from '@/components/cart/QuantityStepper'
 import { Check, Phone } from '@/components/ui/icons'
 import { getProduct, isPurchasable, variantLabel, type ProductId } from '@/content/catalog'
-import { site, terms } from '@/config/site'
+import { site } from '@/config/site'
+import { useLocale, useUi } from '@/i18n/LocaleProvider'
 import { Gallery } from './Gallery'
+
+const COPY = {
+  ro: {
+    images: (name: string) => `Imagini ${name}`,
+    quantity: 'Cantitate',
+    adding: 'Adaugi:',
+    pending: 'Prețul în lei apare în curând. Scrie-ne și îți răspundem în cel mult 24 de ore.',
+    call: 'Sună un specialist',
+    callNote: 'Te ajutăm să alegi, gratuit',
+    callShort: 'Sună',
+  },
+  en: {
+    images: (name: string) => `${name} images`,
+    quantity: 'Quantity',
+    adding: 'Adding:',
+    pending: 'The price in lei is coming soon. Write to us and we reply within 24 hours.',
+    call: 'Call a specialist',
+    callNote: 'Free help to choose',
+    callShort: 'Call',
+  },
+}
 
 type Props = { productId: ProductId; intro: string }
 
@@ -17,7 +39,10 @@ type Props = { productId: ProductId; intro: string }
  * buy (about 42%): what it's for, name, one sentence, price, variant, quantity, button.
  */
 export function ProductHero({ productId, intro }: Props) {
-  const product = getProduct(productId)!
+  const locale = useLocale()
+  const t = COPY[locale]
+  const ui = useUi()
+  const product = getProduct(productId, locale)!
   const purchasable = isPurchasable(product)
 
   const [selected, setSelected] = useState<Record<string, string>>(() => product.variants?.[0]?.options ?? {})
@@ -90,7 +115,7 @@ export function ProductHero({ productId, intro }: Props) {
     <>
       <div className="grid grid-cols-1 gap-y-8 md:grid-cols-12 md:gap-x-10 lg:gap-x-14">
         <div className="md:col-span-7">
-          <Gallery key={variant?.id ?? product.id} images={images} label={`Imagini ${product.name}`} wide={!!product.variants} />
+          <Gallery key={variant?.id ?? product.id} images={images} label={t.images(product.name)} wide={!!product.variants} />
         </div>
 
         <div className="md:col-span-5 md:pt-2">
@@ -100,15 +125,15 @@ export function ProductHero({ productId, intro }: Props) {
 
           <p className="mt-6 text-[30px] font-medium tracking-[-0.025em] text-ink">
             <Price productId={product.id} variantId={variant?.id} />
-            {purchasable && <span className="ml-3 align-middle text-[14px] font-normal tracking-normal text-muted">{terms.vat}</span>}
+            {purchasable && <span className="ml-3 align-middle text-[14px] font-normal tracking-normal text-muted">{ui.vat}</span>}
           </p>
           {purchasable && (
             <>
               <ul className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[14px] text-muted">
-                {['Livrare gratuită', `Retur în ${terms.returnDays} zile`, `Garanție ${terms.warrantyYears} ani`].map((t) => (
-                  <li key={t} className="flex items-center gap-1.5">
+                {[ui.freeDelivery, ui.returns, ui.warranty].map((x) => (
+                  <li key={x} className="flex items-center gap-1.5">
                     <Check className="h-3.5 w-3.5 text-cyan-700" aria-hidden />
-                    {t}
+                    {x}
                   </li>
                 ))}
               </ul>
@@ -156,35 +181,34 @@ export function ProductHero({ productId, intro }: Props) {
           })}
 
           <div ref={buyRef} className="mt-7 flex gap-3">
-            {purchasable && <QuantityStepper value={quantity} onChange={setQuantity} label="Cantitate" />}
+            {purchasable && <QuantityStepper value={quantity} onChange={setQuantity} label={t.quantity} />}
             <AddToCartButton productId={product.id} variantId={variant?.id} quantity={quantity} className="min-w-0 flex-1 !px-5" onAdded={() => setQuantity(1)} />
           </div>
           {purchasable ? (
             variant && (
               <p className="mt-3 text-[15px] text-text">
-                Adaugi: <strong className="font-semibold text-ink">{product.name}, {variantLabel(product, variant)}</strong>
+                {t.adding} <strong className="font-semibold text-ink">{product.name}, {variantLabel(product, variant)}</strong>
               </p>
             )
           ) : (
-            <p className="mt-3 max-w-[30em] text-[15px] text-text">Prețul în lei se anunță în curând. Scrie-ne și îți răspundem în cel mult 24 de ore.</p>
+            <p className="mt-3 max-w-[30em] text-[15px] text-text">{t.pending}</p>
           )}
 
           {/* A direct call: on a phone `tel:` opens the dialer with the number filled in. */}
           <a
             href={site.phoneHref}
-            aria-label={`Sună un specialist Biohack Tech la ${site.phone}`}
             className="group mt-3 flex min-h-14 items-center gap-3 rounded-[14px] bg-paper px-4 py-2.5 shadow-[inset_0_0_0_1px_var(--color-line)] transition-shadow duration-150 hover:shadow-[inset_0_0_0_1.5px_var(--color-ink)]"
           >
             <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-cyan-50 text-cyan-700">
               <Phone className="h-[18px] w-[18px]" aria-hidden />
             </span>
             <span className="min-w-0 flex-1 leading-snug">
-              <span className="block text-[15.5px] font-semibold text-ink">Sună un specialist</span>
-              <span className="block text-[14px] text-muted">Te ajutăm să alegi, gratuit</span>
+              <span className="block text-[15.5px] font-semibold text-ink">{t.call}</span>
+              <span className="block text-[14px] text-muted">{t.callNote}</span>
             </span>
             <span className="flex-none text-[14.5px] font-semibold whitespace-nowrap text-cyan-700 tabular-nums group-hover:text-ink">
               <span className="max-[420px]:hidden">{site.phone}</span>
-              <span className="hidden max-[420px]:inline">Sună</span>
+              <span className="hidden max-[420px]:inline">{t.callShort}</span>
             </span>
           </a>
 

@@ -1,13 +1,13 @@
 export const site = {
   name: 'Biohack Tech',
   url: (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://biohack-tech.ro').replace(/\/$/, ''),
-  description:
-    'Dispozitive de wellness pentru minte și corp, de folosit acasă: NEUROS Calm, Focus, Amber și casca NEUROS Flow. Livrare gratuită în România.',
-  tagline: 'Tehnologie din neuroștiință, pentru bunăstarea de zi cu zi.',
+  description: {
+    ro: 'Dispozitive NEUROS pentru stres, concentrare și ochi obosiți de ecrane: Calm, Focus, Amber și Flow. Le folosești acasă. Livrare gratuită în România.',
+    en: 'NEUROS devices for stress, focus and screen-tired eyes: Calm, Focus, Amber and Flow. Use them at home. Free delivery in Romania.',
+  },
   email: 'contact@biohack-tech.ro',
   phone: '+40 757 890 707',
   phoneHref: 'tel:+40757890707',
-  locale: 'ro_RO',
 } as const
 
 /** Commercial terms stated on the current biohack-tech.ro. Used everywhere they are repeated. */

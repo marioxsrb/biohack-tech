@@ -2,22 +2,39 @@ import type { Metadata } from 'next'
 import { site, terms } from '@/config/site'
 import { isPurchasable, productHref, type Product } from '@/content/catalog'
 import { CURRENCY } from '@/lib/money'
+import { defaultLocale, localePath, localeTag, type Locale } from '@/i18n/locales'
 
 export const absolute = (path = '/') => `${site.url}${path === '/' ? '' : path}`
 
-type PageMeta = { title: string; description: string; path: string; image?: { url: string; width: number; height: number; alt: string } }
+type PageMeta = {
+  title: string
+  description: string
+  /** Internal path, without the language prefix. */
+  path: string
+  locale?: Locale
+  /** false: the page exists only in Romanian (legal texts, landings); every language points to it. */
+  translated?: boolean
+  image?: { url: string; width: number; height: number; alt: string }
+}
 
-/** Unique title, description, canonical URL, Open Graph and Twitter data for a page. */
-export function pageMetadata({ title, description, path, image }: PageMeta): Metadata {
+/**
+ * Unique title, description, canonical URL, language alternates (hreflang), Open Graph and Twitter data.
+ * A translated page names both language versions; Romanian is also the x-default.
+ */
+export function pageMetadata({ title, description, path, locale = defaultLocale, translated = true, image }: PageMeta): Metadata {
+  const url = absolute(translated ? localePath(locale, path) : path)
   return {
     title,
     description,
-    alternates: { canonical: absolute(path) },
+    alternates: {
+      canonical: url,
+      ...(translated && { languages: { ro: absolute(path), en: absolute(localePath('en', path)), 'x-default': absolute(path) } }),
+    },
     openGraph: {
       type: 'website',
-      locale: site.locale,
+      locale: localeTag[locale].replace('-', '_'),
       siteName: site.name,
-      url: absolute(path),
+      url,
       title,
       description,
       ...(image && { images: [image] }),
@@ -31,7 +48,7 @@ export function pageMetadata({ title, description, path, image }: PageMeta): Met
   }
 }
 
-export function organizationJsonLd() {
+export function organizationJsonLd(locale: Locale = defaultLocale) {
   return {
     '@context': 'https://schema.org',
     '@type': 'Organization',
@@ -39,7 +56,7 @@ export function organizationJsonLd() {
     url: site.url,
     email: site.email,
     telephone: site.phone,
-    description: site.description,
+    description: site.description[locale],
   }
 }
 
@@ -56,8 +73,8 @@ function offerPrice(p: Product & { price: number }) {
 }
 
 /** Product structured data. An offer is published only once the product has an approved RON price. */
-export function productJsonLd(p: Product, description: string, imageUrls: string[]) {
-  const url = absolute(productHref(p))
+export function productJsonLd(p: Product, description: string, imageUrls: string[], locale: Locale = defaultLocale) {
+  const url = absolute(localePath(locale, productHref(p)))
   return {
     '@context': 'https://schema.org',
     '@type': 'Product',

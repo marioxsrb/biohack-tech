@@ -1,9 +1,10 @@
 'use client'
 
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { usePathname } from 'next/navigation'
 import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from 'react'
 import { Close } from '@/components/ui/icons'
+import { useLocale } from '@/i18n/LocaleProvider'
 import { ALL, NONE, actionFor, withdrawn, type ConsentChoice, type OptionalCategory } from '@/lib/consent/cookies'
 import { consentStore } from '@/lib/consent/store'
 import { clearVendorCookies, configuredVendors, startVendor, vendorsToLoad } from '@/lib/consent/vendors'
@@ -12,9 +13,55 @@ export const OPEN_COOKIE_SETTINGS = 'bt:cookie-settings'
 /** Any "Setări cookies" control on the site opens the preferences with this. */
 export const openCookieSettings = () => window.dispatchEvent(new Event(OPEN_COOKIE_SETTINGS))
 
-const CATEGORY: Record<OptionalCategory, { title: string; text: string }> = {
-  analytics: { title: 'Analiză', text: 'Ne arată cum este folosit site-ul, ca să îl facem mai clar. Datele sunt statistice.' },
-  marketing: { title: 'Marketing', text: 'Măsoară reclamele Biohack Tech și le face mai relevante pe alte platforme.' },
+const COPY = {
+  ro: {
+    category: {
+      analytics: { title: 'Analiză', text: 'Ne arată cum este folosit site-ul, ca să îl facem mai clar. Datele sunt statistice.' },
+      marketing: { title: 'Marketing', text: 'Măsoară reclamele Biohack Tech și le face mai relevante pe alte platforme.' },
+    } as Record<OptionalCategory, { title: string; text: string }>,
+    whatAnalytics: 'de analiză, ca să vedem ce funcționează pe site',
+    whatMarketing: 'de marketing, pentru reclame relevante',
+    whatJoin: ', și ',
+    bannerTitle: 'Tu alegi ce cookie-uri folosim',
+    bannerText: (what: string) => `Coșul și plata folosesc doar ce este necesar. Cu acordul tău, folosim și cookie-uri ${what}.`,
+    policy: 'Politica de cookies',
+    reject: 'Refuz opționalele',
+    accept: 'Accept toate',
+    customize: 'Aleg eu ce accept',
+    settings: 'Setări cookies',
+    settingsText: 'Alegi pe categorii. Poți reveni oricând din „Setări cookies”, jos în pagină.',
+    closeKeep: 'Închide fără să schimbi alegerea',
+    necessary: 'Necesare',
+    alwaysOn: 'Mereu active',
+    necessaryText: 'Țin minte coșul, datele din formularul de comandă cât ai fila deschisă și această alegere. La plata cu cardul, Stripe folosește cookie-uri de securitate și prevenire a fraudei.',
+    unused: 'Nu folosim acum',
+    services: 'Servicii:',
+    save: 'Salvez alegerea',
+  },
+  en: {
+    category: {
+      analytics: { title: 'Analytics', text: 'Shows us how the site is used, so we can make it easier to use. The data is statistical.' },
+      marketing: { title: 'Marketing', text: 'Measures Biohack Tech ads and makes them more relevant on other platforms.' },
+    } as Record<OptionalCategory, { title: string; text: string }>,
+    whatAnalytics: 'analytics cookies, to see what works on the site',
+    whatMarketing: 'marketing cookies, for relevant ads',
+    whatJoin: ', and ',
+    bannerTitle: 'You choose which cookies we use',
+    bannerText: (what: string) => `The cart and payment use only what is necessary. With your consent, we also use ${what}.`,
+    policy: 'Cookie policy',
+    reject: 'Reject optional',
+    accept: 'Accept all',
+    customize: 'Let me choose',
+    settings: 'Cookie settings',
+    settingsText: 'Choose by category. You can come back any time from “Cookie settings” at the bottom of the page.',
+    closeKeep: 'Close without changing your choice',
+    necessary: 'Necessary',
+    alwaysOn: 'Always on',
+    necessaryText: 'They remember your cart, the order form while the tab is open, and this choice. For card payments, Stripe uses cookies for security and fraud prevention.',
+    unused: 'Not in use',
+    services: 'Services:',
+    save: 'Save my choice',
+  },
 }
 
 const noop = () => () => {}
@@ -80,7 +127,8 @@ export function ConsentManager() {
 
 function Banner({ used, onAccept, onReject, onCustomize }: { used: Set<OptionalCategory>; onAccept: () => void; onReject: () => void; onCustomize: () => void }) {
   const titleId = useId()
-  const what = [used.has('analytics') && 'de analiză, ca să vedem ce funcționează pe site', used.has('marketing') && 'de marketing, pentru reclame relevante'].filter(Boolean).join(', și ')
+  const t = COPY[useLocale()]
+  const what = [used.has('analytics') && t.whatAnalytics, used.has('marketing') && t.whatMarketing].filter(Boolean).join(t.whatJoin)
   return (
     <section
       role="region"
@@ -88,24 +136,24 @@ function Banner({ used, onAccept, onReject, onCustomize }: { used: Set<OptionalC
       className="consent-in fixed z-[300] rounded-[20px] bg-paper p-5 text-[15px] leading-relaxed text-text shadow-[0_24px_60px_-20px_rgba(8,17,19,.4),0_0_0_1px_rgba(8,17,19,.06)] md:bottom-6 md:left-6 md:w-[430px] max-md:inset-x-3 max-md:bottom-[max(12px,env(safe-area-inset-bottom))]"
     >
       <h2 id={titleId} className="text-[17px] leading-snug tracking-[-0.015em]">
-        Tu alegi ce cookie-uri folosim
+        {t.bannerTitle}
       </h2>
       <p className="mt-2">
-        Coșul și plata folosesc doar ce este necesar. Cu acordul tău, folosim și cookie-uri {what}.{' '}
+        {t.bannerText(what)}{' '}
         <Link href="/politica-cookies" className="font-medium text-ink underline underline-offset-4">
-          Politica de cookies
+          {t.policy}
         </Link>
       </p>
       <div className="mt-4 grid grid-cols-2 gap-2">
         <button type="button" onClick={onReject} className="consent-btn">
-          Refuz opționalele
+          {t.reject}
         </button>
         <button type="button" onClick={onAccept} className="consent-btn">
-          Accept toate
+          {t.accept}
         </button>
       </div>
       <button type="button" onClick={onCustomize} className="mt-2 flex min-h-11 w-full items-center justify-center rounded-[10px] text-[14.5px] font-medium text-ink underline underline-offset-4 hover:bg-mist">
-        Aleg eu ce accept
+        {t.customize}
       </button>
     </section>
   )
@@ -126,6 +174,7 @@ function Preferences({
 }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId()
+  const t = COPY[useLocale()]
   const [choice, setChoice] = useState<ConsentChoice>({ analytics: initial.analytics && used.has('analytics'), marketing: initial.marketing && used.has('marketing') })
 
   useEffect(() => {
@@ -148,16 +197,16 @@ function Preferences({
       <div className="flex items-start justify-between gap-4 px-6 pt-6 max-sm:px-5">
         <div>
           <h2 id={titleId} className="text-[22px] leading-tight tracking-[-0.02em]">
-            Setări cookies
+            {t.settings}
           </h2>
           <p className="mt-2 text-[15px] leading-relaxed">
-            Alegi pe categorii. Poți reveni oricând din „Setări cookies”, jos în pagină.{' '}
+            {t.settingsText}{' '}
             <Link href="/politica-cookies" onClick={onClose} className="font-medium text-ink underline underline-offset-4">
-              Politica de cookies
+              {t.policy}
             </Link>
           </p>
         </div>
-        <button type="button" autoFocus onClick={onClose} aria-label="Închide fără să schimbi alegerea" className="-mt-1 -mr-2 flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink hover:bg-mist">
+        <button type="button" autoFocus onClick={onClose} aria-label={t.closeKeep} className="-mt-1 -mr-2 flex h-11 w-11 flex-none items-center justify-center rounded-full text-ink hover:bg-mist">
           <Close className="h-5 w-5" />
         </button>
       </div>
@@ -165,11 +214,11 @@ function Preferences({
       <ul className="mt-5 divide-y divide-mist-2 border-y border-mist-2 px-6 max-sm:px-5">
         <li className="py-4">
           <div className="flex items-center justify-between gap-4">
-            <h3 className="text-[16.5px] font-medium">Necesare</h3>
-            <span className="rounded-full bg-mist px-2.5 py-1 text-[13px] font-medium text-muted">Mereu active</span>
+            <h3 className="text-[16.5px] font-medium">{t.necessary}</h3>
+            <span className="rounded-full bg-mist px-2.5 py-1 text-[13px] font-medium text-muted">{t.alwaysOn}</span>
           </div>
           <p className="mt-1.5 text-[14.5px] leading-relaxed text-muted">
-            Țin minte coșul, datele din formularul de comandă cât ai fila deschisă și această alegere. La plata cu cardul, Stripe folosește cookie-uri de securitate și prevenire a fraudei.
+            {t.necessaryText}
           </p>
         </li>
         {(['analytics', 'marketing'] as const).map((k) => {
@@ -179,16 +228,16 @@ function Preferences({
             <li key={k} className="py-4">
               <div className="flex items-center justify-between gap-4">
                 <h3 id={`consent-${k}`} className="text-[16.5px] font-medium">
-                  {CATEGORY[k].title}
+                  {t.category[k].title}
                 </h3>
                 {available ? (
                   <Switch labelledBy={`consent-${k}`} checked={choice[k]} onChange={(on) => setChoice((c) => ({ ...c, [k]: on }))} />
                 ) : (
-                  <span className="rounded-full bg-mist px-2.5 py-1 text-[13px] font-medium text-muted">Nu folosim acum</span>
+                  <span className="rounded-full bg-mist px-2.5 py-1 text-[13px] font-medium text-muted">{t.unused}</span>
                 )}
               </div>
-              <p className="mt-1.5 text-[14.5px] leading-relaxed text-muted">{CATEGORY[k].text}</p>
-              {tools.length > 0 && <p className="mt-1.5 text-[13.5px] text-muted">Servicii: {tools.map((t) => t.name).join(', ')}.</p>}
+              <p className="mt-1.5 text-[14.5px] leading-relaxed text-muted">{t.category[k].text}</p>
+              {tools.length > 0 && <p className="mt-1.5 text-[13.5px] text-muted">{t.services} {tools.map((v) => v.name).join(', ')}.</p>}
             </li>
           )
         })}
@@ -196,13 +245,13 @@ function Preferences({
 
       <div className="grid gap-2 px-6 pt-5 pb-6 sm:grid-cols-3 max-sm:px-5">
         <button type="button" onClick={() => onSave(NONE)} className="consent-btn">
-          Refuz opționalele
+          {t.reject}
         </button>
         <button type="button" onClick={() => onSave(choice)} className="consent-btn">
-          Salvez alegerea
+          {t.save}
         </button>
         <button type="button" onClick={() => onSave({ analytics: used.has('analytics'), marketing: used.has('marketing') })} className="consent-btn">
-          Accept toate
+          {t.accept}
         </button>
       </div>
     </dialog>
@@ -226,9 +275,10 @@ function Switch({ checked, onChange, labelledBy }: { checked: boolean; onChange:
 
 /** "Setări cookies" in the footer: always present, opens the preferences. */
 export function CookieSettingsButton({ className }: { className?: string }) {
+  const t = COPY[useLocale()]
   return (
     <button type="button" onClick={openCookieSettings} className={className}>
-      Setări cookies
+      {t.settings}
     </button>
   )
 }

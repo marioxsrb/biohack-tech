@@ -1,10 +1,11 @@
 'use client'
 
 import Image from 'next/image'
-import Link from 'next/link'
+import Link from '@/components/ui/Link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { Arrow, Check, Close } from '@/components/ui/icons'
+import { useLocale, useUi } from '@/i18n/LocaleProvider'
 import { formatLei } from '@/lib/money'
 import { useCart } from './CartProvider'
 
@@ -21,6 +22,8 @@ export function AddedPopup() {
   const [hold, setHold] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
+  const ui = useUi()
+  const en = useLocale() === 'en'
   const shownOn = useRef(pathname)
 
   // Leaving the page (to the cart, checkout or anywhere else) closes the confirmation.
@@ -50,7 +53,7 @@ export function AddedPopup() {
       ref={ref}
       key={confirmation.at}
       role="region"
-      aria-label="Produs adăugat în coș"
+      aria-label={en ? 'Product added to cart' : 'Produs adăugat în coș'}
       onMouseEnter={() => setHold(true)}
       onMouseLeave={() => setHold(false)}
       onFocus={() => setHold(true)}
@@ -62,9 +65,9 @@ export function AddedPopup() {
           <span aria-hidden className="flex h-6 w-6 items-center justify-center rounded-full bg-cyan-700 text-white">
             <Check className="h-3.5 w-3.5" />
           </span>
-          Adăugat în coș
+          {ui.addedToCart}
         </p>
-        <button type="button" onClick={dismissConfirmation} aria-label="Închide" className="-mr-2 flex h-10 w-10 items-center justify-center rounded-full text-muted transition-colors hover:bg-mist hover:text-ink">
+        <button type="button" onClick={dismissConfirmation} aria-label={ui.close} className="-mr-2 flex h-10 w-10 items-center justify-center rounded-full text-muted transition-colors hover:bg-mist hover:text-ink">
           <Close className="h-4 w-4" />
         </button>
       </div>
@@ -76,7 +79,7 @@ export function AddedPopup() {
         <span className="min-w-0">
           <span className="block truncate text-[16px] font-medium text-ink">{line.product.name}</span>
           <span className="block truncate text-[14px] text-muted">
-            {[line.variantLabel, confirmation.quantity > 1 ? `${confirmation.quantity} buc.` : null].filter(Boolean).join(' · ')}
+            {[line.variantLabel, confirmation.quantity > 1 ? ui.pieces(confirmation.quantity) : null].filter(Boolean).join(' · ')}
             {!line.variantLabel && confirmation.quantity === 1 ? line.product.purpose : null}
           </span>
         </span>
@@ -85,10 +88,10 @@ export function AddedPopup() {
 
       <div className="mt-4 grid gap-2">
         <Link href="/checkout" onClick={dismissConfirmation} className="cta w-full">
-          Finalizează comanda <Arrow />
+          {ui.checkout} <Arrow />
         </Link>
         <button type="button" onClick={dismissConfirmation} className="btn-secondary w-full">
-          Continuă cumpărăturile
+          {ui.keepShopping}
         </button>
       </div>
     </div>
