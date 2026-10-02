@@ -60,5 +60,5 @@ export function proxy(req: NextRequest) {
 
 // Everything except build assets and images: landing hostnames must be routed on every page path.
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|.*\\.(?:webp|png|jpg|jpeg|svg|ico|woff2?|txt|xml)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|.*\\.(?:webp|png|jpg|jpeg|svg|ico|woff2?|txt|xml|mp4)$).*)'],
 }

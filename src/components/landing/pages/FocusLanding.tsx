@@ -6,6 +6,7 @@ import { terms } from '@/config/site'
 import { formatLei } from '@/lib/money'
 import { HeroCta } from '../HeroCta'
 import { LandingOffer } from '../LandingOffer'
+import { PresentationVideo } from '../PresentationVideo'
 import { FinalCta, Help, Kicker, LandingFaq, LandingShell, Testimonials, Title } from '../kit'
 
 import studio from '@/assets/img/brainlink/casca-studio.webp'
@@ -55,6 +56,24 @@ export function FocusLanding({ landing }: { landing: Landing }) {
                 <Image src={tableta} alt="Tânăr pe canapea, purtând NEUROS Focus și jucând pe tabletă" fill placeholder="blur" sizes="300px" className="object-cover object-[65%_50%]" />
               </div>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Presentation video: the headset in use, in 20 seconds. */}
+      <section aria-labelledby="video-title" className="lp-wrap pt-[calc(var(--sec)*0.5)]">
+        <div className="grid items-center gap-y-10 lg:grid-cols-12 lg:gap-x-12">
+          <div className="lg:col-span-5">
+            <Kicker>Vezi cum arată</Kicker>
+            <Title id="video-title" className="mt-3 max-w-[12em]">
+              NEUROS Focus, în 20 de secunde.
+            </Title>
+            <p className="mt-5 max-w-[28em] text-[17px] leading-relaxed text-[var(--lp-muted)]">
+              Casca pe cap, tableta în mână: undele cerebrale apar pe ecran în timp real, iar jocul merge mai departe doar cât timp ești atent.
+            </p>
+          </div>
+          <div className="lg:col-span-6 lg:col-start-7">
+            <PresentationVideo src="/video/neuros-focus.mp4" poster="/video/neuros-focus-poster.jpg" label="Video de prezentare NEUROS Focus" />
           </div>
         </div>
       </section>
