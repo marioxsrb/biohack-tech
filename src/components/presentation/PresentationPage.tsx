@@ -1,10 +1,11 @@
 /**
- * The presentation page of each product: the landing's story without the purchase. Same sections and
+ * The presentation page of each product: the landing's story and its price, without the purchase. Same sections and
  * copy as the landing (components/landing/stories), then the facts, the questions and a contact. The
  * technical rows come from the product page (product-content.ts), so they are written once.
  */
 import Image from 'next/image'
-import { getProduct, variantLabel, type Product } from '@/content/catalog'
+import { getProduct, unitPrice, variantLabel, type Product } from '@/content/catalog'
+import { formatLei } from '@/lib/money'
 import type { Landing } from '@/content/landings'
 import { getProductContent } from '@/content/product-content'
 import { Kicker, Title } from '@/components/landing/parts'
@@ -12,7 +13,7 @@ import { CalmHero, CalmHow, CalmMoments, CalmUse } from '@/components/landing/st
 import { FocusHero, FocusHow, FocusVideo, FocusWhere } from '@/components/landing/stories/focus'
 import { AmberHero, AmberHow, AmberWhen } from '@/components/landing/stories/amber'
 import { FlowExplain, FlowHero, FlowHome, FlowSpecialist, FlowSpecs, flowZones } from '@/components/landing/stories/flow'
-import { Contact, Facts, PresentationShell, Questions } from './kit'
+import { Contact, Facts, HeroPrice, PresentationShell, Questions } from './kit'
 
 const rows = (p: Product, extra: [string, string][] = []): [string, string][] => [...getProductContent(p.id).specs.map((s): [string, string] => [s.label, s.value]), ...extra]
 
@@ -22,7 +23,7 @@ export function PresentationPage({ landing }: { landing: Landing }) {
     case 'calm':
       return (
         <PresentationShell landing={landing} heroTone="light">
-          <CalmHero name={p.name} />
+          <CalmHero name={p.name} buy={<HeroPrice amount={p.price} light />} />
           <CalmHow />
           <CalmUse />
           <CalmMoments />
@@ -34,7 +35,7 @@ export function PresentationPage({ landing }: { landing: Landing }) {
     case 'focus':
       return (
         <PresentationShell landing={landing} heroTone="dark">
-          <FocusHero name={p.name} />
+          <FocusHero name={p.name} buy={<HeroPrice amount={p.price} />} />
           <FocusVideo />
           <FocusHow />
           <Studies p={p} />
@@ -47,7 +48,7 @@ export function PresentationPage({ landing }: { landing: Landing }) {
     case 'amber':
       return (
         <PresentationShell landing={landing} heroTone="dark">
-          <AmberHero name={p.name} />
+          <AmberHero name={p.name} buy={<HeroPrice amount={p.price} />} />
           <AmberHow />
           <Frames p={p} />
           <AmberWhen />
@@ -59,7 +60,7 @@ export function PresentationPage({ landing }: { landing: Landing }) {
     case 'brain-flow':
       return (
         <PresentationShell landing={landing} heroTone="dark">
-          <FlowHero name={p.name} />
+          <FlowHero name={p.name} buy={<HeroPrice amount={p.price} from={p.variablePrice} center />} />
           <FlowHome />
           <FlowExplain />
           <FlowSpecialist />
@@ -111,12 +112,14 @@ function Frames({ p }: { p: Product }) {
       <ul className="mt-10 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
         {(p.variants ?? []).map((v) => {
           const img = v.images.find((i) => i.kind === 'cutout') ?? p.cutout
+          const price = unitPrice(p, v)
           return (
             <li key={v.id} className="rounded-[20px] bg-paper p-3 sm:p-4">
               <div className="relative aspect-[16/10] rounded-[14px] bg-[var(--lp-bg)]">
                 <Image src={img.src} alt={img.alt} fill sizes="(min-width: 1024px) 260px, 45vw" className="object-contain p-[10%]" />
               </div>
               <p className="mt-3 text-[16px] leading-snug font-medium sm:text-[17px]">{variantLabel(p, v)}</p>
+              {price !== null && <p className="text-[15px] text-[var(--lp-muted)] tabular-nums">{formatLei(price)}</p>}
             </li>
           )
         })}
@@ -139,11 +142,13 @@ function Configurations({ p }: { p: Product }) {
       <ul className="mt-10 grid gap-4 md:grid-cols-3">
         {(p.variants ?? []).map((v) => {
           const n = flowZones[v.id]
+          const price = unitPrice(p, v)
           return (
-            <li key={v.id} className="rounded-[22px] p-5 shadow-[inset_0_0_0_1px_var(--lp-line)] md:p-6">
+            <li key={v.id} className="flex flex-col rounded-[22px] p-5 shadow-[inset_0_0_0_1px_var(--lp-line)] md:p-6">
               <span className="block text-[40px] leading-none font-medium tracking-[-0.05em] tabular-nums md:text-[56px]">{n?.big}</span>
               <span className="mt-2 block text-[17px] font-semibold">{variantLabel(p, v)}</span>
               {n && <span className="mt-2 block text-[15px] leading-snug text-[var(--lp-muted)]">{n.text}</span>}
+              {price !== null && <span className="mt-auto block pt-4 text-[22px] font-medium tracking-[-0.02em] tabular-nums md:pt-6">{formatLei(price)}</span>}
             </li>
           )
         })}

@@ -133,7 +133,7 @@ Ordinea: hero, produsele (cu oferta lor, discret), ideea de brand cu cele patru 
 ## Pagini de prezentare (02.10.2026)
 
 - Fiecare landing are o pagină de prezentare la `/prezentare` pe subdomeniul lui (`calm.biohack-tech.ro/prezentare`, `focus…`, `amber…`, `brain-flow…`). Pe domeniul principal, pentru previzualizare: `/lp/<slug>/prezentare`.
-- Doar informații: povestea produsului (aceleași secțiuni și același text ca pe landing), detaliile tehnice, întrebările despre produs și un contact. Fără preț, fără buton de cumpărare, fără oferte, fără coș și fără întrebările despre retur sau 2+1.
+- Doar informații: povestea produsului (aceleași secțiuni și același text ca pe landing), prețul, detaliile tehnice, întrebările despre produs și un contact. Prețul apare în hero (cu TVA și livrare gratuită), la fiecare ramă NEUROS Amber și la fiecare configurație NEUROS Flow, ca informație, fără buton lângă el. Fără buton de cumpărare, fără oferte, fără coș și fără întrebările despre retur sau 2+1.
 - Niciun link spre biohack-tech.ro: header-ul are doar logo-ul (fără link) și „Contact”, footer-ul are datele firmei și nota de wellness. Singurele linkuri sunt emailul, telefonul și, pe NEUROS Focus, studiile externe despre biofeedback.
 - Pagina nu colectează date: contactul e doar prin email și telefon (fără formular), fără cookie-uri și fără instrumente de analiză. De aceea nu are banner de cookies și nici linkuri spre politici.
 - Neindexate (`noindex` în pagină și în header), fără canonical spre magazin.

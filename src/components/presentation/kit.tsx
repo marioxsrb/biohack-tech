@@ -11,6 +11,7 @@ import type { ProductImage } from '@/content/catalog'
 import type { Landing } from '@/content/landings'
 import { companyLine } from '@/config/company'
 import { site, terms } from '@/config/site'
+import { formatLei } from '@/lib/money'
 import { Kicker, LandingFaq, Lead, Specs, Title, themeVars } from '@/components/landing/parts'
 
 export function PresentationShell({ landing, heroTone, children }: { landing: Landing; heroTone: 'light' | 'dark'; children: ReactNode }) {
@@ -46,6 +47,20 @@ export function PresentationShell({ landing, heroTone, children }: { landing: La
         </div>
       </footer>
     </div>
+  )
+}
+
+/** The price in the hero, as information: the amount and what it includes, with no button beside it. */
+export function HeroPrice({ amount, from, light, center }: { amount: number | null; from?: boolean; light?: boolean; center?: boolean }) {
+  if (amount === null) return null
+  return (
+    <p className={`mt-7 flex flex-wrap items-center gap-x-4 gap-y-2 ${center ? 'justify-center' : ''}`}>
+      <span className={`text-[30px] font-medium tracking-[-0.03em] tabular-nums ${light ? 'text-white' : ''}`}>
+        {from && 'de la '}
+        {formatLei(amount)}
+      </span>
+      <span className={`text-[14px] ${light ? 'text-white/70' : 'text-[var(--lp-muted)]'}`}>{terms.vat} · livrare gratuită</span>
+    </p>
   )
 }
 
