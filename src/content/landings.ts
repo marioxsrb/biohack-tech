@@ -44,7 +44,7 @@ export const landings: Landing[] = [
     theme: { bg: '#f2f5f6', ink: '#0b1316', muted: '#4b5960', panel: '#ffffff', line: '#dce3e6', accent: '#0e7490' },
     meta: {
       title: 'NEUROS Calm: lumină roșie pentru relaxare, purtată la gât',
-      description: 'NEUROS Calm se poartă la gât și aplică lumină roșie în zona nervului vag. Câteva minute de relaxare, acasă. Livrare gratuită în România.',
+      description: 'NEUROS Calm se poartă la gât și aplică lumină roșie și infraroșie în zona nervului vag. Câteva minute de relaxare, acasă. Livrare gratuită în România.',
     },
     faqs: [
       { q: 'Cât durează o ședință?', a: 'Câteva minute. Îl pornești dintr-un singur buton, iar la final se oprește singur.' },

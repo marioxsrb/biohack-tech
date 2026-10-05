@@ -43,7 +43,7 @@ export function CalmHero({ name, buy, cta }: { name: string; buy?: ReactNode; ct
           Seara, câteva minute doar pentru tine.
         </h1>
         <p className="mt-5 max-w-[30em] text-[clamp(17px,1.4vw,20px)] leading-snug text-white/85">
-          Stresul zilei se adună în corp. NEUROS Calm se poartă la gât și aplică lumină roșie în zona nervului vag. Îl pornești și te relaxezi.
+          Stresul zilei se adună în corp. NEUROS Calm se poartă la gât și aplică lumină roșie și infraroșie în zona nervului vag. Îl pornești și te relaxezi.
         </p>
         {buy}
         <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -70,7 +70,8 @@ export function CalmHow() {
           <div className="mt-5 max-w-[30em] space-y-4 text-[17.5px] leading-relaxed text-[var(--lp-muted)]">
             <p>Prin gât trece nervul vag, cel mai lung nerv din corp. Leagă creierul de inimă, plămâni și digestie.</p>
             <p>Nervul vag are un rol în trecerea corpului din alertă în repaus.</p>
-            <p>NEUROS Calm aplică lumină roșie pe ambele părți ale gâtului. Metoda se numește fotobiomodulare.</p>
+            <p>Este cel mai puternic dispozitiv de acest fel de pe piață. Pe partea stângă, 6 diode emit lumină infraroșie de 810 nm, care pătrunde mai adânc, spre nervul vag. Pe restul gâtului, lumină roșie de 660 nm.</p>
+            <p>Lumina pulsează de 14 ori pe secundă, ritmul undelor cerebrale SMR, asociat cu o stare calmă și echilibrată. Metoda se numește fotobiomodulare.</p>
           </div>
         </div>
         <div className="relative aspect-[4/3] overflow-hidden rounded-[28px] md:col-span-6">
@@ -106,7 +107,7 @@ export function CalmUse() {
             items={[
               {
                 title: 'Îl așezi la gât.',
-                text: 'Luminile stau pe ambele părți ale gâtului.',
+                text: 'Diodele de 810 nm stau pe partea stângă, în zona nervului vag.',
               },
               {
                 title: 'Îl pornești.',

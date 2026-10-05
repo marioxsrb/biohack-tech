@@ -64,9 +64,9 @@ export const productContent: Record<ProductId, ProductContent> = {
   'balance-wave': {
     seo: {
       title: 'NEUROS Calm, dispozitiv cu lumină roșie pentru relaxare',
-      description: 'NEUROS Calm se poartă la gât și aplică lumină roșie în zona nervului vag. Câteva minute de relaxare, acasă. Livrare gratuită în România.',
+      description: 'NEUROS Calm se poartă la gât și aplică lumină roșie și infraroșie în zona nervului vag. Câteva minute de relaxare, acasă. Livrare gratuită în România.',
     },
-    intro: 'Stresul zilei se adună în corp. NEUROS Calm aplică lumină roșie în zona gâtului, pe unde trece nervul vag. O ședință durează câteva minute.',
+    intro: 'Stresul zilei se adună în corp. NEUROS Calm aplică lumină pe gât. Pe partea stângă, 6 diode de 810 nm luminează zona nervului vag. O ședință durează câteva minute.',
     benefits: [
       { title: 'Relaxare în câteva minute', text: 'O ședință durează câteva minute.' },
       { title: 'Se oprește singur', text: 'Îl pornești și te relaxezi.' },
@@ -87,7 +87,8 @@ export const productContent: Record<ProductId, ProductContent> = {
       paragraphs: [
         'Pe acolo trece nervul vag, cel mai lung nerv din corp. Leagă creierul de inimă, plămâni și digestie.',
         'Nervul vag are un rol în trecerea corpului din alertă în repaus.',
-        'NEUROS Calm folosește fotobiomodulare: lumină roșie aplicată pe piele, din ambele părți ale gâtului.',
+        'Este cel mai puternic dispozitiv de acest fel de pe piață. Pe partea stângă a gâtului, 6 diode emit lumină infraroșie de 810 nm, care pătrunde mai adânc, spre nervul vag. Pe restul gâtului, lumină roșie de 660 nm.',
+        'Lumina pulsează de 14 ori pe secundă, ritmul undelor cerebrale SMR, asociat cu o stare calmă și echilibrată. Metoda se numește fotobiomodulare.',
       ],
       image: photo(bwNervVag, 'Ilustrație: nervul vag pornește din creier și ajunge la inimă, plămâni și digestie'),
     },
@@ -99,8 +100,10 @@ export const productContent: Record<ProductId, ProductContent> = {
       },
     ],
     specs: [
-      { label: 'Tehnologie', value: 'Fotobiomodulare duală (lumină roșie)' },
-      { label: 'Unde se aplică', value: 'La gât, în zona nervului vag' },
+      { label: 'Tehnologie', value: 'Fotobiomodulare duală: 660 nm și 810 nm' },
+      { label: 'Partea stângă', value: '6 diode de 810 nm, în zona nervului vag' },
+      { label: 'Restul gâtului', value: 'Lumină roșie de 660 nm' },
+      { label: 'Lumină pulsată', value: '14 Hz (ritmul SMR)' },
       { label: 'Oprire', value: 'Automată' },
       { label: 'Garanție', value: '2 ani' },
     ],
@@ -286,9 +289,9 @@ export const productContentEn: Record<ProductId, ProductContent> = {
   'balance-wave': {
     seo: {
       title: 'NEUROS Calm, red light device for the neck and vagus nerve',
-      description: 'NEUROS Calm is worn around the neck and shines red light over the vagus nerve area. A few minutes of relaxation at home. Free delivery in Romania.',
+      description: 'NEUROS Calm is worn around the neck and shines red and infrared light over the vagus nerve area. A few minutes of relaxation at home. Free delivery in Romania.',
     },
-    intro: 'The stress of the day builds up in the body. NEUROS Calm shines red light on your neck, where the vagus nerve runs. A session lasts a few minutes.',
+    intro: 'The stress of the day builds up in the body. NEUROS Calm shines light on your neck. On the left side, 6 diodes at 810 nm light the vagus nerve area. A session lasts a few minutes.',
     benefits: [
       { title: 'Relaxation in a few minutes', text: 'A session lasts a few minutes.' },
       { title: 'Switches off by itself', text: 'You switch it on and relax.' },
@@ -309,7 +312,8 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       paragraphs: [
         'The vagus nerve runs through the neck. It is the longest nerve in the body. It links the brain to the heart, lungs and digestion.',
         'The vagus nerve plays a part in how the body moves from alert to rest.',
-        'NEUROS Calm uses photobiomodulation: red light on the skin, on both sides of the neck.',
+        'It is the most powerful device of its kind on the market. On the left side of the neck, 6 diodes give off 810 nm infrared light, which reaches deeper, towards the vagus nerve. The rest of the neck gets 660 nm red light.',
+        'The light pulses 14 times a second, the rhythm of SMR brain waves, linked to a calm, balanced state. The method is called photobiomodulation.',
       ],
       image: photo(bwNervVag, 'Illustration: the vagus nerve starts in the brain and reaches the heart, lungs and digestion'),
     },
@@ -321,8 +325,10 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       },
     ],
     specs: [
-      { label: 'Technology', value: 'Dual photobiomodulation (red light)' },
-      { label: 'Where it goes', value: 'Around the neck, over the vagus nerve area' },
+      { label: 'Technology', value: 'Dual photobiomodulation: 660 nm and 810 nm' },
+      { label: 'Left side', value: '6 diodes at 810 nm, over the vagus nerve area' },
+      { label: 'Rest of the neck', value: '660 nm red light' },
+      { label: 'Pulsed light', value: '14 Hz (SMR rhythm)' },
       { label: 'Switch off', value: 'Automatic' },
       { label: 'Warranty', value: '2 years' },
     ],

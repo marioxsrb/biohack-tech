@@ -39,7 +39,7 @@ export function CalmLanding({ landing }: { landing: Landing }) {
         title="NEUROS Calm, livrat acasă."
         text="Primești dispozitivul și un specialist care te ajută să începi."
         details={[
-          ['Tehnologie', 'Fotobiomodulare duală, lumină roșie'],
+          ['Tehnologie', '660 nm și 810 nm (6 diode pe stânga), pulsat la 14 Hz'],
           ['Ședința', 'Câteva minute, se oprește singur'],
           ['Ghidaj', 'Un specialist îți recomandă programul'],
         ]}
