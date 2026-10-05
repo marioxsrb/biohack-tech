@@ -43,7 +43,7 @@ export function CalmHero({ name, buy, cta }: { name: string; buy?: ReactNode; ct
           Seara, câteva minute doar pentru tine.
         </h1>
         <p className="mt-5 max-w-[30em] text-[clamp(17px,1.4vw,20px)] leading-snug text-white/85">
-          Stresul zilei se adună în corp. NEUROS Calm se poartă la gât și aplică lumină roșie în zona nervului vag. Alegi durata și te relaxezi.
+          Stresul zilei se adună în corp. NEUROS Calm se poartă la gât și aplică lumină roșie în zona nervului vag. Îl pornești și te relaxezi.
         </p>
         {buy}
         <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -109,8 +109,8 @@ export function CalmUse() {
                 text: 'Luminile stau pe ambele părți ale gâtului.',
               },
               {
-                title: 'Alegi durata.',
-                text: 'Între 5 și 20 de minute. Reglezi intensitatea pe trepte.',
+                title: 'Îl pornești.',
+                text: 'Dintr-un singur buton, pe spatele dispozitivului.',
               },
               {
                 title: 'Te relaxezi.',

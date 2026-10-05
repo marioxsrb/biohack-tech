@@ -40,8 +40,8 @@ export function CalmLanding({ landing }: { landing: Landing }) {
         text="Primești dispozitivul și un specialist care te ajută să începi."
         details={[
           ['Tehnologie', 'Fotobiomodulare duală, lumină roșie'],
-          ['Ședința', '5-20 de minute, se oprește singur'],
-          ['Ghidaj', 'Un specialist îți recomandă durata și programul'],
+          ['Ședința', 'Câteva minute, se oprește singur'],
+          ['Ghidaj', 'Un specialist îți recomandă programul'],
         ]}
       />
 

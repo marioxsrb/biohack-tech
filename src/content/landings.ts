@@ -44,13 +44,12 @@ export const landings: Landing[] = [
     theme: { bg: '#f2f5f6', ink: '#0b1316', muted: '#4b5960', panel: '#ffffff', line: '#dce3e6', accent: '#0e7490' },
     meta: {
       title: 'NEUROS Calm: lumină roșie pentru relaxare, purtată la gât',
-      description: 'NEUROS Calm se poartă la gât și aplică lumină roșie în zona nervului vag. 5-20 de minute de relaxare, acasă. Livrare gratuită în România.',
+      description: 'NEUROS Calm se poartă la gât și aplică lumină roșie în zona nervului vag. Câteva minute de relaxare, acasă. Livrare gratuită în România.',
     },
     faqs: [
-      { q: 'Cât durează o ședință?', a: 'Între 5 și 20 de minute. Alegi tu durata, iar dispozitivul se oprește singur.' },
+      { q: 'Cât durează o ședință?', a: 'Câteva minute. Îl pornești dintr-un singur buton, iar la final se oprește singur.' },
       { q: 'Pot să lucrez sau să citesc în timp ce îl port?', a: 'Da. În timpul ședinței poți citi, medita sau lucra ușor.' },
-      { q: 'Pot regla intensitatea?', a: 'Da. Reglezi intensitatea pe trepte.' },
-      { q: 'Mă ajută cineva să încep?', a: 'Da. Un specialist Biohack Tech îți recomandă durata și programul potrivite pentru tine.' },
+      { q: 'Mă ajută cineva să încep?', a: 'Da. Un specialist Biohack Tech îți recomandă programul potrivit pentru tine.' },
       { q: 'Ce fel de produs este?', a: 'NEUROS Calm este un produs de wellness. Pentru o afecțiune, cere întâi sfatul medicului.' },
       { q: 'Pot să îl returnez?', a: 'Da. Ai 14 zile de la primire să te răzgândești. Garanția este de 2 ani.', buy: true },
     ],

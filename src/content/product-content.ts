@@ -64,23 +64,23 @@ export const productContent: Record<ProductId, ProductContent> = {
   'balance-wave': {
     seo: {
       title: 'NEUROS Calm, dispozitiv cu lumină roșie pentru relaxare',
-      description: 'NEUROS Calm se poartă la gât și aplică lumină roșie în zona nervului vag. 5-20 de minute de relaxare, acasă. Livrare gratuită în România.',
+      description: 'NEUROS Calm se poartă la gât și aplică lumină roșie în zona nervului vag. Câteva minute de relaxare, acasă. Livrare gratuită în România.',
     },
-    intro: 'Stresul zilei se adună în corp. NEUROS Calm aplică lumină roșie în zona gâtului, pe unde trece nervul vag. O ședință durează între 5 și 20 de minute.',
+    intro: 'Stresul zilei se adună în corp. NEUROS Calm aplică lumină roșie în zona gâtului, pe unde trece nervul vag. O ședință durează câteva minute.',
     benefits: [
-      { title: 'Relaxare în câteva minute', text: 'O ședință durează între 5 și 20 de minute.' },
-      { title: 'Se oprește singur', text: 'Alegi durata și te relaxezi.' },
+      { title: 'Relaxare în câteva minute', text: 'O ședință durează câteva minute.' },
+      { title: 'Se oprește singur', text: 'Îl pornești și te relaxezi.' },
       { title: 'Ghidaj inclus', text: 'Un specialist te ajută să începi.' },
     ],
     scene: {
       title: 'Un moment doar pentru tine.',
-      text: 'Îl așezi la gât și alegi durata. Apoi te relaxezi.',
+      text: 'Îl așezi la gât și îl pornești. Apoi te relaxezi.',
       image: photo(bwCalm, 'Femeie relaxată pe canapea, purtând NEUROS Calm la gât'),
     },
     use: {
       title: 'Cum îl folosești',
       image: cut(bwSpate, 'NEUROS Calm văzut din spate, cu butonul de pornire'),
-      steps: ['Îl așezi la gât.', 'Alegi durata, între 5 și 20 de minute.', 'Te relaxezi. Se oprește singur.'],
+      steps: ['Îl așezi la gât.', 'Îl pornești dintr-un singur buton.', 'Te relaxezi. Se oprește singur.'],
     },
     explain: {
       title: 'De ce la gât?',
@@ -101,14 +101,12 @@ export const productContent: Record<ProductId, ProductContent> = {
     specs: [
       { label: 'Tehnologie', value: 'Fotobiomodulare duală (lumină roșie)' },
       { label: 'Unde se aplică', value: 'La gât, în zona nervului vag' },
-      { label: 'Durată', value: '5-20 de minute, la alegere' },
-      { label: 'Intensitate', value: 'Reglabilă pe trepte' },
       { label: 'Oprire', value: 'Automată' },
       { label: 'Garanție', value: '2 ani' },
     ],
     faqs: [
       { q: 'Pot să lucrez în timp ce îl port?', a: 'Da. Poți citi, medita sau lucra ușor în timpul ședinței.' },
-      { q: 'Mă ajută cineva să încep?', a: 'Da. Un specialist Biohack Tech îți recomandă durata și programul potrivite pentru tine.' },
+      { q: 'Mă ajută cineva să încep?', a: 'Da. Un specialist Biohack Tech îți recomandă programul potrivit pentru tine.' },
       { q: 'Ce fel de produs este?', a: 'NEUROS Calm este un produs de wellness. Pentru o afecțiune, vorbește întâi cu medicul tău.' },
     ],
   },
@@ -288,23 +286,23 @@ export const productContentEn: Record<ProductId, ProductContent> = {
   'balance-wave': {
     seo: {
       title: 'NEUROS Calm, red light device for the neck and vagus nerve',
-      description: 'NEUROS Calm is worn around the neck and shines red light over the vagus nerve area. 5 to 20 minutes of relaxation at home. Free delivery in Romania.',
+      description: 'NEUROS Calm is worn around the neck and shines red light over the vagus nerve area. A few minutes of relaxation at home. Free delivery in Romania.',
     },
-    intro: 'The stress of the day builds up in the body. NEUROS Calm shines red light on your neck, where the vagus nerve runs. A session lasts between 5 and 20 minutes.',
+    intro: 'The stress of the day builds up in the body. NEUROS Calm shines red light on your neck, where the vagus nerve runs. A session lasts a few minutes.',
     benefits: [
-      { title: 'Relaxation in a few minutes', text: 'A session lasts between 5 and 20 minutes.' },
-      { title: 'Switches off by itself', text: 'You choose the length and relax.' },
+      { title: 'Relaxation in a few minutes', text: 'A session lasts a few minutes.' },
+      { title: 'Switches off by itself', text: 'You switch it on and relax.' },
       { title: 'Guidance included', text: 'A specialist helps you get started.' },
     ],
     scene: {
       title: 'A moment just for you.',
-      text: 'Place it around your neck and choose the length. Then relax.',
+      text: 'Place it around your neck and switch it on. Then relax.',
       image: photo(bwCalm, 'Relaxed woman on a sofa, wearing NEUROS Calm around her neck'),
     },
     use: {
       title: 'How to use it',
       image: cut(bwSpate, 'NEUROS Calm from the back, with the power button'),
-      steps: ['Place it around your neck.', 'Choose the length, between 5 and 20 minutes.', 'Relax. It switches off by itself.'],
+      steps: ['Place it around your neck.', 'Switch it on with its single button.', 'Relax. It switches off by itself.'],
     },
     explain: {
       title: 'Why the neck?',
@@ -325,14 +323,12 @@ export const productContentEn: Record<ProductId, ProductContent> = {
     specs: [
       { label: 'Technology', value: 'Dual photobiomodulation (red light)' },
       { label: 'Where it goes', value: 'Around the neck, over the vagus nerve area' },
-      { label: 'Session length', value: '5 to 20 minutes, your choice' },
-      { label: 'Intensity', value: 'Adjustable in steps' },
       { label: 'Switch off', value: 'Automatic' },
       { label: 'Warranty', value: '2 years' },
     ],
     faqs: [
       { q: 'Can I work while wearing it?', a: 'Yes. You can read, meditate or do light work during a session.' },
-      { q: 'Will someone help me get started?', a: 'Yes. A Biohack Tech specialist suggests the session length and the routine that suit you.' },
+      { q: 'Will someone help me get started?', a: 'Yes. A Biohack Tech specialist suggests the routine that suits you.' },
       { q: 'What kind of product is it?', a: 'NEUROS Calm is a wellness product. If you have a medical condition, talk to your doctor first.' },
     ],
   },

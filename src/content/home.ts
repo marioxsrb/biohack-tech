@@ -59,7 +59,7 @@ const homeFaqRo: FaqItem[] = [
   },
   {
     q: 'Cum se folosesc?',
-    a: 'NEUROS Calm se poartă la gât, 5-20 de minute. NEUROS Focus se conectează prin Bluetooth la o tabletă, unde rulează jocurile. NEUROS Amber se poartă ca orice ochelari. NEUROS Flow urmează protocolul stabilit la consultația de început. Pentru Calm, Focus și Flow, un specialist te ajută să începi.',
+    a: 'NEUROS Calm se poartă la gât, câteva minute. NEUROS Focus se conectează prin Bluetooth la o tabletă, unde rulează jocurile. NEUROS Amber se poartă ca orice ochelari. NEUROS Flow urmează protocolul stabilit la consultația de început. Pentru Calm, Focus și Flow, un specialist te ajută să începi.',
   },
   {
     q: 'Cum funcționează ofertele?',
@@ -187,7 +187,7 @@ const homeFaqEn: FaqItem[] = [
   },
   {
     q: 'How do I use them?',
-    a: 'You wear NEUROS Calm around your neck for 5 to 20 minutes. NEUROS Focus connects to a tablet by Bluetooth, where the games run. You wear NEUROS Amber like any other glasses. NEUROS Flow follows the protocol set at your first consultation. For Calm, Focus and Flow, a specialist helps you get started.',
+    a: 'You wear NEUROS Calm around your neck for a few minutes. NEUROS Focus connects to a tablet by Bluetooth, where the games run. You wear NEUROS Amber like any other glasses. NEUROS Flow follows the protocol set at your first consultation. For Calm, Focus and Flow, a specialist helps you get started.',
   },
   {
     q: 'How do the offers work?',
