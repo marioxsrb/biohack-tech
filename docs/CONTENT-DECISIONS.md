@@ -118,7 +118,7 @@ Ordinea: hero, produsele (cu oferta lor, discret), ideea de brand cu cele patru 
 
 ## Preloader și optimizare (02.10.2026)
 
-- Preloader la prima pagină dintr-o vizită (o dată pe filă): doar logo-ul „BIOHACK TECH”, literă cu literă, și o linie care se umple, cu o lumină care trece pe ea; apoi cortina urcă peste fotografie. Se mișcă doar prin transform și opacity, ca să rămână fluid cât timp pagina se încarcă dedesubt. Așteaptă evenimentul `load` și minimum 2,4 secunde; după 8 secunde site-ul apare oricum. Fără JavaScript, la a doua pagină din vizită, pe landinguri și în checkout nu apare. Cu „reduce motion” are doar fade.
+- Preloader-ul (cortina cu logo la prima vizită) a fost scos pe 08.10.2026: pagina apare direct, fără așteptare. Rămâne doar intrarea discretă a fotografiei din hero, în CSS, care nu ascunde conținutul.
 - Lighthouse mobil, build de producție: performanță 89 → 93 (home) și 92 → 93 (produs), restul 100. CSS-ul vine în HTML (`inlineCss`), fotografia principală are `fetchPriority="high"`, fontul mono nu mai e preîncărcat, trei etichete ARIA nu mai contrazic textul vizibil.
 - A doua trecere, pe toate paginile publice: prima imagine din /products și fotografia din Despre noi se încarcă imediat, cu prioritate; coșul își păstrează înălțimea cât citește coșul salvat (CLS 0,058 → 0). Lighthouse mobil: 92-96 performanță pe toate paginile, 100 accesibilitate, bune practici și SEO (coșul are noindex intenționat).
 
