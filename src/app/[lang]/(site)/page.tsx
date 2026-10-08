@@ -6,6 +6,7 @@ import { HomeFaq } from '@/components/home/HomeFaq'
 import { Offers } from '@/components/home/Offers'
 import { Rhythm } from '@/components/home/Rhythm'
 import { Why } from '@/components/home/Why'
+import { ReviewMarquee } from '@/components/reviews/ReviewMarquee'
 import { site } from '@/config/site'
 import { getLocale } from '@/i18n/server'
 import { pageMetadata } from '@/lib/seo'
@@ -43,7 +44,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /**
  * Plain document flow: every section renders from the server and scrolls natively.
- * Hero, the four products (once), why buy here, the same day with and without the products, the offers
+ * Hero, the four products (once), why buy here, real reviews under the customer count, the same day with and without the products, the offers
  * (to close a decision, not to open it), questions, a person to write to.
  */
 export default function Home() {
@@ -52,6 +53,7 @@ export default function Home() {
       <Hero />
       <Discover />
       <Why />
+      <ReviewMarquee className="pt-[var(--sec)]" />
       <Rhythm />
       <Offers />
       <HomeFaq />

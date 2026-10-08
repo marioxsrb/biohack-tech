@@ -193,15 +193,24 @@ describe('pages', () => {
     const src = read('src/components/home/Discover.tsx')
     expect(src.match(/<Link href=\{productHref\(p\)\} aria-label=\{view\(p\.name\)\}/g)?.length).toBe(2)
   })
-  it('product page: the offer sits under the price and trust row; Amber opens the pair picker in place', () => {
+  it('product page: price, quantity, bundle offers, then the order buttons, contact and trust row; Amber opens the pair picker', () => {
     const hero = read('src/components/product/ProductHero.tsx')
-    expect(hero.indexOf('ui.warranty')).toBeLessThan(hero.indexOf('<ProductOffer'))
-    expect(hero.indexOf('<ProductOffer')).toBeLessThan(hero.indexOf('<AddToCartButton'))
-    const offer = read('src/components/offers/ProductOffer.tsx')
-    expect(offer).toContain("openAmber('product_page', 3)")
-    // NEUROS Calm, Focus, Flow: the tier cards add this product straight to the cart, no picker.
-    expect(offer).toContain('add(productId, variantId, t.minUnits)')
-    expect(offer).not.toContain('openBundle')
+    const at = (s: string) => hero.indexOf(s)
+    expect(at('<SocialProof')).toBeLessThan(at('<h1'))
+    expect(at('<h1')).toBeLessThan(at('<Highlights'))
+    expect(at('<Highlights')).toBeLessThan(at('<PriceBlock'))
+    expect(at('<PriceBlock')).toBeLessThan(at('product.options?.map'))
+    expect(at('product.options?.map')).toBeLessThan(at('<QuantityStepper'))
+    expect(at('<QuantityStepper')).toBeLessThan(at('<BundleOffer'))
+    expect(at('<BundleOffer')).toBeLessThan(at('<BuyNowButton'))
+    expect(at('<BuyNowButton')).toBeLessThan(at('<ContactOrder'))
+    expect(at('<ContactOrder')).toBeLessThan(at('<AddToCartButton'))
+    expect(at('<AddToCartButton')).toBeLessThan(at('<TrustRow'))
+    const box = read('src/components/product/BuyBox.tsx')
+    expect(box).toContain("openAmber('product_page', 3)")
+    // The rows use the cart's own engine on this product; choosing one sets the quantity, it adds nothing by itself.
+    expect(box).toContain("priceLines([{ key: 'x', productId, quantity: n, unitAmount: unit }])")
+    expect(box).toContain('onClick={() => onQuantity(n)}')
   })
   it('checkout: the suggestion module is the only product surface, before the payment decision', () => {
     const v = read('src/app/[lang]/(checkout)/checkout/CheckoutView.tsx')

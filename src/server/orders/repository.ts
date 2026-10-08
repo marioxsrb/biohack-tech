@@ -32,6 +32,8 @@ function toOrder(r: Row, items: OrderItem[]): Order {
     notes: (r.notes as string) ?? '',
     marketingConsent: !!r.marketing_consent,
     stripePaymentIntentId: (r.stripe_payment_intent_id as string) ?? null,
+    codAmountMinor: r.cod_amount_minor == null ? null : Number(r.cod_amount_minor),
+    codReference: (r.cod_reference as string) ?? null,
     paidAt: date(r.paid_at),
     cancelledAt: date(r.cancelled_at),
     cancelReason: (r.cancel_reason as string) ?? null,
@@ -151,7 +153,7 @@ export const orders = {
 
   async insert(
     q: Queryable,
-    o: Omit<Order, 'createdAt' | 'updatedAt' | 'refundedMinor' | 'paidAt' | 'cancelledAt' | 'cancelReason' | 'refundedAt' | 'fgoInvoiceSeries' | 'fgoInvoiceNumber' | 'fgoInvoiceLink' | 'fgoStornoNumber' | 'ghlContactId' | 'ghlOpportunityId' | 'courier' | 'trackingNumber' | 'trackingUrl' | 'shippedAt' | 'deliveredAt' | 'stripePaymentIntentId' | 'recoveryStatus' | 'recoveryReason' | 'recoveryToken' | 'recoveryExpiresAt' | 'returnStatus' | 'returnRequestedAt' | 'returnReceivedAt' | 'stripeCustomerId' | 'stripePaymentMethodId' | 'upsellStatus' | 'upsellExpiresAt'>,
+    o: Omit<Order, 'createdAt' | 'updatedAt' | 'refundedMinor' | 'paidAt' | 'cancelledAt' | 'cancelReason' | 'refundedAt' | 'fgoInvoiceSeries' | 'fgoInvoiceNumber' | 'fgoInvoiceLink' | 'fgoStornoNumber' | 'ghlContactId' | 'ghlOpportunityId' | 'courier' | 'trackingNumber' | 'trackingUrl' | 'shippedAt' | 'deliveredAt' | 'stripePaymentIntentId' | 'recoveryStatus' | 'recoveryReason' | 'recoveryToken' | 'recoveryExpiresAt' | 'returnStatus' | 'returnRequestedAt' | 'returnReceivedAt' | 'stripeCustomerId' | 'stripePaymentMethodId' | 'upsellStatus' | 'upsellExpiresAt' | 'codAmountMinor' | 'codReference'>,
     idempotencyKey: string,
     termsAcceptedAt: Date,
   ) {

@@ -42,7 +42,8 @@ export function invoicePayload(c: FgoConfig, o: Order) {
     TipFactura: 'Factura',
     IdExtern: o.orderNumber,
     VerificareDuplicat: true,
-    Text: `Comanda ${o.orderNumber}`,
+    // The invoice records how it is paid; it is never registered as collected here (no receipt is sent to FGO).
+    Text: o.paymentMethod === 'cash_on_delivery' ? `Comanda ${o.orderNumber}. Plata ramburs, la livrare.` : `Comanda ${o.orderNumber}`,
     Client: {
       Denumire: client,
       Tip: pj ? 'PJ' : 'PF',

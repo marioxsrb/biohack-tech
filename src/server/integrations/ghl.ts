@@ -7,7 +7,8 @@ import 'server-only'
 import { attributionSummary } from '@/lib/attribution'
 import { isConfirmedPurchase } from '@/lib/segments'
 import type { GhlConfig } from '@/server/config'
-import { customerName, type Order } from '@/server/orders/model'
+import { log } from '@/server/log'
+import { customerName, PAYMENT_METHOD_LABEL, type Order } from '@/server/orders/model'
 
 export class GhlError extends Error {
   constructor(message: string, readonly status: number) {
@@ -51,17 +52,23 @@ export const STAGES = {
   delivered: 'Livrată',
   cancelled: 'Anulată',
   refunded: 'Rambursată',
+  /** Cash on delivery accepted, to prepare; nothing collected yet. Create it in the pipeline (see ghl-check). */
+  codToPrepare: 'Ramburs, de pregătit',
 } as const
 export type StageKey = keyof typeof STAGES
 
-/** Where an order sits in the pipeline, from its two state axes. */
+/**
+ * Where an order sits in the pipeline, from its two state axes. A cash-on-delivery order moves through the
+ * same fulfilment stages but stays "open" until the courier's settlement is recorded: only money is "won".
+ */
 export function stageFor(o: Pick<Order, 'status' | 'paymentStatus'>): { stage: StageKey; status: 'open' | 'won' | 'lost' | 'abandoned' } {
+  const won = o.paymentStatus === 'awaiting_collection' ? 'open' : 'won'
   if (o.paymentStatus === 'refunded') return { stage: 'refunded', status: 'lost' }
   if (o.status === 'cancelled') return { stage: 'cancelled', status: 'lost' }
-  if (o.status === 'delivered') return { stage: 'delivered', status: 'won' }
-  if (o.status === 'shipped') return { stage: 'shipped', status: 'won' }
-  if (o.status === 'processing') return { stage: 'processing', status: 'won' }
-  if (o.status === 'confirmed') return { stage: 'paid', status: 'won' }
+  if (o.status === 'delivered') return { stage: 'delivered', status: won }
+  if (o.status === 'shipped') return { stage: 'shipped', status: won }
+  if (o.status === 'processing') return { stage: 'processing', status: won }
+  if (o.status === 'confirmed') return o.paymentStatus === 'awaiting_collection' ? { stage: 'codToPrepare', status: 'open' } : { stage: 'paid', status: 'won' }
   if (o.status === 'abandoned') return { stage: 'abandoned', status: 'abandoned' }
   return { stage: o.paymentStatus === 'awaiting_transfer' ? 'awaitingTransfer' : 'abandoned', status: 'open' }
 }
@@ -116,6 +123,7 @@ export const PRODUCT_TAG: Record<string, string> = {
 const PAYMENT_STATUS_RO: Record<Order['paymentStatus'], string> = {
   pending: 'în curs',
   awaiting_transfer: 'așteaptă transferul',
+  awaiting_collection: 'ramburs, de încasat la livrare',
   failed: 'eșuată',
   cancelled: 'anulată',
   paid: 'plătită',
@@ -167,7 +175,7 @@ export function contactPayload(c: GhlConfig, o: Order, lifetime: { orders: numbe
       [CONTACT_FIELDS.lastOrderDate, o.createdAt.toISOString().slice(0, 10)],
       [CONTACT_FIELDS.lastOrderValue, (o.totalMinor / 100).toFixed(2)],
       [CONTACT_FIELDS.lastOrderProducts, products],
-      [CONTACT_FIELDS.lastPaymentMethod, o.paymentMethod === 'card' ? 'Card' : 'Transfer bancar'],
+      [CONTACT_FIELDS.lastPaymentMethod, PAYMENT_METHOD_LABEL[o.paymentMethod]],
       [CONTACT_FIELDS.lastPaymentStatus, PAYMENT_STATUS_RO[o.paymentStatus]],
       [CONTACT_FIELDS.lastOrderStatus, ORDER_STATUS_RO[o.status]],
       [CONTACT_FIELDS.lifetimeOrders, String(lifetime.orders)],
@@ -192,6 +200,9 @@ export function tagsFor(o: Order): string[] {
 }
 
 const stageCache = new Map<string, { at: number; ids: Map<string, string> }>()
+
+/** Test helper: forget the cached pipeline stages (like resetConfig). */
+export const resetStageCache = () => stageCache.clear()
 
 async function stageIds(c: GhlConfig): Promise<Map<string, string>> {
   const hit = stageCache.get(c.pipelineId)
@@ -244,7 +255,14 @@ export const ghl = {
   /** Creates the order's opportunity once (found again by name if our id was lost), then moves it. */
   async syncOpportunity(c: GhlConfig, o: Order, contactId: string, knownId: string | null) {
     const { stage, status } = stageFor(o)
-    const stageId = (await stageIds(c)).get(STAGES[stage].toLowerCase())
+    const ids = await stageIds(c)
+    let stageId = ids.get(STAGES[stage].toLowerCase())
+    // Until "Ramburs, de pregătit" exists in the pipeline, a cash-on-delivery order waits in "În pregătire",
+    // never in a "paid" stage, so no payment workflow starts. The contact fields still say "ramburs, de încasat".
+    if (!stageId && stage === 'codToPrepare') {
+      stageId = ids.get(STAGES.processing.toLowerCase())
+      log.warn('ghl.stage_missing', { stage: STAGES.codToPrepare, fallback: STAGES.processing, orderNumber: o.orderNumber })
+    }
     if (!stageId) throw new GhlError(`etapa „${STAGES[stage]}” lipsește din pipeline`, 404)
     const body = {
       name: `${o.orderNumber} · ${customerName(o.customer)}`,

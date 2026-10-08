@@ -38,6 +38,8 @@ export function purchaseState(o: Pick<SegmentInput, 'status' | 'paymentStatus'>)
 
 /** The single rule for "this customer bought it": used for segments and for the GHL product tags. */
 export function isConfirmedPurchase(o: Pick<SegmentInput, 'status' | 'paymentStatus'>): boolean {
+  // A cash-on-delivery parcel can still be refused at the door: it counts once the collection is recorded.
+  if (o.paymentStatus === 'awaiting_collection') return false
   return o.paymentStatus === 'paid' || o.paymentStatus === 'partially_refunded' || o.status === 'shipped' || o.status === 'delivered'
 }
 

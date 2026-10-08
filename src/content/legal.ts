@@ -16,7 +16,7 @@ export type LegalBlock = string | { list: string[] } | { table: { head: string[]
 export type LegalSection = { heading: string; id?: string; body: LegalBlock[] }
 export type LegalPage = { slug: string; title: string; shortTitle: string; description: string; updated: string; sections: LegalSection[] }
 
-const UPDATED = '29 septembrie 2026'
+const UPDATED = '8 octombrie 2026'
 const contactLine = `Scrie-ne la ${site.email} sau sună la ${site.phone}. Răspundem ${terms.responseTime}.`
 
 const identity = (): LegalSection => ({
@@ -79,6 +79,7 @@ export const legalPages: LegalPage[] = [
         body: [
           'La plata cu cardul, contractul se încheie când plata este confirmată și îți trimitem confirmarea pe email.',
           'La transfer bancar, contractul se încheie când îți trimitem pe email confirmarea comenzii cu datele pentru plată. Pregătim coletul după ce suma ajunge în cont.',
+          'La plata ramburs (la livrare), contractul se încheie când îți trimitem pe email confirmarea comenzii. Plătești suma totală curierului, când primești coletul.',
           'Păstrăm comanda în evidențele noastre. O copie o ai în emailul de confirmare și pe pagina comenzii.',
         ],
       },
@@ -314,7 +315,7 @@ export const legalPages: LegalPage[] = [
         heading: 'Cum primești banii',
         body: [
           `Îți returnăm toate sumele plătite, inclusiv livrarea standard, în cel mult ${terms.returnDays} zile de la data la care ne-ai anunțat retragerea.`,
-          'Folosim aceeași metodă de plată: pe card pentru plata cu cardul, în cont pentru transfer.',
+          'Folosim aceeași metodă de plată: pe card pentru plata cu cardul, în cont pentru transfer. Pentru plata ramburs, prin transfer bancar, în contul pe care ni-l indici.',
           'Putem amâna rambursarea până primim produsele sau dovada că le-ai trimis.',
         ],
       },
@@ -381,7 +382,7 @@ export const legalPages: LegalPage[] = [
     slug: 'plati',
     title: 'Plăți',
     shortTitle: 'Plăți',
-    description: 'Cum plătești la Biohack Tech: card bancar prin Stripe sau transfer bancar. Prețuri în lei, cu TVA inclus.',
+    description: 'Cum plătești la Biohack Tech: ramburs la livrare, card bancar prin Stripe sau transfer bancar. Prețuri în lei, cu TVA inclus.',
     updated: UPDATED,
     sections: [
       {
@@ -392,6 +393,14 @@ export const legalPages: LegalPage[] = [
           'Comanda este confirmată când Stripe confirmă plata. Dacă plata nu reușește, nu ți se retrage nimic și poți încerca din nou.',
           'Promoții: la NEUROS Calm, NEUROS Focus și NEUROS Flow (orice configurație), când comanda are 2 bucăți din aceste produse, în orice combinație, primești 10% reducere la ele, iar de la 3 bucăți primești 20%. Cele două reduceri nu se cumulează: se aplică doar cea mai mare atinsă. La NEUROS Amber, din fiecare 3 perechi din aceeași comandă, una este gratuită (cea mai ieftină, dacă prețurile diferă). NEUROS Amber nu intră în calculul celor 3 produse și nu primește reducerile de 10% sau 20%. Reducerile se calculează automat în coș, pe prețurile afișate, și apar separat în comandă și pe factură. Se aplică atât timp cât sunt afișate pe site.',
           'După o plată cu cardul îți putem propune, o singură dată, un produs opțional. Se plătește cu același card doar dacă apeși „Adaugă la comandă” și confirmi suma. Devine o comandă separată, cu factură separată; prima comandă rămâne plătită și confirmată oricum. Dacă banca cere confirmarea, se deschide pasul de verificare al băncii.',
+        ],
+      },
+      {
+        heading: 'Ramburs (plata la livrare)',
+        body: [
+          'Plătești curierului suma totală a comenzii, când primești coletul. Nu plătești nimic online.',
+          'Comanda se confirmă imediat, pe email. Pregătim coletul și ți-l trimitem ca pe orice comandă. Suma de plată apare în email și pe pagina comenzii.',
+          'Reducerile de pachet se aplică la fel, în totalul comenzii.',
         ],
       },
       {
@@ -406,12 +415,12 @@ export const legalPages: LegalPage[] = [
         heading: 'Prețuri și factură',
         body: [
           'Prețurile sunt în lei și includ TVA 21%. Totalul de plată apare înainte să trimiți comanda.',
-          'Factura o primești pe email după confirmarea plății.',
+          'Factura o primești pe email după confirmarea plății. La ramburs, factura se emite când predăm coletul curierului.',
         ],
       },
       {
         heading: 'Rambursări',
-        body: ['Returnăm banii pe aceeași cale prin care ai plătit: pe card sau în contul din care ai făcut transferul.'],
+        body: ['Returnăm banii pe aceeași cale prin care ai plătit: pe card sau în contul din care ai făcut transferul. Pentru o comandă plătită ramburs, prin transfer bancar, în contul pe care ni-l indici.'],
       },
       contact,
     ],

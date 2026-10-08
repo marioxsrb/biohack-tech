@@ -9,5 +9,6 @@ export default defineConfig({
       'server-only': fileURLToPath(new URL('./tests/empty.ts', import.meta.url)),
     },
   },
-  test: { include: ['tests/**/*.test.ts'], environment: 'node' },
+  // Each server test starts an embedded PostgreSQL (PGlite); under a full parallel run its setup can pass 10 s.
+  test: { include: ['tests/**/*.test.ts'], environment: 'node', hookTimeout: 30_000 },
 })

@@ -14,7 +14,7 @@ import { jobs } from '@/server/jobs/outbox'
 import { log } from '@/server/log'
 import { orders } from './repository'
 import { markReturnRequested } from './service'
-import { isPaid } from './state'
+import { isPurchased } from './state'
 
 export type WithdrawalInput = { name: string; email: string; orderNumber: string; items: string; message: string }
 export type WithdrawalField = keyof WithdrawalInput
@@ -69,7 +69,7 @@ export async function recordWithdrawal(w: WithdrawalInput): Promise<{ withdrawal
     if (matched) {
       await orders.event(t, order.id, 'withdrawal.requested', 'checkout', { reference })
       // A paid order now expects a return: the CRM gets bt-retur-solicitat (markReturnRequested, after commit).
-      returnFor = isPaid(order.paymentStatus) && !order.returnStatus ? order.id : null
+      returnFor = isPurchased(order) && !order.returnStatus ? order.id : null
       if (getConfig().email.transport !== 'none') {
         await jobs.enqueue(t, { kind: 'email.send', orderId: order.id, dedupeKey: `email:withdrawal_received:${id}`, payload: { template: 'withdrawal_received', withdrawalId: id } })
       }

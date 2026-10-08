@@ -1,11 +1,11 @@
 /**
  * The plain building blocks of the landings and their presentation pages: theme variables, section
- * typography, steps, specifications, the product FAQ. Server-only markup with no client code, so a
- * page built from these ships no JavaScript of its own.
+ * typography, steps, specifications, the product FAQ, and the reviews (a client component, ReviewMarquee).
+ * Everything else here is server-only markup.
  */
 import type { ReactNode } from 'react'
 import type { ProductId } from '@/content/catalog'
-import { testimonials } from '@/content/home'
+import { ReviewMarquee } from '@/components/reviews/ReviewMarquee'
 import type { Landing } from '@/content/landings'
 
 /** True for dark page backgrounds (relative luminance of the hex colour below 0.2). */
@@ -108,20 +108,7 @@ export function LandingFaq({ items, id = 'intrebari' }: { items: { q: string; a:
   )
 }
 
-/** Verified customer words for this product, when there are some. Nothing is shown otherwise. */
+/** Real reviews of this landing's product only (content/reviews.ts). Nothing for a product without reviews. */
 export function Testimonials({ productId }: { productId: ProductId }) {
-  const list = testimonials.filter((t) => t.productId === productId)
-  if (!list.length) return null
-  return (
-    <section aria-label="Ce spun clienții" className="lp-wrap pb-[var(--sec)]">
-      <ul className="grid gap-6 md:grid-cols-3">
-        {list.map((t) => (
-          <li key={t.quote}>
-            <blockquote className="text-[18px] leading-relaxed">„{t.quote}”</blockquote>
-            <p className="mt-3 text-[14.5px] text-[var(--lp-muted)]">{t.name}</p>
-          </li>
-        ))}
-      </ul>
-    </section>
-  )
+  return <ReviewMarquee productId={productId} variant="landing" className="pb-[var(--sec)]" />
 }

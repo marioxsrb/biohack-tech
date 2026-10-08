@@ -13,6 +13,8 @@ type Props = {
   quantity?: number
   className?: string
   size?: 'sm' | 'md'
+  /** `secondary`: outlined, beside a red "Comandă acum" that already is the main action. */
+  tone?: 'primary' | 'secondary'
   /** Called after a successful add (e.g. to reset a quantity stepper). */
   onAdded?: () => void
 }
@@ -22,7 +24,7 @@ type Props = {
  * for two seconds. Both labels share one grid cell, so the button never changes width.
  * A product without an approved price shows an honest "Întreabă de preț" link instead.
  */
-export function AddToCartButton({ productId, variantId, quantity = 1, className = '', size = 'md', onAdded }: Props) {
+export function AddToCartButton({ productId, variantId, quantity = 1, className = '', size = 'md', tone = 'primary', onAdded }: Props) {
   const { add } = useCart()
   const [added, setAdded] = useState(false)
   const locale = useLocale()
@@ -46,7 +48,7 @@ export function AddToCartButton({ productId, variantId, quantity = 1, className 
   return (
     <button
       type="button"
-      className={`cta ${size === 'sm' ? 'sm' : ''} ${added ? 'is-done' : ''} ${className}`}
+      className={`${tone === 'secondary' ? 'btn-secondary' : 'cta'} ${size === 'sm' ? 'sm' : ''} ${added && tone === 'primary' ? 'is-done' : ''} ${className}`}
       onClick={() => {
         if (add(productId, variantId, quantity)) {
           setAdded(true)

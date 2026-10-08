@@ -7,13 +7,15 @@ import { formatLei } from '@/lib/money'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { jobs } from '@/server/jobs/outbox'
-import { customerName, formatAddress } from '@/server/orders/model'
+import { customerName, formatAddress, PAYMENT_METHOD_LABEL } from '@/server/orders/model'
+import { shipmentFor } from '@/server/fulfillment/courier'
 import { marketing } from '@/server/marketing/consent'
 import { orders } from '@/server/orders/repository'
 import { withdrawals } from '@/server/orders/withdrawal'
-import { canMoveOrder, isPaid } from '@/server/orders/state'
+import { awaitsCollection, canCancel, canFulfil, canMoveOrder, isPaid, isPurchased } from '@/server/orders/state'
 import {
   cancelAction,
+  codCollectedAction,
   deliveredAction,
   markPaidAction,
   processingAction,
@@ -39,6 +41,8 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
   const [events, jobList, consent, withdrawalList] = await Promise.all([orders.events(db, id), jobs.forOrder(db, id), marketing.state(db, o.email), withdrawals.forOrder(id)])
   const c = getConfig()
   const paid = isPaid(o.paymentStatus)
+  const cod = awaitsCollection(o)
+  const ship = shipmentFor(o)
   const [parent, child] = await Promise.all([o.parentOrderId ? orders.byId(db, o.parentOrderId) : null, orders.childOf(db, o.id)])
   const UPSELL: Record<string, string> = { offered: 'oferită, fără răspuns încă', declined: 'refuzată de client', accepted: 'acceptată', expired: 'expirată (fără răspuns)' }
 
@@ -53,8 +57,13 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
         </Link>
       </div>
       <p className="mt-1 text-[14.5px] text-muted">
-        {dt(o.createdAt)} · {o.paymentMethod === 'card' ? 'Card' : 'Transfer bancar'} · {formatLei(o.totalMinor)}
+        {dt(o.createdAt)} · {PAYMENT_METHOD_LABEL[o.paymentMethod]} · {formatLei(o.totalMinor)}
       </p>
+      {cod && o.status !== 'cancelled' && (
+        <p className="mt-4 rounded-[14px] bg-[#fdf3f3] px-5 py-3 text-[15px] text-ink shadow-[inset_0_0_0_1px_#f3d6d6]">
+          Ramburs: curierul încasează <strong className="tabular-nums">{formatLei(ship.cashOnDeliveryMinor)}</strong> la livrare. Comanda rămâne neplătită până înregistrezi decontul curierului.
+        </p>
+      )}
 
       {(parent || child || o.upsellStatus) && (
         <div className="mt-5 rounded-[14px] bg-cyan-50 px-5 py-3 text-[14.5px] text-ink">
@@ -217,16 +226,36 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                   <button className="cta sm mt-3">Plata a fost primită</button>
                 </form>
               )}
-              {paid && canMoveOrder(o.status, 'processing') && (
+              {cod && (o.status === 'shipped' || o.status === 'delivered') && (
+                <form action={codCollectedAction} className="space-y-2 rounded-[12px] bg-mist p-4">
+                  <input type="hidden" name="id" value={o.id} />
+                  <p className="text-[14px] text-text">
+                    Confirmă încasarea doar după ce curierul a decontat <strong>{formatLei(ship.cashOnDeliveryMinor)}</strong> pentru AWB <strong>{o.trackingNumber}</strong>. Livrarea singură nu înseamnă încasare.
+                  </p>
+                  <input name="amount" inputMode="decimal" required placeholder={`Suma decontată, ex. ${(ship.cashOnDeliveryMinor / 100).toFixed(2)}`} className="field !min-h-11 !py-2" aria-label="Suma decontată în lei" />
+                  <input name="reference" required minLength={3} placeholder="Referința decontului (borderou / OP)" className="field !min-h-11 !py-2" aria-label="Referința decontului" />
+                  <button className="cta sm w-full">Rambursul a fost încasat</button>
+                  <p className="text-[13px] text-muted">Suma trebuie să fie exact totalul comenzii. Altfel, nimic nu se schimbă.</p>
+                </form>
+              )}
+              {canFulfil(o) && canMoveOrder(o.status, 'processing') && (
                 <form action={processingAction}>
                   <input type="hidden" name="id" value={o.id} />
                   <button className="btn-secondary sm w-full">Marchează în pregătire</button>
                 </form>
               )}
-              {paid && canMoveOrder(o.status, 'shipped') && (
+              {canFulfil(o) && canMoveOrder(o.status, 'shipped') && (
                 <form action={shipAction} className="space-y-2 rounded-[12px] bg-mist p-4">
                   <input type="hidden" name="id" value={o.id} />
                   <p className="text-[14px] font-medium">Expediere</p>
+                  <dl className="space-y-0.5 rounded-[10px] bg-paper p-3 text-[13.5px]">
+                    <div><dt className="inline text-muted">Destinatar: </dt><dd className="inline">{ship.recipient}, {ship.phone}</dd></div>
+                    <div><dt className="inline text-muted">Adresă: </dt><dd className="inline">{formatAddress(ship.address)}</dd></div>
+                    <div><dt className="inline text-muted">Conținut: </dt><dd className="inline">{ship.contents}</dd></div>
+                    <div><dt className="inline text-muted">Valoare declarată: </dt><dd className="inline tabular-nums">{formatLei(ship.declaredValueMinor)}</dd></div>
+                    <div className="font-semibold"><dt className="inline">Ramburs de încasat: </dt><dd className="inline tabular-nums">{ship.cashOnDeliveryMinor ? formatLei(ship.cashOnDeliveryMinor) : 'nu (plătită)'}</dd></div>
+                  </dl>
+                  <p className="text-[12.5px] text-muted">Rezervi AWB-ul în portalul curierului cu aceste date{ship.cashOnDeliveryMinor ? ', cu serviciul ramburs pe suma de mai sus' : ''}, apoi completezi mai jos.</p>
                   <input name="courier" required placeholder="Curier (ex. Fan Courier)" className="field !min-h-11 !py-2" aria-label="Curier" />
                   <input name="tracking" required placeholder="Număr AWB" className="field !min-h-11 !py-2" aria-label="Număr AWB" />
                   <input name="trackingUrl" type="url" placeholder="Link urmărire (https://...)" className="field !min-h-11 !py-2" aria-label="Link urmărire" />
@@ -239,7 +268,7 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                   <button className="btn-secondary sm w-full">Marchează livrată</button>
                 </form>
               )}
-              {o.paymentMethod === 'bank_transfer' && paid && (
+              {o.paymentMethod !== 'card' && paid && (
                 <form action={refundAction} className="space-y-2 rounded-[12px] bg-mist p-4">
                   <input type="hidden" name="id" value={o.id} />
                   <p className="text-[14px] text-text">După ce ai returnat banii din bancă, înregistrează totalul rambursat până acum (lei).</p>
@@ -247,7 +276,7 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                   <button className="btn-secondary sm w-full">Înregistrează rambursarea</button>
                 </form>
               )}
-              {(paid || o.paymentStatus === 'refunded') && o.returnStatus !== 'received' && (
+              {(isPurchased(o) || o.paymentStatus === 'refunded') && o.returnStatus !== 'received' && (
                 <div className="space-y-2 rounded-[12px] bg-mist p-4">
                   <p className="text-[14px] font-medium">Retur</p>
                   <p className="text-[13.5px] text-text">
@@ -268,12 +297,13 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                   <p className="text-[13px] text-muted">Rambursarea se face separat: din Stripe (card) sau din bancă, apoi înregistrată mai jos (transfer).</p>
                 </div>
               )}
-              {canMoveOrder(o.status, 'cancelled') && (
+              {canCancel(o) && (
                 <form action={cancelAction} className="space-y-2">
                   <input type="hidden" name="id" value={o.id} />
                   <input name="reason" placeholder="Motivul anulării" className="field !min-h-11 !py-2" aria-label="Motivul anulării" />
                   <button className="btn-secondary sm w-full !text-red-deep">Anulează comanda</button>
-                  {paid && <p className="text-[13px] text-muted">Comanda este plătită: fă rambursarea din Stripe (card) sau din bancă (transfer).</p>}
+                  {paid && <p className="text-[13px] text-muted">Comanda este plătită: fă rambursarea din Stripe (card) sau din bancă (transfer, ramburs).</p>}
+                  {cod && o.status === 'shipped' && <p className="text-[13px] text-muted">Pentru un colet refuzat la livrare: nu s-a încasat nimic.</p>}
                 </form>
               )}
             </div>
@@ -282,7 +312,14 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
           <Panel title="Plată, factură, CRM">
             <Rows
               rows={[
+                ['Metodă', PAYMENT_METHOD_LABEL[o.paymentMethod]],
                 ['Plătită la', dt(o.paidAt)],
+                ...(o.paymentMethod === 'cash_on_delivery'
+                  ? ([
+                      ['Ramburs', o.codAmountMinor ? formatLei(o.codAmountMinor) : '–'],
+                      ['Decont curier', o.codReference ?? '–'],
+                    ] as [string, string][])
+                  : []),
                 ['Stripe', o.stripePaymentIntentId ?? '–'],
                 ['Factură', o.fgoInvoiceNumber ? `${o.fgoInvoiceSeries} ${o.fgoInvoiceNumber}` : INVOICE_LABEL[o.invoiceStatus]],
                 ['Storno', o.fgoStornoNumber ?? '–'],

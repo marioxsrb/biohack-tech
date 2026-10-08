@@ -1,8 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { codAllowedFor } from '@/config/payments'
 import { site } from '@/config/site'
 import { sanitizeAttribution } from '@/lib/attribution'
 import { normalizeOrder, validateOrder } from '@/lib/checkout'
 import { resolveOrderLines } from '@/lib/orders/resolve'
+import { priceLines } from '@/lib/promotions'
 import { getConfig, paymentMethods } from '@/server/config'
 import { StripeError, stripe } from '@/server/integrations/stripe'
 import { kickJobs } from '@/server/jobs/runner'
@@ -24,7 +26,9 @@ const contact = `Scrie-ne la ${site.email} sau sună la ${site.phone}.`
  * Prices, names and totals are resolved here, the order is written to our database, and:
  *   card     → a Stripe PaymentIntent for exactly the order total; the browser confirms it
  *              with Stripe, and the order becomes paid only when Stripe says so;
- *   transfer → the order waits for payment; the bank details are on the order page.
+ *   transfer → the order waits for payment; the bank details are on the order page;
+ *   cod      → cash on delivery: confirmed at once, no Stripe call at all; the courier collects the total.
+ *              Offered only while config/payments.ts allows it for this total.
  * The same attempt submitted twice returns the same order.
  */
 export async function POST(req: NextRequest) {
@@ -45,8 +49,10 @@ export async function POST(req: NextRequest) {
       : fail(409, 'BAD_LINE', 'Un produs din coș s-a schimbat între timp. Reîncarcă pagina și verifică din nou coșul.')
   }
 
-  const available = paymentMethods()
-  if (!available.card && !available.transfer) return fail(503, 'UNAVAILABLE', `Comenzile online nu sunt active încă. ${contact}`)
+  const methods = paymentMethods()
+  // The same ceiling the checkout shows: cash on delivery only up to the configured total.
+  const available = { ...methods, cod: methods.cod && codAllowedFor(priceLines(resolved.lines).totalMinor) }
+  if (!available.card && !available.transfer && !available.cod) return fail(503, 'UNAVAILABLE', `Comenzile online nu sunt active încă. ${contact}`)
 
   const form = normalizeOrder(body.order)
   const errors = validateOrder(form, body.acceptedTerms === true, available)
@@ -70,6 +76,10 @@ export async function POST(req: NextRequest) {
 
   if (order.paymentMethod === 'bank_transfer') {
     return NextResponse.json({ method: 'transfer', orderNumber: order.orderNumber, token: order.publicToken })
+  }
+  // Cash on delivery never reaches Stripe: no customer, no PaymentIntent.
+  if (order.paymentMethod === 'cash_on_delivery') {
+    return NextResponse.json({ method: 'cod', orderNumber: order.orderNumber, token: order.publicToken })
   }
 
   if (order.paymentStatus === 'paid') return NextResponse.json({ method: 'card', paid: true, orderNumber: order.orderNumber, token: order.publicToken })

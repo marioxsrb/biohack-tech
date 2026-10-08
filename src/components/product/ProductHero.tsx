@@ -2,46 +2,41 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { AddToCartButton } from '@/components/cart/AddToCartButton'
+import { BuyNowButton } from '@/components/cart/BuyNowButton'
 import { Price } from '@/components/cart/Price'
-import { ProductOffer } from '@/components/offers/ProductOffer'
 import { QuantityStepper } from '@/components/cart/QuantityStepper'
-import { Check, Phone } from '@/components/ui/icons'
+import { Check } from '@/components/ui/icons'
 import { getProduct, isPurchasable, variantLabel, type ProductId } from '@/content/catalog'
-import { site } from '@/config/site'
-import { useLocale, useUi } from '@/i18n/LocaleProvider'
+import { useLocale } from '@/i18n/LocaleProvider'
+import { Availability, BundleOffer, ContactOrder, Highlights, PriceBlock, SocialProof, TrustRow } from './BuyBox'
 import { Gallery } from './Gallery'
 
 const COPY = {
   ro: {
     images: (name: string) => `Imagini ${name}`,
     quantity: 'Cantitate',
-    adding: 'Adaugi:',
     pending: 'Prețul în lei apare în curând. Scrie-ne și îți răspundem în cel mult 24 de ore.',
-    call: 'Sună un specialist',
-    callNote: 'Te ajutăm să alegi, gratuit',
-    callShort: 'Sună',
   },
   en: {
     images: (name: string) => `${name} images`,
     quantity: 'Quantity',
-    adding: 'Adding:',
     pending: 'The price in lei is coming soon. Write to us and we reply within 24 hours.',
-    call: 'Call a specialist',
-    callNote: 'Free help to choose',
-    callShort: 'Call',
   },
 }
 
-type Props = { productId: ProductId; intro: string }
+type Props = { productId: ProductId; intro: string; highlights: string[] }
 
 /**
- * The first screen of a product page: the gallery (about 58%) and everything needed to
- * buy (about 42%): what it's for, name, one sentence, price, variant, quantity, button.
+ * The first screen of a product page: the gallery (about 58%) and everything needed to buy (about 42%),
+ * in the order a customer decides: who else bought, what it's for, name, one sentence, four facts, the
+ * price, the variant, availability and quantity, the bundle offers (they set the quantity), then four
+ * buttons in rows of 1, 2, 1: "Comandă acum" (straight to the checkout, card preselected; transfer and
+ * cash on delivery one click away there), phone and WhatsApp, "Adaugă în coș". Then the store promises.
+ * On a phone the same order runs under the gallery.
  */
-export function ProductHero({ productId, intro }: Props) {
+export function ProductHero({ productId, intro, highlights }: Props) {
   const locale = useLocale()
   const t = COPY[locale]
-  const ui = useUi()
   const product = getProduct(productId, locale)!
   const purchasable = isPurchasable(product)
 
@@ -119,27 +114,16 @@ export function ProductHero({ productId, intro }: Props) {
         </div>
 
         <div className="md:col-span-5 md:pt-2">
+          <SocialProof className="mb-4" />
           <p className="text-[16px] font-medium text-cyan-700">{product.purpose}</p>
           <h1 className="mt-1 text-[clamp(38px,4.2vw,58px)] leading-[0.98] tracking-[-0.045em]">{product.name}</h1>
           <p className="mt-3 max-w-[30em] text-[17px] leading-snug text-text">{product.tagline}</p>
 
-          <p className="mt-6 text-[30px] font-medium tracking-[-0.025em] text-ink">
-            <Price productId={product.id} variantId={variant?.id} />
-            {purchasable && <span className="ml-3 align-middle text-[14px] font-normal tracking-normal text-muted">{ui.vat}</span>}
-          </p>
-          {purchasable && (
-            <>
-              <ul className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-[14px] text-muted">
-                {[ui.freeDelivery, ui.returns, ui.warranty].map((x) => (
-                  <li key={x} className="flex items-center gap-1.5">
-                    <Check className="h-3.5 w-3.5 text-cyan-700" aria-hidden />
-                    {x}
-                  </li>
-                ))}
-              </ul>
-              <ProductOffer productId={product.id} variantId={variant?.id} className="mt-6 max-w-[34em]" />
-            </>
-          )}
+          <Highlights items={highlights} className="mt-5" />
+
+          <div className="mt-6">
+            <PriceBlock productId={product.id} variantId={variant?.id} purchasable={purchasable} />
+          </div>
 
           {product.options?.map((opt) => {
             const avail = available(opt.id)
@@ -180,37 +164,32 @@ export function ProductHero({ productId, intro }: Props) {
             )
           })}
 
-          <div ref={buyRef} className="mt-7 flex gap-3">
-            {purchasable && <QuantityStepper value={quantity} onChange={setQuantity} label={t.quantity} />}
-            <AddToCartButton productId={product.id} variantId={variant?.id} quantity={quantity} className="min-w-0 flex-1 !px-5" onAdded={() => setQuantity(1)} />
-          </div>
           {purchasable ? (
-            variant && (
-              <p className="mt-3 text-[15px] text-text">
-                {t.adding} <strong className="font-semibold text-ink">{product.name}, {variantLabel(product, variant)}</strong>
-              </p>
-            )
-          ) : (
-            <p className="mt-3 max-w-[30em] text-[15px] text-text">{t.pending}</p>
-          )}
+            <>
+              {/* Availability on the left, quantity on the right: both decide what the buttons below order. */}
+              <div className="mt-6 flex items-center justify-between gap-4">
+                <Availability className="min-w-0" />
+                <QuantityStepper value={quantity} onChange={setQuantity} label={t.quantity} size="sm" />
+              </div>
 
-          {/* A direct call: on a phone `tel:` opens the dialer with the number filled in. */}
-          <a
-            href={site.phoneHref}
-            className="group mt-3 flex min-h-14 items-center gap-3 rounded-[14px] bg-paper px-4 py-2.5 shadow-[inset_0_0_0_1px_var(--color-line)] transition-shadow duration-150 hover:shadow-[inset_0_0_0_1.5px_var(--color-ink)]"
-          >
-            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-cyan-50 text-cyan-700">
-              <Phone className="h-[18px] w-[18px]" aria-hidden />
-            </span>
-            <span className="min-w-0 flex-1 leading-snug">
-              <span className="block text-[15.5px] font-semibold text-ink">{t.call}</span>
-              <span className="block text-[14px] text-muted">{t.callNote}</span>
-            </span>
-            <span className="flex-none text-[14.5px] font-semibold whitespace-nowrap text-cyan-700 tabular-nums group-hover:text-ink">
-              <span className="max-[420px]:hidden">{site.phone}</span>
-              <span className="hidden max-[420px]:inline">{t.callShort}</span>
-            </span>
-          </a>
+              <BundleOffer productId={product.id} variantId={variant?.id} quantity={quantity} onQuantity={setQuantity} className="mt-5" />
+
+              {/* Four buttons in rows of 1, 2, 1: order (card or transfer preselected), phone and WhatsApp, add to cart. */}
+              <div ref={buyRef} className="mt-5 grid gap-2.5">
+                <BuyNowButton productId={product.id} variantId={variant?.id} quantity={quantity} pay="online" />
+                <ContactOrder productId={product.id} variantId={variant?.id} quantity={quantity} />
+                <AddToCartButton productId={product.id} variantId={variant?.id} quantity={quantity} tone="secondary" className="!min-h-[52px] w-full" onAdded={() => setQuantity(1)} />
+              </div>
+
+              <TrustRow className="mt-7" />
+            </>
+          ) : (
+            <div className="mt-6 grid gap-2.5">
+              <AddToCartButton productId={product.id} className="w-full" />
+              <p className="max-w-[30em] text-[15px] text-text">{t.pending}</p>
+              <ContactOrder productId={product.id} quantity={1} />
+            </div>
+          )}
 
           <p className="mt-7 max-w-[32em] border-t border-mist-2 pt-6 text-[16.5px] leading-relaxed text-text">{intro}</p>
         </div>
@@ -232,7 +211,7 @@ export function ProductHero({ productId, intro }: Props) {
                 {variant && ` · ${variantLabel(product, variant)}`}
               </p>
             </div>
-            <AddToCartButton productId={product.id} variantId={variant?.id} size="sm" className="!min-h-12 !px-4" />
+            <BuyNowButton productId={product.id} variantId={variant?.id} quantity={quantity} pay="online" look="bar" className="!min-h-12 !px-5" />
           </div>
         </div>
       )}

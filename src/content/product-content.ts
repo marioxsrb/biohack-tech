@@ -34,6 +34,8 @@ export type ProductContent = {
   seo: { title: string; description: string }
   /** Buy area: one or two short sentences under the price. */
   intro: string
+  /** Buy area: four short facts about this product, each on its own line with a check, above the price. */
+  highlights: string[]
   /** Three short benefits, straight after the first photograph. */
   benefits: { title: string; text: string }[]
   /** The large photograph after the buy area. */
@@ -67,6 +69,12 @@ export const productContent: Record<ProductId, ProductContent> = {
       description: 'NEUROS Calm se poartă la gât și aplică lumină roșie și infraroșie în zona nervului vag. Câteva minute de relaxare, acasă. Livrare gratuită în România.',
     },
     intro: 'Stresul zilei se adună în corp. NEUROS Calm aplică lumină pe gât. Pe partea stângă, 6 diode de 810 nm luminează zona nervului vag. O ședință durează câteva minute.',
+    highlights: [
+      '6 diode de 810 nm pe zona nervului vag',
+      'Lumină roșie de 660 nm pe restul gâtului',
+      'Ședințe de câteva minute, cu oprire automată',
+      'Un specialist te ajută să începi',
+    ],
     benefits: [
       { title: 'Relaxare în câteva minute', text: 'O ședință durează câteva minute.' },
       { title: 'Se oprește singur', text: 'Îl pornești și te relaxezi.' },
@@ -120,6 +128,12 @@ export const productContent: Record<ProductId, ProductContent> = {
       description: 'NEUROS Focus este o cască EEG ușoară, cu peste 10 jocuri pe tabletă controlate prin atenție. Îți antrenezi concentrarea acasă. Livrare gratuită.',
     },
     intro: 'Atenția se risipește ușor printre notificări. Pui casca și deschizi aplicația Neuros Game pe tabletă. Jocurile răspund la cât de atent ești.',
+    highlights: [
+      '3 senzori EEG, conectare Bluetooth la tabletă',
+      'Peste 10 jocuri și meditații ghidate',
+      'Până la 4 ore pe o încărcare',
+      'Un specialist îți recomandă programul',
+    ],
     benefits: [
       { title: 'Antrenezi concentrarea', text: 'Prin jocuri scurte, pe tabletă.' },
       { title: 'Și calmul', text: 'Meditații ghidate, cu feedback în timp real.' },
@@ -181,6 +195,12 @@ export const productContent: Record<ProductId, ProductContent> = {
       description: 'Ochelari NEUROS Amber cu lentile chihlimbar, care filtrează lumina albastră a ecranelor. Cat eye sau unisex pătrat, în trei culori. Livrare gratuită.',
     },
     intro: 'Ochii tăi petrec ore întregi în lumina ecranelor. Lentilele chihlimbar filtrează lumina albastră de la monitor, telefon și becuri LED. Rama este ușoară, pentru toată ziua.',
+    highlights: [
+      'Lentile chihlimbar care filtrează lumina albastră',
+      'Pentru monitor, telefon și becuri LED',
+      'Ramă ușoară, pentru toată ziua',
+      'Cat eye sau unisex pătrat, în trei culori',
+    ],
     benefits: [
       { title: 'Mai puțină lumină albastră', text: 'La birou, în orele din fața ecranului.' },
       { title: 'Seri mai liniștite', text: 'Lumina ecranelor devine mai blândă.' },
@@ -229,6 +249,12 @@ export const productContent: Record<ProductId, ProductContent> = {
       description: 'NEUROS Flow: cască de fotobiomodulare cu lumină infraroșie la 810 nm, în configurații cu 1, 4 sau 13 zone. Protocol stabilit cu un specialist. Livrare gratuită în România.',
     },
     intro: 'Alegi configurația cu 1, 4 sau 13 zone. La început, un specialist Biohack Tech stabilește cu tine zonele, durata și frecvența ședințelor.',
+    highlights: [
+      'Lumină infraroșie de 810 nm, prin scalp',
+      '1, 4 sau 13 zone, după configurație',
+      'Protocol stabilit cu un specialist',
+      'Baterie reîncărcabilă și telecomandă incluse',
+    ],
     benefits: [
       { title: 'Se folosește acasă', text: 'Are baterie reîncărcabilă. Te așezi unde vrei.' },
       { title: 'Protocolul tău', text: 'Zone, durată și frecvență, setate cu un specialist.' },
@@ -292,6 +318,12 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       description: 'NEUROS Calm is worn around the neck and shines red and infrared light over the vagus nerve area. A few minutes of relaxation at home. Free delivery in Romania.',
     },
     intro: 'The stress of the day builds up in the body. NEUROS Calm shines light on your neck. On the left side, 6 diodes at 810 nm light the vagus nerve area. A session lasts a few minutes.',
+    highlights: [
+      '6 diodes at 810 nm over the vagus nerve area',
+      'Red light at 660 nm on the rest of the neck',
+      'Sessions of a few minutes, switches off by itself',
+      'A specialist helps you get started',
+    ],
     benefits: [
       { title: 'Relaxation in a few minutes', text: 'A session lasts a few minutes.' },
       { title: 'Switches off by itself', text: 'You switch it on and relax.' },
@@ -345,6 +377,12 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       description: 'NEUROS Focus is a light EEG headband with over 10 tablet games you control with your attention. Train your focus at home. Free delivery in Romania.',
     },
     intro: 'Attention slips away easily between notifications. Put on the headband and open the Neuros Game app on your tablet. The games respond to how focused you are.',
+    highlights: [
+      '3 EEG sensors, Bluetooth to a tablet',
+      'Over 10 games and guided meditations',
+      'Up to 4 hours on one charge',
+      'A specialist recommends your programme',
+    ],
     benefits: [
       { title: 'Train your focus', text: 'With short games on a tablet.' },
       { title: 'And your calm', text: 'Guided meditations with live feedback.' },
@@ -406,6 +444,12 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       description: 'NEUROS Amber glasses have amber lenses that filter the blue light of screens. Cat eye or unisex square, in three colours. Free delivery in Romania.',
     },
     intro: 'Your eyes spend hours in the light of screens. The amber lenses filter blue light from monitors, phones and LED bulbs. The frame is light enough for all day.',
+    highlights: [
+      'Amber lenses that filter blue light',
+      'For monitors, phones and LED bulbs',
+      'A light frame, for all day',
+      'Cat eye or unisex square, in three colours',
+    ],
     benefits: [
       { title: 'Less blue light', text: 'At your desk, during your screen hours.' },
       { title: 'Calmer evenings', text: 'Screen light becomes softer.' },
@@ -452,6 +496,12 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       description: 'NEUROS Flow is a photobiomodulation headset with 810 nm infrared light, with 1, 4 or 13 zones. Protocol set with a specialist. Free delivery in Romania.',
     },
     intro: 'Choose the configuration with 1, 4 or 13 zones. At the start, a Biohack Tech specialist sets the zones, session length and frequency with you.',
+    highlights: [
+      'Infrared light at 810 nm, through the scalp',
+      '1, 4 or 13 zones, by configuration',
+      'A protocol set with a specialist',
+      'Rechargeable battery and remote included',
+    ],
     benefits: [
       { title: 'Used at home', text: 'It runs on a rechargeable battery. Sit wherever you like.' },
       { title: 'Your protocol', text: 'Zones, length and frequency, set with a specialist.' },

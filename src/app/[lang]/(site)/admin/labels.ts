@@ -12,6 +12,7 @@ export const ORDER_LABEL: Record<Order['status'], string> = {
 export const PAYMENT_LABEL: Record<Order['paymentStatus'], string> = {
   pending: 'Card în curs',
   awaiting_transfer: 'Așteaptă transferul',
+  awaiting_collection: 'Ramburs de încasat',
   failed: 'Card eșuat',
   cancelled: 'Plată anulată',
   paid: 'Plătită',

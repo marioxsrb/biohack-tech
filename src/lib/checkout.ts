@@ -13,7 +13,8 @@ export const COUNTIES = [
 
 
 export type BuyerType = 'pf' | 'pj'
-export type PaymentMethod = 'card' | 'transfer'
+/** `cod`: cash on delivery (ramburs), the customer pays the courier. */
+export type PaymentMethod = 'card' | 'transfer' | 'cod'
 
 /** Every text field of the form, flat, so the form can bind them uniformly. */
 export type OrderFields = {
@@ -117,7 +118,7 @@ export function normalizeOrder(raw: unknown): OrderForm {
   out.cui = out.cui.toUpperCase().replace(/\s/g, '')
   out.buyerType = r.buyerType === 'pj' ? 'pj' : 'pf'
   out.sameAddress = r.sameAddress !== false
-  out.paymentMethod = r.paymentMethod === 'transfer' ? 'transfer' : 'card'
+  out.paymentMethod = r.paymentMethod === 'transfer' || r.paymentMethod === 'cod' ? r.paymentMethod : 'card'
   out.marketingConsent = r.marketingConsent === true
   return out
 }
@@ -182,7 +183,7 @@ const MSG = {
   },
 }
 
-export function validateOrder(o: OrderForm, acceptedTerms: boolean, available?: Record<PaymentMethod, boolean>, locale: 'ro' | 'en' = 'ro'): FieldErrors {
+export function validateOrder(o: OrderForm, acceptedTerms: boolean, available?: Partial<Record<PaymentMethod, boolean>>, locale: 'ro' | 'en' = 'ro'): FieldErrors {
   const m = MSG[locale]
   const e: FieldErrors = {}
   if (o.firstName.length < 1) e.firstName = m.firstName

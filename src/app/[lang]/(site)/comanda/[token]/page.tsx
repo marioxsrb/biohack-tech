@@ -8,9 +8,9 @@ import { lineKey } from '@/components/cart/cart-store'
 import { formatLei } from '@/lib/money'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
-import { customerName, formatAddress, type Order } from '@/server/orders/model'
+import { customerName, formatAddress, PAYMENT_METHOD_LABEL, type Order } from '@/server/orders/model'
 import { orders } from '@/server/orders/repository'
-import { isPaid } from '@/server/orders/state'
+import { awaitsCollection, isPaid } from '@/server/orders/state'
 import { offersFor } from '@/server/orders/upsell'
 import { CopyButton, OrderEffects, WaitForPayment } from './OrderClient'
 import { PostPurchaseOffer } from './PostPurchaseOffer'
@@ -41,7 +41,9 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
   const cardPending = cardOpen && order.paymentStatus === 'pending' && !!order.stripePaymentIntentId && !redirectFailed
   const cardFailed = cardOpen && !cardPending
 
-  const placed = paid || transfer
+  // Cash on delivery: confirmed when placed; the customer pays the courier.
+  const cod = awaitsCollection(order) && order.status !== 'cancelled'
+  const placed = paid || transfer || cod
   // The offer exists only for a card payment Stripe already confirmed (never from URL parameters).
   const db = await getDb()
   const offers = c.stripe ? offersFor(order) : []
@@ -55,7 +57,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
         <OrderEffects
           orderNumber={order.orderNumber}
           clearKeys={placed ? items : []}
-          purchase={paid ? { orderNumber: order.orderNumber, value: order.totalMinor, items: order.items.map((i) => ({ item_id: i.variantId ? `${i.productId}/${i.variantId}` : i.productId, item_name: i.productName, item_variant: i.variantName ?? undefined, price: i.unitPriceMinor / 100, quantity: i.quantity })) } : null}
+          purchase={paid || cod ? { orderNumber: order.orderNumber, value: order.totalMinor, items: order.items.map((i) => ({ item_id: i.variantId ? `${i.productId}/${i.variantId}` : i.productId, item_name: i.productName, item_variant: i.variantName ?? undefined, price: i.unitPriceMinor / 100, quantity: i.quantity })) } : null}
         />
 
         {placed && (
@@ -67,7 +69,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
         <h1 className="mt-1 text-[clamp(30px,3.6vw,42px)] leading-tight tracking-[-0.035em]">
           {order.status === 'cancelled'
             ? 'Comanda a fost anulată.'
-            : paid
+            : paid || cod
               ? 'Comanda ta este confirmată.'
               : placed
                 ? 'Mulțumim pentru comandă.'
@@ -96,6 +98,16 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
             publishableKey={c.stripe.publishableKey}
             offers={offers.map((o) => ({ productId: o.productId, name: o.name, reason: o.reason, variants: o.variants, priceMinor: o.priceMinor }))}
           />
+        )}
+        {cod && (
+          <div className="mt-6 rounded-[20px] bg-paper p-6 max-sm:px-5">
+            <p className="text-[15px] text-muted">Plata la livrare (ramburs)</p>
+            <p className="mt-1 text-[28px] font-medium tracking-[-0.02em] text-ink tabular-nums">{formatLei(order.codAmountMinor ?? order.totalMinor)}</p>
+            <p className="mt-2 text-[15.5px] leading-relaxed text-text">
+              Plătești curierului când primești coletul. Nu ai nimic de plătit acum. Ți-am trimis confirmarea pe {order.email}.
+              {order.status === 'shipped' || order.status === 'delivered' ? '' : ` Pregătim coletul în ${terms.processingDays}.`}
+            </p>
+          </div>
         )}
         {transfer && <p className="sub mt-4">Comanda este înregistrată și așteaptă plata. O pregătim imediat ce suma ajunge în cont.</p>}
         {cardPending && (
@@ -231,7 +243,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
             </div>
             <div>
               <dt className="text-muted">Plată</dt>
-              <dd className="mt-1 text-ink">{order.paymentMethod === 'card' ? 'Card' : 'Transfer bancar'}</dd>
+              <dd className="mt-1 text-ink">{PAYMENT_METHOD_LABEL[order.paymentMethod]}</dd>
             </div>
             <div>
               <dt className="text-muted">Data</dt>
@@ -251,7 +263,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
           </a>
           . Menționează numărul comenzii: {order.orderNumber}.
         </p>
-        {paid && order.customer.buyerType === 'pf' && order.status !== 'cancelled' && (
+        {(paid || cod) && order.customer.buyerType === 'pf' && order.status !== 'cancelled' && (
           <p className="mt-3 text-[15px] text-muted">
             Te-ai răzgândit? Ai {terms.returnDays} zile de la primire.{' '}
             <Link href="/retragere" className="font-medium text-ink underline underline-offset-4">

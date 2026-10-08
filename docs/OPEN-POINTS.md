@@ -40,6 +40,7 @@ Updated 29 September 2026 (phase 3/4). Everything that is code is built; what is
 - **Commercial guarantee** beyond the legal 2 years? If yes, its certificate content (OUG 140/2021 art. 15).
 
 **Operations**
+- **Cash on delivery (built 8 Oct 2026, docs/PRODUCTION-LAUNCH.md §33):** create the GHL stage „Ramburs, de pregătit”; choose the courier and its cash-on-delivery ceiling (`NEXT_PUBLIC_COD_MAX_LEI`, if any) and settlement rhythm; confirm with the accountant when the invoice is issued (`FGO_COD_INVOICE`, default at shipment). Collections are recorded by hand in /admin until a courier API exists.
 - **Courier** (Fan Courier, Sameday, Cargus…). Today the manual provider: AWB typed in /admin. An API integration plugs into `src/server/fulfillment/courier.ts`.
 - **Shipping** stays free for all orders? (today: free, from the current site).
 - **Unpaid transfer orders:** set `TRANSFER_EXPIRY_DAYS` to cancel automatically, or keep manual cancellation after the W3 reminder.

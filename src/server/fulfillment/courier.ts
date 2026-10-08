@@ -8,6 +8,8 @@
  * markShipped(), so emails, the CRM and the audit trail stay the same.
  */
 import 'server-only'
+import { customerName, type Address, type Order } from '@/server/orders/model'
+import { awaitsCollection } from '@/server/orders/state'
 
 export type CourierAdapter = {
   id: string
@@ -25,4 +27,36 @@ const PROVIDERS: Record<string, CourierAdapter> = { manual }
 export function courier(): CourierAdapter {
   const id = process.env.COURIER_PROVIDER?.trim() || 'manual'
   return PROVIDERS[id] ?? manual
+}
+
+/**
+ * Everything a courier needs for one parcel, from the canonical order. Today the team copies it into the
+ * courier's portal from /admin; a provider integration will send exactly this. `cashOnDeliveryMinor` is the
+ * amount the courier must collect at the door: the order total for an uncollected cash-on-delivery order,
+ * 0 otherwise. Nothing here books an AWB or collects money.
+ */
+export type ShipmentData = {
+  reference: string
+  recipient: string
+  phone: string
+  email: string
+  address: Address
+  contents: string
+  parcels: number
+  declaredValueMinor: number
+  cashOnDeliveryMinor: number
+}
+
+export function shipmentFor(o: Order): ShipmentData {
+  return {
+    reference: o.orderNumber,
+    recipient: o.customer.buyerType === 'pj' && o.customer.company ? `${o.customer.company} (${customerName(o.customer)})` : customerName(o.customer),
+    phone: o.phone,
+    email: o.email,
+    address: o.shippingAddress,
+    contents: o.items.map((i) => `${i.quantity} x ${i.productName}${i.variantName ? ` (${i.variantName})` : ''}`).join(', '),
+    parcels: 1,
+    declaredValueMinor: o.totalMinor,
+    cashOnDeliveryMinor: awaitsCollection(o) ? (o.codAmountMinor ?? o.totalMinor) : 0,
+  }
 }

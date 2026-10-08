@@ -136,7 +136,7 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
                   {formatLei(o.totalMinor)}
                   {o.discountMinor > 0 && <span className="block text-[12.5px] text-cyan-700">reducere {formatLei(o.discountMinor)}</span>}
                 </td>
-                <td className="px-4 py-3">{o.paymentMethod === 'card' ? 'Card' : 'Transfer'}</td>
+                <td className="px-4 py-3">{o.paymentMethod === 'card' ? 'Card' : o.paymentMethod === 'cash_on_delivery' ? 'Ramburs' : 'Transfer'}</td>
                 <td className="px-4 py-3">
                   <span className={`rounded-full px-2.5 py-1 text-[13px] font-medium ${tone(o.paymentStatus)}`}>{PAYMENT_LABEL[o.paymentStatus]}</span>
                 </td>

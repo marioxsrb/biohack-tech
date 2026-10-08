@@ -1,10 +1,10 @@
 /**
  * Homepage copy beyond the hero and the product shelf: why Biohack Tech, the daily-rhythm comparison,
  * the FAQ (short on the homepage, complete on /intrebari-frecvente). Only facts that are already on the
- * product pages, the legal pages or config/site.ts. No testimonials: the source material's six were
- * unverifiable (docs/CONTENT-DECISIONS.md); real ones can be added to `testimonials` with consent.
+ * product pages, the legal pages or config/site.ts. The source material's six testimonials were
+ * unverifiable (docs/CONTENT-DECISIONS.md) and are not used; real reviews live in content/reviews.ts.
  */
-import type { ProductId, ProductImage } from './catalog'
+import type { ProductImage } from './catalog'
 import { company } from '@/config/company'
 import { site, terms } from '@/config/site'
 import type { Locale } from '@/i18n/locales'
@@ -42,13 +42,6 @@ const rhythmRo = {
   note: 'Fiecare om răspunde în ritmul lui. Sunt produse de wellness. Pentru o afecțiune, cere întâi sfatul medicului.',
 }
 
-/**
- * Real customer words, when there are some. Add an entry only with the customer's written consent and a
- * source you can show (email, review platform). The homepage shows the block only when this is not empty.
- */
-export type Testimonial = { quote: string; name: string; productId: ProductId; source: string; consentAt: string }
-export const testimonials: Testimonial[] = []
-
 export type FaqItem = { q: string; a: string }
 
 /** The homepage keeps only the questions that decide a purchase. All of them are on /intrebari-frecvente. */
@@ -71,7 +64,7 @@ const homeFaqRo: FaqItem[] = [
   },
   {
     q: 'Cum plătesc?',
-    a: 'Cu cardul, online, prin Stripe, sau prin transfer bancar. Datele cardului rămân la Stripe. La transfer, pregătim comanda când suma ajunge în cont.',
+    a: 'Ramburs, la livrare: plătești curierului când primești coletul. Sau cu cardul, online, prin Stripe, ori prin transfer bancar. Datele cardului rămân la Stripe. La transfer, pregătim comanda când suma ajunge în cont.',
   },
   {
     q: 'Cât durează livrarea și cum returnez?',
@@ -124,7 +117,7 @@ const faqRo: FaqGroup[] = [
     items: [
       {
         q: 'Cum pot plăti?',
-        a: 'Cu cardul, online, prin Stripe, sau prin transfer bancar. Datele cardului rămân la Stripe. La transfer, pregătim comanda când suma ajunge în cont.',
+        a: 'Ramburs, la livrare: plătești curierului când primești coletul. Sau cu cardul, online, prin Stripe, ori prin transfer bancar. Datele cardului rămân la Stripe. La transfer, pregătim comanda când suma ajunge în cont.',
       },
       { q: 'Prețurile includ TVA?', a: `Da. Toate prețurile sunt în lei, cu ${terms.vat.replace(' inclus', '')} inclus.` },
       {
@@ -199,7 +192,7 @@ const homeFaqEn: FaqItem[] = [
   },
   {
     q: 'How do I pay?',
-    a: 'By card, online, through Stripe, or by bank transfer. Your card details stay with Stripe. With a bank transfer, we prepare your order once the payment reaches our account.',
+    a: 'Cash on delivery: you pay the courier when the parcel arrives. Or by card, online, through Stripe, or by bank transfer. Your card details stay with Stripe. With a bank transfer, we prepare your order once the payment reaches our account.',
   },
   {
     q: 'How long does delivery take, and how do I return a product?',

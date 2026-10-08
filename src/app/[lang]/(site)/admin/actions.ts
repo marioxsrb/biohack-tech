@@ -38,6 +38,20 @@ export async function markPaidAction(f: FormData) {
   await done(id, 'mark_paid', r.changed)
 }
 
+/**
+ * Cash on delivery: the courier settled the money. Recorded only with the exact amount and the settlement
+ * reference (borderou or payment order), both kept in the order's history.
+ */
+export async function codCollectedAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id')
+  const lei = Number(text(f, 'amount', 20).replace(/\./g, '').replace(',', '.'))
+  const reference = text(f, 'reference', 120)
+  if (!Number.isFinite(lei) || lei <= 0 || reference.length < 3) return
+  const r = await confirmPayment(id, 'admin', { amountMinor: Math.round(lei * 100), currency: 'RON', reference })
+  await done(id, 'cod_collected', r.changed)
+}
+
 export async function processingAction(f: FormData) {
   await guard()
   const id = text(f, 'id')

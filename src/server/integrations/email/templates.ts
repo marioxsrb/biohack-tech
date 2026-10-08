@@ -6,11 +6,13 @@
  */
 import { site, terms } from '@/config/site'
 import type { BankConfig } from '@/server/config'
-import { customerName, formatAddress, type Order } from '@/server/orders/model'
+import { customerName, formatAddress, PAYMENT_METHOD_LABEL, type Order } from '@/server/orders/model'
+import { awaitsCollection } from '@/server/orders/state'
 import { formatLei } from '@/lib/money'
 
 export type EmailTemplate =
   | 'order_confirmed'
+  | 'cod_confirmed'
   | 'transfer_instructions'
   | 'payment_received'
   | 'invoice_issued'
@@ -22,6 +24,7 @@ export type EmailTemplate =
 
 export const EMAIL_TEMPLATES: Record<EmailTemplate, { subject: (o: Order) => string; kind: 'transactional' }> = {
   order_confirmed: { subject: (o) => `Comanda ta Biohack Tech #${o.orderNumber}`, kind: 'transactional' },
+  cod_confirmed: { subject: (o) => `Comanda ta Biohack Tech #${o.orderNumber}: plata la livrare`, kind: 'transactional' },
   transfer_instructions: { subject: (o) => `Comanda #${o.orderNumber}: datele pentru transfer`, kind: 'transactional' },
   payment_received: { subject: (o) => `Am primit plata pentru comanda #${o.orderNumber}`, kind: 'transactional' },
   invoice_issued: { subject: (o) => `Factura pentru comanda #${o.orderNumber}`, kind: 'transactional' },
@@ -98,15 +101,31 @@ function bankBlock(o: Order, bank: BankConfig | null): Block[] {
   ]
 }
 
+/** How the money goes back: the same way, except cash paid to the courier, which comes back by bank transfer. */
+const refundWay = (o: Order) =>
+  o.paymentMethod === 'cash_on_delivery' ? 'prin transfer bancar, în contul pe care ni-l indici' : 'pe aceeași cale prin care ai plătit'
+
 function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; blocks: Block[]; cta?: { label: string; url: string } } {
   const orderUrl = `${ctx.siteUrl}/comanda/${o.publicToken}`
   const first = o.customer.firstName
-  const summary = [h(`Comanda #${o.orderNumber}`), rows([['Data', dateRo(o.createdAt)], ['Plată', o.paymentMethod === 'card' ? 'Card' : 'Transfer bancar']]), itemsBlock(o)]
+  const summary = [h(`Comanda #${o.orderNumber}`), rows([['Data', dateRo(o.createdAt)], ['Plată', PAYMENT_METHOD_LABEL[o.paymentMethod]]]), itemsBlock(o)]
   switch (t) {
     case 'order_confirmed':
       return {
         lead: `Mulțumim, ${first}. Plata a fost confirmată și comanda ta este înregistrată.`,
         blocks: [p(`Pregătim coletul în ${terms.processingDays}. Primești un email cu numărul AWB când îl predăm curierului.`), ...summary, ...addressBlock(o)],
+        cta: { label: 'Vezi comanda', url: orderUrl },
+      }
+    case 'cod_confirmed':
+      return {
+        lead: `Mulțumim, ${first}. Comanda ta este confirmată.`,
+        blocks: [
+          rows([['De plătit la livrare', formatLei(o.codAmountMinor ?? o.totalMinor)]]),
+          p('Plătești curierului când primești coletul. Nu plătești nimic acum.'),
+          p(`Pregătim coletul în ${terms.processingDays}. Primești un email cu numărul AWB când îl predăm curierului.`),
+          ...summary,
+          ...addressBlock(o),
+        ],
         cta: { label: 'Vezi comanda', url: orderUrl },
       }
     case 'transfer_instructions':
@@ -140,6 +159,7 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
           rows([
             ['Curier', o.courier ?? ''],
             ['Număr AWB', o.trackingNumber ?? ''],
+            ...(awaitsCollection(o) ? ([['De plătit curierului', formatLei(o.codAmountMinor ?? o.totalMinor)]] as [string, string][]) : []),
           ]),
           p(`Livrarea durează de obicei ${terms.transitDays}.`),
           ...addressBlock(o).slice(0, 2),
@@ -170,7 +190,7 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
           ]),
           h('Ce urmează'),
           p('Trimite-ne produsele în cel mult 14 zile de la această cerere. Îți scriem adresa de retur și pașii.'),
-          p('Îți returnăm banii în cel mult 14 zile de la data de mai sus, pe aceeași cale prin care ai plătit. Putem amâna rambursarea până primim produsele sau dovada că le-ai trimis.'),
+          p(`Îți returnăm banii în cel mult 14 zile de la data de mai sus, ${refundWay(o)}. Putem amâna rambursarea până primim produsele sau dovada că le-ai trimis.`),
         ],
       }
     }
@@ -181,7 +201,7 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
           p(
             o.paymentStatus === 'refunded'
               ? 'Rambursarea a fost deja procesată. Nu mai ai nimic de făcut.'
-              : 'Îți returnăm banii pe aceeași cale prin care ai plătit, în cel mult 14 zile de la cererea de retragere. Îți scriem când rambursarea este procesată.',
+              : `Îți returnăm banii ${refundWay(o)}, în cel mult 14 zile de la cererea de retragere. Îți scriem când rambursarea este procesată.`,
           ),
           p(`Pentru orice întrebare, scrie-ne la ${site.email}.`),
         ],
@@ -189,7 +209,14 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
     case 'refund_issued':
       return {
         lead: `Am procesat o rambursare de ${formatLei(o.refundedMinor)} pentru comanda #${o.orderNumber}.`,
-        blocks: [p(o.paymentMethod === 'card' ? 'Suma apare pe card în câteva zile lucrătoare, în funcție de bancă.' : 'Suma ajunge în contul din care ai plătit.'), p(`Pentru orice întrebare, scrie-ne la ${site.email}.`)],
+        blocks: [
+          p(
+            o.paymentMethod === 'card'
+              ? 'Suma apare pe card în câteva zile lucrătoare, în funcție de bancă.'
+              : o.paymentMethod === 'cash_on_delivery'
+                ? 'Suma ajunge prin transfer bancar, în contul pe care ni l-ai indicat.'
+                : 'Suma ajunge în contul din care ai plătit.',
+          ), p(`Pentru orice întrebare, scrie-ne la ${site.email}.`)],
       }
   }
 }

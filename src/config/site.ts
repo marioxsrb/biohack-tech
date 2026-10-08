@@ -8,6 +8,11 @@ export const site = {
   email: 'contact@biohack-tech.ro',
   phone: '+40 757 890 707',
   phoneHref: 'tel:+40757890707',
+  /**
+   * The official WhatsApp number for orders (+40 765 874 571, confirmed 08.10.2026), digits only in
+   * international format, as wa.me expects. null hides the WhatsApp button.
+   */
+  whatsapp: '40765874571' as string | null,
 } as const
 
 /** Commercial terms stated on the current biohack-tech.ro. Used everywhere they are repeated. */

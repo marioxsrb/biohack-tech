@@ -2,7 +2,7 @@
  * Allowed state changes, in one place. Anything not listed is refused, so a replayed
  * webhook or a double click can never move an order backwards or twice.
  */
-import type { OrderStatus, PaymentStatus } from './model'
+import type { Order, OrderStatus, PaymentStatus } from './model'
 
 const ORDER_FLOW: Record<OrderStatus, OrderStatus[]> = {
   pending: ['confirmed', 'abandoned', 'cancelled'],
@@ -18,6 +18,7 @@ const PAYMENT_FLOW: Record<PaymentStatus, PaymentStatus[]> = {
   pending: ['paid', 'failed', 'cancelled'],
   failed: ['paid', 'pending', 'cancelled'],
   awaiting_transfer: ['paid'],
+  awaiting_collection: ['paid'],
   paid: ['partially_refunded', 'refunded'],
   partially_refunded: ['partially_refunded', 'refunded'],
   refunded: [],
@@ -29,3 +30,20 @@ export const canMovePayment = (from: PaymentStatus, to: PaymentStatus) => PAYMEN
 
 /** Payment states in which the order counts as paid for fulfilment and invoicing. */
 export const isPaid = (p: PaymentStatus) => p === 'paid' || p === 'partially_refunded'
+
+/** A cash-on-delivery order whose money the courier has not settled yet. */
+export const awaitsCollection = (o: Pick<Order, 'paymentMethod' | 'paymentStatus'>) =>
+  o.paymentMethod === 'cash_on_delivery' && o.paymentStatus === 'awaiting_collection'
+
+/** The order may be prepared and shipped: paid, or cash on delivery (the courier collects at the door). */
+export const canFulfil = (o: Pick<Order, 'paymentMethod' | 'paymentStatus'>) => isPaid(o.paymentStatus) || awaitsCollection(o)
+
+/**
+ * The customer has the product and owes or has paid for it: what a withdrawal and a return need.
+ * Cash on delivery counts from delivery, even before the courier's settlement is recorded.
+ */
+export const isPurchased = (o: Pick<Order, 'paymentMethod' | 'paymentStatus' | 'status'>) => isPaid(o.paymentStatus) || (awaitsCollection(o) && o.status === 'delivered')
+
+/** Cancellation: before shipping for every order; after shipping only a cash-on-delivery parcel refused at the door. */
+export const canCancel = (o: Pick<Order, 'status' | 'paymentMethod' | 'paymentStatus'>) =>
+  canMoveOrder(o.status, 'cancelled') || (o.status === 'shipped' && awaitsCollection(o))

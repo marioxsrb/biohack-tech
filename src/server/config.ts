@@ -6,6 +6,7 @@
  */
 import 'server-only'
 import { missingCompanyFields } from '@/config/company'
+import { cashOnDelivery } from '@/config/payments'
 
 export type AppEnv = 'development' | 'staging' | 'production'
 
@@ -26,6 +27,11 @@ export type FgoConfig = {
   platformUrl: string
   /** When a bank-transfer order gets its invoice: on payment (default) or never automatically. */
   transferInvoice: 'on_payment' | 'manual'
+  /**
+   * When a cash-on-delivery order gets its invoice: when it ships (default, the invoice travels with the
+   * parcel), when the courier's settlement is recorded, or never automatically. Never marked as collected.
+   */
+  codInvoice: 'on_shipment' | 'on_collection' | 'manual'
   autoStorno: boolean
 }
 export type GhlConfig = { token: string; locationId: string; pipelineId: string; apiBase: string; emailFrom?: string }
@@ -141,6 +147,7 @@ function readFgo(appEnv: AppEnv, issues: ConfigIssue[], siteUrl: string): FgoCon
     unit: str('FGO_UM') ?? 'BUC',
     platformUrl: siteUrl,
     transferInvoice: str('FGO_TRANSFER_INVOICE') === 'manual' ? 'manual' : 'on_payment',
+    codInvoice: str('FGO_COD_INVOICE') === 'manual' ? 'manual' : str('FGO_COD_INVOICE') === 'on_collection' ? 'on_collection' : 'on_shipment',
     autoStorno: str('FGO_AUTO_STORNO') === 'true',
   }
 }
@@ -231,8 +238,11 @@ export function resetConfig() {
   cached = null
 }
 
-/** Which payment methods can complete an order right now. */
+/**
+ * Which payment methods can complete an order right now. Cash on delivery needs only the database (the
+ * courier collects); it is switched off or limited in config/payments.ts.
+ */
 export function paymentMethods(c: Config = getConfig()) {
   const db = !!c.databaseUrl || c.localDb
-  return { card: db && !!c.stripe, transfer: db && !!c.bank }
+  return { card: db && !!c.stripe, transfer: db && !!c.bank, cod: db && cashOnDelivery.enabled }
 }

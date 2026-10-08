@@ -11,12 +11,13 @@ import { Thumb } from '@/components/cart/Thumb'
 import { OfferProgress } from '@/components/cart/OfferProgress'
 import { Suggestions } from '@/components/offers/Suggestions'
 import { Totals } from '@/components/cart/Totals'
-import { Arrow, Bank, CardIcon, Lock, Mail } from '@/components/ui/icons'
+import { Arrow, Bank, CardIcon, Lock, Mail, Truck } from '@/components/ui/icons'
 import { productHref, productsIn } from '@/content/catalog'
 import { useLocale } from '@/i18n/LocaleProvider'
 import { ui } from '@/i18n/ui'
 import type { Locale } from '@/i18n/locales'
 import { attributionParams } from '@/lib/attribution'
+import { cashOnDelivery, codAllowedFor } from '@/config/payments'
 import { site, terms } from '@/config/site'
 import { track } from '@/lib/analytics'
 import { MARKETING_CONSENT_TEXT, MARKETING_CONSENT_TEXT_EN } from '@/lib/consent/marketing'
@@ -89,6 +90,10 @@ const COPY = {
     cardNote: 'După plată îți putem propune un produs opțional. Îl adaugi doar dacă vrei, cu o nouă confirmare. Stripe păstrează cardul pentru această comandă 30 de minute. Noi nu vedem și nu stocăm datele cardului.',
     transfer: 'Transfer bancar',
     transferText: 'Primești datele pentru plată imediat după comandă. Pregătim coletul după ce primim plata.',
+    cod: 'Ramburs (plata la livrare)',
+    codText: 'Plătești curierului când primești coletul. Nu plătești nimic acum.',
+    codOver: (max: string) => `Disponibil pentru comenzi de până la ${max}. Alege cardul sau transferul.`,
+    codAfter: (amount: string) => `Comanda se confirmă imediat. Plătești ${amount} curierului când primești coletul.`,
     edit: 'Modifică',
     accept: 'Am citit și accept',
     terms: 'termenii și condițiile',
@@ -160,6 +165,10 @@ const COPY = {
     cardNote: 'After payment we may suggest an optional product. You add it only if you want, with a new confirmation. Stripe keeps the card for this order for 30 minutes. We never see or store your card details.',
     transfer: 'Bank transfer',
     transferText: 'You get the payment details right after you order. We pack your order once the payment arrives.',
+    cod: 'Cash on delivery',
+    codText: 'You pay the courier when the parcel arrives. Nothing to pay now.',
+    codOver: (max: string) => `Available for orders up to ${max}. Please choose card or bank transfer.`,
+    codAfter: (amount: string) => `Your order is confirmed right away. You pay ${amount} to the courier when the parcel arrives.`,
     edit: 'Edit',
     accept: 'I have read and accept the',
     terms: 'terms and conditions',
@@ -212,6 +221,8 @@ export function CheckoutView({ methods, stripeKey }: { methods: Methods; stripeK
   const params = useSearchParams()
   const items = params.getAll('item').join('&')
   const lp = params.get('lp')
+  // ?plata=ramburs|card|transfer: the button the customer pressed on the product page.
+  const [preferred] = useState(() => PREFERRED[params.get('plata') ?? ''])
 
   // Makes sure the linked selection is in the cart (never twice), then drops ?item so a reload or a
   // return to this page changes nothing. The campaign parameters stay until the order is placed.
@@ -221,12 +232,13 @@ export function CheckoutView({ methods, stripeKey }: { methods: Methods; stripeK
     if (direct.length) cartStore.restore(direct)
     const url = new URL(window.location.href)
     url.searchParams.delete('item')
+    url.searchParams.delete('plata')
     window.history.replaceState(window.history.state, '', url)
   }, [items, lp])
 
   if (!hydrated || (items && lines.length === 0)) return <div className="min-h-[60vh]" aria-busy="true" />
   if (lines.length === 0) return <EmptyCheckout />
-  return <CheckoutForm lines={lines} methods={{ card: methods.card && !!stripeKey, transfer: methods.transfer }} stripeKey={stripeKey} />
+  return <CheckoutForm lines={lines} methods={{ card: methods.card && !!stripeKey, transfer: methods.transfer, cod: methods.cod }} stripeKey={stripeKey} preferred={preferred} />
 }
 
 function EmptyCheckout() {
@@ -256,23 +268,29 @@ function EmptyCheckout() {
   )
 }
 
-function readDraft(methods: Methods): OrderForm {
+const PREFERRED: Record<string, PaymentMethod | undefined> = { ramburs: 'cod', card: 'card', transfer: 'transfer' }
+
+function readDraft(methods: Methods, preferred?: PaymentMethod): OrderForm {
   let draft = emptyOrder
   try {
     draft = normalizeOrder(JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? '{}'))
   } catch {}
-  if (!methods[draft.paymentMethod]) draft = { ...draft, paymentMethod: methods.card || !methods.transfer ? 'card' : 'transfer' }
+  if (preferred && methods[preferred]) draft = { ...draft, paymentMethod: preferred }
+  if (!methods[draft.paymentMethod]) draft = { ...draft, paymentMethod: methods.card ? 'card' : methods.cod ? 'cod' : 'transfer' }
   return draft
 }
 
-function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; methods: Methods; stripeKey: string | null }) {
+function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines: ResolvedLine[]; methods: Methods; stripeKey: string | null; preferred?: PaymentMethod }) {
   const router = useRouter()
   const locale: Locale = useLocale()
   const t = COPY[locale]
   const { total, pricing, progress } = useCart()
-  const anyMethod = methods.card || methods.transfer
+  // Cash on delivery up to the configured ceiling (config/payments.ts); the server applies the same rule.
+  const codOverLimit = offered.cod && !codAllowedFor(total)
+  const methods: Methods = { ...offered, cod: offered.cod && !codOverLimit }
+  const anyMethod = methods.card || methods.transfer || methods.cod
 
-  const [form, setForm] = useState<OrderForm>(() => readDraft(methods))
+  const [form, setForm] = useState<OrderForm>(() => readDraft(methods, preferred))
   const [accepted, setAccepted] = useState(false)
   const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({})
   const [submitted, setSubmitted] = useState(false)
@@ -323,7 +341,7 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
         const problem = await card.current.validate()
         if (problem) throw new Error(problem)
       }
-      track('add_payment_info', { value: total, items: lines, payment_type: form.paymentMethod === 'card' ? 'card' : 'transfer bancar' })
+      track('add_payment_info', { value: total, items: lines, payment_type: form.paymentMethod === 'card' ? 'card' : form.paymentMethod === 'cod' ? 'ramburs' : 'transfer bancar' })
 
       const res = await fetch('/api/checkout', {
         method: 'POST',
@@ -343,7 +361,7 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
       if (!res.ok) throw new Error(locale === 'en' ? t.failed : (data.message ?? t.failed))
 
       const orderUrl = `/comanda/${data.token}`
-      if (data.method === 'transfer' || data.paid || data.submitted) {
+      if (data.method === 'transfer' || data.method === 'cod' || data.paid || data.submitted) {
         router.push(orderUrl)
         return
       }
@@ -494,6 +512,18 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
 
             <Group n={4} title={t.payment}>
               <div role="radiogroup" aria-label={t.method} className="grid gap-2">
+                {(offered.cod || cashOnDelivery.enabled) && (
+                  <PayOption
+                    id="cod"
+                    icon={<Truck className="h-6 w-6" />}
+                    title={t.cod}
+                    text={codOverLimit && cashOnDelivery.maxTotalMinor ? t.codOver(formatLei(cashOnDelivery.maxTotalMinor)) : t.codText}
+                    available={methods.cod}
+                    unavailableNote={codOverLimit ? '' : undefined}
+                    checked={form.paymentMethod === 'cod'}
+                    onSelect={() => patch({ paymentMethod: 'cod' })}
+                  />
+                )}
                 <PayOption
                   id="card"
                   icon={<CardIcon className="h-6 w-6" />}
@@ -629,7 +659,9 @@ function CheckoutForm({ lines, methods, stripeKey }: { lines: ResolvedLine[]; me
                 <p className="mt-3 text-center text-[14px] leading-snug text-text">
                   {form.paymentMethod === 'card'
                     ? t.cardAfter
-                    : t.transferAfter}
+                    : form.paymentMethod === 'cod'
+                      ? t.codAfter(formatLei(total))
+                      : t.transferAfter}
                 </p>
                 <p className="mt-2 text-center text-[13.5px] leading-snug text-muted">
                   <Link href="/politica-retur" target="_blank" className="underline underline-offset-4 hover:text-ink">
@@ -692,6 +724,7 @@ function PayOption({
   available,
   checked,
   onSelect,
+  unavailableNote,
   children,
 }: {
   id: PaymentMethod
@@ -699,6 +732,8 @@ function PayOption({
   title: string
   text: string
   available: boolean
+  /** Replaces the "În curând" mark of an unavailable method ('' = no mark, the text explains it). */
+  unavailableNote?: string
   checked: boolean
   onSelect: () => void
   children?: ReactNode
@@ -717,7 +752,7 @@ function PayOption({
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
             <span className={`text-[16.5px] font-medium ${available ? 'text-ink' : 'text-muted'}`}>{title}</span>
-            {!available && <span className="rounded-full bg-paper px-2 py-0.5 text-[12.5px] font-medium text-muted">{t.soon}</span>}
+            {!available && unavailableNote !== '' && <span className="rounded-full bg-paper px-2 py-0.5 text-[12.5px] font-medium text-muted">{unavailableNote ?? t.soon}</span>}
           </span>
           <span className={`mt-0.5 block text-[14.5px] leading-snug ${available ? 'text-text' : 'text-muted'}`}>{text}</span>
         </span>

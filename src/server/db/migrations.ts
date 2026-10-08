@@ -234,4 +234,12 @@ create index if not exists enquiries_created_idx on enquiries (created_at desc);
 create index if not exists enquiries_status_idx on enquiries (status)
 `,
   },
+  {
+    // Cash on delivery (ramburs): what the courier must collect, and the settlement reference that makes it paid.
+    id: '006_cash_on_delivery',
+    sql: `
+alter table orders add column if not exists cod_amount_minor integer;
+alter table orders add column if not exists cod_reference text
+`,
+  },
 ]

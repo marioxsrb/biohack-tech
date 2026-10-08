@@ -19,7 +19,7 @@ import { priceLines } from '@/lib/promotions'
 import { upsellsFor } from '@/lib/upsell'
 import { UPSELL_WINDOW_MINUTES } from '@/config/upsell'
 import type { OrderLine } from '@/lib/orders/resolve'
-import { canMoveOrder, canMovePayment, isPaid } from './state'
+import { awaitsCollection, canCancel, canFulfil, canMoveOrder, canMovePayment, isPaid, isPurchased } from './state'
 import { formatOrderNumber, orderDay } from './number'
 import type { Address, Order, OrderStatus, PaymentMethod } from './model'
 import { orders } from './repository'
@@ -58,7 +58,8 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
   if (existing) return { order: existing, created: false }
 
   const f = input.form
-  const method: PaymentMethod = f.paymentMethod === 'transfer' ? 'bank_transfer' : 'card'
+  const method: PaymentMethod = f.paymentMethod === 'transfer' ? 'bank_transfer' : f.paymentMethod === 'cod' ? 'cash_on_delivery' : 'card'
+  const cod = method === 'cash_on_delivery'
   // Promotions are recomputed here from the catalog-priced lines, whatever the caller passed.
   const pricing = priceLines(input.lines)
   const subtotal = pricing.subtotalMinor
@@ -76,8 +77,9 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
           id,
           orderNumber,
           publicToken: randomBytes(24).toString('base64url'),
-          status: 'pending',
-          paymentStatus: method === 'card' ? 'pending' : 'awaiting_transfer',
+          // Cash on delivery: accepted at once and prepared before any money exists; the courier collects.
+          status: cod ? 'confirmed' : 'pending',
+          paymentStatus: method === 'card' ? 'pending' : cod ? 'awaiting_collection' : 'awaiting_transfer',
           paymentMethod: method,
           invoiceStatus: 'none',
           currency: 'RON',
@@ -116,9 +118,12 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
         key,
         now,
       )
+      // What the courier has to collect, kept on the order for the parcel (fulfillment/courier.ts).
+      if (cod) await orders.update(t, id, { cod_amount_minor: subtotal - discount + shipping })
       await orders.event(t, id, 'order.created', 'checkout', {
         method,
         total: subtotal - discount + shipping,
+        ...(cod && { codAmount: subtotal - discount + shipping }),
         ...(discount && { discount, promotions: pricing.promotions.map((p) => p.id) }),
         marketingConsent: f.marketingConsent,
         ...(input.attribution && { attribution: input.attribution }),
@@ -126,6 +131,8 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
       // Proof of the ticked box: exact wording, version, time, order. An unticked box records nothing.
       if (f.marketingConsent) await marketing.grant(t, { email: f.email, source: 'checkout', orderId: id, page: '/checkout' })
       const created = (await orders.byId(t, id))!
+      // A cash-on-delivery order is a commitment, like a payment: earlier unpaid card attempts are closed.
+      if (cod) await closeAbandonedAttempts(t, created)
       await enqueueAll(t, jobsFor('created', created))
       return created
     })
@@ -187,13 +194,24 @@ async function transition(
 
 /**
  * Money received. For cards, only Stripe (webhook or a server-side retrieve) calls this,
- * with the amount it reports; for bank transfer, a person in /admin after seeing the statement.
+ * with the amount it reports; for bank transfer, a person in /admin after seeing the statement;
+ * for cash on delivery, a person in /admin with the courier's settlement: the exact amount and its
+ * reference (borderou or payment order), both kept in the audit trail. Delivery alone never pays an order.
  */
-export function confirmPayment(orderId: string, source: Source, reported?: { amountMinor: number; currency: string; paymentIntentId?: string; paymentMethodId?: string | null }) {
+export function confirmPayment(
+  orderId: string,
+  source: Source,
+  reported?: { amountMinor: number; currency: string; paymentIntentId?: string; paymentMethodId?: string | null; reference?: string },
+) {
   return transition(orderId, source, async (o, t) => {
     if (isPaid(o.paymentStatus) || o.paymentStatus === 'refunded') return { skip: 'already_paid' }
-    // Card money is confirmed only by Stripe (webhook or reconciliation); a person confirms only transfers.
-    if (source === 'admin' && o.paymentMethod !== 'bank_transfer') return { skip: 'card_payment_confirmed_by_stripe_only' }
+    // Card money is confirmed only by Stripe (webhook or reconciliation); a person confirms only transfers and collections.
+    if (source === 'admin' && o.paymentMethod === 'card') return { skip: 'card_payment_confirmed_by_stripe_only' }
+    if (o.paymentMethod === 'cash_on_delivery') {
+      if (source !== 'admin') return { skip: 'collection_confirmed_by_admin_only' }
+      if (o.status !== 'shipped' && o.status !== 'delivered') return { skip: `collection_before_delivery_${o.status}` }
+      if (!reported?.reference || reported.reference.trim().length < 3) return { skip: 'collection_reference_required' }
+    }
     if (!canMovePayment(o.paymentStatus, 'paid')) return { skip: `payment_${o.paymentStatus}` }
     if (reported) {
       if (reported.currency.toUpperCase() !== 'RON' || reported.amountMinor !== o.totalMinor) {
@@ -205,7 +223,10 @@ export function confirmPayment(orderId: string, source: Source, reported?: { amo
     const status: OrderStatus = canMoveOrder(o.status, 'confirmed') ? 'confirmed' : o.status
     await closeAbandonedAttempts(t, o)
     const c = getConfig()
-    const invoiceDue = o.paymentMethod === 'card' || c.fgo?.transferInvoice !== 'manual'
+    const cod = o.paymentMethod === 'cash_on_delivery'
+    // Cash on delivery: the invoice was issued at shipment (default) or is issued now (on_collection).
+    const invoiceDue = cod ? c.fgo?.codInvoice === 'on_collection' : o.paymentMethod === 'card' || c.fgo?.transferInvoice !== 'manual'
+    const invoice = cod && o.invoiceStatus !== 'none' ? {} : { invoice_status: c.fgo && invoiceDue ? 'pending' : 'manual' }
     // A paid card checkout order with a card Stripe kept for on-session use gets the optional
     // post-purchase offer for a limited time. Only ids are stored, never card data.
     const offer =
@@ -213,9 +234,9 @@ export function confirmPayment(orderId: string, source: Source, reported?: { amo
         ? { stripe_payment_method_id: reported.paymentMethodId, upsell_status: 'offered', upsell_expires_at: new Date(Date.now() + UPSELL_WINDOW_MINUTES * 60_000) }
         : {}
     return {
-      patch: { payment_status: 'paid', status, paid_at: new Date(), invoice_status: c.fgo && invoiceDue ? 'pending' : 'manual', ...offer },
+      patch: { payment_status: 'paid', status, paid_at: new Date(), ...invoice, ...(cod && { cod_reference: reported!.reference!.trim().slice(0, 120) }), ...offer },
       event: 'payment.confirmed',
-      data: { amount: o.totalMinor, ...('upsell_status' in offer && { upsellOffered: true }) },
+      data: { amount: o.totalMinor, ...(cod && { collection: true, reference: reported!.reference!.trim().slice(0, 120) }), ...('upsell_status' in offer && { upsellOffered: true }) },
     }
   })
 }
@@ -362,7 +383,7 @@ export function markAbandonedIfUnpaid(orderId: string) {
   return transition(orderId, 'system', async (o, t) => {
     if (o.paymentMethod !== 'card' || isPaid(o.paymentStatus) || !canMoveOrder(o.status, 'abandoned')) return { skip: 'not_abandoned' }
     const later = await t.query(
-      "select 1 from orders where email = $1 and id <> $2 and created_at >= $3 and payment_status in ('paid','partially_refunded','awaiting_transfer') limit 1",
+      "select 1 from orders where email = $1 and id <> $2 and created_at >= $3 and payment_status in ('paid','partially_refunded','awaiting_transfer','awaiting_collection') limit 1",
       [o.email, o.id, o.createdAt],
     )
     if (later.rows.length) return { patch: { status: 'cancelled', cancelled_at: new Date(), cancel_reason: 'înlocuită de o comandă ulterioară' }, event: 'order.superseded' }
@@ -411,18 +432,21 @@ export function expireUnpaidTransfer(orderId: string) {
 
 export function markProcessing(orderId: string, source: Source) {
   return transition(orderId, source, async (o) => {
-    if (!isPaid(o.paymentStatus) || !canMoveOrder(o.status, 'processing')) return { skip: `status_${o.status}` }
+    if (!canFulfil(o) || !canMoveOrder(o.status, 'processing')) return { skip: `status_${o.status}` }
     return { patch: { status: 'processing' }, event: 'order.processing' }
   })
 }
 
 export function markShipped(orderId: string, source: Source, s: { courier: string; trackingNumber: string; trackingUrl?: string }) {
   return transition(orderId, source, async (o) => {
-    if (!isPaid(o.paymentStatus) || !canMoveOrder(o.status, 'shipped')) return { skip: `status_${o.status}` }
+    if (!canFulfil(o) || !canMoveOrder(o.status, 'shipped')) return { skip: `status_${o.status}` }
+    // Cash on delivery: by default the invoice is issued now, so it travels with the parcel. It stays unpaid.
+    const fgo = getConfig().fgo
+    const codInvoice = awaitsCollection(o) && o.invoiceStatus === 'none' ? { invoice_status: fgo ? (fgo.codInvoice === 'on_shipment' ? 'pending' : fgo.codInvoice === 'manual' ? 'manual' : 'none') : 'manual' } : {}
     return {
-      patch: { status: 'shipped', courier: s.courier, tracking_number: s.trackingNumber, tracking_url: s.trackingUrl || null, shipped_at: new Date() },
+      patch: { status: 'shipped', courier: s.courier, tracking_number: s.trackingNumber, tracking_url: s.trackingUrl || null, shipped_at: new Date(), ...codInvoice },
       event: 'order.shipped',
-      data: { courier: s.courier, trackingNumber: s.trackingNumber },
+      data: { courier: s.courier, trackingNumber: s.trackingNumber, ...(awaitsCollection(o) && { codAmount: o.codAmountMinor ?? o.totalMinor }) },
     }
   })
 }
@@ -434,10 +458,13 @@ export function markDelivered(orderId: string, source: Source) {
   })
 }
 
-/** Cancels an order that has not shipped. A paid order must be refunded in Stripe separately. */
+/**
+ * Cancels an order that has not shipped, or a cash-on-delivery parcel refused at the door (nothing was
+ * collected). A paid order must be refunded in Stripe or the bank separately.
+ */
 export function cancelOrder(orderId: string, source: Source, reason: string) {
   return transition(orderId, source, async (o) => {
-    if (!canMoveOrder(o.status, 'cancelled')) return { skip: `status_${o.status}` }
+    if (!canCancel(o)) return { skip: `status_${o.status}` }
     return { patch: { status: 'cancelled', cancelled_at: new Date(), cancel_reason: reason.slice(0, 300) }, event: 'order.cancelled', data: { wasPaid: isPaid(o.paymentStatus) } }
   })
 }
@@ -449,7 +476,7 @@ export function cancelOrder(orderId: string, source: Source, reason: string) {
 export function markReturnRequested(orderId: string, source: Source, via = 'formular') {
   return transition(orderId, source, async (o) => {
     if (o.returnStatus) return { skip: `return_${o.returnStatus}` }
-    if (!isPaid(o.paymentStatus)) return { skip: `payment_${o.paymentStatus}` }
+    if (!isPurchased(o)) return { skip: `payment_${o.paymentStatus}` }
     return { patch: { return_status: 'requested', return_requested_at: new Date() }, event: 'return.requested', data: { via } }
   })
 }
@@ -461,7 +488,7 @@ export function markReturnRequested(orderId: string, source: Source, via = 'form
 export function markReturnReceived(orderId: string, source: Source) {
   return transition(orderId, source, async (o, t) => {
     if (o.returnStatus === 'received') return { skip: 'return_received' }
-    if (!isPaid(o.paymentStatus) && o.paymentStatus !== 'refunded') return { skip: `payment_${o.paymentStatus}` }
+    if (!isPurchased(o) && o.paymentStatus !== 'refunded') return { skip: `payment_${o.paymentStatus}` }
     await t.query("update withdrawal_requests set status = 'received' where order_id = $1 and status <> 'received'", [o.id])
     return {
       patch: { return_status: 'received', return_received_at: new Date(), ...(o.returnRequestedAt ? {} : { return_requested_at: new Date() }) },
@@ -504,6 +531,8 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
       // A post-purchase order is paid on the spot or not at all: only the safety-net reconcile, never
       // an abandonment (a declined or failed offer is not an abandoned checkout).
       if (o.kind === 'upsell') return [{ kind: 'stripe.reconcile', orderId: o.id, dedupeKey: `reconcile:${o.id}`, runAt: new Date(Date.now() + 10 * 60_000) }]
+      // Cash on delivery: confirmed at once. The confirmation email says what to pay the courier.
+      if (o.paymentMethod === 'cash_on_delivery') return [...crm(), ...email('cod_confirmed')]
       return o.paymentMethod === 'bank_transfer'
         ? [
             ...crm(),
@@ -526,7 +555,8 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
         ...(o.upsellStatus === 'offered' && o.upsellExpiresAt ? release(o.id, o.upsellExpiresAt) : []),
         ...(o.kind === 'upsell' && o.parentOrderId ? release(o.parentOrderId) : []),
         ...crm(),
-        ...email(o.paymentMethod === 'card' ? 'order_confirmed' : 'payment_received'),
+        // The customer paid the courier in person: no "payment received" email for a collection.
+        ...(o.paymentMethod === 'cash_on_delivery' ? [] : email(o.paymentMethod === 'card' ? 'order_confirmed' : 'payment_received')),
         ...(o.invoiceStatus === 'pending' ? [{ kind: 'fgo.invoice' as const, orderId: o.id, dedupeKey: `fgo.invoice:${o.id}` }] : []),
       ]
     case 'order.abandoned':
@@ -534,7 +564,7 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
     case 'order.delivered':
       return crm()
     case 'order.shipped':
-      return [...crm(), ...email('order_shipped')]
+      return [...crm(), ...email('order_shipped'), ...(o.invoiceStatus === 'pending' ? [{ kind: 'fgo.invoice' as const, orderId: o.id, dedupeKey: `fgo.invoice:${o.id}` }] : [])]
     case 'return.requested':
       return crm()
     case 'return.received':
@@ -544,7 +574,7 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
       return o.ghlOpportunityId ? crm() : []
     case 'order.cancelled': {
       // An unpaid card attempt was never confirmed to the customer: no email, and no CRM record unless one exists.
-      const known = o.paymentMethod === 'bank_transfer' || !!data.wasPaid
+      const known = o.paymentMethod !== 'card' || !!data.wasPaid
       return [...(known || o.ghlOpportunityId ? crm() : []), ...(known ? email('order_cancelled') : [])]
     }
     case 'payment.refunded':

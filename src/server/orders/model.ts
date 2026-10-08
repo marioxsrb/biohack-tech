@@ -11,6 +11,7 @@ import type { AppliedPromotion } from '@/lib/promotions'
 
 export const ORDER_STATUS = {
   pending: 'pending', // created, waiting for payment
+  // confirmed: paid, or (cash on delivery) accepted and to be prepared before the money exists
   abandoned: 'abandoned', // card payment not completed in time (can still be paid)
   confirmed: 'confirmed', // paid, to be prepared
   processing: 'processing', // being prepared
@@ -23,6 +24,8 @@ export type OrderStatus = (typeof ORDER_STATUS)[keyof typeof ORDER_STATUS]
 export const PAYMENT_STATUS = {
   pending: 'pending', // card payment started, not confirmed by Stripe
   awaitingTransfer: 'awaiting_transfer',
+  /** Cash on delivery: the courier collects at the door; paid only once a person records the settlement. */
+  awaitingCollection: 'awaiting_collection',
   failed: 'failed', // last card attempt failed; the customer can retry
   cancelled: 'cancelled', // the card payment was cancelled in Stripe before any money moved
   paid: 'paid',
@@ -31,8 +34,15 @@ export const PAYMENT_STATUS = {
 } as const
 export type PaymentStatus = (typeof PAYMENT_STATUS)[keyof typeof PAYMENT_STATUS]
 
-export const PAYMENT_METHOD = { card: 'card', bankTransfer: 'bank_transfer' } as const
+export const PAYMENT_METHOD = { card: 'card', bankTransfer: 'bank_transfer', cashOnDelivery: 'cash_on_delivery' } as const
 export type PaymentMethod = (typeof PAYMENT_METHOD)[keyof typeof PAYMENT_METHOD]
+
+/** How a payment method is named to people (customer pages, emails, admin, CRM, invoice text). */
+export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+  card: 'Card',
+  bank_transfer: 'Transfer bancar',
+  cash_on_delivery: 'Ramburs (plata la livrare)',
+}
 
 export const INVOICE_STATUS = {
   none: 'none', // not due yet
@@ -102,6 +112,10 @@ export type Order = {
   notes: string
   marketingConsent: boolean
   stripePaymentIntentId: string | null
+  /** Cash on delivery: the amount the courier must collect (the order total, set when the order is placed). */
+  codAmountMinor: number | null
+  /** Cash on delivery: the courier's settlement reference (borderou, payment order) recorded with the collection. */
+  codReference: string | null
   paidAt: Date | null
   cancelledAt: Date | null
   cancelReason: string | null

@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ProductHero } from '@/components/product/ProductHero'
 import { ProductSections } from '@/components/product/ProductSections'
+import { ReviewMarquee } from '@/components/reviews/ReviewMarquee'
 
 import { getProductBySlug, productHref, products } from '@/content/catalog'
 import { getProductContent } from '@/content/product-content'
@@ -51,10 +52,11 @@ export default async function ProductPage({ params }: PageProps<'/[lang]/product
     <>
       <section id="cumpara" className="scroll-mt-[var(--nav-h)] pt-[calc(var(--nav-h)+48px)] pb-[var(--sec)] max-sm:pt-[var(--nav-h)]">
         <div className="wrap">
-          <ProductHero productId={product.id} intro={content.intro} />
+          <ProductHero productId={product.id} intro={content.intro} highlights={content.highlights} />
         </div>
       </section>
 
+      <ReviewMarquee productId={product.id} className="mb-[var(--sec)]" />
       <ProductSections product={product} content={content} locale={locale} />
 
       <p className="wrap py-8 text-[13px] leading-relaxed text-muted">
