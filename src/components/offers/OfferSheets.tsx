@@ -9,7 +9,7 @@ import { getProduct, unitPrice, variantLabel, type ProductId } from '@/content/c
 import { useLocale, useUi } from '@/i18n/LocaleProvider'
 import type { Locale } from '@/i18n/locales'
 import { AMBER_ID, amberLabel, amberModels, amberTotals, pairsToLines } from '@/lib/amber-pairs'
-import { BUNDLE, bundleNeeds, bundleToLines, bundleTotals, pickComplete, type BundlePick } from '@/lib/bundle-picks'
+import { BUNDLE, bundleToLines, bundleTotals, unitsInCart, type BundlePick } from '@/lib/bundle-picks'
 import { trackUi, type UiPlacement } from '@/lib/analytics'
 import { formatLei } from '@/lib/money'
 import type { EntrySource } from '@/lib/purchase'
@@ -38,21 +38,20 @@ const COPY = {
     chooseVariant: 'Alege o configurație',
     configuration: 'Configurație',
     variantNote: 'Casca e aceeași. Diferă câte zone poți activa. Protocolul îl stabilești cu un specialist la consultația de început.',
-    bundleName: '20% la 3 produse',
-    bundleAdded: 'Am adăugat selecția în coș. Reducerea de 20% se aplică.',
-    bundleActive: 'Reducerea de 20% este deja activă în coș.',
+    bundleName: 'Până la 20% reducere',
+    bundleAdded: (pct: number) => (pct ? `Am adăugat produsele în coș. Reducerea de ${pct}% se aplică.` : 'Am adăugat produsul în coș.'),
     backToOrder: 'Înapoi la comandă',
-    bundleTitle: (missing: number) => (missing === 3 ? 'Alege 3 produse. Primești 20% reducere.' : missing === 1 ? 'Mai alege 1 produs pentru 20% reducere.' : `Mai alege ${missing} produse pentru 20% reducere.`),
-    products: (n: number) => (n === 1 ? '1 produs' : `${n} produse`),
+    bundleTitle: 'Alege produsul și câte bucăți.',
+    units: (n: number) => (n === 1 ? '1 bucată' : `${n} bucăți`),
+    unitsResult: (total: number, pct: number) => `${total} în total, ${pct}% reducere`,
+    howMany: 'Câte adaugi?',
     discount: (p: number) => `Reducere ${p}%`,
     totalAfter: 'Total după reducere',
-    addSelection: 'Adaugă selecția în coș',
-    pickConfigFor: (n: number) => `Alege configurația pentru produsul ${n}.`,
-    pickProduct: (n: number) => `Mai alege produsul ${n}.`,
-    bundleIntro: 'NEUROS Calm, NEUROS Focus și NEUROS Flow, în orice combinație. Poți alege același produs de mai multe ori.',
-    product: (n: number) => `Produsul ${n}`,
+    addSelection: 'Adaugă în coș',
+    pickConfig: 'Alege configurația NEUROS Flow.',
+    pickProductFirst: 'Alege produsul.',
+    bundleIntro: 'Reducerea se aplică la bucățile din același produs: 10% la 2 bucăți, 20% la 3. Ce ai deja în coș se adună.',
     chooseProduct: 'Alege produsul',
-    flowConfigOf: (n: number) => `Configurația NEUROS Flow, produsul ${n}`,
   },
   en: {
     amberTitle: (slots: number) => (slots === 3 ? 'Choose 3 pairs. Pay for 2.' : slots === 1 ? 'Choose one more pair. It is free.' : `Choose ${slots} more pairs. One of them is free.`),
@@ -76,21 +75,20 @@ const COPY = {
     chooseVariant: 'Choose a configuration',
     configuration: 'Configuration',
     variantNote: 'The headset is the same. The configurations differ in how many zones you can switch on. You set the protocol with a specialist at your first consultation.',
-    bundleName: '20% off 3 products',
-    bundleAdded: 'We added your selection to the cart. The 20% discount applies.',
-    bundleActive: 'The 20% discount is already applied in your cart.',
+    bundleName: 'Up to 20% off',
+    bundleAdded: (pct: number) => (pct ? `We added the products to your cart. The ${pct}% discount applies.` : 'We added the product to your cart.'),
     backToOrder: 'Back to your order',
-    bundleTitle: (missing: number) => (missing === 3 ? 'Choose 3 products. Get 20% off.' : missing === 1 ? 'Add 1 more product for 20% off.' : `Add ${missing} more products for 20% off.`),
-    products: (n: number) => (n === 1 ? '1 product' : `${n} products`),
+    bundleTitle: 'Choose the product and how many.',
+    units: (n: number) => (n === 1 ? '1 unit' : `${n} units`),
+    unitsResult: (total: number, pct: number) => `${total} in all, ${pct}% off`,
+    howMany: 'How many?',
     discount: (p: number) => `${p}% discount`,
     totalAfter: 'Total after discount',
-    addSelection: 'Add your selection to the cart',
-    pickConfigFor: (n: number) => `Choose the configuration for product ${n}.`,
-    pickProduct: (n: number) => `Choose product ${n}.`,
-    bundleIntro: 'NEUROS Calm, NEUROS Focus and NEUROS Flow, in any mix. You can choose the same product more than once.',
-    product: (n: number) => `Product ${n}`,
+    addSelection: 'Add to cart',
+    pickConfig: 'Choose the NEUROS Flow configuration.',
+    pickProductFirst: 'Choose the product.',
+    bundleIntro: 'The discount applies to units of the same product: 10% for 2, 20% for 3. What is already in your cart counts.',
     chooseProduct: 'Choose the product',
-    flowConfigOf: (n: number) => `NEUROS Flow configuration, product ${n}`,
   },
 }
 
@@ -98,7 +96,7 @@ type Open = ({ kind: 'amber'; slots: number; placement: UiPlacement } | { kind: 
 
 const Ctx = createContext<{
   openAmber: (placement: UiPlacement, slots?: number) => void
-  /** The 20% for 3 products picker; asks only for the products the cart still needs. */
+  /** The quantity-discount picker: one product and how many (the discount is counted per product). */
   openBundle: (placement: UiPlacement) => void
   openVariant: (productId: ProductId, placement: UiPlacement) => void
 } | null>(null)
@@ -384,9 +382,10 @@ function VariantPicker({ productId, placement, onClose }: { productId: ProductId
 }
 
 /**
- * 20% for 3 products: one slot per product the cart still needs (3, 2 or 1). Each slot is a product
- * (NEUROS Calm, NEUROS Focus, NEUROS Flow; the same product more than once is fine) and, for NEUROS Flow,
- * its configuration. Totals from the promotion engine; one button adds everything; closing adds nothing.
+ * The quantity discount, counted per product: the customer picks one product (NEUROS Calm, NEUROS Focus,
+ * NEUROS Flow with its configuration) and how many. Units of that product already in the cart count too,
+ * so the choices are the quantities that reach 10% (2 in all) or 20% (3 in all). Totals from the promotion
+ * engine; one button adds the units; closing adds nothing.
  */
 function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose: () => void }) {
   const { lines, addMany } = useCart()
@@ -394,17 +393,20 @@ function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose:
   const t = COPY[locale]
   const ui = useUi()
   const cart = lines.map((l) => ({ productId: l.product.id, variantId: l.variant?.id, quantity: l.quantity }))
-  // The number of slots is fixed when the picker opens.
-  const [need] = useState(() => bundleNeeds(cart))
-  const [picks, setPicks] = useState<BundlePick[]>(() => Array.from({ length: need.missing }, () => ({ productId: null, variantId: null })))
-  const [done, setDone] = useState(false)
-  const totals = bundleTotals(cart, picks)
-  const ready = bundleToLines(picks)
-  const firstOpen = picks.findIndex((p) => !pickComplete(p))
-  const slotNo = (i: number) => need.units + i + 1
-  const set = (i: number, next: BundlePick) => setPicks((ps) => ps.map((p, j) => (j === i ? next : p)))
+  const [pick, setPick] = useState<BundlePick>({ productId: null, variantId: null, quantity: 0 })
+  const [done, setDone] = useState<number | null>(null)
+  const have = unitsInCart(cart, pick.productId)
+  // How many to add: enough for 2 in all (10%) and for 3 in all (20%); one more once 20% already applies.
+  const options = have >= 3 ? [1] : [2 - have, 3 - have].filter((n) => n > 0)
+  const totals = bundleTotals(cart, pick)
+  const ready = bundleToLines(pick)
+  const product = pick.productId ? getProduct(pick.productId, locale) : undefined
+  const choose = (productId: ProductId) => {
+    const n = unitsInCart(cart, productId)
+    setPick({ productId, variantId: productId === pick.productId ? pick.variantId : null, quantity: n >= 3 ? 1 : 3 - n })
+  }
 
-  if (need.missing === 0 || done) {
+  if (done !== null) {
     return (
       <Sheet open onClose={onClose} label={t.bundleName} title={<p className="text-[17px] font-semibold text-ink">{t.bundleName}</p>}>
         <div className="mx-auto max-w-[30em] py-6 text-center">
@@ -412,7 +414,7 @@ function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose:
             <Check className="h-6 w-6" />
           </span>
           <p className="mt-4 text-[22px] leading-tight font-medium tracking-[-0.02em] text-ink" role="status">
-            {done ? t.bundleAdded : t.bundleActive}
+            {t.bundleAdded(done)}
           </p>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
             {placement !== 'cart' && placement !== 'checkout' && (
@@ -429,40 +431,37 @@ function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose:
     )
   }
 
-  const title = t.bundleTitle(need.missing)
   const add = () => {
     if (!ready || !addMany(ready, sourceFor(placement, 'bundle'))) return
-    trackUi('complete_bundle_configurator', { placement, items: need.missing })
+    trackUi('complete_bundle_configurator', { placement, items: pick.quantity })
     if (placement === 'cart' || placement === 'checkout') onClose()
-    else setDone(true)
+    else setDone(totals.percent)
   }
 
   return (
     <Sheet
       open
       onClose={onClose}
-      label={title}
+      label={t.bundleTitle}
       title={
         <>
           <p className="inline-flex rounded-full bg-cyan-700 px-2.5 py-0.5 text-[12.5px] font-semibold text-white">{t.bundleName}</p>
-          <h2 className="mt-1 text-[clamp(20px,2.4vw,26px)] leading-tight tracking-[-0.025em]">{title}</h2>
+          <h2 className="mt-1 text-[clamp(20px,2.4vw,26px)] leading-tight tracking-[-0.025em]">{t.bundleTitle}</h2>
         </>
       }
       footer={
         <div className="space-y-3">
           <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-0.5 text-[14.5px]">
-            {picks.map((p, i) =>
-              pickComplete(p) ? (
-                <div key={i} className="contents">
-                  <dt className="truncate text-text">{pickLabel(p, locale)}</dt>
-                  <dd className="text-right tabular-nums">{formatLei(unitPrice(getProduct(p.productId!)!, getProduct(p.productId!)!.variants?.find((v) => v.id === p.variantId)) ?? 0)}</dd>
-                </div>
-              ) : null,
+            {ready && (
+              <>
+                <dt className="truncate text-text">{pickLabel(pick, locale)} × {pick.quantity}</dt>
+                <dd className="text-right tabular-nums">{formatLei((unitPrice(getProduct(pick.productId!)!, getProduct(pick.productId!)!.variants?.find((v) => v.id === pick.variantId)) ?? 0) * pick.quantity)}</dd>
+              </>
             )}
-            {need.units > 0 && (
+            {have > 0 && (
               <>
                 <dt className="text-muted">{t.inCart}</dt>
-                <dd className="text-right text-muted">{t.products(need.units)}</dd>
+                <dd className="text-right text-muted">{t.units(have)}</dd>
               </>
             )}
             <dt className="text-muted">Subtotal</dt>
@@ -476,70 +475,81 @@ function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose:
             <Lock /> {t.addSelection}
           </button>
           <p className="text-center text-[13px] text-muted" aria-live="polite">
-            {ready ? ui.vat + '.' : picks[firstOpen]?.productId === 'brain-flow' ? t.pickConfigFor(slotNo(firstOpen)) : t.pickProduct(slotNo(firstOpen))}
+            {ready ? ui.vat + '.' : product?.variants?.length ? t.pickConfig : t.pickProductFirst}
           </p>
         </div>
       }
     >
       <p className="text-[15px] text-text">{t.bundleIntro}</p>
-      <ol className="mt-4 space-y-3">
-        {picks.map((pick, i) => {
-          const flow = pick.productId ? getProduct(pick.productId, locale) : undefined
+      <div role="radiogroup" aria-label={t.chooseProduct} className="mt-4 grid grid-cols-3 gap-2">
+        {(BUNDLE.products as ProductId[]).map((id) => {
+          const p = getProduct(id, locale)!
+          const on = pick.productId === id
           return (
-            <li key={i} className={`rounded-[18px] bg-paper p-4 transition-shadow sm:p-5 ${pickComplete(pick) ? 'shadow-[inset_0_0_0_2px_var(--color-ink)]' : 'shadow-[inset_0_0_0_1px_var(--color-line)]'}`}>
-              <div className="flex items-baseline justify-between gap-3">
-                <p className="text-[16px] font-semibold text-ink">{t.product(slotNo(i))}</p>
-                <p className={`truncate text-[14.5px] ${pickComplete(pick) ? 'font-medium text-cyan-700' : 'text-muted'}`}>{pickComplete(pick) ? pickLabel(pick, locale) : t.chooseProduct}</p>
-              </div>
-              <div role="radiogroup" aria-label={t.product(slotNo(i))} className="mt-3 grid grid-cols-3 gap-2">
-                {(BUNDLE.products as ProductId[]).map((id) => {
-                  const p = getProduct(id, locale)!
-                  const on = pick.productId === id
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      role="radio"
-                      aria-checked={on}
-                      onClick={() => set(i, { productId: id, variantId: on ? pick.variantId : null })}
-                      className={`flex flex-col items-center rounded-[14px] px-1.5 pt-2 pb-2.5 text-center transition-shadow ${on ? 'bg-mist shadow-[inset_0_0_0_2px_var(--color-ink)]' : 'shadow-[inset_0_0_0_1px_var(--color-line)] hover:shadow-[inset_0_0_0_1px_var(--color-ink)]'}`}
-                    >
-                      <span className="relative block h-12 w-full sm:h-16">
-                        <Image src={p.cutout.src} alt="" fill sizes="120px" className="object-contain" />
-                      </span>
-                      <span className="mt-1.5 text-[13.5px] leading-tight font-semibold text-ink">{p.name.replace('NEUROS ', '')}</span>
-                      <span className="text-[12.5px] text-muted tabular-nums">
-                        {p.variablePrice ? ui.from : ''}
-                        {formatLei(p.price ?? 0)}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-              {flow?.variants?.length ? (
-                <div role="radiogroup" aria-label={t.flowConfigOf(slotNo(i))} className="mt-3 grid grid-cols-3 gap-2">
-                  {flow.variants.map((v) => {
-                    const on = pick.variantId === v.id
-                    return (
-                      <button
-                        key={v.id}
-                        type="button"
-                        role="radio"
-                        aria-checked={on}
-                        onClick={() => set(i, { productId: flow.id, variantId: v.id })}
-                        className={`flex min-h-14 flex-col items-center justify-center rounded-[12px] px-1 py-2 text-center transition-colors ${on ? 'bg-ink text-white' : 'bg-paper text-ink shadow-[inset_0_0_0_1px_var(--color-line)] hover:shadow-[inset_0_0_0_1px_var(--color-ink)]'}`}
-                      >
-                        <span className="text-[14.5px] font-semibold">{variantLabel(flow, v)}</span>
-                        <span className={`text-[12.5px] tabular-nums ${on ? 'text-white/80' : 'text-muted'}`}>{formatLei(unitPrice(flow, v) ?? 0)}</span>
-                      </button>
-                    )
-                  })}
-                </div>
-              ) : null}
-            </li>
+            <button
+              key={id}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => choose(id)}
+              className={`flex flex-col items-center rounded-[14px] px-1.5 pt-2 pb-2.5 text-center transition-shadow ${on ? 'bg-mist shadow-[inset_0_0_0_2px_var(--color-ink)]' : 'shadow-[inset_0_0_0_1px_var(--color-line)] hover:shadow-[inset_0_0_0_1px_var(--color-ink)]'}`}
+            >
+              <span className="relative block h-12 w-full sm:h-16">
+                <Image src={p.cutout.src} alt="" fill sizes="120px" className="object-contain" />
+              </span>
+              <span className="mt-1.5 text-[13.5px] leading-tight font-semibold text-ink">{p.name.replace('NEUROS ', '')}</span>
+              <span className="text-[12.5px] text-muted tabular-nums">
+                {p.variablePrice ? ui.from : ''}
+                {formatLei(p.price ?? 0)}
+              </span>
+            </button>
           )
         })}
-      </ol>
+      </div>
+      {product?.variants?.length ? (
+        <div role="radiogroup" aria-label={t.configuration} className="mt-3 grid grid-cols-3 gap-2">
+          {product.variants.map((v) => {
+            const on = pick.variantId === v.id
+            return (
+              <button
+                key={v.id}
+                type="button"
+                role="radio"
+                aria-checked={on}
+                onClick={() => setPick({ ...pick, variantId: v.id })}
+                className={`flex min-h-14 flex-col items-center justify-center rounded-[12px] px-1 py-2 text-center transition-colors ${on ? 'bg-ink text-white' : 'bg-paper text-ink shadow-[inset_0_0_0_1px_var(--color-line)] hover:shadow-[inset_0_0_0_1px_var(--color-ink)]'}`}
+              >
+                <span className="text-[14.5px] font-semibold">{variantLabel(product, v)}</span>
+                <span className={`text-[12.5px] tabular-nums ${on ? 'text-white/80' : 'text-muted'}`}>{formatLei(unitPrice(product, v) ?? 0)}</span>
+              </button>
+            )
+          })}
+        </div>
+      ) : null}
+      {pick.productId && (
+        <>
+          <p className="mt-5 text-[16px] font-semibold text-ink">{t.howMany}</p>
+          <div role="radiogroup" aria-label={t.howMany} className="mt-2 grid grid-cols-2 gap-2">
+            {options.map((n) => {
+              const on = pick.quantity === n
+              const pct = n + have >= 3 ? 20 : 10
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => setPick({ ...pick, quantity: n })}
+                  className={`flex flex-col items-start rounded-[14px] px-4 py-3 text-left transition-colors ${on ? 'bg-ink text-white' : 'bg-paper text-ink shadow-[inset_0_0_0_1px_var(--color-line)] hover:shadow-[inset_0_0_0_1px_var(--color-ink)]'}`}
+                >
+                  <span className="text-[16px] font-semibold">{t.units(n)}</span>
+                  <span className={`text-[13.5px] ${on ? 'text-white/80' : 'text-muted'}`}>{t.unitsResult(n + have, pct)}</span>
+                </button>
+              )
+            })}
+          </div>
+        </>
+      )}
     </Sheet>
   )
 }

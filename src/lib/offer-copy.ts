@@ -8,6 +8,7 @@
  *   next free pair is one pair away does it become a visible prompt again.
  */
 import type { Locale } from '@/i18n/locales'
+import { getProduct } from '@/content/catalog'
 import { formatLei } from './money'
 import type { PromotionProgress } from './promotions'
 
@@ -55,21 +56,31 @@ function amberCopyEn(p: Pick<PromotionProgress, 'units' | 'freeUnits' | 'untilNe
   return { tone: 'active', headline, detail }
 }
 
-const produse = (n: number) => (n === 1 ? '1 produs' : `${n} produse`)
-const productsEn = (n: number) => (n === 1 ? '1 product' : `${n} products`)
+type BundleProgress = Pick<PromotionProgress, 'units' | 'untilNext' | 'savedMinor' | 'active' | 'percent' | 'nextPercent' | 'productId'> | null
 
-type BundleProgress = Pick<PromotionProgress, 'units' | 'untilNext' | 'savedMinor' | 'active' | 'percent' | 'nextPercent'> | null
+const nameOf = (id: string | undefined, locale: Locale) => (id ? (getProduct(id, locale)?.name ?? '') : '')
+const together = (n: number, en: boolean) => (en ? (n === 2 ? 'both' : n === 3 ? 'all three' : `all ${n}`) : n === 2 ? 'ambele' : n === 3 ? 'toate trei' : `toate ${n}`)
 
-/** 10% at 2 eligible products, 20% from 3: the first step is a prompt, 10% is earned with a nudge to 20%. */
+/**
+ * The quantity discount, counted per product: 2 units of the same product get 10%, 3 or more get 20%,
+ * on that product only. Each product in the cart has its own line, named.
+ */
 export function bundleCopy(p: BundleProgress, locale: Locale = 'ro'): OfferCopy {
   const en = locale === 'en'
-  if (!p || p.units === 0) return { tone: 'discover', headline: en ? 'Choose 2 products for 10% off, or 3 for 20% off.' : 'Alege 2 produse pentru 10% sau 3 pentru 20% reducere.' }
+  if (!p || p.units === 0) return { tone: 'discover', headline: en ? 'Take 2 of the same product for 10% off, or 3 for 20% off.' : 'Iei 2 bucăți din același produs: 10% reducere. Iei 3: 20%.' }
+  const name = nameOf(p.productId, locale)
+  const target = p.units + p.untilNext
   if (p.active) {
-    const headline = en ? `Your ${p.percent}% discount is applied.` : `Reducerea de ${p.percent}% este activă.`
+    const headline = en ? `${p.percent}% off your ${name} is applied.` : `Reducerea de ${p.percent}% la ${name} este activă.`
     const detail = en ? `You save ${formatLei(p.savedMinor)}.` : `Economisești ${formatLei(p.savedMinor)}.`
     if (!p.nextPercent) return { tone: 'active', headline, detail }
-    if (p.untilNext === 1) return { tone: 'active', headline, detail, nudge: en ? `Add 1 more product and get ${p.nextPercent}% off all of them.` : `Mai adaugă 1 produs și primești ${p.nextPercent}% la toate.` }
-    return { tone: 'active', headline, detail, quiet: en ? `${productsEn(p.untilNext)} more until ${p.nextPercent}% off.` : `Încă ${produse(p.untilNext)} până la ${p.nextPercent}% reducere.` }
+    if (p.untilNext === 1) return { tone: 'active', headline, detail, nudge: en ? `Add one more ${name} and get ${p.nextPercent}% off ${together(target, true)}.` : `Mai adaugă încă un ${name} și primești ${p.nextPercent}% la ${together(target, false)}.` }
+    return { tone: 'active', headline, detail, quiet: en ? `${p.untilNext} more ${name} for ${p.nextPercent}% off.` : `Încă ${p.untilNext} ${name} până la ${p.nextPercent}% reducere.` }
   }
-  return { tone: 'progress', headline: en ? `Add ${productsEn(p.untilNext)} for ${p.nextPercent}% off.` : `Mai alege ${produse(p.untilNext)} pentru ${p.nextPercent}% reducere.` }
+  return {
+    tone: 'progress',
+    headline: p.untilNext === 1
+      ? en ? `Add one more ${name} and get ${p.nextPercent}% off ${together(target, true)}.` : `Mai adaugă încă un ${name} și primești ${p.nextPercent}% la ${together(target, false)}.`
+      : en ? `Add ${p.untilNext} more ${name} for ${p.nextPercent}% off.` : `Mai adaugă încă ${p.untilNext} ${name} pentru ${p.nextPercent}% reducere.`,
+  }
 }

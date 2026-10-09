@@ -144,10 +144,10 @@ describe('attribution and promotions survive the handoff', () => {
     expect(attributionSummary({ entry: 'home' })).toBe('site, pagina principală')
   })
 
-  it('Amber 2+1 from the landing and 20% on a mixed cart: cart = server', async () => {
+  it('Amber 2+1 from the landing and 20% on 3 Calm next to other products: cart = server', async () => {
     const p = await page('https://biohack-tech.ro/lp/amber')
     p.startCheckout(vi.fn(), 'amber', { productId: 'ochelari-biohack', variantId: 'patrat-maro', quantity: 3 })
-    p.cartStore.add('balance-wave', undefined, 1, 'home')
+    p.cartStore.add('balance-wave', undefined, 3, 'home')
     p.cartStore.add('brainlink-pro', undefined, 1, 'product')
     p.cartStore.add('brain-flow', '1-zona', 1, 'product')
     const lines = p.cartStore.getSnapshot()
@@ -157,7 +157,8 @@ describe('attribution and promotions survive the handoff', () => {
     const server = resolveOrderLines(lines)
     expect(server.ok).toBe(true)
     if (!server.ok) return
-    expect(server.promotions.map((x) => x.id).sort()).toEqual(['amber-2-plus-1', 'trei-produse-20'])
+    expect(server.promotions.map((x) => x.id).sort()).toEqual(['amber-2-plus-1', 'trei-produse-20:balance-wave'])
+    expect(server.lines.filter((l) => l.productId !== 'balance-wave' && l.productId !== 'ochelari-biohack').every((l) => l.discountMinor === 0)).toBe(true)
     expect([server.subtotal, server.discount, server.total]).toEqual([shown.subtotalMinor, shown.discountMinor, shown.totalMinor])
     expect(server.promotions.find((x) => x.id === 'amber-2-plus-1')?.amountMinor).toBe(31500)
   })

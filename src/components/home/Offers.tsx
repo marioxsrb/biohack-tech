@@ -10,43 +10,43 @@ const COPY = {
   ro: {
     title: 'Oferte: până la 20% reducere',
     intro: 'Reducerile se aplică singure în coș. Le vezi pe fiecare în comandă și pe factură.',
-    products: (n: number) => `${n} produse`,
+    products: (n: number) => `${n} bucăți din același produs`,
     off: 'reducere',
-    bundleText: 'Alegi oricare trei produse. Le poți combina sau poți lua același produs de mai multe ori. Reducerea se aplică la toate trei.',
-    firstTier: (n: number, pct: number) => `La ${n} produse primești ${pct}%.`,
-    bundleLabel: 'Alege 3 produse pentru 20% reducere',
-    bundleCta: 'Alege 3 produse',
+    bundleText: 'Iei trei bucăți din același produs și primești 20% reducere la ele. Restul comenzii rămâne la prețul întreg.',
+    firstTier: (n: number, pct: number) => `La ${n} bucăți primești ${pct}%.`,
+    bundleLabel: 'Alege produsul pentru 20% reducere',
+    bundleCta: 'Alege produsul',
     amberKicker: 'La 3 perechi',
     amberDeal: '2+1',
     free: 'gratis',
     amberText: 'Plătești două perechi. A treia este gratuită. Poți combina ramele.',
     amberLabel: 'Alege 3 perechi NEUROS Amber, plătești 2',
     amberCta: 'Alege 3 perechi',
-    note: 'Ofertele se cumulează. Reducerea pe produse se aplică la NEUROS Calm, Focus și Flow.',
+    note: 'Ofertele se cumulează. Reducerea de 10% sau 20% se calculează separat pentru fiecare produs: NEUROS Calm, Focus sau Flow.',
     details: 'Detalii',
   },
   en: {
     title: 'Offers: up to 20% off',
     intro: 'The discounts apply automatically in the cart. You see each one in your order and on the invoice.',
-    products: (n: number) => `${n} products`,
+    products: (n: number) => `${n} of the same product`,
     off: 'off',
-    bundleText: 'Choose any three products. Mix them, or take the same product more than once. The discount applies to all three.',
-    firstTier: (n: number, pct: number) => `With ${n} products you get ${pct}% off.`,
-    bundleLabel: 'Choose 3 products for 20% off',
-    bundleCta: 'Choose 3 products',
+    bundleText: 'Take three of the same product and get 20% off those three. The rest of the order stays at full price.',
+    firstTier: (n: number, pct: number) => `With ${n} you get ${pct}% off.`,
+    bundleLabel: 'Choose the product for 20% off',
+    bundleCta: 'Choose the product',
     amberKicker: 'With 3 pairs',
     amberDeal: '3 for 2',
     free: 'one free',
     amberText: 'You pay for two pairs. The third one is free. You can mix the frames.',
     amberLabel: 'Choose 3 pairs of NEUROS Amber, pay for 2',
     amberCta: 'Choose 3 pairs',
-    note: 'The offers add up. The product discount applies to NEUROS Calm, Focus and Flow.',
+    note: 'The offers add up. The 10% or 20% discount is counted separately for each product: NEUROS Calm, Focus or Flow.',
     details: 'Details',
   },
 }
 
 /**
- * The two standing offers. Readable in one line each ("3 produse, 20% reducere" / "2+1 gratis"), then one
+ * The two standing offers. Readable in one line each ("3 bucăți, 20% reducere" / "2+1 gratis"), then one
  * sentence, then one action. Rules and names come from config/promotions.ts; the cart computes them.
  * No countdowns, no struck-through prices, no stickers.
  */
@@ -81,7 +81,7 @@ export async function Offers() {
           <p className="mt-4 max-w-[26em] text-[16px] leading-relaxed text-white/80">
             {t.bundleText}{first && first !== top && ` ${t.firstTier(first.minUnits, first.percent)}`}
           </p>
-          {/* The products are the way in: the image opens the 3-product picker, like the button. */}
+          {/* The products are the way in: the image opens the product picker, like the button. */}
           <OfferTrigger offer="bundle" placement="homepage" className="group mt-7 grid w-full cursor-pointer grid-cols-3 items-start gap-3 text-left">
             {bundleProducts.map((p) => (
               <span key={p.id} className="block">

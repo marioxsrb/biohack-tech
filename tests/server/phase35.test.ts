@@ -128,7 +128,7 @@ describe('discounted orders agree everywhere', () => {
     const o = await placeCard([{ productId: 'balance-wave', quantity: 3 }, { productId: 'ochelari-biohack', variantId: 'patrat-negru', quantity: 3 }])
     const expected = 3 * 638000 - 382800 + 2 * 31500
     expect([o.subtotalMinor, o.discountMinor, o.totalMinor]).toEqual([3 * 638000 + 3 * 31500, 382800 + 31500, expected])
-    expect(o.promotions.map((p) => [p.id, p.amountMinor])).toEqual([['trei-produse-20', 382800], ['amber-2-plus-1', 31500]])
+    expect(o.promotions.map((p) => [p.id, p.amountMinor])).toEqual([['trei-produse-20:balance-wave', 382800], ['amber-2-plus-1', 31500]])
     const pi = calls.find((c) => c.url.endsWith('/v1/payment_intents'))!
     expect(Number(pi.form!.get('amount'))).toBe(expected)
     expect(pi.form!.get('customer')).toBe('cus_1')
@@ -137,14 +137,14 @@ describe('discounted orders agree everywhere', () => {
     const c = getConfig()
     const lines = invoicePayload(c.fgo!, o).Continut
     expect(Math.round(lines.reduce((s, l) => s + l.PretTotal * 100, 0))).toBe(expected)
-    expect(lines.map((l) => l.Denumire)).toEqual(['NEUROS Calm, 20% la 3 produse: -3828.00 lei', 'NEUROS Amber (Unisex pătrat · Negru), NEUROS Amber 2+1 gratis: -315.00 lei'])
+    expect(lines.map((l) => l.Denumire)).toEqual(['NEUROS Calm, 20% la 3 bucăți: -3828.00 lei', 'NEUROS Amber (Unisex pătrat · Negru), NEUROS Amber 2+1 gratis: -315.00 lei'])
     const f = contactPayload(c.ghl!, o, { orders: 1, valueMinor: o.totalMinor }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, c.siteUrl).customFields
     expect(f.find((x) => x.key === 'contact.bt_last_order_value')!.fieldValue).toBe((expected / 100).toFixed(2))
     const mail = renderEmail('order_confirmed', o, { siteUrl: c.siteUrl, bank: c.bank })
-    for (const s of ['Subtotal: 20.085 lei', '20% la 3 produse: -3.828 lei', 'NEUROS Amber 2+1 gratis: -315 lei', 'Total: 15.942 lei']) expect(mail.text).toContain(s)
+    for (const s of ['Subtotal: 20.085 lei', '20% la 3 bucăți NEUROS Calm: -3.828 lei', 'NEUROS Amber 2+1 gratis: -315 lei', 'Total: 15.942 lei']) expect(mail.text).toContain(s)
   })
 
-  it('2 Calm + 1 Focus + 3 Amber by transfer: the transfer email asks for exactly the discounted total', async () => {
+  it('2 Calm + 1 Focus + 3 Amber by transfer: 10% on the Calm only, the transfer email asks for exactly that total', async () => {
     const res = await post(checkout, '/api/checkout', {
       lines: [{ productId: 'balance-wave', quantity: 2 }, { productId: 'brainlink-pro', quantity: 1 }, { productId: 'ochelari-biohack', variantId: 'cat-eye-bej', quantity: 3 }],
       order: { ...person, paymentMethod: 'transfer' },
@@ -152,11 +152,11 @@ describe('discounted orders agree everywhere', () => {
       attemptId: 'tr-1',
     })
     const o = (await orders.byToken(db, (await res.json()).token))!
-    const eligible = 2 * 638000 + 79000
-    const expected = eligible - 271000 + 2 * 31500
+    // 10% on the two Calm only (127.600 bani); the Focus at full price; one Amber free.
+    const expected = 2 * 638000 - 127600 + 79000 + 2 * 31500
     expect(o.totalMinor).toBe(expected)
     const c = getConfig()
-    expect(renderEmail('transfer_instructions', o, { siteUrl: c.siteUrl, bank: c.bank }).text).toContain('Suma: 11.470 lei')
+    expect(renderEmail('transfer_instructions', o, { siteUrl: c.siteUrl, bank: c.bank }).text).toContain('Suma: 12.904 lei')
     await svc.confirmPayment(o.id, 'admin')
     expect((await orders.byId(db, o.id))!.paymentStatus).toBe('paid')
     // A full refund is the discounted total, not the list price.

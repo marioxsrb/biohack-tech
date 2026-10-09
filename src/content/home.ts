@@ -56,7 +56,7 @@ const homeFaqRo: FaqItem[] = [
   },
   {
     q: 'Cum funcționează ofertele?',
-    a: 'Cu 2 produse NEUROS Calm, Focus sau Flow în coș primești 10% reducere. Cu 3 sau mai multe primești 20%. Le poți combina cum vrei. La NEUROS Amber, la fiecare 3 perechi, una este gratuită. Reducerile se aplică singure în coș și se cumulează.',
+    a: 'Iei 2 bucăți din același produs (NEUROS Calm, Focus sau Flow) și primești 10% reducere la ele. Iei 3 sau mai multe și primești 20%. Reducerea se calculează separat pentru fiecare produs. La NEUROS Amber, la fiecare 3 perechi, una este gratuită. Reducerile se aplică singure în coș și se cumulează.',
   },
   {
     q: 'Ce diferă între configurațiile NEUROS Flow?',
@@ -104,11 +104,11 @@ const faqRo: FaqGroup[] = [
     items: [
       {
         q: 'Cum funcționează reducerile de 10% și 20%?',
-        a: 'Cu 2 produse NEUROS Calm, NEUROS Focus sau NEUROS Flow în coș primești 10% reducere. Cu 3 sau mai multe primești 20%. Poți combina produsele sau poți lua mai multe bucăți din același produs. Reducerea se aplică la NEUROS Calm, Focus și Flow. Apare automat în coș.',
+        a: 'Iei 2 bucăți din același produs și primești 10% reducere la ele. Iei 3 sau mai multe și primești 20%. Merge la NEUROS Calm, NEUROS Focus și NEUROS Flow (orice configurație), separat pentru fiecare produs: un Calm și un Focus nu primesc reducere. Restul comenzii rămâne la prețul întreg. Reducerea apare automat în coș.',
       },
       {
         q: 'Cum funcționează 2+1 gratis la NEUROS Amber?',
-        a: 'La fiecare 3 perechi NEUROS Amber din aceeași comandă, una este gratuită. Poți combina ramele. Se aplică automat în coș și se poate cumula cu reducerea de 20% la celelalte produse.',
+        a: 'La fiecare 3 perechi NEUROS Amber din aceeași comandă, una este gratuită. Poți combina ramele. Se aplică automat în coș și se poate cumula cu reducerea de 10% sau 20% la celelalte produse.',
       },
     ],
   },

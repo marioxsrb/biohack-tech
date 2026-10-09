@@ -32,11 +32,14 @@ describe('order segments', () => {
 
     const both = orderSegments(
       order({
-        items: [item('balance-wave', 1, null, 'trei-produse-20'), item('brainlink-pro', 1, null, 'trei-produse-20'), item('brain-flow', 1, '4-zone', 'trei-produse-20'), item('ochelari-biohack', 3, 'patrat-maro', 'amber-2-plus-1')],
-        promotions: [{ id: 'trei-produse-20', amountMinor: 464000 }, { id: 'amber-2-plus-1', amountMinor: 31500 }],
+        items: [item('balance-wave', 3, null, 'trei-produse-20:balance-wave'), item('brainlink-pro', 1, null, null), item('ochelari-biohack', 3, 'patrat-maro', 'amber-2-plus-1')],
+        promotions: [{ id: 'trei-produse-20:balance-wave', amountMinor: 382800 }, { id: 'amber-2-plus-1', amountMinor: 31500 }],
       }),
     )
-    expect(both.promotions['trei-produse-20']).toEqual({ eligible: true, units: 3, qualified: true, applied: true, amountMinor: 464000 })
+    expect(both.promotions['trei-produse-20']).toEqual({ eligible: true, units: 4, qualified: true, applied: true, amountMinor: 382800 })
+    // One of each product never qualifies: the discount counts each product on its own.
+    const mixed = orderSegments(order({ items: [item('balance-wave'), item('brainlink-pro'), item('brain-flow', 1, '4-zone')] }))
+    expect(mixed.promotions['trei-produse-20']).toMatchObject({ units: 3, qualified: false, applied: false })
     expect(both.promotions['amber-2-plus-1']).toEqual({ eligible: true, units: 3, qualified: true, applied: true, amountMinor: 31500 })
 
     const focusOnly = orderSegments(order({ items: [item('brainlink-pro')] }))

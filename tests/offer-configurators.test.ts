@@ -5,7 +5,7 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { bundleNeeds, bundleToLines, bundleTotals, pickComplete } from '@/lib/bundle-picks'
+import { bundleToLines, bundleTotals, pickComplete, unitsInCart } from '@/lib/bundle-picks'
 import { amberCopy, bundleCopy } from '@/lib/offer-copy'
 import { resolveOrderLines } from '@/lib/orders/resolve'
 import { promotionProgress } from '@/lib/promotions'
@@ -47,48 +47,38 @@ describe('NEUROS Amber 2+1 at any quantity', () => {
   })
 })
 
-describe('20% for 3 products', () => {
+describe('quantity discount, per product', () => {
   const P = { calm: 638000, focus: 79000, flow1: 1290000 }
   it('wording at 0, 1, 2, 3 eligible units', () => {
     const b = (lines: { productId: string; quantity: number; unitAmount: number }[]) => bundleCopy(promotionProgress(lines.map((l, i) => ({ key: String(i), ...l }))).find((p) => p.kind === 'bundle_percent') ?? null)
-    expect(b([]).headline).toBe('Alege 2 produse pentru 10% sau 3 pentru 20% reducere.')
-    expect(b([{ productId: 'balance-wave', quantity: 1, unitAmount: P.calm }]).headline).toBe('Mai alege 1 produs pentru 10% reducere.')
-    expect(b([{ productId: 'balance-wave', quantity: 2, unitAmount: P.calm }])).toMatchObject({ tone: 'active', headline: 'Reducerea de 10% este activă.', nudge: 'Mai adaugă 1 produs și primești 20% la toate.' })
-    expect(b([{ productId: 'balance-wave', quantity: 3, unitAmount: P.calm }])).toMatchObject({ tone: 'active', headline: 'Reducerea de 20% este activă.' })
+    expect(b([]).headline).toBe('Iei 2 bucăți din același produs: 10% reducere. Iei 3: 20%.')
+    expect(b([{ productId: 'balance-wave', quantity: 1, unitAmount: P.calm }]).headline).toBe('Mai adaugă încă un NEUROS Calm și primești 10% la ambele.')
+    expect(b([{ productId: 'balance-wave', quantity: 2, unitAmount: P.calm }])).toMatchObject({ tone: 'active', headline: 'Reducerea de 10% la NEUROS Calm este activă.', nudge: 'Mai adaugă încă un NEUROS Calm și primești 20% la toate trei.' })
+    expect(b([{ productId: 'balance-wave', quantity: 3, unitAmount: P.calm }])).toMatchObject({ tone: 'active', headline: 'Reducerea de 20% la NEUROS Calm este activă.' })
   })
 
-  it('asks only for the missing products: 0 → 3 slots, 1 → 2, 2 → 1, 3+ → none; Amber does not count', () => {
-    expect(bundleNeeds([]).missing).toBe(3)
-    expect(bundleNeeds([{ productId: 'balance-wave', quantity: 1 }, { productId: 'ochelari-biohack', quantity: 3 }]).missing).toBe(2)
-    expect(bundleNeeds([{ productId: 'balance-wave', quantity: 1 }, { productId: 'brainlink-pro', quantity: 1 }]).missing).toBe(1)
-    expect(bundleNeeds([{ productId: 'brain-flow', quantity: 4 }]).missing).toBe(0)
+  it('a pick is one product and a quantity; NEUROS Flow needs its configuration; nothing is chosen for the customer', () => {
+    expect(pickComplete({ productId: 'brain-flow', variantId: null, quantity: 3 })).toBe(false)
+    expect(pickComplete({ productId: 'brain-flow', variantId: '1-zona', quantity: 3 })).toBe(true)
+    expect(pickComplete({ productId: 'ochelari-biohack', variantId: 'cat-eye-bej', quantity: 3 })).toBe(false)
+    expect(pickComplete({ productId: 'balance-wave', variantId: null, quantity: 0 })).toBe(false)
+    expect(bundleToLines({ productId: 'brainlink-pro', variantId: null, quantity: 3 })).toEqual([{ productId: 'brainlink-pro', quantity: 3 }])
   })
 
-  it('NEUROS Flow needs its configuration; nothing is chosen for the customer', () => {
-    expect(pickComplete({ productId: 'brain-flow', variantId: null })).toBe(false)
-    expect(pickComplete({ productId: 'brain-flow', variantId: '1-zona' })).toBe(true)
-    expect(pickComplete({ productId: 'ochelari-biohack', variantId: 'cat-eye-bej' })).toBe(false)
-    expect(bundleToLines([{ productId: 'balance-wave', variantId: null }, { productId: 'brain-flow', variantId: null }])).toBeNull()
+  it('units already in the cart count; other products never do', () => {
+    const cart = [{ productId: 'balance-wave', quantity: 1 }, { productId: 'brainlink-pro', quantity: 2 }]
+    expect(unitsInCart(cart, 'balance-wave')).toBe(1)
+    const t = bundleTotals(cart, { productId: 'balance-wave', variantId: null, quantity: 2 })
+    // 3 Calm: 19.140 lei − 20% (3.828 lei) = 15.312 lei. The Focus in the cart is not part of this offer's totals.
+    expect(t).toMatchObject({ units: 3, percent: 20, subtotalMinor: 1914000, discountMinor: 382800, totalMinor: 1531200 })
   })
 
-  it('same product more than once merges; Calm + Focus + NEUROS Flow 1 zone totals from the engine = server', () => {
-    expect(bundleToLines([{ productId: 'brainlink-pro', variantId: null }, { productId: 'brainlink-pro', variantId: null }, { productId: 'brainlink-pro', variantId: null }])).toEqual([{ productId: 'brainlink-pro', quantity: 3 }])
-    const picks = [
-      { productId: 'balance-wave' as const, variantId: null },
-      { productId: 'brainlink-pro' as const, variantId: null },
-      { productId: 'brain-flow' as const, variantId: '1-zona' },
-    ]
-    const t = bundleTotals([], picks)
-    const sub = P.calm + P.focus + P.flow1
-    expect(t).toMatchObject({ subtotalMinor: sub, discountMinor: Math.floor((sub * 20 + 50) / 100), units: 3 })
-    // With NEUROS Focus at 790 lei: 6.380 + 790 + 12.900 = 20.070 lei, − 20% (4.014 lei) = 16.056 lei.
-    expect(t).toMatchObject({ subtotalMinor: 2007000, discountMinor: 401400, totalMinor: 1605600 })
-    const server = resolveOrderLines(bundleToLines(picks))
+  it('picker totals = server totals (3 NEUROS Flow 1 zone)', () => {
+    const pick = { productId: 'brain-flow' as const, variantId: '1-zona', quantity: 3 }
+    const t = bundleTotals([], pick)
+    expect(t).toMatchObject({ subtotalMinor: 3 * P.flow1, discountMinor: Math.floor((3 * P.flow1 * 20 + 50) / 100), units: 3 })
+    const server = resolveOrderLines(bundleToLines(pick)!)
     expect(server.ok && [server.subtotal, server.discount, server.total]).toEqual([t.subtotalMinor, t.discountMinor, t.totalMinor])
-  })
-
-  it('with products already in the cart the totals include them', () => {
-    expect(bundleTotals([{ productId: 'balance-wave', quantity: 1 }, { productId: 'brainlink-pro', quantity: 1 }], [{ productId: 'brainlink-pro', variantId: null }])).toMatchObject({ units: 3, discountMinor: Math.floor(((P.calm + 2 * P.focus) * 20 + 50) / 100) })
   })
 })
 
@@ -100,7 +90,7 @@ describe('where the pickers open', () => {
     expect(src.match(/<OfferTrigger offer="amber"/g)?.length).toBe(2)
     expect(src).not.toMatch(/productHref\(amberProduct\)/)
   })
-  it('cart and checkout: the 20% completion opens the 3-product picker, Amber the pair picker', () => {
+  it('cart and checkout: the bundle picker and the Amber pair picker are wired', () => {
     const src = read('src/components/offers/Suggestions.tsx')
     expect(src).toContain("if (r.add === 'bundle') return openBundle(placement)")
     expect(src).toContain("if (r.add === 'amber_pairs') return openAmber(placement, r.slots ?? 3)")

@@ -1,10 +1,11 @@
 /**
- * The promotion engine on the real catalog prices: 20% for 3+ eligible units (Calm, Focus, NEUROS Flow),
- * NEUROS Amber 2+1 gratis, stacking on separate products, rounding in whole bani.
+ * The promotion engine on the real catalog prices: the quantity discount counted per product (10% for 2,
+ * 20% for 3+ units of the same Calm, Focus or NEUROS Flow), NEUROS Amber 2+1 gratis, stacking on separate
+ * products, rounding in whole bani.
  */
 import { describe, expect, it } from 'vitest'
 import { resolveOrderLines } from '@/lib/orders/resolve'
-import { allocate, percentOf, priceLines, promotionHints, promotionProgress } from '@/lib/promotions'
+import { allocate, percentOf, priceLines, promotionHints, promotionProgress, savedBy } from '@/lib/promotions'
 
 const CALM = 638000
 const FOCUS = 79000
@@ -25,18 +26,20 @@ function order(...lines: L[]) {
   expect(r.total).toBe(r.subtotal - r.discount)
   return r
 }
-const promo = (r: ReturnType<typeof order>, id: string) => r.promotions.find((p) => p.id === id)?.amountMinor ?? 0
+const promo = (r: ReturnType<typeof order>, id: string) => savedBy(r.promotions, id)
 
-describe('10% for 2, 20% for 3+ eligible units', () => {
+describe('10% for 2, 20% for 3+ units of the same product', () => {
   it.each([
     ['1 Calm', [calm(1)], 0],
     ['2 Calm: 10%', [calm(2)], percentOf(2 * CALM, 10)],
-    ['1 Calm + 1 Focus: 10%', [calm(1), focus(1)], percentOf(CALM + FOCUS, 10)],
+    ['1 Calm + 1 Focus: different products never add up', [calm(1), focus(1)], 0],
     ['3 Calm', [calm(3)], percentOf(3 * CALM, 20)],
     ['4 Calm', [calm(4)], percentOf(4 * CALM, 20)],
-    ['2 Calm + 1 Focus', [calm(2), focus(1)], percentOf(2 * CALM + FOCUS, 20)],
-    ['1 Calm + 1 Focus + 1 NEUROS Flow 4 zone', [calm(1), focus(1), bf('4-zone')], percentOf(CALM + FOCUS + BF['4-zone'], 20)],
-    ['3 NEUROS Flow, one of each configuration', [bf('1-zona'), bf('4-zone'), bf('13-zone')], percentOf(BF['1-zona'] + BF['4-zone'] + BF['13-zone'], 20)],
+    ['2 Calm + 1 Focus: 10% on the 2 Calm only', [calm(2), focus(1)], percentOf(2 * CALM, 10)],
+    ['3 Calm + 1 Focus: 20% on the Calm only, Focus at full price', [calm(3), focus(1)], percentOf(3 * CALM, 20)],
+    ['3 Calm + 2 Focus: 20% on Calm, 10% on Focus', [calm(3), focus(2)], percentOf(3 * CALM, 20) + percentOf(2 * FOCUS, 10)],
+    ['1 Calm + 1 Focus + 1 NEUROS Flow 4 zone: nothing', [calm(1), focus(1), bf('4-zone')], 0],
+    ['3 NEUROS Flow, one of each configuration: one product', [bf('1-zona'), bf('4-zone'), bf('13-zone')], percentOf(BF['1-zona'] + BF['4-zone'] + BF['13-zone'], 20)],
     ['2 Calm + 1 Amber: Amber does not count (10%, not 20%)', [calm(2), amber(1)], percentOf(2 * CALM, 10)],
     ['3 Amber: never triggers the 20%', [amber(3)], 0],
   ])('%s', (_, lines, expected) => {
@@ -48,9 +51,17 @@ describe('10% for 2, 20% for 3+ eligible units', () => {
     expect([r.subtotal, r.discount, r.total]).toEqual([1914000, 382800, 1531200])
   })
 
-  it('the order names the tier that applied, never both', () => {
-    expect(order(calm(2)).promotions.map((p) => p.label)).toEqual(['10% la 2 produse'])
-    expect(order(calm(3)).promotions.map((p) => p.label)).toEqual(['20% la 3 produse'])
+  it('the order names the tier and the product, one entry per product', () => {
+    expect(order(calm(2)).promotions.map((p) => [p.id, p.label])).toEqual([['trei-produse-20:balance-wave', '10% la 2 bucăți NEUROS Calm']])
+    expect(order(calm(3)).promotions.map((p) => p.label)).toEqual(['20% la 3 bucăți NEUROS Calm'])
+    expect(order(calm(3), focus(2)).promotions.map((p) => p.label)).toEqual(['20% la 3 bucăți NEUROS Calm', '10% la 2 bucăți NEUROS Focus'])
+  })
+
+  it('each line carries its own product group, and only discounted lines', () => {
+    const r = order(calm(3), focus(1))
+    expect(r.lines.find((l) => l.productId === 'balance-wave')!.promotionId).toBe('trei-produse-20:balance-wave')
+    expect(r.lines.find((l) => l.productId === 'brainlink-pro')!.discountMinor).toBe(0)
+    expect(r.total).toBe(3 * CALM - percentOf(3 * CALM, 20) + FOCUS)
   })
 
   it('never discounts Amber, even next to 3 eligible units', () => {
@@ -89,10 +100,9 @@ describe('stacking on separate products', () => {
     expect(r.total).toBe(3 * CALM - percentOf(3 * CALM, 20) + 2 * AMBER)
   })
 
-  it('2 Calm + 1 Focus + 3 Amber: 20% on Calm and Focus, one Amber free', () => {
+  it('2 Calm + 1 Focus + 3 Amber: 10% on the Calm, Focus at full price, one Amber free', () => {
     const r = order(calm(2), focus(1), amber(3))
-    const eligible = 2 * CALM + FOCUS
-    expect(r.total).toBe(eligible - percentOf(eligible, 20) + 2 * AMBER)
+    expect(r.total).toBe(2 * CALM - percentOf(2 * CALM, 10) + FOCUS + 2 * AMBER)
     for (const l of r.lines) if (l.productId === 'ochelari-biohack') expect(l.promotionId).toBe('amber-2-plus-1')
   })
 
@@ -111,8 +121,8 @@ describe('integer money', () => {
     expect(allocate(7, [3, 3])).toEqual([4, 3])
     expect(allocate(0, [5])).toEqual([0])
     const odd = priceLines([
-      { key: 'a', productId: 'balance-wave', quantity: 1, unitAmount: 333 },
-      { key: 'b', productId: 'brainlink-pro', quantity: 1, unitAmount: 333 },
+      { key: 'a', productId: 'brain-flow', quantity: 1, unitAmount: 333 },
+      { key: 'b', productId: 'brain-flow', quantity: 1, unitAmount: 333 },
       { key: 'c', productId: 'brain-flow', quantity: 1, unitAmount: 334 },
     ])
     expect(odd.discountMinor).toBe(200)
@@ -125,8 +135,9 @@ describe('hints', () => {
   const h = (...l: L[]) => promotionHints(l).map((x) => x.id)
   it('says what is missing, only when something is close', () => {
     expect(h()).toEqual([])
-    expect(h(calm(1))).toEqual(['trei-produse-20'])
-    expect(promotionHints([calm(2)])[0].text).toContain('Mai adaugă un produs')
+    expect(h(calm(1))).toEqual(['trei-produse-20:balance-wave'])
+    expect(promotionHints([calm(2)])[0].text).toBe('Mai adaugă încă un NEUROS Calm și primești 20% reducere la toate trei.')
+    expect(h(calm(1), focus(1))).toEqual(['trei-produse-20:balance-wave', 'trei-produse-20:brainlink-pro'])
     expect(h(calm(3))).toEqual([])
     expect(h(amber(1))).toEqual([])
     expect(h(amber(2))).toEqual(['amber-2-plus-1'])
@@ -139,9 +150,13 @@ describe('progress towards the offers', () => {
   const prog = (...l: L[]) =>
     promotionProgress(order(...l).lines.map((x) => ({ key: x.key, productId: x.productId, quantity: x.quantity, unitAmount: x.unitAmount }))).map((p) => [p.id, p.state, p.missing, p.active])
   it('bundle: far at 1, 10% active and close to 20% at 2, 20% active from 3', () => {
-    expect(prog(calm(1))).toEqual([['trei-produse-20', 'far', 2, false]])
-    expect(prog(calm(2))).toEqual([['trei-produse-20', 'close', 1, true]])
-    expect(prog(calm(2), focus(1))).toEqual([['trei-produse-20', 'active', 0, true]])
+    expect(prog(calm(1))).toEqual([['trei-produse-20:balance-wave', 'far', 2, false]])
+    expect(prog(calm(2))).toEqual([['trei-produse-20:balance-wave', 'close', 1, true]])
+    expect(prog(calm(3))).toEqual([['trei-produse-20:balance-wave', 'active', 0, true]])
+    expect(prog(calm(2), focus(1))).toEqual([
+      ['trei-produse-20:balance-wave', 'close', 1, true],
+      ['trei-produse-20:brainlink-pro', 'far', 2, false],
+    ])
   })
   it('Amber 2+1: far at 1, close at 2, active at 3, active and close again at 5', () => {
     expect(prog(amber(1))).toEqual([['amber-2-plus-1', 'far', 2, false]])
@@ -150,7 +165,7 @@ describe('progress towards the offers', () => {
     expect(prog(amber(5))).toEqual([['amber-2-plus-1', 'close', 1, true]])
   })
   it('only promotions the cart touches', () => {
-    expect(prog(focus(1)).map((p) => p[0])).toEqual(['trei-produse-20'])
+    expect(prog(focus(1)).map((p) => p[0])).toEqual(['trei-produse-20:brainlink-pro'])
   })
 })
 

@@ -2,10 +2,11 @@
  * THE ONLY PLACE PROMOTIONS ARE DEFINED. The engine (lib/promotions.ts) applies them on the server for
  * every order and in the browser only to show the same numbers. Prices come from config/prices.ts.
  *
- * Rules agreed on 29.09.2026:
- *   - 3+ eligible units (NEUROS Calm, NEUROS Focus, NEUROS Flow, any mix, any NEUROS Flow configuration):
- *     20% off those eligible units. NEUROS Amber neither counts nor is discounted by it.
- *   - Added 01.10.2026: exactly 2 eligible units get 10% (same products, same rules). 3+ stays 20%.
+ * Rules (changed 09.10.2026):
+ *   - Quantity discount, counted PER PRODUCT: 2 units of the same product (NEUROS Calm, NEUROS Focus or
+ *     NEUROS Flow) get 10% off those 2 units, 3 or more get 20% off those units. Different products never
+ *     add up (1 Calm + 1 Focus gets nothing), and the discount never touches the rest of the order.
+ *     NEUROS Flow counts as one product whatever the configuration. NEUROS Amber has its own offer.
  *   - NEUROS Amber 2+1 gratis: in every complete group of 3 Amber units, one is free (any frame).
  * The two apply to separate products, so one unit is never discounted twice.
  */
@@ -29,7 +30,7 @@ export type BundlePercent = Copy & {
   /** Name of the offer as a whole (the order stores the label of the tier that applied). */
   label: string
   products: ProductId[]
-  /** Ascending by minUnits; the highest tier reached applies, never two at once. */
+  /** Ascending by minUnits; per product, the highest tier its units reach applies, never two at once. */
   tiers: BundleTier[]
 }
 
@@ -49,13 +50,13 @@ export const PROMOTIONS: Promotion[] = [
   {
     kind: 'bundle_percent',
     id: 'trei-produse-20',
-    label: '10% la 2 produse, 20% la 3 produse',
+    label: '10% la 2 bucăți, 20% la 3 bucăți',
     badge: 'Până la 20% reducere',
-    line: 'NEUROS Calm, Focus sau Flow, în orice combinație. Reducerea apare în coș.',
+    line: 'Iei 2 bucăți din același produs: 10% reducere la ele. Iei 3: 20%. Reducerea apare în coș.',
     products: ['balance-wave', 'brainlink-pro', 'brain-flow'],
     tiers: [
-      { minUnits: 2, percent: 10, label: '10% la 2 produse' },
-      { minUnits: 3, percent: 20, label: '20% la 3 produse' },
+      { minUnits: 2, percent: 10, label: '10% la 2 bucăți' },
+      { minUnits: 3, percent: 20, label: '20% la 3 bucăți' },
     ],
   },
   {
@@ -75,15 +76,21 @@ export const PROMOTIONS: Promotion[] = [
  * Keyed by the Romanian label, so a label taken from a computed price (a tier) translates too.
  */
 const EN: Record<string, string> = {
-  '10% la 2 produse, 20% la 3 produse': '10% off 2 products, 20% off 3',
-  '10% la 2 produse': '10% off 2 products',
-  '20% la 3 produse': '20% off 3 products',
+  '10% la 2 bucăți, 20% la 3 bucăți': '10% off 2 units, 20% off 3',
+  '10% la 2 bucăți': '10% off 2 units',
+  '20% la 3 bucăți': '20% off 3 units',
   'Până la 20% reducere': 'Up to 20% off',
-  'NEUROS Calm, Focus sau Flow, în orice combinație. Reducerea apare în coș.': 'NEUROS Calm, Focus or Flow, in any mix. The discount shows in the cart.',
+  'Iei 2 bucăți din același produs: 10% reducere la ele. Iei 3: 20%. Reducerea apare în coș.': 'Take 2 of the same product: 10% off those two. Take 3: 20%. The discount shows in the cart.',
   'NEUROS Amber 2+1 gratis': 'NEUROS Amber 3 for 2',
   '2+1 gratis': '3 for 2',
   'La fiecare 3 perechi NEUROS Amber, una este gratuită. Poți combina ramele.': 'In every 3 pairs of NEUROS Amber, one is free. You can mix the frames.',
 }
 
 /** A promotion text (label, badge, line, tier label) in the visitor's language. */
-export const promoText = (ro: string, locale: Locale = 'ro'): string => (locale === 'en' ? (EN[ro] ?? ro) : ro)
+export const promoText = (ro: string, locale: Locale = 'ro'): string => {
+  if (locale !== 'en') return ro
+  if (EN[ro]) return EN[ro]
+  // An applied per-product label: "20% la 3 bucăți NEUROS Calm" → "20% off 3 units, NEUROS Calm".
+  const m = ro.match(/^(\d+% la \d+ bucăți) (.+)$/)
+  return m && EN[m[1]] ? `${EN[m[1]]}, ${m[2]}` : ro
+}

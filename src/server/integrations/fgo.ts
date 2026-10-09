@@ -26,7 +26,9 @@ const lei = (minor: number) => Number((minor / 100).toFixed(2))
 function lineName(i: Order['items'][number], o: Order) {
   const base = i.variantName ? `${i.productName} (${i.variantName})` : i.productName
   if (!i.discountMinor) return base
-  const promo = o.promotions.find((p) => p.id === i.promotionId)?.label ?? 'reducere'
+  const label = o.promotions.find((p) => p.id === i.promotionId)?.label ?? 'reducere'
+  // A per-product discount names its product ("20% la 3 bucăți NEUROS Calm"); the line already does.
+  const promo = label.endsWith(` ${i.productName}`) ? label.slice(0, -i.productName.length - 1) : label
   return `${base}, ${promo}: -${(i.discountMinor / 100).toFixed(2)} lei`
 }
 

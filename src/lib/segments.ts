@@ -9,6 +9,7 @@
  * a purchase.
  */
 import { PROMOTIONS } from '@/config/promotions'
+import { savedBy } from '@/lib/promotions'
 import type { Attribution } from './attribution'
 
 export type SegmentInput = {
@@ -78,8 +79,10 @@ export function orderSegments(o: SegmentInput): OrderSegments {
   for (const p of PROMOTIONS) {
     const units = o.items.filter((i) => (p.products as string[]).includes(i.productId)).reduce((n, i) => n + i.quantity, 0)
     const threshold = p.kind === 'bundle_percent' ? p.tiers[0].minUnits : p.group
-    const applied = o.promotions.find((a) => a.id === p.id)
-    promotions[p.id] = { eligible: units > 0, units, qualified: units >= threshold, applied: !!applied && applied.amountMinor > 0, amountMinor: applied?.amountMinor ?? 0 }
+    // The quantity discount counts each product on its own: it qualifies when one product reaches the threshold.
+    const counted = p.kind === 'bundle_percent' ? Math.max(0, ...(p.products as string[]).map((id) => o.items.filter((i) => i.productId === id).reduce((n, i) => n + i.quantity, 0))) : units
+    const amountMinor = savedBy(o.promotions, p.id)
+    promotions[p.id] = { eligible: units > 0, units, qualified: counted >= threshold, applied: amountMinor > 0, amountMinor }
   }
   const a = o.attribution
   return {

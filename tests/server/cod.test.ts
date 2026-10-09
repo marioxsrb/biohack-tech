@@ -107,8 +107,9 @@ describe('cash on delivery: placing the order', () => {
   it('keeps the bundle promotions exactly: 10% for 2, 20% for 3, Amber 2+1, and collects the discounted total', async () => {
     const two = await codOrder([{ productId: 'brainlink-pro', quantity: 2 }])
     expect([two.subtotalMinor, two.discountMinor, two.totalMinor, two.codAmountMinor]).toEqual([158000, 15800, 142200, 142200])
-    const three = await codOrder([{ productId: 'brainlink-pro', quantity: 1 }, { productId: 'balance-wave', quantity: 2 }])
-    expect([three.subtotalMinor, three.discountMinor, three.totalMinor]).toEqual([1355000, 271000, 1084000])
+    const three = await codOrder([{ productId: 'brainlink-pro', quantity: 1 }, { productId: 'balance-wave', quantity: 3 }])
+    // 20% on the three Calm only (382.800 bani); the Focus stays at full price.
+    expect([three.subtotalMinor, three.discountMinor, three.totalMinor]).toEqual([1993000, 382800, 1610200])
     expect(three.codAmountMinor).toBe(three.totalMinor)
     const amber = await codOrder([{ productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 2 }, { productId: 'ochelari-biohack', variantId: 'patrat-maro', quantity: 1 }])
     expect([amber.subtotalMinor, amber.discountMinor, amber.totalMinor, amber.codAmountMinor]).toEqual([59850, 19950, 39900, 39900])
@@ -157,7 +158,7 @@ describe('cash on delivery: CRM, email, invoice, fulfillment', () => {
     expect(mail.text).toContain('De plătit la livrare: 1.422 lei')
     expect(mail.text).toContain('Plătești curierului când primești coletul. Nu plătești nimic acum.')
     expect(mail.text).toContain('Plată: Ramburs (plata la livrare)')
-    expect(mail.text).toContain('10% la 2 produse: -158 lei')
+    expect(mail.text).toContain('10% la 2 bucăți NEUROS Focus: -158 lei')
   })
 
   it('ships before any money: invoice issued with the parcel (unpaid), amount to collect kept for the courier', async () => {
