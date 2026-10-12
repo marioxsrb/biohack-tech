@@ -28,6 +28,7 @@ export function CalmHero({ name, buy, cta }: { name: string; buy?: ReactNode; ct
           fill
           loading="eager"
           fetchPriority="high"
+          quality={85}
           placeholder="blur"
           sizes="100vw"
           className="object-cover object-[64%_50%]"

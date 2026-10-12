@@ -158,10 +158,10 @@ const catalog: Omit<Product, 'price'>[] = [
     kind: 'Dispozitiv cu lumină roșie, purtat la gât',
     purpose: 'Pentru relaxare',
     tagline: 'Se poartă la gât. Îți oferă câteva minute de lumină roșie și liniște. Se oprește singur.',
-    cutout: cut(bwActiv, 'NEUROS Calm, dispozitivul cu luminile roșii aprinse', 'bottom'),
+    cutout: cut(bwActiv, 'NEUROS Calm, dispozitivul cu luminile roșii aprinse și cordonul de prindere'),
     lifestyle: photo(bwCanapea, 'Femeie relaxată pe canapea, purtând NEUROS Calm la gât'),
     images: [
-      cut(bwActiv, 'NEUROS Calm, dispozitivul cu luminile roșii aprinse', 'bottom'),
+      cut(bwActiv, 'NEUROS Calm, dispozitivul cu luminile roșii aprinse și cordonul de prindere'),
       photo(bwPurtat, 'Femeie cu ochii închiși, purtând NEUROS Calm la gât'),
       cut(bwDispozitiv, 'NEUROS Calm văzut din spate, cu butonul de pornire'),
       cut(bwCutie, 'NEUROS Calm lângă cutia produsului'),

@@ -73,7 +73,7 @@ const ALT: Record<string, string> = {
   'NEUROS Amber pătrat negru pe noptieră, lângă laptop': 'NEUROS Amber square in black on a bedside table, next to a laptop',
   'NEUROS Calm lângă cutia produsului': 'NEUROS Calm next to its box',
   'NEUROS Calm văzut din spate, cu butonul de pornire': 'NEUROS Calm from the back, with the power button',
-  'NEUROS Calm, dispozitivul cu luminile roșii aprinse': 'NEUROS Calm, the device with its red lights on',
+  'NEUROS Calm, dispozitivul cu luminile roșii aprinse și cordonul de prindere': 'NEUROS Calm, the device with its red lights on and its neck cord',
   'NEUROS Flow lângă telecomanda inclusă': 'NEUROS Flow next to the included remote',
   'NEUROS Flow, casca albă cu LED-urile aprinse': 'NEUROS Flow, the white headset with its LEDs on',
   'NEUROS Focus lângă geanta de transport': 'NEUROS Focus next to its carrying case',

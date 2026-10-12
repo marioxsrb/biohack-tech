@@ -31,6 +31,7 @@ export async function Hero() {
         fill
         loading="eager"
         fetchPriority="high"
+        quality={85}
         placeholder="blur"
         sizes="100vw"
         className="hero-img -z-10 object-cover object-[68%_30%] max-sm:object-[74%_22%]"

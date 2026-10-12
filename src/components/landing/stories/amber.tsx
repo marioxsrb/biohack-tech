@@ -25,6 +25,7 @@ export function AmberHero({ name, buy, cta }: { name: string; buy?: ReactNode; c
               fill
               loading="eager"
               fetchPriority="high"
+              quality={85}
               placeholder="blur"
               sizes="(min-width: 1152px) 680px, 100vw"
               className="object-cover object-[72%_40%]"
@@ -113,7 +114,7 @@ export function AmberWhy() {
     <section id="cum" aria-labelledby="cum-title" className="lp-wrap scroll-mt-20 py-[var(--sec)]">
       <div className="grid items-center gap-y-10 lg:grid-cols-12 lg:gap-x-14">
         <div className="relative aspect-[4/5] overflow-hidden rounded-[28px] lg:col-span-5 max-lg:aspect-[4/3]">
-          <Image src={seara} alt="Femeie în pat, seara, citind pe tabletă cu NEUROS Amber" fill placeholder="blur" sizes="(min-width: 1152px) 470px, 100vw" className="object-cover" />
+          <Image src={seara} alt="Femeie în pat, seara, citind pe tabletă cu NEUROS Amber" fill placeholder="blur" quality={85} sizes="(min-width: 1152px) 470px, 100vw" className="object-cover" />
         </div>
         <div className="lg:col-span-7">
           <Kicker>Cum funcționează</Kicker>

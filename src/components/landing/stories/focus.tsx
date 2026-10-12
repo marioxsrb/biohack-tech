@@ -43,6 +43,7 @@ export function FocusHero({ name, buy, cta }: { name: string; buy?: ReactNode; c
               fill
               loading="eager"
               fetchPriority="high"
+              quality={85}
               placeholder="blur"
               sizes="(min-width: 1152px) 660px, 100vw"
               className="object-cover"
