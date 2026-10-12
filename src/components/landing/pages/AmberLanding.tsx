@@ -3,17 +3,18 @@ import type { Landing } from '@/content/landings'
 import { terms } from '@/config/site'
 import { formatLei } from '@/lib/money'
 import { AmberSelector } from '../AmberSelector'
+import { AmberShowcase } from '../AmberShowcase'
 import { HeroCta } from '../HeroCta'
-import { AmberHero, AmberHow, AmberWhen } from '../stories/amber'
+import { AmberHero, AmberWhy } from '../stories/amber'
 import { FinalCta, Help, LandingFaq, LandingShell, Testimonials } from '../kit'
 
 const CTA = 'Alege perechile'
 
 /**
- * NEUROS Amber, the simplest landing: what the lens does, then the frames to choose from (mix and match,
- * 2+1 built in), when to wear them, questions. The site's neutral surfaces, type and red button; the
- * warmth comes from the lens photographs and a little amber light, never from brown surfaces. The glasses first as an object worth wearing, then the four
- * frames, what the lens does, when to wear them, the 2+1 offer as a clear calculation, and the purchase.
+ * NEUROS Amber: the glasses first as an object worth wearing (the hero, then the product films on the
+ * landing's one dark stage), the four frames to choose from (mix and match, 2+1 built in), what the lens
+ * does and when to wear them, reviews, questions. One warm palette, set in globals.css under
+ * [data-landing='amber']: ivory surfaces, warm black for text and buttons, amber as the only accent.
  */
 export function AmberLanding({ landing }: { landing: Landing }) {
   const p = getProduct(landing.productId)!
@@ -36,11 +37,9 @@ export function AmberLanding({ landing }: { landing: Landing }) {
         cta={<HeroCta slug={landing.slug} productId={p.id} label={CTA} />}
       />
 
-      <AmberHow />
-
+      <AmberShowcase productId={p.id} />
       <AmberSelector slug={landing.slug} productId={p.id} />
-
-      <AmberWhen />
+      <AmberWhy />
 
       <Testimonials productId={p.id} />
       <LandingFaq items={landing.faqs} />

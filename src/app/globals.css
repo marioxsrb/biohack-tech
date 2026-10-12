@@ -538,3 +538,71 @@ textarea.field { resize: vertical; }
   .rv2-card { transition: none; }
   .rv2-card.is-active { transform: none; }
 }
+
+/* ---------- NEUROS Amber landing: one warm palette ----------
+   The amber lens is the only colour: warm ivory surfaces, a warm near-black for text, buttons and the
+   dark chapters, amber for accents. The site's own tokens are redefined inside this landing only, so
+   every shared component (buttons, reviews, forms, the sticky bar) follows without its own variant. */
+[data-landing='amber'] {
+  --color-ink: #1b1611;
+  --color-text: #3a322a;
+  --color-muted: #6b6156;
+  --color-faint: #958a7d;
+  --color-paper: #fffdf9;
+  --color-mist: #f5f1ea;
+  --color-mist-2: #ece6dc;
+  --color-line: #e5ddd0;
+  --color-dark: #120f0c;
+  --color-dark-2: #1b1713;
+  --color-dark-3: #2a231c;
+  --color-dark-muted: #b3a798;
+  --color-cyan: #d48a2c;
+  --color-cyan-700: #9a5b13;
+  --color-cyan-50: #faf1e3;
+  --color-cyan-100: #f3e1c4;
+  --rv-glow: 240 179 90;
+  --rv-number: #f0c27a;
+}
+[data-landing='amber'] ::selection { background: #f3e1c4; color: var(--color-ink); }
+/* Buttons: warm black on light surfaces, amber on dark ones. */
+[data-landing='amber'] .cta {
+  background: var(--color-ink);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 10px 24px -14px rgb(27 22 17 / 0.8);
+}
+[data-landing='amber'] .cta:hover { background: #000; box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 14px 28px -14px rgb(27 22 17 / 0.9); }
+[data-landing='amber'] .cta:active { background: #000; }
+[data-landing='amber'] .on-dark .cta { background: #f0b35a; color: var(--color-ink); box-shadow: 0 10px 30px -12px rgb(240 179 90 / 0.55); }
+[data-landing='amber'] .on-dark .cta:hover { background: #f5c47a; }
+
+/* ---------- NEUROS Amber showcase (components/landing/AmberShowcase) ----------
+   A dark studio stage in the films' own warm graphite (sampled from them), shown until a film loads. */
+.amber-stage {
+  background:
+    radial-gradient(70% 75% at 50% 32%, #2a241d 0%, #16130f 55%, #0a0a08 100%);
+}
+.amber-film {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  pointer-events: none;
+  /* The outgoing film holds its last frame while the next one dissolves in over it. */
+  transition: opacity var(--fade) var(--ease-brand) calc(var(--fade) * 0.4);
+}
+.amber-film.is-on { opacity: 1; z-index: 1; transition-delay: 0s; }
+/* Wide screens: closer to the frame than the film's own framing (it has background to spare and its
+   1920px stay sharp). Phones already crop the sides to 4:3; any closer and the temples leave the stage. */
+@media (min-width: 1024px) {
+  .amber-film { transform: scale(1.12); transform-origin: 50% 50%; }
+}
+/* Wide screens: the title and the frames sit on the film; a shade at the foot keeps them legible. */
+@media (min-width: 1024px) {
+  .amber-scrim { background: linear-gradient(to top, rgb(18 15 12 / 0.92), rgb(18 15 12 / 0.45) 26%, transparent 46%); z-index: 2; }
+}
+.amber-stage > :not(.amber-film) { z-index: 2; }
+.amber-caption { animation: amber-caption 0.6s var(--ease-brand) both; }
+@keyframes amber-caption {
+  from { opacity: 0; transform: translateY(6px); }
+}

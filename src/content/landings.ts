@@ -74,7 +74,7 @@ export const landings: Landing[] = [
   {
     slug: 'amber',
     productId: 'ochelari-biohack',
-    theme: { bg: '#f2f5f6', ink: '#0b1316', muted: '#4b5960', panel: '#ffffff', line: '#dce3e6', accent: '#0e7490' },
+    theme: { bg: '#f5f1ea', ink: '#1b1611', muted: '#6b6156', panel: '#fffdf9', line: '#e5ddd0', accent: '#9a5b13' },
     meta: {
       title: 'NEUROS Amber: ochelari pentru lumina albastră, 2+1 gratis',
       description: 'Ochelari NEUROS Amber cu lentile chihlimbar, care filtrează lumina albastră a ecranelor. Patru rame. La trei perechi, una este gratuită.',

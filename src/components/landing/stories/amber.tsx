@@ -106,3 +106,36 @@ export function AmberWhen() {
     </section>
   )
 }
+
+/** The landing's one section of explanation: what the lens does and when to wear them, beside the evening photograph. */
+export function AmberWhy() {
+  return (
+    <section id="cum" aria-labelledby="cum-title" className="lp-wrap scroll-mt-20 py-[var(--sec)]">
+      <div className="grid items-center gap-y-10 lg:grid-cols-12 lg:gap-x-14">
+        <div className="relative aspect-[4/5] overflow-hidden rounded-[28px] lg:col-span-5 max-lg:aspect-[4/3]">
+          <Image src={seara} alt="Femeie în pat, seara, citind pe tabletă cu NEUROS Amber" fill placeholder="blur" sizes="(min-width: 1152px) 470px, 100vw" className="object-cover" />
+        </div>
+        <div className="lg:col-span-7">
+          <Kicker>Cum funcționează</Kicker>
+          <Title id="cum-title" className="mt-3 max-w-[14em]">
+            Lentila chihlimbar filtrează lumina albastră.
+          </Title>
+          <p className="mt-5 max-w-[30em] text-[17.5px] leading-relaxed text-[var(--lp-muted)]">
+            Monitorul, telefonul și becurile LED emit lumină albastră. Lentilele chihlimbar o filtrează, iar lumina ecranelor devine mai blândă. Rama este ușoară: îi porți toată ziua.
+          </p>
+          <ul className="mt-9 divide-y divide-[var(--lp-line)] border-y border-[var(--lp-line)]">
+            {[
+              ['La birou', 'În fața monitorului, ore în șir.'],
+              ['Seara', 'Pe telefon sau pe tabletă. Lumina ecranului devine mai blândă înainte de somn.'],
+            ].map(([t, d]) => (
+              <li key={t} className="grid gap-1 py-4 sm:grid-cols-[160px_1fr] sm:gap-6">
+                <span className="text-[17px] font-medium text-[var(--lp-ink)]">{t}</span>
+                <span className="text-[16px] text-[var(--lp-muted)]">{d}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+  )
+}

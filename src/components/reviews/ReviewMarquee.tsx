@@ -284,12 +284,12 @@ export function ReviewMarquee({ productId, variant = 'site', className = '' }: {
   return (
     <section aria-label={t.label} className={`${variant === 'landing' ? 'lp-wrap' : 'wrap'} max-sm:px-0 ${className}`}>
       <div className="rv2 on-dark relative isolate overflow-clip rounded-[32px] bg-dark py-[clamp(48px,7vw,88px)] text-white max-sm:rounded-none">
-        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_80%_at_12%_0%,rgb(6_182_212/0.22),transparent_60%),radial-gradient(50%_70%_at_100%_100%,rgb(6_182_212/0.12),transparent_60%)]" />
+        <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(60%_80%_at_12%_0%,rgb(var(--rv-glow,6_182_212)/0.22),transparent_60%),radial-gradient(50%_70%_at_100%_100%,rgb(var(--rv-glow,6_182_212)/0.12),transparent_60%)]" />
 
         <div className="grid items-end gap-x-10 gap-y-8 px-[clamp(24px,5vw,64px)] lg:grid-cols-[1fr_auto]">
           {customers ? (
             <p className="flex flex-wrap items-end gap-x-5 gap-y-1">
-              <span className="rv2-number bg-[linear-gradient(180deg,#ffffff_30%,#7fdcec)] bg-clip-text text-[clamp(84px,12vw,156px)] leading-[0.8] font-medium tracking-[-0.065em] text-transparent tabular-nums">
+              <span className="rv2-number bg-[linear-gradient(180deg,#ffffff_30%,var(--rv-number,#7fdcec))] bg-clip-text text-[clamp(84px,12vw,156px)] leading-[0.8] font-medium tracking-[-0.065em] text-transparent tabular-nums">
                 {customers}+
               </span>
               <span className="pb-[0.35em] text-[clamp(22px,2.6vw,36px)] leading-none tracking-[-0.03em] text-white/85">{t.happy}</span>
