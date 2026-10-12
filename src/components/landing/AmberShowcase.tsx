@@ -14,8 +14,8 @@ const film = (id: string) => ({ hd: `/video/amber/${id}.mp4`, sd: `/video/amber/
 
 /** The crossfade from one frame's film to the next (ms). */
 const FADE = 1200
-/** The films play faster than they were rendered: a frame turns from the front to the profile in under 6 s. */
-const SPEED = 1.75
+/** The films play faster than they were rendered: a frame turns from the front to the profile in about 4.5 s. */
+const SPEED = 2.2
 /** Dragging across the whole stage turns the frame through its whole film. */
 const SCRUB = 1
 
