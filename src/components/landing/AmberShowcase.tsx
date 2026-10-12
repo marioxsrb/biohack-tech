@@ -7,21 +7,22 @@ import { getProduct, variantLabel, type ProductId } from '@/content/catalog'
 
 /**
  * One product film per frame, in public/video/amber/<variant id>(-720).mp4 with a .jpg poster (its first
- * frame). Each film is a slow camera orbit from the front to the profile, generated between the real
- * photographs of that frame (front, three-quarter, profile), on the stage's own background.
+ * frame). Each film turns the frame from the front to three-quarter and back, generated only between two
+ * real photographs of that frame taken from the same height (nothing unseen is invented, the frame never
+ * bobs), on the stage's own background; it starts and ends on the front photograph, so it loops cleanly.
  */
 const film = (id: string) => ({ hd: `/video/amber/${id}.mp4`, sd: `/video/amber/${id}-720.mp4`, poster: `/video/amber/${id}.jpg` })
 
 /** The crossfade from one frame's film to the next (ms). */
 const FADE = 1200
-/** The films play faster than they were rendered: a frame turns from the front to the profile in about 4.5 s. */
-const SPEED = 2.2
+/** The films play a little faster than they were rendered: out to three-quarter and back in under 7 s. */
+const SPEED = 1.5
 /** Dragging across the whole stage turns the frame through its whole film. */
 const SCRUB = 1
 
 /**
  * NEUROS Amber on a dark stage, after the reference's product film: one frame at a time, large, turning
- * slowly from the front to the profile, then dissolving into the next frame. Plays only while on screen
+ * from the front to three-quarter and back, then dissolving into the next frame. Plays only while on screen
  * and never with reduced motion; the visitor can pause it, drag (or use the arrow keys) to turn the
  * frame by hand, and pick a frame.
  */
