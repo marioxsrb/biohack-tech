@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
   if (!resolved.ok) {
     return resolved.reason === 'EMPTY'
       ? fail(400, 'EMPTY', 'Coșul este gol.')
-      : fail(409, 'BAD_LINE', 'Un produs din coș s-a schimbat între timp. Reîncarcă pagina și verifică din nou coșul.')
+      : fail(409, 'BAD_LINE', 'Un produs din coș nu mai este disponibil sau s-a schimbat între timp. Reîncarcă pagina și verifică din nou coșul.')
   }
 
   const available = paymentMethods()

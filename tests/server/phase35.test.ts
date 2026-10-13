@@ -180,7 +180,6 @@ describe('post-purchase offer', () => {
     ['balance-wave', undefined, ['ochelari-biohack', 'brainlink-pro']],
     ['brainlink-pro', undefined, ['ochelari-biohack', 'balance-wave']],
     ['ochelari-biohack', 'cat-eye-negru', ['balance-wave', 'brainlink-pro']],
-    ['brain-flow', '13-zone', ['balance-wave', 'brainlink-pro']],
   ])('paid %s (%s) → offers %j', async (productId, variantId, offered) => {
     const o = await paidCard(productId, variantId)
     expect(o.upsellStatus).toBe('offered')
@@ -224,7 +223,7 @@ describe('post-purchase offer', () => {
   })
 
   it('two choices, one purchase: the second product can be chosen; accepting one closes the offer (one linked order)', async () => {
-    const parent = await paidCard('brain-flow', '13-zone')
+    const parent = await paidCard('ochelari-biohack', 'cat-eye-negru')
     expect(offersFor(parent).map((o) => o.productId)).toEqual(['balance-wave', 'brainlink-pro'])
     expect((await act(parent.publicToken, 'accept', { productId: 'ochelari-biohack', variantId: 'patrat-maro' })).state).toBe('closed')
     expect((await act(parent.publicToken, 'accept', { productId: 'brainlink-pro' })).state).toBe('paid')

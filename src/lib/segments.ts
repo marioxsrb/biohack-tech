@@ -60,9 +60,9 @@ export type OrderSegments = {
   purchase: PurchaseState
   /** original = a normal checkout order; upsell = the optional order added after a card payment. */
   origin: 'original' | 'upsell'
-  /** Canonical product ids (brain-flow stays the id of NEUROS Flow). */
+  /** Canonical product ids. */
   products: string[]
-  /** productId:variantId for products with variants (Amber frame, NEUROS Flow configuration). */
+  /** productId:variantId for products with variants (Amber frame). */
   variants: string[]
   promotions: Record<string, PromotionSegment>
   /** landing = came through an advertising landing; site = the main site. */

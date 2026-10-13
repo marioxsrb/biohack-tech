@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { connection } from 'next/server'
-import { getProduct, getVariant } from '@/content/catalog'
+import { isDiscontinued } from '@/content/catalog'
 import { attributionSummary } from '@/lib/attribution'
 import { formatLei } from '@/lib/money'
 import { getConfig } from '@/server/config'
@@ -123,17 +123,16 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
           <Panel title="Produse">
             <ul className="divide-y divide-mist-2">
               {o.items.map((i) => {
-                const zones = getVariant(getProduct(i.productId) ?? ({} as never), i.variantId ?? undefined)?.zones
                 return (
                   <li key={i.position} className="flex justify-between gap-4 py-2.5">
                     <span className="min-w-0 [overflow-wrap:anywhere]">
                       <span className="font-medium">
                         {i.quantity} × {i.productName}
                       </span>
+                      {isDiscontinued(i.productId) && <span className="ml-2 rounded-full bg-mist px-2.5 py-0.5 text-[13px]">Produs retras</span>}
                       {i.variantName && (
                         <span className="mt-1 flex flex-wrap gap-1.5">
                           <span className="rounded-full bg-mist px-2.5 py-0.5 text-[13px]">Variantă: {i.variantName}</span>
-                          {zones && <span className="rounded-full bg-mist px-2.5 py-0.5 text-[13px]">{zones} {zones === 1 ? 'zonă' : 'zone'}</span>}
                         </span>
                       )}
                       <span className="mt-1 block text-[13px] text-muted">

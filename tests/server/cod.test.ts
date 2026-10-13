@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NextRequest } from 'next/server'
 import { TEST_PRICES } from '../fixtures'
 
-vi.mock('@/config/prices', () => ({ PRICES_RON: { ...TEST_PRICES, 'balance-wave': 638000, 'brain-flow': { '1-zona': 1290000, '4-zone': 1490000, '13-zone': 1390000 } } }))
+vi.mock('@/config/prices', () => ({ PRICES_RON: { ...TEST_PRICES, 'balance-wave': 638000 } }))
 vi.mock('next/server', async (orig) => ({ ...(await orig<typeof import('next/server')>()), after: (fn: () => unknown) => void fn() }))
 
 const { freshDb, person, lines, TEST_ENV } = await import('./helpers')
@@ -133,14 +133,18 @@ describe('cash on delivery: placing the order', () => {
         [{ productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 1 }],
         [{ productId: 'brainlink-pro', quantity: 1 }],
         [{ productId: 'balance-wave', quantity: 10 }],
-        [{ productId: 'brain-flow', variantId: '4-zone', quantity: 10 }],
+        [
+          { productId: 'balance-wave', quantity: 10 },
+          { productId: 'brainlink-pro', quantity: 10 },
+          ...['cat-eye-negru', 'cat-eye-bej', 'patrat-negru', 'patrat-maro'].map((variantId) => ({ productId: 'ochelari-biohack', variantId, quantity: 10 })),
+        ],
       ]) {
         const o = await codOrder(raw)
         expect(o).toMatchObject({ paymentMethod: 'cash_on_delivery', paymentStatus: 'awaiting_collection', status: 'confirmed', stripePaymentIntentId: null })
         expect(o.codAmountMinor).toBe(o.totalMinor)
       }
-      const flow = (await db.query<{ total_minor: number }>("select max(total_minor)::int as total_minor from orders")).rows[0].total_minor
-      expect(flow).toBeGreaterThan(10_000_000) // over 100.000 lei, still cash on delivery
+      const largest = (await db.query<{ total_minor: number }>("select max(total_minor)::int as total_minor from orders")).rows[0].total_minor
+      expect(largest).toBeGreaterThan(6_000_000) // over 60.000 lei, still cash on delivery
     } finally {
       vi.unstubAllEnvs()
     }

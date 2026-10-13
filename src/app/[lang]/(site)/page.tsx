@@ -16,13 +16,13 @@ const META = {
   ro: {
     title: `Dispozitive pentru relaxare și concentrare | ${site.name}`,
     description:
-      'Dispozitive NEUROS pentru stres, concentrare și ochi obosiți de ecrane: Calm cu lumină roșie, casca EEG Focus, ochelarii Amber și Flow. Livrare gratuită.',
+      'Dispozitive NEUROS pentru stres, concentrare și ochi obosiți de ecrane: Calm cu lumină roșie, casca EEG Focus și ochelarii Amber. Livrare gratuită.',
     alt: 'Femeie relaxată pe canapea, purtând NEUROS Calm',
   },
   en: {
     title: `Devices for relaxation and focus | ${site.name}`,
     description:
-      'NEUROS devices for stress, focus and screen-tired eyes: Calm with red light, the Focus EEG headband, Amber glasses and Flow. Free delivery in Romania.',
+      'NEUROS devices for stress, focus and screen-tired eyes: Calm with red light, the Focus EEG headband and Amber glasses. Free delivery in Romania.',
     alt: 'Relaxed woman on a sofa, wearing NEUROS Calm',
   },
 }

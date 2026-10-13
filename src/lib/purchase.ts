@@ -48,7 +48,7 @@ export function sourceForPath(pathname: string): EntrySource {
 
 const clampQty = (n: number) => Math.min(MAX_QTY, Math.max(1, Math.floor(n) || 1))
 
-/** `brain-flow:4-zone`, `ochelari-biohack:cat-eye-negru*3`, `balance-wave`. */
+/** `ochelari-biohack:cat-eye-negru*3`, `balance-wave`. A product that is not in the catalog is dropped. */
 export function encodeItem(s: { productId: string; variantId?: string; quantity?: number }): string {
   const q = clampQty(s.quantity ?? 1)
   return `${s.productId}${s.variantId ? `:${s.variantId}` : ''}${q > 1 ? `*${q}` : ''}`

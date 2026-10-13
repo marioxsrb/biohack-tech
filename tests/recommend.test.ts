@@ -16,22 +16,23 @@ const ids = (r: { productId: string }[]) => r.map((x) => x.productId)
 describe('recommendations: one engine, deterministic', () => {
   // The final matrix, the same for cart, checkout and after payment (complementary products only).
   // The products offered (a 20% row whose image is a product already there offers the picker, not that product).
-  const cross = (set: string[], placement: 'cart' | 'checkout' | 'post_purchase') => ids(recommend(set.map((p) => L(p, 1, p === 'brain-flow' ? '4-zone' : p === 'ochelari-biohack' ? 'cat-eye-bej' : undefined)), placement).filter((r) => !set.includes(r.productId)))
+  const cross = (set: string[], placement: 'cart' | 'checkout' | 'post_purchase') => ids(recommend(set.map((p) => L(p, 1, p === 'ochelari-biohack' ? 'cat-eye-bej' : undefined)), placement).filter((r) => !set.includes(r.productId)))
   const [CALM, FOCUS, AMBER, FLOW] = ['balance-wave', 'brainlink-pro', 'ochelari-biohack', 'brain-flow']
+  // NEUROS Flow is discontinued: it is never suggested, and as a (historical) cart line it has no complements.
   it.each([
     [[CALM], [AMBER, FOCUS]],
-    [[FLOW], [CALM, FOCUS]],
+    [[FLOW], []],
     [[FOCUS], [AMBER, CALM]],
     [[AMBER], [CALM, FOCUS]],
     [[CALM, AMBER], [FOCUS]],
     [[CALM, FOCUS], [AMBER]],
-    [[FLOW, CALM], [FOCUS]],
-    [[FLOW, FOCUS], [CALM]],
+    [[FLOW, CALM], [AMBER, FOCUS]],
+    [[FLOW, FOCUS], [AMBER, CALM]],
     [[CALM, FOCUS, AMBER], []],
   ])('matrix %j → %j, in the cart, in checkout and after payment', (set, expected) => {
     for (const placement of ['cart', 'post_purchase'] as const) expect(cross(set, placement)).toEqual(expected)
     // Checkout shows two; a promotion row may take a place, the complements keep their order.
-    const checkout = recommend(set.map((p) => L(p, 1, p === FLOW ? '4-zone' : p === AMBER ? 'cat-eye-bej' : undefined)), 'checkout')
+    const checkout = recommend(set.map((p) => L(p, 1, p === AMBER ? 'cat-eye-bej' : undefined)), 'checkout')
     expect(checkout.length).toBeLessThanOrEqual(2)
     expect(expected.slice(0, 2 - checkout.filter((r) => r.kind === 'complete_offer').length).every((id) => checkout.some((r) => r.productId === id))).toBe(true)
     expect(ids(checkout)).not.toContain(FLOW)
@@ -44,7 +45,7 @@ describe('recommendations: one engine, deterministic', () => {
   it('post-payment: up to two choices, never a promotion completion, never NEUROS Flow', () => {
     expect([[CALM], [FLOW], [FOCUS], [AMBER]].map((p) => upsellsFor(p).map((x) => x.productId))).toEqual([
       [AMBER, FOCUS],
-      [CALM, FOCUS],
+      [],
       [AMBER, CALM],
       [CALM, FOCUS],
     ])
@@ -70,8 +71,9 @@ describe('recommendations: one engine, deterministic', () => {
 
   it('20% one away means one more of the same product; different products never complete it', () => {
     expect(recommend([L('balance-wave', 2)], 'cart')[0]).toMatchObject({ productId: 'balance-wave', kind: 'complete_offer', add: 'direct', reason: 'Încă un NEUROS Calm și primești 20% reducere la toate trei.' })
-    // NEUROS Flow: the third unit goes through its configuration picker (any configuration counts).
-    expect(recommend([L('brain-flow', 1, '4-zone'), L('brain-flow', 1, '1-zona')], 'cart')[0]).toMatchObject({ productId: 'brain-flow', kind: 'complete_offer', add: 'variant' })
+    expect(recommend([L('brainlink-pro', 2)], 'cart')[0]).toMatchObject({ productId: 'brainlink-pro', kind: 'complete_offer', add: 'direct' })
+    // NEUROS Flow is discontinued: never suggested, not even to complete a discount.
+    expect(ids(recommend([L('brain-flow', 1, '4-zone'), L('brain-flow', 1, '1-zona')], 'cart'))).not.toContain('brain-flow')
     expect(recommend([L('balance-wave'), L('brainlink-pro')], 'cart').filter((x) => x.kind === 'complete_offer')).toEqual([])
   })
 

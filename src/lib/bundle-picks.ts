@@ -1,7 +1,7 @@
 /**
  * The quantity-discount picker, without UI. The discount is counted per product (config/promotions.ts):
  * 2 units of the same product get 10%, 3 or more get 20%, on that product only. So the picker asks for
- * one product (NEUROS Flow with a configuration) and how many; units already in the cart count too.
+ * one product (with its configuration, if it has one) and how many; units already in the cart count too.
  * Totals come from the promotion engine. Nothing is chosen for the customer.
  */
 import { PROMOTIONS, type BundlePercent } from '@/config/promotions'
@@ -14,7 +14,7 @@ export type BundlePick = { productId: ProductId | null; variantId: string | null
 
 const isEligible = (id: string) => (BUNDLE.products as string[]).includes(id)
 
-/** Units of one product already in the cart (every NEUROS Flow configuration counts). */
+/** Units of one product already in the cart (every configuration counts). */
 export const unitsInCart = (cart: { productId: string; quantity: number }[], productId: string | null) =>
   productId ? cart.filter((l) => l.productId === productId).reduce((n, l) => n + l.quantity, 0) : 0
 

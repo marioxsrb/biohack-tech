@@ -122,7 +122,7 @@ export function PriceBlock({ productId, variantId, purchasable }: { productId: P
 
 /**
  * The store's bundle offers for this product, as quantity choices: 1, 2 (−10%), 3+ (−20%) for NEUROS Calm,
- * Focus and Flow; 1 or 3 pairs (2+1) for NEUROS Amber. Each row shows the total and the saving in lei for
+ * Focus; 1 or 3 pairs (2+1) for NEUROS Amber. Each row shows the total and the saving in lei for
  * that quantity of the chosen configuration, computed by the same engine as the cart and the server
  * (lib/promotions.ts) from the real price. Choosing a row sets the quantity the order buttons use.
  * The unit price never changes: the reduction is a bundle reduction, applied to the order.

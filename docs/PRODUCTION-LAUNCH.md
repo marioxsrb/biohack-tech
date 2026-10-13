@@ -6,6 +6,8 @@ Written 26 September 2026 against commit “Launch pass”; updated 29 September
 
 ## 1. Current status
 
+**NEUROS Flow discontinued (13 Oct 2026).** The store sells NEUROS Calm, Focus and Amber only. Flow is not in the catalog (`src/content/catalog.ts`), has no price, no promotion, no recommendation and no landing. The cart, the checkout API and the post-purchase offer refuse it (409 `BAD_LINE`). `/products/brain-flow`, `/lp/brain-flow` and `/prezentare/brain-flow` answer **410 Gone**. `brain-flow.biohack-tech.ro` redirects (308) to the same path on biohack-tech.ro, so old order links keep working. The Vercel domain and DNS were not changed. Orders that already contain Flow keep their own lines, so they still render, invoice, refund and sync. Their GHL tag `bt-cumparat-brain-flow` is kept for CRM resyncs.
+
 | Area | Status |
 |---|---|
 | Storefront (home, 4 product pages, cart page, checkout, order page, legal, 404) | Built, tested at 390/430/768/1024/1280/1440 |

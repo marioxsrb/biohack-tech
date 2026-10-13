@@ -5,10 +5,12 @@
  *
  * Naming: NEUROS is the maker (the neck device already carries the NEUROS logo; the
  * headset's app is Neuros Game). Each product is NEUROS + one short word for what it's for:
- * Calm, Focus, Amber, Flow. Biohack Tech is the store. The photobiomodulation helmet was sold as
- * "Brain Flow" on the previous site; since 29.09.2026 it is NEUROS Flow for customers, while its
- * technical id stays `brain-flow` (orders, URLs, CRM tags, landing host). Internal ids stay unchanged so carts
- * saved before the rename still resolve.
+ * Calm, Focus, Amber. Biohack Tech is the store.
+ *
+ * NEUROS Flow (`brain-flow`) was discontinued on 13.10.2026: it is not in this catalog, so nothing can show,
+ * recommend, price or sell it (an unknown product is refused by the cart, the checkout API and the offer).
+ * Orders that already contain it keep their own product name, variant and amounts on each line, so they
+ * still render, invoice, refund and reconcile without a catalog entry (DISCONTINUED_PRODUCTS below).
  */
 import type { StaticImageData } from 'next/image'
 import { PRICES_RON, type PriceEntry } from '@/config/prices'
@@ -51,11 +53,6 @@ import blGeanta from '@/assets/img/brainlink/casca-geanta.webp'
 import blTableta from '@/assets/img/brainlink/pillar-games.webp'
 import blRelaxare from '@/assets/img/brainlink/lifestyle-relaxare.webp'
 
-import bfCasca from '@/assets/img/brain-flow/casca.webp'
-import bfTelecomanda from '@/assets/img/brain-flow/casca-telecomanda.webp'
-import bfInterior from '@/assets/img/brain-flow/casca-interior.webp'
-import bfFemeie from '@/assets/img/brain-flow/lifestyle-femeie.webp'
-import bfFotoliu from '@/assets/img/brain-flow/fotoliu.webp'
 
 /**
  * `cutout`: transparent product shot, shown whole on a neutral stage.
@@ -76,8 +73,6 @@ export type Variant = {
   /** Option values, keyed by option id (e.g. { model: 'cat-eye', culoare: 'negru' }). */
   options: Record<string, string>
   images: ProductImage[]
-  /** NEUROS Flow: how many zones the configuration can activate. */
-  zones?: number
   /** Price in bani for this configuration, when it differs per variant (config/prices.ts). */
   price?: number | null
 }
@@ -88,7 +83,7 @@ export type ProductOption = {
   values: { id: string; label: string; swatch?: string }[]
 }
 
-export type ProductId = 'ochelari-biohack' | 'balance-wave' | 'brainlink-pro' | 'brain-flow'
+export type ProductId = 'ochelari-biohack' | 'balance-wave' | 'brainlink-pro'
 
 export type Product = {
   id: ProductId
@@ -96,7 +91,7 @@ export type Product = {
   slug: string
   /** Maker shown above the model name. */
   brand?: 'NEUROS'
-  /** The short name: Calm, Focus, Amber, Flow. */
+  /** The short name: Calm, Focus, Amber. */
   model: string
   /** Full customer-facing name: "NEUROS Calm". */
   name: string
@@ -138,14 +133,6 @@ function priced(p: Omit<Product, 'price'>): Product {
   const known = (variants ?? []).map((v) => v.price).filter((x): x is number => typeof x === 'number')
   return { ...p, variants, price: known.length ? Math.min(...known) : null, variablePrice: new Set(known).size > 1 }
 }
-
-const brainFlowGallery = [
-  cut(bfCasca, 'NEUROS Flow, casca albă cu LED-urile aprinse'),
-  photo(bfFemeie, 'Femeie relaxată pe canapea, purtând casca NEUROS Flow'),
-  cut(bfTelecomanda, 'NEUROS Flow lângă telecomanda inclusă'),
-  cut(bfInterior, 'Interiorul căștii NEUROS Flow, cu LED-urile, lângă telecomandă și ochelari'),
-  photo(bfFotoliu, 'Femeie într-un fotoliu, cu o cană în mână, lângă casca NEUROS Flow'),
-]
 
 /** Display order. Calm is the lead product on the source site. */
 const catalog: Omit<Product, 'price'>[] = [
@@ -272,39 +259,14 @@ const catalog: Omit<Product, 'price'>[] = [
     chooseLabel: 'Alege rama',
     guidance: false,
   },
-  {
-    id: 'brain-flow',
-    slug: 'brain-flow',
-    brand: 'NEUROS',
-    model: 'Flow',
-    name: 'NEUROS Flow',
-    kind: 'Cască de fotobiomodulare, infraroșu 810 nm',
-    purpose: 'Pentru rutina de acasă',
-    tagline: 'O cască cu lumină infraroșie, pentru acasă. Un specialist stabilește protocolul împreună cu tine.',
-    cutout: cut(bfCasca, 'NEUROS Flow, casca albă cu LED-urile aprinse'),
-    lifestyle: photo(bfFemeie, 'Femeie relaxată pe canapea, purtând casca NEUROS Flow'),
-    images: brainFlowGallery,
-    options: [
-      {
-        id: 'zone',
-        label: 'Configurație',
-        values: [
-          { id: '1-zona', label: '1 zonă' },
-          { id: '4-zone', label: '4 zone' },
-          { id: '13-zone', label: '13 zone' },
-        ],
-      },
-    ],
-    // Same helmet and the same photographs for every configuration: the source shows no per-configuration images.
-    variants: [
-      { id: '1-zona', options: { zone: '1-zona' }, zones: 1, images: brainFlowGallery },
-      { id: '4-zone', options: { zone: '4-zone' }, zones: 4, images: brainFlowGallery },
-      { id: '13-zone', options: { zone: '13-zone' }, zones: 13, images: brainFlowGallery },
-    ],
-    chooseLabel: 'Alege configurația',
-    guidance: true,
-  },
 ]
+
+/**
+ * Products no longer sold. Only their id and name are kept, for reading old orders, CRM tags and links;
+ * they are never priced, listed or accepted in a cart.
+ */
+export const DISCONTINUED_PRODUCTS: Record<string, { name: string }> = { 'brain-flow': { name: 'NEUROS Flow' } }
+export const isDiscontinued = (id: string) => id in DISCONTINUED_PRODUCTS
 
 /** Romanian: the source of truth, and what orders, invoices and the CRM store. */
 export const products: Product[] = catalog.map(priced)

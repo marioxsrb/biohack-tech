@@ -22,7 +22,7 @@ type Props = {
   title: string
   text: string
   cta: string
-  /** Extra words per variant (NEUROS Flow: zones and what they are for). */
+  /** Extra words per variant (what each one is for). */
   notes?: Record<string, VariantNote>
   /** 'panel': product image beside the picker. 'columns': the variants side by side, large (configurations). */
   layout?: 'panel' | 'columns'

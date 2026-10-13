@@ -12,9 +12,9 @@ import type { ProductId } from './catalog'
 import type { LandingSlug } from '@/lib/landing-hosts'
 
 /**
- * A landing's colours. All four use the main site's palette (mist page, white panels, ink text, the
- * site's lines and red button); only `accent` differs, for kickers and small details (the site's cyan,
- * or the infrared red of NEUROS Flow). Product personality comes from photographs, copy and layout.
+ * A landing's colours. All of them use the main site's palette (mist page, white panels, ink text, the
+ * site's lines and red button); only `accent` differs, for kickers and small details. Product personality
+ * comes from photographs, copy and layout.
  * Text contrast stays at WCAG AA or better.
  */
 export type LandingTheme = {
@@ -85,23 +85,6 @@ export const landings: Landing[] = [
       { q: 'Cum funcționează 2+1 gratis?', a: 'La fiecare trei perechi din aceeași comandă, una este gratuită. Poți combina ramele. Reducerea apare singură în coș.', buy: true },
       { q: 'Ce rame există?', a: 'Cat eye, în negru sau bej, și unisex pătrat, în negru sau maro.' },
       { q: 'Pot să îi returnez?', a: 'Da. Ai 14 zile de la primire să te răzgândești. Garanția este de 2 ani.', buy: true },
-    ],
-  },
-  {
-    slug: 'brain-flow',
-    productId: 'brain-flow',
-    theme: { bg: '#f2f5f6', ink: '#0b1316', muted: '#4b5960', panel: '#ffffff', line: '#dce3e6', accent: '#b0202c' },
-    meta: {
-      title: 'NEUROS Flow: cască cu lumină infraroșie 810 nm, pentru acasă',
-      description: 'NEUROS Flow este o cască de fotobiomodulare cu lumină infraroșie la 810 nm, cu 1, 4 sau 13 zone. Protocolul îl stabilești cu un specialist. Livrare gratuită.',
-    },
-    faqs: [
-      { q: 'Ce configurație aleg?', a: 'Casca și tehnologia sunt aceleași. Se schimbă numărul de zone pe care le poți activa în același protocol: 1, 4 sau 13. Scrie-ne și alegem împreună.' },
-      { q: 'Cine stabilește protocolul?', a: 'Un specialist Biohack Tech, la consultația de început. Împreună alegeți zonele, durata și frecvența ședințelor.' },
-      { q: 'Cum se folosește acasă?', a: 'Pui casca, confirmi zonele pe telecomandă și pornești ședința. Casca se oprește la finalul timpului setat.' },
-      { q: 'Cum se alimentează?', a: 'Casca are baterie reîncărcabilă. Te așezi unde vrei.' },
-      { q: 'Ce fel de produs este?', a: 'NEUROS Flow este un produs de wellness. Dacă ai o afecțiune sau urmezi un tratament, cere întâi sfatul medicului.' },
-      { q: 'Pot să o returnez?', a: 'Da. Ai 14 zile de la primire să te răzgândești. Garanția este de 2 ani.', buy: true },
     ],
   },
 ]

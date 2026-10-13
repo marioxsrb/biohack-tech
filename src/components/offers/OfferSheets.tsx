@@ -48,7 +48,7 @@ const COPY = {
     discount: (p: number) => `Reducere ${p}%`,
     totalAfter: 'Total după reducere',
     addSelection: 'Adaugă în coș',
-    pickConfig: 'Alege configurația NEUROS Flow.',
+    pickConfig: 'Alege configurația.',
     pickProductFirst: 'Alege produsul.',
     bundleIntro: 'Reducerea se aplică la bucățile din același produs: 10% la 2 bucăți, 20% la 3. Ce ai deja în coș se adună.',
     chooseProduct: 'Alege produsul',
@@ -85,7 +85,7 @@ const COPY = {
     discount: (p: number) => `${p}% discount`,
     totalAfter: 'Total after discount',
     addSelection: 'Add to cart',
-    pickConfig: 'Choose the NEUROS Flow configuration.',
+    pickConfig: 'Choose the configuration.',
     pickProductFirst: 'Choose the product.',
     bundleIntro: 'The discount applies to units of the same product: 10% for 2, 20% for 3. What is already in your cart counts.',
     chooseProduct: 'Choose the product',
@@ -113,7 +113,7 @@ const sourceFor = (placement: UiPlacement, kind: 'amber' | 'bundle' | 'variant')
 
 /**
  * One place that opens the purchase pickers from anywhere (homepage, product page, cart, checkout):
- * the NEUROS Amber 2+1 pairs and the NEUROS Flow configuration. Nothing is added until the customer
+ * the NEUROS Amber 2+1 pairs and a product's configuration. Nothing is added until the customer
  * presses the add button; closing adds nothing.
  */
 export function OfferSheetsProvider({ children }: { children: ReactNode }) {
@@ -321,7 +321,7 @@ function AmberPairs({ slots, placement, onClose }: { slots: number; placement: U
   )
 }
 
-/** A product with configurations (NEUROS Flow): choose one, then add. */
+/** A product with configurations: choose one, then add. */
 function VariantPicker({ productId, placement, onClose }: { productId: ProductId; placement: UiPlacement; onClose: () => void }) {
   const { add } = useCart()
   const locale = useLocale()
@@ -383,7 +383,7 @@ function VariantPicker({ productId, placement, onClose }: { productId: ProductId
 
 /**
  * The quantity discount, counted per product: the customer picks one product (NEUROS Calm, NEUROS Focus,
- * NEUROS Flow with its configuration) and how many. Units of that product already in the cart count too,
+ * a product with its configuration) and how many. Units of that product already in the cart count too,
  * so the choices are the quantities that reach 10% (2 in all) or 20% (3 in all). Totals from the promotion
  * engine; one button adds the units; closing adds nothing.
  */

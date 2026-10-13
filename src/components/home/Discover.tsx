@@ -10,15 +10,14 @@ import type { Locale } from '@/i18n/locales'
 import type { Ui } from '@/i18n/ui'
 
 /**
- * The one place the four products are introduced. An editorial, asymmetric shelf: a wide stage and a
- * narrow one per row, swapped on the second row, each product on its own quiet colour. Every tile says
+ * The one place the three products are introduced. An editorial, asymmetric shelf: a wide stage and a
+ * narrow one on the first row, the third product across the whole second row, each on its own quiet colour. Every tile says
  * when it is used, what it is, the price, the offer, and one next step.
  */
-const SHELF: { id: ProductId; when: Record<Locale, string>; tint: string; wide: boolean }[] = [
+const SHELF: { id: ProductId; when: Record<Locale, string>; tint: string; wide: boolean; full?: boolean }[] = [
   { id: 'balance-wave', when: { ro: 'Pentru stres · seara', en: 'For stress · evenings' }, tint: '#f4e9e6', wide: true },
   { id: 'brainlink-pro', when: { ro: 'Pentru concentrare · la birou', en: 'For focus · at work' }, tint: '#e5f1f4', wide: false },
-  { id: 'ochelari-biohack', when: { ro: 'Pentru ochi · la ecrane', en: 'For your eyes · at screens' }, tint: '#f5ecdc', wide: false },
-  { id: 'brain-flow', when: { ro: 'Lumină infraroșie · acasă', en: 'Infrared light · at home' }, tint: '#efedeb', wide: true },
+  { id: 'ochelari-biohack', when: { ro: 'Pentru ochi · la ecrane', en: 'For your eyes · at screens' }, tint: '#f5ecdc', wide: true, full: true },
 ]
 
 const COPY = {
@@ -49,7 +48,7 @@ export async function Discover() {
 
       <ul className="mt-10 grid gap-5 lg:grid-cols-12">
         {SHELF.map((s) => (
-          <Tile key={s.id} p={getProduct(s.id, locale)!} when={s.when[locale]} tint={s.tint} wide={s.wide} view={t.view} ui={ui} />
+          <Tile key={s.id} p={getProduct(s.id, locale)!} when={s.when[locale]} tint={s.tint} wide={s.wide} full={s.full} view={t.view} ui={ui} />
         ))}
       </ul>
 
@@ -63,7 +62,7 @@ export async function Discover() {
   )
 }
 
-function Tile({ p, when, tint, wide, view, ui }: { p: Product; when: string; tint: string; wide: boolean; view: (name: string) => string; ui: Ui }) {
+function Tile({ p, when, tint, wide, full, view, ui }: { p: Product; when: string; tint: string; wide: boolean; full?: boolean; view: (name: string) => string; ui: Ui }) {
   const choose = !!p.variants?.length
   const head = (
     <>
@@ -111,7 +110,7 @@ function Tile({ p, when, tint, wide, view, ui }: { p: Product; when: string; tin
   // Wide: text and price on the left, the product large on the right. Narrow: text, product, price.
   // Either way the price and the action sit on the tile's lower edge, so rows line up.
   return (
-    <li style={{ background: tint }} className={`group relative overflow-hidden rounded-[28px] ${wide ? 'lg:col-span-7' : 'lg:col-span-5'}`}>
+    <li style={{ background: tint }} className={`group relative overflow-hidden rounded-[28px] ${full ? 'lg:col-span-12' : wide ? 'lg:col-span-7' : 'lg:col-span-5'}`}>
       {wide ? (
         <div className="grid h-full sm:grid-cols-2">
           <div className={`relative z-10 flex flex-col ${pad}`}>

@@ -92,7 +92,7 @@ export const CONTACT_FIELDS = {
   recoveryUrl: 'contact.bt_recovery_url',
   /** The site's own unsubscribe link for marketing emails (never GHL's DND, which would also block order emails). */
   unsubscribeUrl: 'contact.bt_unsubscribe_url',
-  /** Where the latest order came from: "site", or "landing brain-flow · facebook / paid / campanie". */
+  /** Where the latest order came from: "site", or "landing calm · facebook / paid / campanie". */
   lastOrderSource: 'contact.bt_last_order_source',
 } as const
 
@@ -117,6 +117,7 @@ export const PRODUCT_TAG: Record<string, string> = {
   'balance-wave': 'bt-cumparat-calm',
   'brainlink-pro': 'bt-cumparat-focus',
   'ochelari-biohack': 'bt-cumparat-amber',
+  // Discontinued 13.10.2026; kept so orders placed before still get their tag on a CRM resync.
   'brain-flow': 'bt-cumparat-brain-flow',
 }
 

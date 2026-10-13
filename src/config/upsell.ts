@@ -7,9 +7,8 @@
  *   NEUROS Calm  → NEUROS Amber, NEUROS Focus
  *   NEUROS Focus → NEUROS Amber, NEUROS Calm
  *   NEUROS Amber → NEUROS Calm, NEUROS Focus
- *   NEUROS Flow  → NEUROS Calm, NEUROS Focus
  *
- * NEUROS Flow is never a complementary suggestion: it is chosen with a specialist, not in one click.
+ * Only products of the catalog can be suggested (NEUROS Flow was discontinued on 13.10.2026).
  */
 import type { ProductId } from '@/content/catalog'
 
@@ -27,10 +26,6 @@ export const UPSELL_MAP: Record<ProductId, UpsellCandidate[]> = {
   'ochelari-biohack': [
     { productId: 'balance-wave', reason: 'Câteva minute de relaxare seara, cu NEUROS Calm purtat la gât.' },
     { productId: 'brainlink-pro', reason: 'Antrenează-ți atenția prin jocuri pe tabletă, cu NEUROS Focus.' },
-  ],
-  'brain-flow': [
-    { productId: 'balance-wave', reason: 'NEUROS Calm adaugă câteva minute de relaxare, purtat la gât.' },
-    { productId: 'brainlink-pro', reason: 'NEUROS Focus adaugă antrenamentul atenției, prin jocuri pe tabletă.' },
   ],
 }
 

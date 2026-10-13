@@ -39,7 +39,8 @@ describe('order segments', () => {
     expect(both.promotions['trei-produse-20']).toEqual({ eligible: true, units: 4, qualified: true, applied: true, amountMinor: 382800 })
     // One of each product never qualifies: the discount counts each product on its own.
     const mixed = orderSegments(order({ items: [item('balance-wave'), item('brainlink-pro'), item('brain-flow', 1, '4-zone')] }))
-    expect(mixed.promotions['trei-produse-20']).toMatchObject({ units: 3, qualified: false, applied: false })
+    // A historical NEUROS Flow line is no longer part of the promotion.
+    expect(mixed.promotions['trei-produse-20']).toMatchObject({ units: 2, qualified: false, applied: false })
     expect(both.promotions['amber-2-plus-1']).toEqual({ eligible: true, units: 3, qualified: true, applied: true, amountMinor: 31500 })
 
     const focusOnly = orderSegments(order({ items: [item('brainlink-pro')] }))

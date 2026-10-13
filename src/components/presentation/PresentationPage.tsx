@@ -12,7 +12,6 @@ import { Kicker, Title } from '@/components/landing/parts'
 import { CalmHero, CalmHow, CalmMoments, CalmUse } from '@/components/landing/stories/calm'
 import { FocusHero, FocusHow, FocusVideo, FocusWhere } from '@/components/landing/stories/focus'
 import { AmberHero, AmberHow, AmberWhen } from '@/components/landing/stories/amber'
-import { FlowExplain, FlowHero, FlowHome, FlowSpecialist, FlowSpecs, flowZones } from '@/components/landing/stories/flow'
 import { Contact, Facts, HeroPrice, PresentationShell, Questions } from './kit'
 
 const rows = (p: Product, extra: [string, string][] = []): [string, string][] => [...getProductContent(p.id).specs.map((s): [string, string] => [s.label, s.value]), ...extra]
@@ -55,19 +54,6 @@ export function PresentationPage({ landing }: { landing: Landing }) {
           <Facts image={p.cutout} rows={rows(p)} />
           <Questions landing={landing} />
           <Contact text="Scrie-ne ce formă porți de obicei. Îți recomandăm rama potrivită." />
-        </PresentationShell>
-      )
-    case 'brain-flow':
-      return (
-        <PresentationShell landing={landing} heroTone="dark">
-          <FlowHero name={p.name} buy={<HeroPrice amount={p.price} from={p.variablePrice} center />} />
-          <FlowHome />
-          <FlowExplain />
-          <FlowSpecialist />
-          <Configurations p={p} />
-          <FlowSpecs />
-          <Questions landing={landing} />
-          <Contact text="Spune-ne ce vrei să urmărești. Îți explicăm configurațiile și cum decurge consultația de început." />
         </PresentationShell>
       )
   }
@@ -120,35 +106,6 @@ function Frames({ p }: { p: Product }) {
               </div>
               <p className="mt-3 text-[16px] leading-snug font-medium sm:text-[17px]">{variantLabel(p, v)}</p>
               {price !== null && <p className="mt-0.5 text-[17px] font-semibold tracking-[-0.01em] tabular-nums">{formatLei(price)}</p>}
-            </li>
-          )
-        })}
-      </ul>
-    </section>
-  )
-}
-
-/** NEUROS Flow: what each configuration is for. The headset is the same in all three. */
-function Configurations({ p }: { p: Product }) {
-  return (
-    <section aria-labelledby="configuratii" className="lp-wrap py-[var(--sec)]">
-      <Kicker>Configurații</Kicker>
-      <Title id="configuratii" className="mt-3">
-        1, 4 sau 13 zone.
-      </Title>
-      <p className="mt-3 max-w-[36em] text-[17.5px] leading-relaxed text-[var(--lp-muted)]">
-        Casca și tehnologia sunt aceleași. Se schimbă numărul de zone pe care le poți activa în același protocol. Configurația potrivită o alegi împreună cu specialistul.
-      </p>
-      <ul className="mt-10 grid gap-4 md:grid-cols-3">
-        {(p.variants ?? []).map((v) => {
-          const n = flowZones[v.id]
-          const price = unitPrice(p, v)
-          return (
-            <li key={v.id} className="flex flex-col rounded-[22px] p-5 shadow-[inset_0_0_0_1px_var(--lp-line)] md:p-6">
-              <span className="block text-[40px] leading-none font-medium tracking-[-0.05em] tabular-nums md:text-[56px]">{n?.big}</span>
-              <span className="mt-2 block text-[17px] font-semibold">{variantLabel(p, v)}</span>
-              {n && <span className="mt-2 block text-[15px] leading-snug text-[var(--lp-muted)]">{n.text}</span>}
-              {price !== null && <span className="mt-auto block pt-4 text-[24px] font-semibold tracking-[-0.025em] tabular-nums md:pt-6">{formatLei(price)}</span>}
             </li>
           )
         })}

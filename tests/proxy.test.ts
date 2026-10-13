@@ -18,9 +18,9 @@ async function run(url: string, host: string, headers: Record<string, string> = 
 
 describe('proxy', () => {
   it('serves the landing at the root of its hostname, never indexed, keeping the campaign query', async () => {
-    const res = await run('https://brain-flow.biohack-tech.ro/?utm_source=meta', 'brain-flow.biohack-tech.ro')
+    const res = await run('https://focus.biohack-tech.ro/?utm_source=meta', 'focus.biohack-tech.ro')
     expect(isRewrite(res)).toBe(true)
-    expect(getRewrittenUrl(res)).toBe('https://brain-flow.biohack-tech.ro/ro/lp/brain-flow?utm_source=meta')
+    expect(getRewrittenUrl(res)).toBe('https://focus.biohack-tech.ro/ro/lp/focus?utm_source=meta')
     expect(res.headers.get('x-robots-tag')).toBe('noindex, nofollow')
   })
 
@@ -51,10 +51,35 @@ describe('proxy', () => {
   })
 
   it('previews the presentation pages on the main host at /lp/<slug>/prezentare, never indexed', async () => {
-    const res = await run('https://biohack-tech.ro/lp/brain-flow/prezentare', 'biohack-tech.ro')
-    expect(getRewrittenUrl(res)).toBe('https://biohack-tech.ro/prezentare/brain-flow')
+    const res = await run('https://biohack-tech.ro/lp/amber/prezentare', 'biohack-tech.ro')
+    expect(getRewrittenUrl(res)).toBe('https://biohack-tech.ro/prezentare/amber')
     expect(res.headers.get('x-robots-tag')).toBe('noindex, nofollow')
     expect(getRewrittenUrl(await run('https://biohack-tech.ro/lp/nope/prezentare', 'biohack-tech.ro'))).toBe('https://biohack-tech.ro/ro/lp/nope/prezentare')
+  })
+
+  it('NEUROS Flow is gone: its hostname redirects to the main site, its pages answer 410 on every host and language', async () => {
+    for (const [url, to] of [
+      ['https://brain-flow.biohack-tech.ro/?utm_source=meta', 'https://biohack-tech.ro/?utm_source=meta'],
+      ['https://brain-flow.biohack-tech.ro/checkout?item=brain-flow:4-zone', 'https://biohack-tech.ro/checkout?item=brain-flow:4-zone'],
+      ['https://brain-flow.biohack-tech.ro/comanda/abc_DEF', 'https://biohack-tech.ro/comanda/abc_DEF'],
+      ['https://brain-flow.biohack-tech.ro/api/checkout', 'https://biohack-tech.ro/api/checkout'],
+    ]) {
+      const res = await run(url, 'brain-flow.biohack-tech.ro')
+      expect([res.status, res.headers.get('location')]).toEqual([308, to])
+    }
+    for (const [url, host] of [
+      ['https://biohack-tech.ro/products/brain-flow', 'biohack-tech.ro'],
+      ['https://biohack-tech.ro/en/products/brain-flow', 'biohack-tech.ro'],
+      ['https://biohack-tech.ro/lp/brain-flow', 'biohack-tech.ro'],
+      ['https://biohack-tech.ro/lp/brain-flow/prezentare', 'biohack-tech.ro'],
+      ['https://biohack-tech.ro/prezentare/brain-flow', 'biohack-tech.ro'],
+      ['https://calm.biohack-tech.ro/products/brain-flow', 'calm.biohack-tech.ro'],
+    ]) {
+      const res = await run(url, host)
+      expect(res.status).toBe(410)
+      expect(res.headers.get('x-robots-tag')).toBe('noindex, nofollow')
+      expect(await res.text()).toContain('NEUROS Flow')
+    }
   })
 
   it('the main-site copies under /lp are not indexed', async () => {

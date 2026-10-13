@@ -22,11 +22,6 @@ import glToate from '@/assets/img/glasses/audience-stil.webp'
 import glBirou from '@/assets/img/glasses/result-focus.webp'
 import glSeara from '@/assets/img/glasses/result-seara.webp'
 
-import bfBarbat from '@/assets/img/brain-flow/lifestyle-barbat.webp'
-import bfTelecomanda from '@/assets/img/brain-flow/casca-telecomanda.webp'
-import bfInterior from '@/assets/img/brain-flow/casca-interior.webp'
-import bfBirou from '@/assets/img/brain-flow/birou-scris.webp'
-import bfConsultatie from '@/assets/img/brain-flow/consultatie.webp'
 
 export type Story = { title: string; text: string; image: ProductImage }
 
@@ -240,74 +235,6 @@ export const productContent: Record<ProductId, ProductContent> = {
       { q: 'Pot să îi returnez?', a: 'Da, în 14 zile de la primire.' },
     ],
   },
-
-  // NEUROS Flow: only what the source states (810 nm, 1/4/13 zones, adjustable protocol, remote, battery,
-  // initial consultation). No health outcome is claimed; the source's study list is not reused.
-  'brain-flow': {
-    seo: {
-      title: 'NEUROS Flow, cască cu lumină infraroșie 810 nm',
-      description: 'NEUROS Flow: cască de fotobiomodulare cu lumină infraroșie la 810 nm, în configurații cu 1, 4 sau 13 zone. Protocol stabilit cu un specialist. Livrare gratuită în România.',
-    },
-    intro: 'Alegi configurația cu 1, 4 sau 13 zone. La început, un specialist Biohack Tech stabilește cu tine zonele, durata și frecvența ședințelor.',
-    highlights: [
-      'Lumină infraroșie de 810 nm, prin scalp',
-      '1, 4 sau 13 zone, după configurație',
-      'Protocol stabilit cu un specialist',
-      'Baterie reîncărcabilă și telecomandă incluse',
-    ],
-    benefits: [
-      { title: 'Se folosește acasă', text: 'Are baterie reîncărcabilă. Te așezi unde vrei.' },
-      { title: 'Protocolul tău', text: 'Zone, durată și frecvență, setate cu un specialist.' },
-      { title: 'Control simplu', text: 'Telecomandă inclusă. Ședința se oprește singură.' },
-    ],
-    scene: {
-      title: 'Ședința, în ritmul tău.',
-      text: 'Pui casca, confirmi zonele pe telecomandă și pornești ședința. Stai relaxat până se termină.',
-      image: photo(bfBarbat, 'Bărbat relaxat pe canapea, cu casca NEUROS Flow pe cap'),
-    },
-    use: {
-      title: 'Cum o folosești',
-      image: cut(bfTelecomanda, 'NEUROS Flow lângă telecomanda inclusă'),
-      steps: ['Stabilești protocolul cu specialistul, la început.', 'Pui casca și confirmi zonele pe telecomandă.', 'Pornești ședința. Casca se oprește la finalul timpului setat.'],
-    },
-    explain: {
-      title: 'Ce înseamnă fotobiomodulare?',
-      paragraphs: [
-        'Fotobiomodulare înseamnă lumină roșie sau infraroșie aplicată din exterior. NEUROS Flow folosește lumină infraroșie la 810 nm, aplicată prin scalp.',
-        'LED-urile sunt montate în interiorul căștii. Configurația aleasă stabilește câte zone poți activa în același protocol: 1, 4 sau 13.',
-        'Casca și tehnologia sunt aceleași în toate configurațiile. Diferă doar numărul de zone.',
-      ],
-      image: cut(bfInterior, 'Interiorul căștii NEUROS Flow, cu LED-urile, lângă telecomandă'),
-    },
-    moments: [
-      {
-        title: 'În rutina zilei.',
-        text: 'Ședințele se fac acasă, la ora aleasă de tine.',
-        image: photo(bfBirou, 'Bărbat scriind la birou, lângă casca NEUROS Flow'),
-      },
-      {
-        title: 'Începi cu un specialist.',
-        text: 'Consultația de început stabilește protocolul. Îl revizuiți periodic, împreună.',
-        image: photo(bfConsultatie, 'Consultație Biohack Tech: specialistul arată protocolul pe tabletă'),
-      },
-    ],
-    specs: [
-      { label: 'Tehnologie', value: 'Fotobiomodulare transcraniană (t-PBM)' },
-      { label: 'Lungime de undă', value: '810 nm, infraroșu apropiat' },
-      { label: 'Configurații', value: '1, 4 sau 13 zone selectabile' },
-      { label: 'Parametri reglabili', value: 'Zone active, frecvență, durata ședinței' },
-      { label: 'Control', value: 'Telecomandă inclusă' },
-      { label: 'Alimentare', value: 'Baterie reîncărcabilă' },
-      { label: 'Ghidaj', value: 'Consultație inițială pentru configurarea protocolului' },
-      { label: 'Garanție', value: '2 ani' },
-    ],
-    faqs: [
-      { q: 'Ce diferă între configurații?', a: 'Casca și tehnologia sunt aceleași. Diferă câte zone poți activa în același protocol: 1, 4 sau 13.' },
-      { q: 'Cine stabilește protocolul?', a: 'Un specialist Biohack Tech, la consultația de început. Împreună alegeți zonele, durata și frecvența ședințelor.' },
-      { q: 'Ce fel de produs este?', a: 'NEUROS Flow este un produs de wellness. Dacă ai o afecțiune sau urmezi un tratament, vorbește întâi cu medicul tău.' },
-      { q: 'Pot să o returnez?', a: 'Da, în 14 zile de la primire, ca orice produs cumpărat online.' },
-    ],
-  },
 }
 
 /** The same pages in English, for /en. Same images, same facts, same limits on claims. */
@@ -487,72 +414,6 @@ export const productContentEn: Record<ProductId, ProductContent> = {
     faqs: [
       { q: 'When do I wear them?', a: 'At your desk, in front of screens, and in the evening when you use your phone or laptop.' },
       { q: 'Can I return them?', a: 'Yes, within 14 days of delivery.' },
-    ],
-  },
-
-  'brain-flow': {
-    seo: {
-      title: 'NEUROS Flow, 810 nm infrared light headset for home',
-      description: 'NEUROS Flow is a photobiomodulation headset with 810 nm infrared light, with 1, 4 or 13 zones. Protocol set with a specialist. Free delivery in Romania.',
-    },
-    intro: 'Choose the configuration with 1, 4 or 13 zones. At the start, a Biohack Tech specialist sets the zones, session length and frequency with you.',
-    highlights: [
-      'Infrared light at 810 nm, through the scalp',
-      '1, 4 or 13 zones, by configuration',
-      'A protocol set with a specialist',
-      'Rechargeable battery and remote included',
-    ],
-    benefits: [
-      { title: 'Used at home', text: 'It runs on a rechargeable battery. Sit wherever you like.' },
-      { title: 'Your protocol', text: 'Zones, length and frequency, set with a specialist.' },
-      { title: 'Simple control', text: 'Remote included. The session stops by itself.' },
-    ],
-    scene: {
-      title: 'Sessions at your own pace.',
-      text: 'Put on the headset, confirm the zones on the remote and start the session. Relax until it ends.',
-      image: photo(bfBarbat, 'Relaxed man on a sofa, wearing the NEUROS Flow headset'),
-    },
-    use: {
-      title: 'How to use it',
-      image: cut(bfTelecomanda, 'NEUROS Flow next to the included remote'),
-      steps: ['Set your protocol with the specialist at the start.', 'Put on the headset and confirm the zones on the remote.', 'Start the session. The headset stops when the set time ends.'],
-    },
-    explain: {
-      title: 'What is photobiomodulation?',
-      paragraphs: [
-        'Photobiomodulation means red or infrared light applied from outside. NEUROS Flow uses 810 nm infrared light, applied through the scalp.',
-        'The LEDs sit inside the headset. The configuration you choose sets how many zones you can switch on in one protocol: 1, 4 or 13.',
-        'The headset and the technology are the same in every configuration. Only the number of zones changes.',
-      ],
-      image: cut(bfInterior, 'Inside the NEUROS Flow headset, with its LEDs, next to the remote'),
-    },
-    moments: [
-      {
-        title: 'Part of your day.',
-        text: 'Sessions happen at home, at a time you choose.',
-        image: photo(bfBirou, 'Man writing at a desk, next to the NEUROS Flow headset'),
-      },
-      {
-        title: 'You start with a specialist.',
-        text: 'The first consultation sets your protocol. You review it together from time to time.',
-        image: photo(bfConsultatie, 'Biohack Tech consultation: the specialist shows the protocol on a tablet'),
-      },
-    ],
-    specs: [
-      { label: 'Technology', value: 'Transcranial photobiomodulation (t-PBM)' },
-      { label: 'Wavelength', value: '810 nm, near infrared' },
-      { label: 'Configurations', value: '1, 4 or 13 selectable zones' },
-      { label: 'Adjustable settings', value: 'Active zones, frequency, session length' },
-      { label: 'Control', value: 'Remote included' },
-      { label: 'Power', value: 'Rechargeable battery' },
-      { label: 'Guidance', value: 'First consultation to set up your protocol' },
-      { label: 'Warranty', value: '2 years' },
-    ],
-    faqs: [
-      { q: 'What changes between configurations?', a: 'The headset and the technology are the same. What changes is how many zones you can switch on in one protocol: 1, 4 or 13.' },
-      { q: 'Who sets the protocol?', a: 'A Biohack Tech specialist, at the first consultation. Together you choose the zones, session length and frequency.' },
-      { q: 'What kind of product is it?', a: 'NEUROS Flow is a wellness product. If you have a medical condition or follow a course of care, talk to your doctor first.' },
-      { q: 'Can I return it?', a: 'Yes, within 14 days of delivery, like anything bought online.' },
     ],
   },
 }

@@ -47,7 +47,6 @@ const LANDINGS = [
   { slug: 'calm', pick: { productId: 'balance-wave' as const }, name: 'NEUROS Calm', unit: 638000 },
   { slug: 'focus', pick: { productId: 'brainlink-pro' as const }, name: 'NEUROS Focus', unit: 79000 },
   { slug: 'amber', pick: { productId: 'ochelari-biohack' as const, variantId: 'patrat-maro', quantity: 3 }, name: 'NEUROS Amber', unit: 31500 },
-  { slug: 'brain-flow', pick: { productId: 'brain-flow' as const, variantId: '13-zone' }, name: 'NEUROS Flow', unit: 1390000 },
 ] as const
 
 describe('landing → checkout: the selection survives', () => {
@@ -108,16 +107,33 @@ describe('landing → checkout: the selection survives', () => {
   })
 })
 
+describe('NEUROS Flow (discontinued) in old carts and old links', () => {
+  it('a saved cart with NEUROS Flow loads without it and keeps the other products; checkout gets only sellable lines', async () => {
+    storage = new Map([[KEY, JSON.stringify([{ productId: 'brain-flow', variantId: '13-zone', quantity: 1 }, { productId: 'balance-wave', quantity: 2 }])]])
+    const p = await page('https://biohack-tech.ro/cart')
+    expect(p.cartStore.getSnapshot().map((l) => [l.productId, l.quantity])).toEqual([['balance-wave', 2]])
+    expect(resolveOrderLines(p.cartStore.getSnapshot())).toMatchObject({ ok: true, total: 2 * 638000 - 127600 })
+  })
+
+  it('an old checkout or landing link for NEUROS Flow adds nothing', async () => {
+    storage = new Map()
+    expect(parseItems('?item=brain-flow:13-zone&lp=brain-flow')).toEqual([])
+    const p = await page('https://biohack-tech.ro/checkout?item=brain-flow:4-zone')
+    p.startCheckout(vi.fn(), 'brain-flow' as never, { productId: 'brain-flow' as never, variantId: '4-zone' })
+    expect(p.cartStore.getSnapshot()).toEqual([])
+  })
+})
+
 describe('the item parameter', () => {
   it('round-trips product, variant and quantity; drops what the catalog does not sell', () => {
-    expect(encodeItem({ productId: 'brain-flow', variantId: '4-zone' })).toBe('brain-flow:4-zone')
+    expect(encodeItem({ productId: 'ochelari-biohack', variantId: 'patrat-negru' })).toBe('ochelari-biohack:patrat-negru')
     expect(encodeItem({ productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 3 })).toBe('ochelari-biohack:cat-eye-negru*3')
     expect(parseItems('?item=ochelari-biohack:cat-eye-negru*3&item=balance-wave')).toEqual([
       { productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 3, source: 'link' },
       { productId: 'balance-wave', variantId: undefined, quantity: 1, source: 'link' },
     ])
     // A product with variants needs one; a product without variants takes none; quantities are clamped.
-    expect(parseItems('?item=brain-flow&item=ochelari-biohack:nope&item=balance-wave:x&item=nu-exista&item=<script>')).toEqual([])
+    expect(parseItems('?item=brain-flow&item=brain-flow:4-zone&item=ochelari-biohack:nope&item=balance-wave:x&item=nu-exista&item=<script>')).toEqual([])
     expect(parseItems('?item=brainlink-pro*99')).toEqual([{ productId: 'brainlink-pro', variantId: undefined, quantity: 10, source: 'link' }])
     expect(parseItems('?item=brainlink-pro&item=brainlink-pro')[0].quantity).toBe(2)
   })
@@ -149,10 +165,11 @@ describe('attribution and promotions survive the handoff', () => {
     p.startCheckout(vi.fn(), 'amber', { productId: 'ochelari-biohack', variantId: 'patrat-maro', quantity: 3 })
     p.cartStore.add('balance-wave', undefined, 3, 'home')
     p.cartStore.add('brainlink-pro', undefined, 1, 'product')
-    p.cartStore.add('brain-flow', '1-zona', 1, 'product')
+    p.cartStore.add('brain-flow' as never, '1-zona', 1, 'product') // discontinued: ignored
     const lines = p.cartStore.getSnapshot()
+    expect(lines.map((l) => l.productId)).not.toContain('brain-flow')
     const shown = priceLines(
-      lines.map((l) => ({ key: `${l.productId}:${l.variantId ?? ''}`, productId: l.productId, quantity: l.quantity, unitAmount: { 'balance-wave': 638000, 'brainlink-pro': 79000, 'ochelari-biohack': 31500, 'brain-flow': 1290000 }[l.productId] })),
+      lines.map((l) => ({ key: `${l.productId}:${l.variantId ?? ''}`, productId: l.productId, quantity: l.quantity, unitAmount: { 'balance-wave': 638000, 'brainlink-pro': 79000, 'ochelari-biohack': 31500 }[l.productId]! })),
     )
     const server = resolveOrderLines(lines)
     expect(server.ok).toBe(true)

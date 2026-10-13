@@ -64,8 +64,8 @@ function agreeEverywhere(o: Awaited<ReturnType<typeof buy>>, method: 'card' | 't
 const LEI = (n: number) => n * 100
 
 describe('configured prices', () => {
-  it('Calm 6.380, Focus 790, Amber 315, Flow 12.900 / 14.900 / 13.900 lei', () => {
-    expect(PRICES_RON).toEqual({ 'balance-wave': LEI(6380), 'brainlink-pro': LEI(790), 'ochelari-biohack': LEI(315), 'brain-flow': { '1-zona': LEI(12900), '4-zone': LEI(14900), '13-zone': LEI(13900) } })
+  it('only Calm 6.380, Focus 790 and Amber 315 lei; NEUROS Flow has no price', () => {
+    expect(PRICES_RON).toEqual({ 'balance-wave': LEI(6380), 'brainlink-pro': LEI(790), 'ochelari-biohack': LEI(315) })
   })
 })
 
@@ -92,13 +92,10 @@ describe('NEUROS Amber 2+1: quantities 1, 2, 3, 4, 5, 6, 8, 9', () => {
   })
 })
 
-describe('Calm, Focus, Flow: 10% for 2, 20% for 3+ of the SAME product', () => {
+describe('Calm, Focus: 10% for 2, 20% for 3+ of the SAME product', () => {
   const cases: [string, L, Record<number, number>][] = [
     ['Calm', { productId: 'balance-wave', quantity: 0 }, { 1: 6380, 2: 11484, 3: 15312, 4: 20416 }],
     ['Focus', { productId: 'brainlink-pro', quantity: 0 }, { 1: 790, 2: 1422, 3: 1896, 4: 2528 }],
-    ['Flow 1 zonă', { productId: 'brain-flow', variantId: '1-zona', quantity: 0 }, { 1: 12900, 2: 23220, 3: 30960 }],
-    ['Flow 4 zone', { productId: 'brain-flow', variantId: '4-zone', quantity: 0 }, { 1: 14900, 2: 26820 }],
-    ['Flow 13 zone', { productId: 'brain-flow', variantId: '13-zone', quantity: 0 }, { 1: 13900, 2: 25020 }],
   ]
   for (const [name, line, totals] of cases)
     for (const [q, lei] of Object.entries(totals))
@@ -108,15 +105,20 @@ describe('Calm, Focus, Flow: 10% for 2, 20% for 3+ of the SAME product', () => {
         agreeEverywhere(o, 'card')
       })
 
-  it('different products never add up: 1 Calm + 1 Focus + 1 Flow = full price', async () => {
-    const o = await buy([{ productId: 'balance-wave', quantity: 1 }, { productId: 'brainlink-pro', quantity: 1 }, { productId: 'brain-flow', variantId: '4-zone', quantity: 1 }])
-    expect([o.discountMinor, o.totalMinor]).toEqual([0, LEI(6380 + 790 + 14900)])
+  it('different products never add up: 1 Calm + 1 Focus + 1 Amber = full price', async () => {
+    const o = await buy([{ productId: 'balance-wave', quantity: 1 }, { productId: 'brainlink-pro', quantity: 1 }, { productId: 'ochelari-biohack', variantId: 'patrat-maro', quantity: 1 }])
+    expect([o.discountMinor, o.totalMinor]).toEqual([0, LEI(6380 + 790 + 315)])
   })
 
-  it('Flow counts as one product across configurations: 1 zonă + 4 zone = 10% on both', async () => {
-    const o = await buy([{ productId: 'brain-flow', variantId: '1-zona', quantity: 1 }, { productId: 'brain-flow', variantId: '4-zone', quantity: 1 }])
-    expect(o.totalMinor).toBe(LEI(25020))
-    agreeEverywhere(o, 'card')
+  it('NEUROS Flow cannot be bought: every configuration, alone or next to a valid product, by any method, is refused', async () => {
+    for (const method of ['card', 'transfer', 'cod'] as const)
+      for (const lines of [[{ productId: 'brain-flow', variantId: '4-zone', quantity: 1 }], [{ productId: 'brain-flow', quantity: 1 }], [{ productId: 'balance-wave', quantity: 1 }, { productId: 'brain-flow', variantId: '13-zone', quantity: 1 }]]) {
+        const res = await post({ lines, order: { ...person, paymentMethod: method }, acceptedTerms: true, attemptId: `flow-${Math.random()}` })
+        expect(res.status).toBe(409)
+        expect((await res.json()).error).toBe('BAD_LINE')
+      }
+    expect(piAmounts).toEqual([])
+    expect((await db.query('select count(*)::int as n from orders')).rows[0].n).toBe(0)
   })
 
   it('both offers on one order, never on the same unit: 2 Calm + 3 Focus + 3 Amber', async () => {
@@ -137,9 +139,9 @@ describe('the same totals for every payment method and buyer type', () => {
       if (method === 'cod') expect(o.codAmountMinor).toBe(o.totalMinor)
     })
 
-  it('cash on delivery has no ceiling: 4 × NEUROS Flow 13 zone = 44.480 lei is accepted', async () => {
-    const o = await buy([{ productId: 'brain-flow', variantId: '13-zone', quantity: 4 }], 'cod')
-    expect([o.paymentMethod, o.paymentStatus, o.totalMinor, o.codAmountMinor]).toEqual(['cash_on_delivery', 'awaiting_collection', LEI(44480), LEI(44480)])
+  it('cash on delivery has no ceiling: 10 × NEUROS Calm = 51.040 lei is accepted', async () => {
+    const o = await buy([{ productId: 'balance-wave', quantity: 10 }], 'cod')
+    expect([o.paymentMethod, o.paymentStatus, o.totalMinor, o.codAmountMinor]).toEqual(['cash_on_delivery', 'awaiting_collection', LEI(51040), LEI(51040)])
     expect(TEST_ENV.STRIPE_SECRET_KEY.startsWith('sk_test_')).toBe(true)
   })
 

@@ -18,7 +18,7 @@ const COPY = {
     config: 'Alege configurația',
     add: 'Adaugă',
     added: 'Adăugat',
-    mix: 'NEUROS Calm, Focus sau Flow',
+    mix: 'NEUROS Calm sau Focus',
     perPair: ' / pereche',
     bundle: '20% la 3 bucăți',
     oneStep: 'Mai ai un pas până la ofertă',
@@ -32,7 +32,7 @@ const COPY = {
     config: 'Choose the configuration',
     add: 'Add',
     added: 'Added',
-    mix: 'NEUROS Calm, Focus or Flow',
+    mix: 'NEUROS Calm or Focus',
     perPair: ' / pair',
     bundle: '20% off 3 units',
     oneStep: 'One step away from the offer',
@@ -45,7 +45,7 @@ const COPY = {
 /**
  * Compact suggestions ("Completează oferta" / "Completează rutina") from the one recommendation engine (`lib/recommend.ts`).
  * Completing a nearby promotion comes first. Simple products are added in place; NEUROS Amber opens the
- * 2+1 pair picker, NEUROS Flow its configuration picker. Always below or beside the main action,
+ * 2+1 pair picker, a product with variants its variant picker. Always below or beside the main action,
  * never above it. In the checkout on phones it is folded, so the payment stays close.
  */
 export function Suggestions({ placement, className = '' }: { placement: 'cart' | 'checkout'; className?: string }) {

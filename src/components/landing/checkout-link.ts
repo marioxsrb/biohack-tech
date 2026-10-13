@@ -25,7 +25,7 @@ export function checkoutHref(slug: LandingSlug, picks: Pick | Pick[], from?: { s
  * has it on its first render and after any reload), then the checkout opens with the same selection
  * and the campaign parameters in its URL.
  *
- * One product (Calm, Focus, a NEUROS Flow configuration): the line is made sure to be there, never
+ * One product (Calm, Focus): the line is made sure to be there, never
  * doubled. A built selection (`exact`, NEUROS Amber frames): each chosen line gets exactly the chosen
  * quantity, as the customer saw it on the landing.
  */

@@ -1,11 +1,12 @@
 /**
- * The real catalog (no price mocks): four products (NEUROS Flow priced per configuration), and checkout,
+ * The real catalog (no price mocks): three products (NEUROS Flow discontinued), and checkout,
  * FGO, GoHighLevel and email all carry the same names, variants and prices.
  */
 import { beforeEach, describe, expect, it } from 'vitest'
 
 const { freshDb, person, lines } = await import('./helpers')
-const { products, isPurchasable, unitPrice, getProduct, resolveLine } = await import('@/content/catalog')
+const { products, isPurchasable, getProduct, resolveLine, isDiscontinued, DISCONTINUED_PRODUCTS } = await import('@/content/catalog')
+const { orders } = await import('@/server/orders/repository')
 const { PRICES_RON } = await import('@/config/prices')
 const { getConfig } = await import('@/server/config')
 const svc = await import('@/server/orders/service')
@@ -19,17 +20,15 @@ beforeEach(async () => {
   await freshDb()
 })
 
-describe('the four-product catalog', () => {
-  it('sells NEUROS Calm, Focus, Amber and NEUROS Flow; NEUROS Flow "from" its lowest configuration', () => {
+describe('the three-product catalog (NEUROS Flow discontinued 13.10.2026)', () => {
+  it('sells only NEUROS Calm, Focus and Amber, each with its page content and CRM tag', () => {
     expect(products.map((p) => [p.id, p.slug, p.name, p.price])).toEqual([
       ['balance-wave', 'calm', 'NEUROS Calm', 638000],
       ['brainlink-pro', 'focus', 'NEUROS Focus', 79000],
       ['ochelari-biohack', 'amber', 'NEUROS Amber', 31500],
-      ['brain-flow', 'brain-flow', 'NEUROS Flow', 1290000],
     ])
     expect(products.every(isPurchasable)).toBe(true)
     expect(Object.keys(PRICES_RON).sort()).toEqual(products.map((p) => p.id).sort())
-    // Every product has its page content, its CRM tag and (when it has variants) stable ids.
     for (const p of products) {
       expect(productContent[p.id]).toBeDefined()
       expect(PRODUCT_TAG[p.id]).toMatch(/^bt-cumparat-/)
@@ -37,48 +36,47 @@ describe('the four-product catalog', () => {
     }
   })
 
-  it('NEUROS Flow: three configurations, each with its zone count and its own canonical price', () => {
-    const bf = getProduct('brain-flow')!
-    expect(bf.variablePrice).toBe(true)
-    expect(bf.variants!.map((v) => [v.id, v.zones, unitPrice(bf, v)])).toEqual([
-      ['1-zona', 1, 1290000],
-      ['4-zone', 4, 1490000],
-      ['13-zone', 13, 1390000],
-    ])
-    // A configuration is required; an unknown one does not exist.
-    expect(resolveLine('brain-flow')).toBeNull()
-    expect(resolveLine('brain-flow', '7-zone')).toBeNull()
-    expect(unitPrice(bf)).toBeNull()
-    // The copy makes no health promise and uses no dash punctuation.
-    const text = JSON.stringify(productContent['brain-flow'])
-    expect(text).not.toMatch(/[—–]|vindec|trateaz[aă] |depresi|anxiet|garantat/i)
+  it('NEUROS Flow is not in the catalog: no product, no price, no content, no line; only its name is kept as discontinued', () => {
+    expect(getProduct('brain-flow')).toBeUndefined()
+    expect(getProduct('brain-flow', 'en')).toBeUndefined()
+    for (const v of [undefined, '1-zona', '4-zone', '13-zone']) expect(resolveLine('brain-flow', v)).toBeNull()
+    expect((productContent as Record<string, unknown>)['brain-flow']).toBeUndefined()
+    expect(isDiscontinued('brain-flow')).toBe(true)
+    expect(DISCONTINUED_PRODUCTS['brain-flow'].name).toBe('NEUROS Flow')
   })
 
-  it('the server prices every NEUROS Flow line from the catalog, whatever the browser sends', () => {
-    const r = resolveOrderLines([
-      { productId: 'brain-flow', variantId: '13-zone', quantity: 1, unitAmount: 100, price: 1 },
-      { productId: 'brain-flow', variantId: '1-zona', quantity: 2 },
+  it('the server refuses every NEUROS Flow line, whatever the browser sends, also next to a valid product', () => {
+    for (const raw of [
+      [{ productId: 'brain-flow', variantId: '13-zone', quantity: 1, unitAmount: 100, price: 1 }],
+      [{ productId: 'brain-flow', quantity: 1 }],
+      [{ productId: 'balance-wave', quantity: 1 }, { productId: 'brain-flow', variantId: '4-zone', quantity: 1 }],
     ])
-    // Three NEUROS Flow units also unlock the 20% promotion (every configuration counts).
-    expect(r).toMatchObject({ ok: true, subtotal: 1390000 + 2 * 1290000, discount: 794000, total: 3176000 })
-    expect(resolveOrderLines([{ productId: 'brain-flow', quantity: 1 }])).toEqual({ ok: false, reason: 'BAD_LINE' })
-    expect(resolveOrderLines([{ productId: 'brain-flow', variantId: '4-zone', quantity: 11 }])).toEqual({ ok: false, reason: 'BAD_LINE' })
-    expect(resolveOrderLines([{ productId: 'brain-flow', variantId: '4-zone', quantity: -1 }])).toEqual({ ok: false, reason: 'BAD_LINE' })
+      expect(resolveOrderLines(raw)).toEqual({ ok: false, reason: 'BAD_LINE' })
   })
 
-  it('a NEUROS Flow order carries its configuration into the order, FGO, GHL (tag + products) and email', async () => {
-    const { order } = await svc.placeOrder({ lines: lines([{ productId: 'brain-flow', variantId: '4-zone', quantity: 1 }]), form: person, attemptId: 'catalog-bf' })
-    expect(order.totalMinor).toBe(1490000)
-    expect(order.items.map((i) => [i.productId, i.variantId, i.productName, i.variantName, i.sku, i.unitPriceMinor])).toEqual([
-      ['brain-flow', '4-zone', 'NEUROS Flow', '4 zone', 'brain-flow/4-zone', 1490000],
-    ])
+  it('an order placed with NEUROS Flow before the discontinuation still reads, invoices, syncs and emails from its own lines', async () => {
+    const db = await freshDb()
+    const { order: placed } = await svc.placeOrder({ lines: lines([{ productId: 'balance-wave', quantity: 1 }]), form: person, attemptId: 'catalog-historic' })
+    // The line as it was stored when NEUROS Flow was still sold.
+    await db.query(
+      "update order_items set product_id = 'brain-flow', variant_id = '4-zone', product_name = 'NEUROS Flow', variant_name = '4 zone', sku = 'brain-flow/4-zone', unit_price_minor = 1490000, line_total_minor = 1490000 where order_id = $1",
+      [placed.id],
+    )
+    await db.query('update orders set subtotal_minor = 1490000, total_minor = 1490000 where id = $1', [placed.id])
+    const order = (await orders.byId(db, placed.id))!
+    expect(order.items.map((i) => [i.productId, i.variantId, i.productName, i.variantName, i.unitPriceMinor])).toEqual([['brain-flow', '4-zone', 'NEUROS Flow', '4 zone', 1490000]])
     const c = getConfig()
     expect(invoicePayload(c.fgo!, order).Continut.map((l) => [l.Denumire, l.CodArticol, l.NrProduse, l.PretTotal])).toEqual([['NEUROS Flow (4 zone)', 'brain-flow/4-zone', 1, 14900]])
     const fields = contactPayload(c.ghl!, order, { orders: 1, valueMinor: order.totalMinor }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, c.siteUrl).customFields
     expect(fields.find((f) => f.key === 'contact.bt_last_order_products')!.fieldValue).toBe('1 x NEUROS Flow (4 zone)')
     expect(tagsFor({ ...order, paymentStatus: 'paid' })).toEqual(['bt-client', 'bt-cumparat-brain-flow'])
-    const mail = renderEmail('order_confirmed', { ...order, paymentStatus: 'paid' }, { siteUrl: c.siteUrl, bank: c.bank })
-    for (const s of ['NEUROS Flow', '4 zone', '14.900 lei']) expect(mail.text).toContain(s)
+    for (const t of ['order_confirmed', 'refund_issued'] as const) {
+      const mail = renderEmail(t, { ...order, paymentStatus: 'paid', refundedMinor: 1490000 }, { siteUrl: c.siteUrl, bank: c.bank })
+      expect(mail.text).toContain(t === 'order_confirmed' ? '1 x NEUROS Flow (4 zone): 14.900 lei' : '14.900 lei')
+    }
+    // A late Stripe confirmation and then a refund of the old order are still recorded normally.
+    expect((await svc.confirmPayment(order.id, 'stripe.webhook', { amountMinor: 1490000, currency: 'ron' })).order?.paymentStatus).toBe('paid')
+    expect((await svc.recordRefund(order.id, 'stripe.webhook', 1490000)).order?.paymentStatus).toBe('refunded')
   })
 
   it('carries the same lines into the order, the FGO invoice, the GHL contact and the confirmation email', async () => {

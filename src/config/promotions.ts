@@ -3,10 +3,10 @@
  * every order and in the browser only to show the same numbers. Prices come from config/prices.ts.
  *
  * Rules (changed 09.10.2026):
- *   - Quantity discount, counted PER PRODUCT: 2 units of the same product (NEUROS Calm, NEUROS Focus or
- *     NEUROS Flow) get 10% off those 2 units, 3 or more get 20% off those units. Different products never
- *     add up (1 Calm + 1 Focus gets nothing), and the discount never touches the rest of the order.
- *     NEUROS Flow counts as one product whatever the configuration. NEUROS Amber has its own offer.
+ *   - Quantity discount, counted PER PRODUCT: 2 units of the same product (NEUROS Calm or NEUROS Focus)
+ *     get 10% off those 2 units, 3 or more get 20% off those units. Different products never add up
+ *     (1 Calm + 1 Focus gets nothing), and the discount never touches the rest of the order.
+ *     NEUROS Amber has its own offer. (NEUROS Flow was discontinued on 13.10.2026.)
  *   - NEUROS Amber 2+1 gratis: in every complete group of 3 Amber units, one is free (any frame).
  * The two apply to separate products, so one unit is never discounted twice.
  */
@@ -53,7 +53,7 @@ export const PROMOTIONS: Promotion[] = [
     label: '10% la 2 bucăți, 20% la 3 bucăți',
     badge: 'Până la 20% reducere',
     line: 'Iei 2 bucăți din același produs: 10% reducere la ele. Iei 3: 20%. Reducerea apare în coș.',
-    products: ['balance-wave', 'brainlink-pro', 'brain-flow'],
+    products: ['balance-wave', 'brainlink-pro'],
     tiers: [
       { minUnits: 2, percent: 10, label: '10% la 2 bucăți' },
       { minUnits: 3, percent: 20, label: '20% la 3 bucăți' },

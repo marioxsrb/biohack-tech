@@ -52,7 +52,7 @@ export function OfferProgress({ progress, lines, compact = false, className = ''
   )
 }
 
-/** What one more unit would save, from the engine (for the quantity discount: one more of that product; for NEUROS Flow the cheapest configuration, hence "cel puțin"). */
+/** What one more unit would save, from the engine (for the quantity discount: one more of that product; for a product with configurations the cheapest one, hence "cel puțin"). */
 function nextGain(p: PromotionProgress, lines: ResolvedLine[]): number {
   const base = lines.map((l) => ({ key: l.key, productId: l.product.id, quantity: l.quantity, unitAmount: l.unit }))
   const amountFor = (ls: typeof base) => priceLines(ls).promotions.find((a) => a.id === p.id)?.amountMinor ?? 0

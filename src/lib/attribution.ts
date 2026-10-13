@@ -75,7 +75,7 @@ export function sanitizeAttribution(raw: unknown, mainHost?: string, base = land
 }
 
 /**
- * One line for the CRM and the admin: "landing brain-flow · facebook / paid-social / lansare",
+ * One line for the CRM and the admin: "landing calm · facebook / paid-social / lansare",
  * "site, pagina produsului". Plain "site" when nothing is known.
  */
 export function attributionSummary(a: Attribution | null | undefined): string {

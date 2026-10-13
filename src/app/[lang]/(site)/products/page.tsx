@@ -7,13 +7,13 @@ const COPY = {
   ro: {
     title: 'Dispozitive pentru relaxare, concentrare și ecrane',
     description:
-      'NEUROS Calm cu lumină roșie pentru relaxare, casca EEG NEUROS Focus, ochelarii NEUROS Amber pentru lumina albastră și casca NEUROS Flow. Livrare gratuită.',
+      'NEUROS Calm cu lumină roșie pentru relaxare, casca EEG NEUROS Focus, și ochelarii NEUROS Amber pentru lumina albastră. Livrare gratuită.',
     heading: 'Produse',
   },
   en: {
     title: 'Devices for relaxation, focus and screens',
     description:
-      'NEUROS Calm with red light for relaxation, the NEUROS Focus EEG headband, NEUROS Amber blue light glasses and the NEUROS Flow headset. Free delivery in Romania.',
+      'NEUROS Calm with red light for relaxation, the NEUROS Focus EEG headband, and NEUROS Amber blue light glasses. Free delivery in Romania.',
     heading: 'Products',
   },
 }

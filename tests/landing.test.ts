@@ -9,16 +9,30 @@ import { checkoutHref } from '@/components/landing/checkout-link'
 import { getProduct, productHref } from '@/content/catalog'
 import { landings } from '@/content/landings'
 import { attributionParams, attributionSummary, sanitizeAttribution } from '@/lib/attribution'
-import { LANDING_SLUGS, landingForHost, routeLanding, wwwRedirect } from '@/lib/landing-hosts'
+import { DISCONTINUED_PATH, LANDING_SLUGS, landingForHost, retiredLandingRedirect, routeLanding, wwwRedirect } from '@/lib/landing-hosts'
 
 const BASE = 'biohack-tech.ro'
 const prod = (host: string) => landingForHost(host, BASE, false)
 
 describe('landing hostnames (explicit allowlist)', () => {
-  it('maps each of the four hostnames to its landing, ignoring case, port and a trailing dot', () => {
-    expect(LANDING_SLUGS.map((s) => prod(`${s}.biohack-tech.ro`))).toEqual(['calm', 'focus', 'amber', 'brain-flow'])
+  it('maps each of the three hostnames to its landing, ignoring case, port and a trailing dot', () => {
+    expect(LANDING_SLUGS.map((s) => prod(`${s}.biohack-tech.ro`))).toEqual(['calm', 'focus', 'amber'])
     expect(prod('CALM.Biohack-Tech.ro:443')).toBe('calm')
-    expect(prod('brain-flow.biohack-tech.ro.')).toBe('brain-flow')
+    expect(prod('amber.biohack-tech.ro.')).toBe('amber')
+  })
+
+  it('the NEUROS Flow hostname is no landing: every path goes to the same path on the main site', () => {
+    expect(prod('brain-flow.biohack-tech.ro')).toBeNull()
+    expect(retiredLandingRedirect('brain-flow.biohack-tech.ro', 'https://biohack-tech.ro', '/?utm_source=meta', BASE, false)).toBe('https://biohack-tech.ro/?utm_source=meta')
+    expect(retiredLandingRedirect('Brain-Flow.Biohack-Tech.ro.', 'https://biohack-tech.ro', '/checkout?item=brain-flow:4-zone', BASE, false)).toBe('https://biohack-tech.ro/checkout?item=brain-flow:4-zone')
+    expect(retiredLandingRedirect('brain-flow.biohack-tech.ro', 'https://biohack-tech.ro', '/comanda/abc', BASE, false)).toBe('https://biohack-tech.ro/comanda/abc')
+    expect(retiredLandingRedirect('brain-flow.localhost:3000', 'https://biohack-tech.ro', '/', BASE, true)).toBe('http://localhost:3000/')
+    for (const h of ['calm.biohack-tech.ro', 'biohack-tech.ro', 'brain-flow.biohack-tech.ro.evil.com', 'brain-flow.localhost', null]) expect(retiredLandingRedirect(h, 'https://biohack-tech.ro', '/', BASE, false)).toBeNull()
+  })
+
+  it('NEUROS Flow pages are recognized as discontinued, other product pages are not', () => {
+    for (const p of ['/products/brain-flow', '/products/brain-flow/', '/lp/brain-flow', '/lp/brain-flow/prezentare', '/prezentare/brain-flow']) expect(DISCONTINUED_PATH.test(p)).toBe(true)
+    for (const p of ['/products/calm', '/products', '/lp/amber', '/products/brain-flowx']) expect(DISCONTINUED_PATH.test(p)).toBe(false)
   })
 
   it('treats the main site, unknown and forged hosts as the main site', () => {
@@ -49,7 +63,7 @@ describe('what a landing hostname serves', () => {
     expect(routeLanding('focus', '/')).toEqual({ action: 'rewrite', path: '/lp/focus' })
     expect(routeLanding('focus', '/lp/focus')).toEqual({ action: 'redirect', path: '/' })
     // The cart lives in this origin's storage: cart, checkout and the product pages the cart links to stay here.
-    for (const p of ['/checkout', '/cart', '/products', '/products/brain-flow', '/comanda/abc_DEF-123', '/api/checkout', '/api/consent', '/api/contact', '/_next/static/x.js', '/politica-retur', '/retragere', '/retragere/confirmare', '/terms-of-service']) {
+    for (const p of ['/checkout', '/cart', '/products', '/products/amber', '/comanda/abc_DEF-123', '/api/checkout', '/api/consent', '/api/contact', '/_next/static/x.js', '/politica-retur', '/retragere', '/retragere/confirmare', '/terms-of-service']) {
       expect(routeLanding('focus', p)).toEqual({ action: 'next' })
     }
     for (const p of ['/admin', '/admin/orders/1', '/products/focus/extra', '/lp/calm', '/api/jobs/run', '/api/webhooks/stripe', '/about-us']) {
@@ -66,13 +80,12 @@ describe('www → apex', () => {
   })
 })
 
-describe('the four landings', () => {
+describe('the three landings', () => {
   it('one per product, same slug as the product page, not listed anywhere', () => {
     expect(landings.map((l) => [l.slug, l.productId])).toEqual([
       ['calm', 'balance-wave'],
       ['focus', 'brainlink-pro'],
       ['amber', 'ochelari-biohack'],
-      ['brain-flow', 'brain-flow'],
     ])
     for (const l of landings) expect(productHref(getProduct(l.productId)!)).toBe(`/products/${l.slug}`)
   })
@@ -84,7 +97,7 @@ describe('the four landings', () => {
     const text = sources.map((f) => readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')).join('\n') + JSON.stringify(landings.map((l) => [l.meta, l.faqs]))
     expect(text).not.toMatch(/[—–]/)
     expect(text).not.toMatch(/clienți mulțumiți|recenzi|★|stele|stoc limitat|ultimele bucăți|doar azi|ofertă expir|vindec|garantat|tratează|anxiet|depresi|insomni|studii arată|dovedit/i)
-    expect(text).not.toContain('Brain Flow')
+    expect(text).not.toMatch(/Brain Flow|NEUROS Flow/)
   })
 
   it('product pages: no unverifiable "users say" statements', () => {
@@ -93,9 +106,9 @@ describe('the four landings', () => {
   })
 
   it('the checkout link carries ids and campaign parameters only', () => {
-    const href = checkoutHref('brain-flow', { productId: 'brain-flow', variantId: '13-zone' }, {
+    const href = checkoutHref('amber', { productId: 'ochelari-biohack', variantId: 'patrat-maro' }, {
       search: '?utm_source=facebook&utm_medium=paid&utm_campaign=lansare&fbclid=abc&email=ana@x.ro&price=1',
-      host: 'brain-flow.biohack-tech.ro',
+      host: 'amber.biohack-tech.ro',
     })
     const q = new URL(href, 'https://x').searchParams
     expect(href.startsWith('/checkout?')).toBe(true)
@@ -103,9 +116,9 @@ describe('the four landings', () => {
       utm_source: 'facebook',
       utm_medium: 'paid',
       utm_campaign: 'lansare',
-      item: 'brain-flow:13-zone',
-      lp: 'brain-flow',
-      lp_host: 'brain-flow.biohack-tech.ro',
+      item: 'ochelari-biohack:patrat-maro',
+      lp: 'amber',
+      lp_host: 'amber.biohack-tech.ro',
     })
   })
 })

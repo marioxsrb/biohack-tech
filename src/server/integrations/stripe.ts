@@ -18,6 +18,8 @@ export class StripeError extends Error {
   ) {
     super(message)
   }
+  /** Stripe's 409 for a second identical request while the first is still running (safe to repeat). */
+  idempotencyInProgress = false
 }
 
 function encode(obj: Record<string, unknown>, prefix = '', out = new URLSearchParams()) {
@@ -30,7 +32,26 @@ function encode(obj: Record<string, unknown>, prefix = '', out = new URLSearchPa
   return out
 }
 
+/**
+ * Two identical requests at once (a double submit, a network retry): Stripe answers the second with 409
+ * "another in-progress request using this Idempotent Key" and asks to try again. Once the first finishes,
+ * the same key returns the same object, so the request is simply repeated a few times, briefly.
+ */
+const IN_PROGRESS_RETRIES = [400, 800, 1600, 3200]
+
 async function call<T>(c: StripeConfig, path: string, init?: { body?: Record<string, unknown>; idempotencyKey?: string }): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await callOnce<T>(c, path, init)
+    } catch (e) {
+      const inProgress = e instanceof StripeError && e.status === 409 && e.idempotencyInProgress && !!init?.idempotencyKey
+      if (!inProgress || attempt >= IN_PROGRESS_RETRIES.length) throw e
+      await new Promise((r) => setTimeout(r, IN_PROGRESS_RETRIES[attempt]))
+    }
+  }
+}
+
+async function callOnce<T>(c: StripeConfig, path: string, init?: { body?: Record<string, unknown>; idempotencyKey?: string }): Promise<T> {
   const res = await fetch(`${c.apiBase}/v1${path}`, {
     method: init?.body ? 'POST' : 'GET',
     headers: {
@@ -42,8 +63,12 @@ async function call<T>(c: StripeConfig, path: string, init?: { body?: Record<str
     cache: 'no-store',
     signal: AbortSignal.timeout(20_000),
   })
-  const json = (await res.json().catch(() => ({}))) as { error?: { message?: string; code?: string; decline_code?: string; payment_intent?: { id?: string } } }
-  if (!res.ok) throw new StripeError(json.error?.message ?? `Stripe ${res.status}`, res.status, json.error?.decline_code ?? json.error?.code, json.error?.payment_intent?.id)
+  const json = (await res.json().catch(() => ({}))) as { error?: { type?: string; message?: string; code?: string; decline_code?: string; payment_intent?: { id?: string } } }
+  if (!res.ok) {
+    const err = new StripeError(json.error?.message ?? `Stripe ${res.status}`, res.status, json.error?.decline_code ?? json.error?.code, json.error?.payment_intent?.id)
+    err.idempotencyInProgress = res.status === 409 && /in-progress request using this idempotent key/i.test(json.error?.message ?? '')
+    throw err
+  }
   return json as T
 }
 

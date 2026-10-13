@@ -22,7 +22,7 @@ const COPY = {
     amberText: 'Plătești două perechi. A treia este gratuită. Poți combina ramele.',
     amberLabel: 'Alege 3 perechi NEUROS Amber, plătești 2',
     amberCta: 'Alege 3 perechi',
-    note: 'Ofertele se cumulează. Reducerea de 10% sau 20% se calculează separat pentru fiecare produs: NEUROS Calm, Focus sau Flow.',
+    note: 'Ofertele se cumulează. Reducerea de 10% sau 20% se calculează separat pentru fiecare produs: NEUROS Calm sau Focus.',
     details: 'Detalii',
   },
   en: {
@@ -40,7 +40,7 @@ const COPY = {
     amberText: 'You pay for two pairs. The third one is free. You can mix the frames.',
     amberLabel: 'Choose 3 pairs of NEUROS Amber, pay for 2',
     amberCta: 'Choose 3 pairs',
-    note: 'The offers add up. The 10% or 20% discount is counted separately for each product: NEUROS Calm, Focus or Flow.',
+    note: 'The offers add up. The 10% or 20% discount is counted separately for each product: NEUROS Calm or Focus.',
     details: 'Details',
   },
 }
@@ -71,7 +71,7 @@ export async function Offers() {
 
       <div className="mt-10 grid gap-5 md:grid-cols-2">
         <article aria-labelledby="offer-bundle" className="on-dark relative flex flex-col overflow-hidden rounded-[24px] bg-dark p-[clamp(24px,3.2vw,40px)] text-white">
-          <p className="text-[13px] font-semibold tracking-[0.12em] text-cyan uppercase">NEUROS Calm · Focus · Flow</p>
+          <p className="text-[13px] font-semibold tracking-[0.12em] text-cyan uppercase">NEUROS Calm · Focus</p>
           <h3 id="offer-bundle" className="mt-5 !text-white">
             <span className="block text-[22px] font-medium tracking-[-0.02em] text-white/80">{t.products(minUnits)}</span>
             <span className="mt-1 block text-[clamp(56px,6vw,80px)] leading-[0.95] font-medium tracking-[-0.05em]">

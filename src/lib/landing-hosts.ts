@@ -5,7 +5,14 @@
  *
  * Locally the same page is at /lp/<slug>, and <slug>.localhost works outside production.
  */
-export const LANDING_SLUGS = ['calm', 'focus', 'amber', 'brain-flow'] as const
+export const LANDING_SLUGS = ['calm', 'focus', 'amber'] as const
+
+/**
+ * Landings of discontinued products (NEUROS Flow, 13.10.2026). Their hostname still resolves, so every
+ * request is sent permanently to the same path on the main site: the home page for "/", and an old order
+ * page (a Stripe return, an email link) keeps working. Nothing of the product is served or sold there.
+ */
+export const RETIRED_LANDING_SLUGS = ['brain-flow'] as const
 export type LandingSlug = (typeof LANDING_SLUGS)[number]
 
 export const isLandingSlug = (v: unknown): v is LandingSlug => typeof v === 'string' && (LANDING_SLUGS as readonly string[]).includes(v)
@@ -58,6 +65,22 @@ export function routeLanding(slug: LandingSlug, pathname: string): LandingRoute 
   if (LANDING_PASSTHROUGH.some((r) => r.test(pathname))) return { action: 'next' }
   return { action: 'redirect', path: pathname }
 }
+
+/** Where a request to a retired landing hostname goes (same path on the main site), or null for any other host. */
+export function retiredLandingRedirect(hostHeader: string | null | undefined, siteUrl: string, pathAndQuery: string, base = landingBaseDomain(), dev = process.env.NODE_ENV !== 'production'): string | null {
+  if (!hostHeader) return null
+  const raw = hostHeader.trim().toLowerCase()
+  const host = raw.replace(/:\d+$/, '').replace(/\.$/, '')
+  for (const slug of RETIRED_LANDING_SLUGS) {
+    if (host === landingHost(slug as unknown as LandingSlug, base)) return `${new URL(siteUrl).origin}${pathAndQuery}`
+    // Locally: brain-flow.localhost:3000 → localhost:3000.
+    if (dev && host === `${slug}.localhost`) return `http://${raw.replace(/^[^.]+\./, '')}${pathAndQuery}`
+  }
+  return null
+}
+
+/** Public paths of discontinued products. They answer 410 Gone, never another product's page. */
+export const DISCONTINUED_PATH = /^\/(products|lp|prezentare)\/brain-flow(\/prezentare)?\/?$/
 
 /**
  * www → apex: `www.<main host>` answers with a permanent redirect to the same path on the main site

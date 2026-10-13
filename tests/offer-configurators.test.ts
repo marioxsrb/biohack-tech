@@ -48,7 +48,7 @@ describe('NEUROS Amber 2+1 at any quantity', () => {
 })
 
 describe('quantity discount, per product', () => {
-  const P = { calm: 638000, focus: 79000, flow1: 1290000 }
+  const P = { calm: 638000, focus: 79000 }
   it('wording at 0, 1, 2, 3 eligible units', () => {
     const b = (lines: { productId: string; quantity: number; unitAmount: number }[]) => bundleCopy(promotionProgress(lines.map((l, i) => ({ key: String(i), ...l }))).find((p) => p.kind === 'bundle_percent') ?? null)
     expect(b([]).headline).toBe('Iei 2 bucăți din același produs: 10% reducere. Iei 3: 20%.')
@@ -57,9 +57,8 @@ describe('quantity discount, per product', () => {
     expect(b([{ productId: 'balance-wave', quantity: 3, unitAmount: P.calm }])).toMatchObject({ tone: 'active', headline: 'Reducerea de 20% la NEUROS Calm este activă.' })
   })
 
-  it('a pick is one product and a quantity; NEUROS Flow needs its configuration; nothing is chosen for the customer', () => {
-    expect(pickComplete({ productId: 'brain-flow', variantId: null, quantity: 3 })).toBe(false)
-    expect(pickComplete({ productId: 'brain-flow', variantId: '1-zona', quantity: 3 })).toBe(true)
+  it('a pick is one product and a quantity; nothing is chosen for the customer', () => {
+    expect(pickComplete({ productId: 'balance-wave', variantId: null, quantity: 3 })).toBe(true)
     expect(pickComplete({ productId: 'ochelari-biohack', variantId: 'cat-eye-bej', quantity: 3 })).toBe(false)
     expect(pickComplete({ productId: 'balance-wave', variantId: null, quantity: 0 })).toBe(false)
     expect(bundleToLines({ productId: 'brainlink-pro', variantId: null, quantity: 3 })).toEqual([{ productId: 'brainlink-pro', quantity: 3 }])
@@ -73,10 +72,10 @@ describe('quantity discount, per product', () => {
     expect(t).toMatchObject({ units: 3, percent: 20, subtotalMinor: 1914000, discountMinor: 382800, totalMinor: 1531200 })
   })
 
-  it('picker totals = server totals (3 NEUROS Flow 1 zone)', () => {
-    const pick = { productId: 'brain-flow' as const, variantId: '1-zona', quantity: 3 }
+  it('picker totals = server totals (3 NEUROS Focus)', () => {
+    const pick = { productId: 'brainlink-pro' as const, variantId: null, quantity: 3 }
     const t = bundleTotals([], pick)
-    expect(t).toMatchObject({ subtotalMinor: 3 * P.flow1, discountMinor: Math.floor((3 * P.flow1 * 20 + 50) / 100), units: 3 })
+    expect(t).toMatchObject({ subtotalMinor: 3 * P.focus, discountMinor: Math.floor((3 * P.focus * 20 + 50) / 100), units: 3 })
     const server = resolveOrderLines(bundleToLines(pick)!)
     expect(server.ok && [server.subtotal, server.discount, server.total]).toEqual([t.subtotalMinor, t.discountMinor, t.totalMinor])
   })

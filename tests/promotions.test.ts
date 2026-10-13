@@ -1,6 +1,6 @@
 /**
  * The promotion engine on the real catalog prices: the quantity discount counted per product (10% for 2,
- * 20% for 3+ units of the same Calm, Focus or NEUROS Flow), NEUROS Amber 2+1 gratis, stacking on separate
+ * 20% for 3+ units of the same Calm or Focus), NEUROS Amber 2+1 gratis, stacking on separate
  * products, rounding in whole bani.
  */
 import { describe, expect, it } from 'vitest'
@@ -10,13 +10,11 @@ import { allocate, percentOf, priceLines, promotionHints, promotionProgress, sav
 const CALM = 638000
 const FOCUS = 79000
 const AMBER = 31500
-const BF = { '1-zona': 1290000, '4-zone': 1490000, '13-zone': 1390000 }
 
 type L = { productId: string; variantId?: string; quantity: number }
 const calm = (quantity: number): L => ({ productId: 'balance-wave', quantity })
 const focus = (quantity: number): L => ({ productId: 'brainlink-pro', quantity })
 const amber = (quantity: number, variantId = 'cat-eye-negru'): L => ({ productId: 'ochelari-biohack', variantId, quantity })
-const bf = (variantId: keyof typeof BF, quantity = 1): L => ({ productId: 'brain-flow', variantId, quantity })
 
 function order(...lines: L[]) {
   const r = resolveOrderLines(lines)
@@ -38,8 +36,9 @@ describe('10% for 2, 20% for 3+ units of the same product', () => {
     ['2 Calm + 1 Focus: 10% on the 2 Calm only', [calm(2), focus(1)], percentOf(2 * CALM, 10)],
     ['3 Calm + 1 Focus: 20% on the Calm only, Focus at full price', [calm(3), focus(1)], percentOf(3 * CALM, 20)],
     ['3 Calm + 2 Focus: 20% on Calm, 10% on Focus', [calm(3), focus(2)], percentOf(3 * CALM, 20) + percentOf(2 * FOCUS, 10)],
-    ['1 Calm + 1 Focus + 1 NEUROS Flow 4 zone: nothing', [calm(1), focus(1), bf('4-zone')], 0],
-    ['3 NEUROS Flow, one of each configuration: one product', [bf('1-zona'), bf('4-zone'), bf('13-zone')], percentOf(BF['1-zona'] + BF['4-zone'] + BF['13-zone'], 20)],
+    ['1 Calm + 1 Focus + 1 Amber: nothing', [calm(1), focus(1), amber(1)], 0],
+    ['2 Focus: 10%', [focus(2)], percentOf(2 * FOCUS, 10)],
+    ['3 Focus: 20%', [focus(3)], percentOf(3 * FOCUS, 20)],
     ['2 Calm + 1 Amber: Amber does not count (10%, not 20%)', [calm(2), amber(1)], percentOf(2 * CALM, 10)],
     ['3 Amber: never triggers the 20%', [amber(3)], 0],
   ])('%s', (_, lines, expected) => {
@@ -112,6 +111,13 @@ describe('stacking on separate products', () => {
   })
 })
 
+describe('NEUROS Flow (discontinued)', () => {
+  it('is in no promotion: its lines get no discount and its order cannot be priced', () => {
+    expect(priceLines([{ key: 'f', productId: 'brain-flow', quantity: 3, unitAmount: 1290000 }]).discountMinor).toBe(0)
+    expect(resolveOrderLines([{ productId: 'brain-flow', variantId: '1-zona', quantity: 3 }])).toEqual({ ok: false, reason: 'BAD_LINE' })
+  })
+})
+
 describe('integer money', () => {
   it('percent rounds half up in whole bani; allocation always sums exactly', () => {
     expect(percentOf(1001, 20)).toBe(200) // 200.2
@@ -121,9 +127,9 @@ describe('integer money', () => {
     expect(allocate(7, [3, 3])).toEqual([4, 3])
     expect(allocate(0, [5])).toEqual([0])
     const odd = priceLines([
-      { key: 'a', productId: 'brain-flow', quantity: 1, unitAmount: 333 },
-      { key: 'b', productId: 'brain-flow', quantity: 1, unitAmount: 333 },
-      { key: 'c', productId: 'brain-flow', quantity: 1, unitAmount: 334 },
+      { key: 'a', productId: 'balance-wave', quantity: 1, unitAmount: 333 },
+      { key: 'b', productId: 'balance-wave', quantity: 1, unitAmount: 333 },
+      { key: 'c', productId: 'balance-wave', quantity: 1, unitAmount: 334 },
     ])
     expect(odd.discountMinor).toBe(200)
     expect(Object.values(odd.lineDiscounts).reduce((s, x) => s + x, 0)).toBe(200)

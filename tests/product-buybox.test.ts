@@ -64,9 +64,9 @@ describe('order buttons', () => {
     expect(cashOnDelivery).toEqual({ enabled: true })
   })
   it('"Comandă cu plata la livrare" carries product, variant, quantity and the method, never a price', () => {
-    const item = encodeItem({ productId: 'brain-flow', variantId: '13-zone', quantity: 2 })
-    expect(item).toBe('brain-flow:13-zone*2')
-    expect(parseItems(new URLSearchParams({ item, plata: 'ramburs' }))).toEqual([{ productId: 'brain-flow', variantId: '13-zone', quantity: 2, source: 'link' }])
+    const item = encodeItem({ productId: 'ochelari-biohack', variantId: 'patrat-maro', quantity: 2 })
+    expect(item).toBe('ochelari-biohack:patrat-maro*2')
+    expect(parseItems(new URLSearchParams({ item, plata: 'ramburs' }))).toEqual([{ productId: 'ochelari-biohack', variantId: 'patrat-maro', quantity: 2, source: 'link' }])
     const btn = read('src/components/cart/BuyNowButton.tsx')
     expect(btn).toContain("plata: pay === 'cod' ? 'ramburs' : 'card'")
     expect(btn).toContain("cod: 'Comandă cu plata la livrare'")

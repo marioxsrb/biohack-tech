@@ -1,5 +1,5 @@
 /**
- * Phase 3/4 end to end on the real catalog (no price mocks): NEUROS Flow configurations across both
+ * Phase 3/4 end to end on the real catalog (no price mocks): NEUROS Amber frames across both
  * payment methods, landing attribution from the checkout request to the CRM, the fulfillment and
  * return lifecycle, and checkout recovery with a variant. External APIs are stubbed at the HTTP boundary.
  */
@@ -51,18 +51,18 @@ beforeEach(async () => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
-describe('payment matrix: NEUROS Flow configuration × payment method', () => {
+describe('payment matrix: NEUROS Amber frame × payment method', () => {
   const cases = [
-    ['1-zona', 1290000],
-    ['4-zone', 1490000],
-    ['13-zone', 1390000],
+    ['cat-eye-negru', 31500],
+    ['cat-eye-bej', 31500],
+    ['patrat-maro', 31500],
   ] as const
   for (const [variantId, amount] of cases) {
     for (const method of ['card', 'transfer'] as const) {
       it(`${variantId} by ${method}: canonical total, right initial state and follow-ups`, async () => {
-        const { order } = await svc.placeOrder({ lines: lines([{ productId: 'brain-flow', variantId, quantity: 1 }]), form: { ...person, paymentMethod: method }, attemptId: `m-${variantId}-${method}` })
+        const { order } = await svc.placeOrder({ lines: lines([{ productId: 'ochelari-biohack', variantId, quantity: 1 }]), form: { ...person, paymentMethod: method }, attemptId: `m-${variantId}-${method}` })
         expect(order.totalMinor).toBe(amount)
-        expect(order.items[0]).toMatchObject({ variantId, unitPriceMinor: amount, sku: `brain-flow/${variantId}` })
+        expect(order.items[0]).toMatchObject({ variantId, unitPriceMinor: amount, sku: `ochelari-biohack/${variantId}` })
         const kinds = (await jobs.forOrder(db, order.id)).map((j) => j.kind).sort()
         if (method === 'card') {
           expect(order.paymentStatus).toBe('pending')
@@ -84,25 +84,25 @@ describe('landing attribution: checkout request → order → CRM', () => {
   it('keeps the validated landing and UTM, reprices a tampered line, and syncs the source to GHL', async () => {
     const res = await checkout(
       req({
-        lines: [{ productId: 'brain-flow', variantId: '13-zone', quantity: 1, unitAmount: 1, price: 1 }],
+        lines: [{ productId: 'balance-wave', quantity: 1, unitAmount: 1, price: 1 }],
         order: { ...person, paymentMethod: 'transfer' },
         acceptedTerms: true,
         attemptId: 'lp-attempt-1',
-        attribution: { lp: 'brain-flow', lp_host: 'brain-flow.biohack-tech.ro', utm_source: 'facebook', utm_medium: 'paid', utm_campaign: 'lansare', gclid: 'x', total: 1 },
+        attribution: { lp: 'calm', lp_host: 'calm.biohack-tech.ro', utm_source: 'facebook', utm_medium: 'paid', utm_campaign: 'lansare', gclid: 'x', total: 1 },
       }),
     )
     expect(res.status).toBe(200)
     const { token } = await res.json()
     const order = (await orders.byToken(db, token))!
-    expect(order.totalMinor).toBe(1390000)
+    expect(order.totalMinor).toBe(638000)
     expect(order.attribution).toEqual({
-      landing: 'brain-flow',
-      landingHost: 'brain-flow.biohack-tech.ro',
+      landing: 'calm',
+      landingHost: 'calm.biohack-tech.ro',
       landingPath: '/',
       utm: { utm_source: 'facebook', utm_medium: 'paid', utm_campaign: 'lansare' },
     })
     await runDueJobs()
-    expect(field('contact.bt_last_order_source')).toBe('landing brain-flow · facebook / paid / lansare')
+    expect(field('contact.bt_last_order_source')).toBe('landing calm · facebook / paid / lansare')
   })
 
   it('an order through the main site is recorded as "site"; garbage attribution is dropped', async () => {
@@ -116,7 +116,7 @@ describe('landing attribution: checkout request → order → CRM', () => {
 
 describe('fulfillment and returns', () => {
   async function paidOrder(id = 'f-1') {
-    const { order } = await svc.placeOrder({ lines: lines([{ productId: 'brain-flow', variantId: '4-zone', quantity: 1 }]), form: { ...person, paymentMethod: 'transfer' }, attemptId: id })
+    const { order } = await svc.placeOrder({ lines: lines([{ productId: 'brainlink-pro', quantity: 1 }]), form: { ...person, paymentMethod: 'transfer' }, attemptId: id })
     await svc.confirmPayment(order.id, 'admin')
     return order
   }
@@ -144,7 +144,7 @@ describe('fulfillment and returns', () => {
     const o = await paidOrder('f-2')
     await svc.markShipped(o.id, 'admin', { courier: 'X', trackingNumber: 'AWB9' })
     await svc.markDelivered(o.id, 'admin')
-    const { matched } = await recordWithdrawal({ name: 'Ana Popescu', email: person.email, orderNumber: o.orderNumber, items: 'NEUROS Flow', message: '' })
+    const { matched } = await recordWithdrawal({ name: 'Ana Popescu', email: person.email, orderNumber: o.orderNumber, items: 'NEUROS Focus', message: '' })
     expect(matched).toBe(true)
     let now = (await orders.byId(db, o.id))!
     expect(now.returnStatus).toBe('requested')
@@ -170,11 +170,11 @@ describe('fulfillment and returns', () => {
 })
 
 describe('abandoned checkout regression with a variant', () => {
-  it('a NEUROS Flow card attempt with consent is recoverable and the link restores the same configuration', async () => {
-    const { order } = await svc.placeOrder({ lines: lines([{ productId: 'brain-flow', variantId: '13-zone', quantity: 1 }]), form: { ...person, marketingConsent: true }, attemptId: 'ab-1' })
+  it('a NEUROS Amber card attempt with consent is recoverable and the link restores the same frame', async () => {
+    const { order } = await svc.placeOrder({ lines: lines([{ productId: 'ochelari-biohack', variantId: 'cat-eye-bej', quantity: 1 }]), form: { ...person, marketingConsent: true }, attemptId: 'ab-1' })
     await svc.markAbandonedIfUnpaid(order.id)
     const o = (await orders.byId(db, order.id))!
     expect([o.status, o.recoveryStatus]).toEqual(['abandoned', 'eligible'])
-    expect(await recoveryCart(o.recoveryToken!)).toEqual([{ productId: 'brain-flow', variantId: '13-zone', quantity: 1 }])
+    expect(await recoveryCart(o.recoveryToken!)).toEqual([{ productId: 'ochelari-biohack', variantId: 'cat-eye-bej', quantity: 1 }])
   })
 })
