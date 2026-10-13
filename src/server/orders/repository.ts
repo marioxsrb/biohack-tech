@@ -93,6 +93,31 @@ async function one(q: Queryable, sql: string, params: unknown[]): Promise<Order 
   return (await withItems(q, rows))[0] ?? null
 }
 
+/**
+ * The /admin work queues: what each person has to do next, straight from the order's own state.
+ * "Atenție" gathers everything a person must settle: money to refund, invoices without a credit note,
+ * failed invoices, returns waiting and synchronisations that stopped.
+ */
+export const QUEUES = {
+  atentie: {
+    label: 'Necesită atenție',
+    where: `(status = 'cancelled' and payment_status in ('paid', 'partially_refunded'))
+      or (fgo_invoice_number is not null and fgo_storno_number is null and (status = 'cancelled' or payment_status = 'refunded'))
+      or invoice_status = 'failed' or return_status = 'requested'
+      or exists (select 1 from jobs j where j.order_id = orders.id and j.status in ('failed', 'retry'))`,
+  },
+  transfer: { label: 'Așteaptă transferul', where: `payment_status = 'awaiting_transfer' and status <> 'cancelled'` },
+  pregatire: { label: 'De pregătit', where: `status in ('confirmed', 'processing') and payment_status in ('paid', 'partially_refunded', 'awaiting_collection')` },
+  expediate: { label: 'Expediate', where: `status = 'shipped'` },
+  incasare: { label: 'Ramburs de încasat', where: `payment_status = 'awaiting_collection' and status in ('shipped', 'delivered')` },
+  livrate: { label: 'Livrate', where: `status = 'delivered'` },
+  retururi: { label: 'Retururi', where: `return_status is not null` },
+  anulate: { label: 'Anulate și rambursate', where: `status = 'cancelled' or payment_status in ('refunded', 'partially_refunded')` },
+  nefinalizate: { label: 'Card nefinalizat', where: `payment_method = 'card' and status in ('pending', 'abandoned')` },
+} as const
+export type QueueKey = keyof typeof QUEUES
+export const isQueue = (k: string): k is QueueKey => Object.prototype.hasOwnProperty.call(QUEUES, k)
+
 export const orders = {
   byId: async (q: Queryable, id: string, lock = false) => (UUID.test(id) ? one(q, `select * from orders where id = $1${lock ? ' for update' : ''}`, [id]) : null),
   byToken: (q: Queryable, token: string) => one(q, 'select * from orders where public_token = $1', [token]),
@@ -125,15 +150,23 @@ export const orders = {
     return withItems(q, rows)
   },
 
-  async list(q: Queryable, opts: { limit?: number; search?: string } = {}) {
+  async list(q: Queryable, opts: { limit?: number; search?: string; queue?: QueueKey } = {}) {
     const params: unknown[] = [opts.limit ?? 100]
-    let where = ''
+    const where: string[] = []
     if (opts.search) {
       params.push(`%${opts.search.toLowerCase()}%`)
-      where = `where lower(order_number) like $2 or lower(email) like $2 or lower(customer->>'lastName') like $2 or lower(coalesce(customer->>'company','')) like $2`
+      where.push(`(lower(order_number) like $2 or lower(email) like $2 or lower(customer->>'lastName') like $2 or lower(coalesce(customer->>'company','')) like $2)`)
     }
-    const { rows } = await q.query(`select * from orders ${where} order by created_at desc limit $1`, params)
+    if (opts.queue && QUEUES[opts.queue]) where.push(`(${QUEUES[opts.queue].where})`)
+    const { rows } = await q.query(`select * from orders ${where.length ? `where ${where.join(' and ')}` : ''} order by created_at desc limit $1`, params)
     return withItems(q, rows)
+  },
+
+  /** How many orders sit in each work queue (the /admin filters). */
+  async queueCounts(q: Queryable): Promise<Record<QueueKey, number>> {
+    const keys = Object.keys(QUEUES) as QueueKey[]
+    const { rows } = await q.query<Record<string, string>>(`select ${keys.map((k) => `count(*) filter (where ${QUEUES[k].where}) as "${k}"`).join(', ')} from orders`)
+    return Object.fromEntries(keys.map((k) => [k, Number(rows[0][k] ?? 0)])) as Record<QueueKey, number>
   },
 
   /**

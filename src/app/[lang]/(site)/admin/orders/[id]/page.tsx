@@ -44,6 +44,20 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
   const cod = awaitsCollection(o)
   const ship = shipmentFor(o)
   const [parent, child] = await Promise.all([o.parentOrderId ? orders.byId(db, o.parentOrderId) : null, orders.childOf(db, o.id)])
+  // What happened to the CRM record, from the order's own sync jobs (GHL is never asked from this page).
+  const crmJobs = jobList.filter((j) => j.kind === 'ghl.sync')
+  const crmStuck = crmJobs.find((j) => j.status === 'failed') ?? crmJobs.find((j) => j.status === 'retry')
+  const crmState = !c.ghl
+    ? 'neconfigurat'
+    : crmStuck
+      ? `${crmStuck.status === 'failed' ? 'oprită, are nevoie de o persoană' : `reîncercare ${crmStuck.attempts}`}: ${crmStuck.lastError ?? ''}`
+      : crmJobs.some((j) => j.status === 'pending' || j.status === 'running')
+        ? 'în curs'
+        : o.ghlOpportunityId
+          ? 'sincronizată'
+          : o.paymentMethod === 'card'
+            ? 'se trimite după plată sau la abandon'
+            : 'nesincronizată încă'
   const UPSELL: Record<string, string> = { offered: 'oferită, fără răspuns încă', declined: 'refuzată de client', accepted: 'acceptată', expired: 'expirată (fără răspuns)' }
 
   return (
@@ -205,8 +219,9 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
               {events.map((e, i) => (
                 <li key={i} className="flex gap-3">
                   <span className="w-[130px] flex-none text-muted tabular-nums">{dt(e.created_at)}</span>
-                  <span>
+                  <span className="min-w-0 [overflow-wrap:anywhere]">
                     <span className="font-medium">{e.type}</span> <span className="text-muted">· {e.source}</span>
+                    {eventDetails(e.data) && <span className="block text-[13px] text-muted">{eventDetails(e.data)}</span>}
                   </span>
                 </li>
               ))}
@@ -223,6 +238,7 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                   <p className="text-[14px] text-text">
                     Confirmă doar după ce vezi în extras <strong>{formatLei(o.totalMinor)}</strong> cu referința <strong>{o.orderNumber}</strong>.
                   </p>
+                  <Confirm text={`Am văzut ${formatLei(o.totalMinor)} în extras, cu referința ${o.orderNumber}.`} />
                   <button className="cta sm mt-3">Plata a fost primită</button>
                 </form>
               )}
@@ -234,6 +250,7 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                   </p>
                   <input name="amount" inputMode="decimal" required placeholder={`Suma decontată, ex. ${(ship.cashOnDeliveryMinor / 100).toFixed(2)}`} className="field !min-h-11 !py-2" aria-label="Suma decontată în lei" />
                   <input name="reference" required minLength={3} placeholder="Referința decontului (borderou / OP)" className="field !min-h-11 !py-2" aria-label="Referința decontului" />
+                  <Confirm text="Curierul a decontat suma, iar referința e corectă." />
                   <button className="cta sm w-full">Rambursul a fost încasat</button>
                   <p className="text-[13px] text-muted">Suma trebuie să fie exact totalul comenzii. Altfel, nimic nu se schimbă.</p>
                 </form>
@@ -273,6 +290,7 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                   <input type="hidden" name="id" value={o.id} />
                   <p className="text-[14px] text-text">După ce ai returnat banii din bancă, înregistrează totalul rambursat până acum (lei).</p>
                   <input name="amount" inputMode="decimal" required placeholder={`ex. ${(o.totalMinor / 100).toFixed(2)}`} className="field !min-h-11 !py-2" aria-label="Total rambursat în lei" />
+                  <Confirm text="Banii au plecat deja din bancă." />
                   <button className="btn-secondary sm w-full">Înregistrează rambursarea</button>
                 </form>
               )}
@@ -301,6 +319,7 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                 <form action={cancelAction} className="space-y-2">
                   <input type="hidden" name="id" value={o.id} />
                   <input name="reason" placeholder="Motivul anulării" className="field !min-h-11 !py-2" aria-label="Motivul anulării" />
+                  <Confirm text="Anulez comanda. Clientul primește emailul de anulare." />
                   <button className="btn-secondary sm w-full !text-red-deep">Anulează comanda</button>
                   {paid && <p className="text-[13px] text-muted">Comanda este plătită: fă rambursarea din Stripe (card) sau din bancă (transfer, ramburs).</p>}
                   {cod && o.status === 'shipped' && <p className="text-[13px] text-muted">Pentru un colet refuzat la livrare: nu s-a încasat nimic.</p>}
@@ -323,6 +342,7 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                 ['Stripe', o.stripePaymentIntentId ?? '–'],
                 ['Factură', o.fgoInvoiceNumber ? `${o.fgoInvoiceSeries} ${o.fgoInvoiceNumber}` : INVOICE_LABEL[o.invoiceStatus]],
                 ['Storno', o.fgoStornoNumber ?? '–'],
+                ['Stare GHL', crmState],
                 ['GHL contact', o.ghlContactId ?? '–'],
                 ['GHL oportunitate', o.ghlOpportunityId ?? '–'],
                 ['Curier / AWB', o.trackingNumber ? `${o.courier} · ${o.trackingNumber}` : '–'],
@@ -375,6 +395,26 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
       </div>
     </>
   )
+}
+
+/** A sensitive action needs a ticked box; the Server Action checks it too. */
+function Confirm({ text }: { text: string }) {
+  return (
+    <label className="mt-2 flex items-start gap-2 text-[13.5px] text-text">
+      <input type="checkbox" name="confirm" value="da" required className="mt-1" />
+      <span>{text}</span>
+    </label>
+  )
+}
+
+/** The useful part of an event's data, in one line (no personal data is stored in events). */
+function eventDetails(data: Record<string, unknown>) {
+  const LABEL: Record<string, string> = { courier: 'curier', trackingNumber: 'AWB', reason: 'motiv', amount: 'sumă', refundedMinor: 'rambursat', codAmount: 'ramburs', reference: 'referință', series: 'serie', number: 'număr', template: 'email', via: 'prin', eventId: 'eveniment Stripe' }
+  const MONEY = new Set(['amount', 'refundedMinor', 'codAmount', 'amountMinor'])
+  return Object.entries(data ?? {})
+    .filter(([k, v]) => LABEL[k] && v !== null && v !== undefined && v !== '')
+    .map(([k, v]) => `${LABEL[k]}: ${MONEY.has(k) && typeof v === 'number' ? formatLei(v) : String(v)}`)
+    .join(' · ')
 }
 
 function Panel({ title, children }: { title: string; children: React.ReactNode }) {

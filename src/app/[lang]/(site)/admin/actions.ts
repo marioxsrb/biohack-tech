@@ -23,6 +23,8 @@ async function guard() {
 }
 
 const text = (f: FormData, k: string, max = 200) => String(f.get(k) ?? '').trim().slice(0, max)
+/** Money and cancellations need the ticked confirmation box; without it nothing changes. */
+const confirmed = (f: FormData) => f.get('confirm') === 'da'
 
 async function done(id: string, action: string, changed: boolean) {
   log.info('admin.action', { orderId: id, action, changed })
@@ -34,6 +36,7 @@ async function done(id: string, action: string, changed: boolean) {
 export async function markPaidAction(f: FormData) {
   await guard()
   const id = text(f, 'id')
+  if (!confirmed(f)) return
   const r = await confirmPayment(id, 'admin')
   await done(id, 'mark_paid', r.changed)
 }
@@ -47,7 +50,7 @@ export async function codCollectedAction(f: FormData) {
   const id = text(f, 'id')
   const lei = Number(text(f, 'amount', 20).replace(/\./g, '').replace(',', '.'))
   const reference = text(f, 'reference', 120)
-  if (!Number.isFinite(lei) || lei <= 0 || reference.length < 3) return
+  if (!confirmed(f) || !Number.isFinite(lei) || lei <= 0 || reference.length < 3) return
   const r = await confirmPayment(id, 'admin', { amountMinor: Math.round(lei * 100), currency: 'RON', reference })
   await done(id, 'cod_collected', r.changed)
 }
@@ -90,6 +93,7 @@ export async function deliveredAction(f: FormData) {
 export async function cancelAction(f: FormData) {
   await guard()
   const id = text(f, 'id')
+  if (!confirmed(f)) return
   const reason = text(f, 'reason', 300) || 'anulată de echipă'
   await done(id, 'cancel', (await cancelOrder(id, 'admin', reason)).changed)
 }
@@ -99,7 +103,7 @@ export async function refundAction(f: FormData) {
   await guard()
   const id = text(f, 'id')
   const lei = Number(text(f, 'amount', 20).replace(/\./g, '').replace(',', '.'))
-  if (!Number.isFinite(lei) || lei <= 0) return
+  if (!confirmed(f) || !Number.isFinite(lei) || lei <= 0) return
   await done(id, 'refund', (await recordRefund(id, 'admin', Math.round(lei * 100))).changed)
 }
 

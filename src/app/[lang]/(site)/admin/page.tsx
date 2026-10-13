@@ -5,7 +5,7 @@ import { loadConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { jobs } from '@/server/jobs/outbox'
 import { customerName } from '@/server/orders/model'
-import { orders } from '@/server/orders/repository'
+import { isQueue, orders, QUEUES, type QueueKey } from '@/server/orders/repository'
 import { withdrawals } from '@/server/orders/withdrawal'
 import { enquiries } from '@/server/enquiries'
 import { retryJobsAction } from './actions'
@@ -16,15 +16,19 @@ const dt = (d: Date) => d.toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest'
 /** Every order at a glance, newest first, plus anything that needs a person. */
 export default async function AdminPage({ searchParams }: PageProps<'/[lang]/admin'>) {
   await connection()
-  const q = String((await searchParams).q ?? '').trim().slice(0, 80)
+  const sp = await searchParams
+  const q = String(sp.q ?? '').trim().slice(0, 80)
+  const queueParam = String(sp.coada ?? '')
+  const queue: QueueKey | undefined = isQueue(queueParam) ? queueParam : undefined
   const { issues } = loadConfig()
   const db = await getDb()
-  const [list, problems, withdrawalList, messageCounts, followUps] = await Promise.all([
-    orders.list(db, { limit: 150, search: q || undefined }),
+  const [list, problems, withdrawalList, messageCounts, followUps, counts] = await Promise.all([
+    orders.list(db, { limit: 150, search: q || undefined, queue }),
     jobs.problems(db),
     withdrawals.recent(20),
     enquiries.counts(),
     orders.followUps(db),
+    orders.queueCounts(db),
   ])
   const numberOf = new Map(list.map((o) => [o.id, o.orderNumber]))
   const errors = issues.filter((i) => i.level === 'error')
@@ -34,10 +38,27 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
       <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
         <h1 className="text-[34px] tracking-[-0.03em]">Comenzi</h1>
         <form className="flex gap-2">
+          {queue && <input type="hidden" name="coada" value={queue} />}
           <input name="q" defaultValue={q} placeholder="Număr, email, nume, firmă" className="field !min-h-11 w-[280px] !py-2" aria-label="Caută comenzi" />
           <button className="btn-secondary sm !min-h-11">Caută</button>
         </form>
       </div>
+
+      <nav aria-label="Cozi de lucru" className="mt-4 flex flex-wrap gap-2 text-[14px]">
+        <Link href={q ? `/admin?q=${encodeURIComponent(q)}` : '/admin'} className={`rounded-full px-3.5 py-1.5 ${!queue ? 'bg-ink text-paper' : 'bg-paper text-ink'}`} aria-current={!queue ? 'page' : undefined}>
+          Toate
+        </Link>
+        {(Object.keys(QUEUES) as QueueKey[]).map((k) => (
+          <Link
+            key={k}
+            href={`/admin?coada=${k}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+            aria-current={queue === k ? 'page' : undefined}
+            className={`rounded-full px-3.5 py-1.5 tabular-nums ${queue === k ? 'bg-ink text-paper' : k === 'atentie' && counts[k] > 0 ? 'bg-[#fdecec] text-red-deep' : 'bg-paper text-ink'}`}
+          >
+            {QUEUES[k].label} · {counts[k]}
+          </Link>
+        ))}
+      </nav>
 
       {errors.length > 0 && (
         <div className="mt-6 rounded-[14px] bg-[#fdecec] px-5 py-4 text-[14.5px] text-ink">
@@ -177,7 +198,7 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
             {!list.length && (
               <tr>
                 <td colSpan={8} className="px-4 py-10 text-center text-muted">
-                  {q ? 'Nicio comandă găsită.' : 'Încă nu există comenzi.'}
+                  {q || queue ? 'Nicio comandă găsită.' : 'Încă nu există comenzi.'}
                 </td>
               </tr>
             )}

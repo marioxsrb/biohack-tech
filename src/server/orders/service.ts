@@ -471,7 +471,7 @@ export function markDelivered(orderId: string, source: Source) {
 export function cancelOrder(orderId: string, source: Source, reason: string) {
   return transition(orderId, source, async (o) => {
     if (!canCancel(o)) return { skip: `status_${o.status}` }
-    return { patch: { status: 'cancelled', cancelled_at: new Date(), cancel_reason: reason.slice(0, 300) }, event: 'order.cancelled', data: { wasPaid: isPaid(o.paymentStatus) } }
+    return { patch: { status: 'cancelled', cancelled_at: new Date(), cancel_reason: reason.slice(0, 300) }, event: 'order.cancelled', data: { wasPaid: isPaid(o.paymentStatus), reason: reason.slice(0, 300) } }
   })
 }
 
