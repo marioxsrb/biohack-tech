@@ -212,6 +212,10 @@ describe('post-purchase offer', () => {
     expect(kinds).toEqual(expect.arrayContaining(['fgo.invoice', 'ghl.sync', 'email.send']))
     expect(kinds).not.toContain('order.abandon_check')
     await drain()
+    // Its own CRM record, named after the parent, so the team packs both in one parcel.
+    const names = calls.filter((c) => /\/opportunities\/(opp-1)?$/.test(c.url) && c.json?.name).map((c) => String(c.json!.name))
+    expect(names.filter((n) => n.startsWith(child.orderNumber))).toEqual(expect.arrayContaining([`${child.orderNumber} · Ana Popescu · adăugată la ${parent.orderNumber}`]))
+    expect(names.filter((n) => n.startsWith(parent.orderNumber)).every((n) => !n.includes('adăugată la'))).toBe(true)
     expect(calls.some((c) => c.url.includes('/v1/payment_methods/pm_1/detach'))).toBe(true)
     expect((await orders.byId(db, parent.id))!.stripePaymentMethodId).toBeNull()
     // The webhook for the extra payment, delivered later, changes nothing.

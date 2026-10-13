@@ -37,7 +37,8 @@ async function syncCrm(orderId: string) {
   const contactId = await ghl.upsertContact(c.ghl, latest, await orders.lifetime(db, o.email), m.fields, c.siteUrl)
   await ghl.addTags(c.ghl, contactId, [...tagsFor(o), ...(m.recoverable ? [TAGS.recovery] : [])])
   if (!m.recoverable && m.hadRecovery) await ghl.removeTags(c.ghl, contactId, [TAGS.recovery])
-  const oppId = await ghl.syncOpportunity(c.ghl, o, contactId, o.ghlOpportunityId)
+  const parentNumber = o.parentOrderId ? (await orders.byId(db, o.parentOrderId))?.orderNumber : null
+  const oppId = await ghl.syncOpportunity(c.ghl, o, contactId, o.ghlOpportunityId, parentNumber)
   if (contactId !== o.ghlContactId || oppId !== o.ghlOpportunityId) await orders.update(db, o.id, { ghl_contact_id: contactId, ghl_opportunity_id: oppId })
   return contactId
 }

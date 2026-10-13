@@ -252,8 +252,11 @@ export const ghl = {
     if (tags.length) await call(c, 'DELETE', `/contacts/${contactId}/tags`, { tags })
   },
 
-  /** Creates the order's opportunity once (found again by name if our id was lost), then moves it. */
-  async syncOpportunity(c: GhlConfig, o: Order, contactId: string, knownId: string | null) {
+  /**
+   * Creates the order's opportunity once (found again by name if our id was lost), then moves it. An order
+   * added after payment (post-purchase offer) names its parent, so the team packs both in one parcel.
+   */
+  async syncOpportunity(c: GhlConfig, o: Order, contactId: string, knownId: string | null, parentOrderNumber?: string | null) {
     const { stage, status } = stageFor(o)
     const ids = await stageIds(c)
     let stageId = ids.get(STAGES[stage].toLowerCase())
@@ -265,7 +268,7 @@ export const ghl = {
     }
     if (!stageId) throw new GhlError(`etapa „${STAGES[stage]}” lipsește din pipeline`, 404)
     const body = {
-      name: `${o.orderNumber} · ${customerName(o.customer)}`,
+      name: `${o.orderNumber} · ${customerName(o.customer)}${parentOrderNumber ? ` · adăugată la ${parentOrderNumber}` : ''}`,
       pipelineStageId: stageId,
       status,
       monetaryValue: Number(((o.totalMinor - o.refundedMinor) / 100).toFixed(2)),
