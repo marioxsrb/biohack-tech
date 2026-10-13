@@ -98,7 +98,7 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     }
     if (!NOTIFICATIONS[event].stillTrue(o, ctx)) throw new Skip(`no longer true: ${o.status} / ${o.paymentStatus}`)
     const mail = renderNotification(event, o, ctx)
-    const ref = await deliver(c, { ...mail, to: c.email.notifyTo!, name: `notify-${j.dedupeKey.replace(/[^\w.-]+/g, '-')}` })
+    const ref = await deliver(c, { ...mail, to: c.email.notifyTo!, name: j.dedupeKey.replace(/[^\w.-]+/g, '-') })
     await orders.event(db, o.id, 'notify.sent', 'system', { event, ref })
     return ref
   },
