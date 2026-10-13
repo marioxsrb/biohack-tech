@@ -93,4 +93,15 @@ describe('transactional emails', () => {
     expect(bank.text).toContain('199,50 lei')
     expect(bank.html).toContain(`/comanda/${order.publicToken}`)
   })
+
+  it('the cancellation email says exactly where the money stands', async () => {
+    const { order } = await placeOrder({ lines: lines([{ productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 1 }]), form: { ...person, paymentMethod: 'transfer' }, attemptId: 'a-mail-2' })
+    const ctx = { siteUrl: 'https://test.biohack-tech.ro', bank: getConfig().bank }
+    const say = (paymentStatus: typeof order.paymentStatus) => renderEmail('order_cancelled', { ...order, status: 'cancelled', paymentStatus }, ctx).text
+    expect(say('awaiting_transfer')).toContain('Nu ai nimic de plătit')
+    expect(say('awaiting_collection')).toContain('Nu ai nimic de plătit')
+    expect(say('paid')).toContain('îți este returnată')
+    expect(say('refunded')).toContain('ți-a fost returnată')
+    expect(say('refunded')).not.toContain('nimic de plătit')
+  })
 })

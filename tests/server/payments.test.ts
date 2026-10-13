@@ -100,18 +100,73 @@ describe('Stripe webhook route', () => {
 
   it('refuses events for another PaymentIntent, another amount or currency', async () => {
     const { order, piId } = await cardOrder()
-    expect((await deliver(event('payment_intent.succeeded', intent(order, 'pi_other')))).body.outcome).toBe('intent_mismatch')
+    expect((await deliver(event('payment_intent.succeeded', intent(order, 'pi_other')))).body.outcome).toBe('attention:intent_mismatch')
     expect((await deliver(event('payment_intent.payment_failed', intent(order, 'pi_other')))).body.outcome).toBe('intent_mismatch')
-    expect((await deliver(event('payment_intent.succeeded', intent(order, piId, { amount_received: 100 })))).body.outcome).toBe('amount_mismatch')
-    expect((await deliver(event('payment_intent.succeeded', intent(order, piId, { currency: 'eur' })))).body.outcome).toBe('amount_mismatch')
+    expect((await deliver(event('payment_intent.succeeded', intent(order, piId, { amount_received: 100 })))).body.outcome).toBe('attention:amount_mismatch')
+    expect((await deliver(event('payment_intent.succeeded', intent(order, piId, { currency: 'eur' })))).body.outcome).toBe('attention:amount_mismatch')
     expect((await orders.byId(db, order.id))!.paymentStatus).toBe('pending')
   })
 
   it('ignores events from the other Stripe mode and events for unknown orders', async () => {
     const { order, piId } = await cardOrder()
     expect((await deliver(event('payment_intent.succeeded', intent(order, piId), { livemode: true }))).body).toEqual({ ignored: 'mode mismatch' })
-    expect((await deliver(event('payment_intent.succeeded', { id: 'pi_nobody', amount_received: 1, currency: 'ron', metadata: {} }))).body.outcome).toBe('order_not_found')
+    expect((await deliver(event('payment_intent.succeeded', { id: 'pi_nobody', amount_received: 1, currency: 'ron', metadata: {} }))).body.outcome).toBe('unrelated')
     expect((await orders.byId(db, order.id))!.paymentStatus).toBe('pending')
+  })
+})
+
+describe('Stripe webhook on a shared NEUROS account', () => {
+  const followUps = () => orders.followUps(db)
+
+  it('another NEUROS shop\'s payments are acknowledged as unrelated: no order, no alert, no retry', async () => {
+    // The real shape seen in production on 2 and 4 Oct 2026: a book sold by another NEUROS site.
+    const book = { id: 'pi_book', amount: 13189, amount_received: 13189, currency: 'ron', metadata: { product: 'diana-book', language: 'ro' } }
+    for (const type of ['payment_intent.succeeded', 'payment_intent.canceled', 'payment_intent.payment_failed']) {
+      expect(await deliver(event(type, book))).toEqual({ status: 200, body: { received: true, outcome: 'unrelated' } })
+    }
+    expect(await deliver(event('charge.refunded', { id: 'ch_book', payment_intent: 'pi_book', amount_refunded: 13189, metadata: {} }))).toEqual({ status: 200, body: { received: true, outcome: 'unrelated' } })
+    expect((await db.query('select 1 from orders')).rows).toHaveLength(0)
+    expect((await db.query('select 1 from order_events')).rows).toHaveLength(0)
+    expect((await followUps()).payments).toEqual([])
+  })
+
+  it('money of ours that cannot be applied is acknowledged but flagged for a person, with the order history', async () => {
+    const { order, piId } = await cardOrder()
+    await svc.cancelOrder(order.id, 'admin', 'clientul a renunțat')
+    // Paid after the order was cancelled: Stripe has the money, the order cannot take it.
+    const late = await deliver(event('payment_intent.succeeded', intent(order, piId)))
+    expect(late.status).toBe(200)
+    expect(late.body.outcome).toBe('attention:paid_after_cancel')
+    // The money is recorded, the order stays cancelled, and nothing tells the customer it is confirmed.
+    expect((await orders.byId(db, order.id))!).toMatchObject({ status: 'cancelled', paymentStatus: 'paid', invoiceStatus: 'none' })
+    const kinds = (await db.query<{ kind: string; payload: { template?: string } }>('select kind, payload from jobs where order_id = $1', [order.id])).rows
+    expect(kinds.some((j) => j.payload?.template === 'order_confirmed' || j.kind === 'fgo.invoice')).toBe(false)
+    expect(await eventTypes(order.id)).toEqual(expect.arrayContaining(['payment.after_cancel', 'payment.attention']))
+    const f = await followUps()
+    expect(f.payments).toEqual([expect.objectContaining({ type: 'payment_intent.succeeded', reason: 'paid_after_cancel' })])
+    expect(f.orders).toEqual([expect.objectContaining({ id: order.id, refund: true, storno: false })])
+  })
+
+  it('a payment that names one of our order numbers but matches no order is flagged, not ignored', async () => {
+    const res = await deliver(event('payment_intent.succeeded', { id: 'pi_lost', amount_received: 31500, currency: 'ron', metadata: { order_id: '00000000-0000-4000-8000-000000000000', order_number: 'BHT-20261013-0001' } }))
+    expect(res).toEqual({ status: 200, body: { received: true, outcome: 'attention:order_not_found' } })
+    expect((await followUps()).payments).toHaveLength(1)
+  })
+
+  it('a replayed success is only a duplicate, never an alert', async () => {
+    const { order, piId } = await cardOrder()
+    expect((await deliver(event('payment_intent.succeeded', intent(order, piId)))).body.outcome).toBe('paid')
+    expect((await deliver(event('payment_intent.succeeded', intent(order, piId)))).body.outcome).toBe('already_paid')
+    expect((await followUps()).payments).toEqual([])
+  })
+
+  it('a database failure is not acknowledged: Stripe retries the event', async () => {
+    const { order, piId } = await cardOrder()
+    const spy = vi.spyOn(svc, 'confirmPayment').mockRejectedValueOnce(new Error('connection lost'))
+    const body = event('payment_intent.succeeded', intent(order, piId))
+    expect((await deliver(body)).status).toBe(500)
+    spy.mockRestore()
+    expect(await deliver(body)).toEqual({ status: 200, body: { received: true, outcome: 'paid' } })
   })
 })
 

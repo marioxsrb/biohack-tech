@@ -83,6 +83,12 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const o = await orders.byId(db, j.orderId!)
     if (!o) throw new Skip('order gone')
     if (o.fgoInvoiceNumber) return `already ${o.fgoInvoiceSeries} ${o.fgoInvoiceNumber}`
+    // Cancelled before the invoice went out and no money was taken (a cash-on-delivery parcel refused right
+    // after shipping): nothing to invoice, so no document that would then need a credit note.
+    if (o.status === 'cancelled' && !['paid', 'partially_refunded', 'refunded'].includes(o.paymentStatus)) {
+      await orders.update(db, o.id, { invoice_status: 'none' })
+      throw new Skip('order cancelled before invoicing')
+    }
     if (!c.fgo) {
       await orders.update(db, o.id, { invoice_status: 'manual' })
       throw new Skip('fgo not configured')

@@ -19,11 +19,12 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
   const q = String((await searchParams).q ?? '').trim().slice(0, 80)
   const { issues } = loadConfig()
   const db = await getDb()
-  const [list, problems, withdrawalList, messageCounts] = await Promise.all([
+  const [list, problems, withdrawalList, messageCounts, followUps] = await Promise.all([
     orders.list(db, { limit: 150, search: q || undefined }),
     jobs.problems(db),
     withdrawals.recent(20),
     enquiries.counts(),
+    orders.followUps(db),
   ])
   const numberOf = new Map(list.map((o) => [o.id, o.orderNumber]))
   const errors = issues.filter((i) => i.level === 'error')
@@ -73,6 +74,31 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
                     Deschide
                   </Link>
                 )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {(followUps.orders.length > 0 || followUps.payments.length > 0) && (
+        <div className="mt-6 rounded-[14px] bg-paper p-5 shadow-[inset_0_0_0_1px_var(--color-red)]">
+          <p className="font-semibold text-ink">Bani și facturi de rezolvat ({followUps.orders.length + followUps.payments.length})</p>
+          <ul className="mt-3 divide-y divide-mist-2 text-[14px]">
+            {followUps.orders.map((f) => (
+              <li key={f.id} className="flex flex-wrap items-center justify-between gap-3 py-2">
+                <span>
+                  <span className="font-medium">#{f.orderNumber}</span>
+                  {f.refund && <> · anulată, de rambursat {formatLei(f.outstandingMinor)}</>}
+                  {f.storno && <> · factură emisă, fără storno</>}
+                </span>
+                <Link href={`/admin/orders/${f.id}`} className="underline underline-offset-4">
+                  Vezi comanda
+                </Link>
+              </li>
+            ))}
+            {followUps.payments.map((p) => (
+              <li key={p.eventId} className="py-2">
+                <span className="font-medium">Plată Stripe neaplicată</span> · {p.type} · {p.reason} · {dt(p.receivedAt)} · <span className="text-muted">{p.eventId}</span>
               </li>
             ))}
           </ul>

@@ -22,7 +22,18 @@ export const runtime = 'nodejs'
  *
  * This, not the order page, is what marks card orders paid: a customer who closes the
  * browser right after paying still gets a paid, confirmed order.
+ *
+ * The Stripe account is shared with other NEUROS shops, so this endpoint also receives their
+ * PaymentIntents. Ours always carry metadata.order_number "BHT-…" (integrations/stripe.ts). Anything
+ * else with no matching order is stored as "unrelated" and acknowledged: it is not ours to retry.
+ * Our own money that cannot be applied (wrong amount or PaymentIntent, paid after the order was
+ * cancelled, refund on an order in the wrong state, our order missing) is acknowledged too, since a
+ * retry would change nothing, but stored as "attention:<reason>", logged as an error, written to the
+ * order's history and listed in /admin for a person.
  */
+const OUR_ORDER_NUMBER = /^BHT-/
+// Skips that only mean "already done": everything else on money events needs a person.
+const SETTLED = new Set(['already_paid', 'refund_already_recorded'])
 export async function POST(req: NextRequest) {
   const c = getConfig()
   if (!c.stripe) return NextResponse.json({ error: 'not configured' }, { status: 503 })
@@ -48,15 +59,26 @@ export async function POST(req: NextRequest) {
       return (byMeta && (await orders.byId(db, byMeta))) || (typeof piId === 'string' ? await orders.byPaymentIntent(db, piId) : null)
     }
 
+    // Ours if it names one of our order numbers; otherwise only if it matches one of our orders.
+    const ours = (meta: unknown) => OUR_ORDER_NUMBER.test(String((meta as Record<string, unknown> | undefined)?.order_number ?? ''))
+    const needsPerson = async (orderId: string | undefined, reason: string, amountMinor: number) => {
+      log.error('stripe.payment_needs_attention', { type: event.type, eventId: event.id, orderId, reason, amountMinor, paymentIntentId: String(obj.id ?? obj.payment_intent ?? '') })
+      if (orderId) await orders.event(db, orderId, 'payment.attention', 'stripe.webhook', { eventId: event.id, type: event.type, reason, amountMinor })
+      return `attention:${reason}`
+    }
+
     let outcome = 'ignored'
     if (event.type === 'payment_intent.succeeded' || event.type === 'payment_intent.payment_failed' || event.type === 'payment_intent.canceled') {
       const o = await orderFor(obj.id, obj.metadata)
       const piId = String(obj.id)
-      if (!o) outcome = 'order_not_found'
+      if (!o) outcome = !ours(obj.metadata) ? 'unrelated' : event.type === 'payment_intent.succeeded' ? await needsPerson(undefined, 'order_not_found', Number(obj.amount_received ?? obj.amount)) : 'order_not_found'
       else if (event.type === 'payment_intent.succeeded') {
         const pm = typeof obj.payment_method === 'string' ? obj.payment_method : null
-        const r = await confirmPayment(o.id, 'stripe.webhook', { amountMinor: Number(obj.amount_received ?? obj.amount), currency: String(obj.currency), paymentIntentId: piId, paymentMethodId: pm })
-        outcome = r.changed ? 'paid' : (r.reason ?? 'unchanged')
+        const amountMinor = Number(obj.amount_received ?? obj.amount)
+        const r = await confirmPayment(o.id, 'stripe.webhook', { amountMinor, currency: String(obj.currency), paymentIntentId: piId, paymentMethodId: pm })
+        outcome = r.changed
+          ? r.order?.status === 'cancelled' ? await needsPerson(o.id, 'paid_after_cancel', amountMinor) : 'paid'
+          : SETTLED.has(r.reason ?? '') ? r.reason! : await needsPerson(o.id, r.reason ?? 'unchanged', amountMinor)
       } else if (event.type === 'payment_intent.payment_failed') {
         const err = obj.last_payment_error as { code?: string; decline_code?: string } | undefined
         const r = await recordPaymentFailure(o.id, 'stripe.webhook', err?.decline_code ?? err?.code ?? 'failed', piId)
@@ -70,8 +92,8 @@ export async function POST(req: NextRequest) {
       const o = await orderFor(obj.payment_intent, obj.metadata)
       if (o) {
         const r = await recordRefund(o.id, 'stripe.webhook', Number(obj.amount_refunded))
-        outcome = r.changed ? 'refunded' : (r.reason ?? 'unchanged')
-      } else outcome = 'order_not_found'
+        outcome = r.changed ? 'refunded' : SETTLED.has(r.reason ?? '') ? r.reason! : await needsPerson(o.id, r.reason ?? 'unchanged', Number(obj.amount_refunded))
+      } else outcome = ours(obj.metadata) ? await needsPerson(undefined, 'order_not_found', Number(obj.amount_refunded)) : 'unrelated'
       log.info('stripe.webhook', { type: event.type, eventId: event.id, orderId: o?.id, orderNumber: o?.orderNumber, outcome })
     }
 

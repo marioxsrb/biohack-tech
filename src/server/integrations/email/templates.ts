@@ -170,7 +170,13 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
       return {
         lead: `Comanda #${o.orderNumber} a fost anulată.`,
         blocks: [
-          p(o.paymentStatus === 'paid' || o.paymentStatus === 'partially_refunded' ? 'Suma plătită îți este returnată pe aceeași cale. Îți scriem când rambursarea este procesată.' : 'Nu ai nimic de plătit pentru această comandă.'),
+          p(
+            o.paymentStatus === 'refunded'
+              ? 'Suma plătită ți-a fost returnată pe aceeași cale.'
+              : o.paymentStatus === 'paid' || o.paymentStatus === 'partially_refunded'
+                ? 'Suma plătită îți este returnată pe aceeași cale. Îți scriem când rambursarea este procesată.'
+                : 'Nu ai nimic de plătit pentru această comandă.',
+          ),
           p(`Pentru orice întrebare, scrie-ne la ${site.email}.`),
         ],
       }

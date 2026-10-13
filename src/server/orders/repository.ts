@@ -190,6 +190,33 @@ export const orders = {
     await q.query(`update orders set ${set}, updated_at = now() where id = $1`, [id, ...keys.map((k) => patch[k])])
   },
 
+  /**
+   * Money and documents a person still has to settle: paid orders that were cancelled but not refunded,
+   * issued invoices of cancelled or fully refunded orders without a credit note, and Stripe payments of
+   * ours the webhook could not apply (stored as "attention:<reason>").
+   */
+  async followUps(q: Queryable) {
+    const due = await q.query<{ id: string; order_number: string; status: string; payment_status: string; fgo_invoice_number: string | null; total_minor: number; refunded_minor: number }>(
+      `select id, order_number, status, payment_status, fgo_invoice_number, total_minor, refunded_minor from orders
+        where (status = 'cancelled' and payment_status in ('paid', 'partially_refunded'))
+           or (fgo_invoice_number is not null and fgo_storno_number is null and (status = 'cancelled' or payment_status = 'refunded'))
+        order by updated_at desc limit 50`,
+    )
+    const payments = await q.query<{ event_id: string; type: string; outcome: string; received_at: Date }>(
+      "select event_id, type, outcome, received_at from webhook_events where outcome like 'attention:%' order by received_at desc limit 20",
+    )
+    return {
+      orders: due.rows.map((r) => ({
+        id: r.id,
+        orderNumber: r.order_number,
+        refund: r.status === 'cancelled' && (r.payment_status === 'paid' || r.payment_status === 'partially_refunded'),
+        storno: !!r.fgo_invoice_number,
+        outstandingMinor: Number(r.total_minor) - Number(r.refunded_minor),
+      })),
+      payments: payments.rows.map((r) => ({ eventId: r.event_id, type: r.type, reason: r.outcome.slice('attention:'.length), receivedAt: new Date(r.received_at) })),
+    }
+  },
+
   event: (q: Queryable, orderId: string, type: string, source: string, data: Record<string, unknown> = {}) =>
     q.query('insert into order_events (order_id, type, source, data) values ($1,$2,$3,$4)', [orderId, type, source, JSON.stringify(data)]),
 

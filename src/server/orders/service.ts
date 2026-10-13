@@ -220,6 +220,12 @@ export function confirmPayment(
       }
       if (reported.paymentIntentId && o.stripePaymentIntentId && reported.paymentIntentId !== o.stripePaymentIntentId) return { skip: 'intent_mismatch' }
     }
+    // Paid after the order was cancelled (an older card attempt completing late): record the money, but
+    // send no "order confirmed" email and issue no invoice. /admin lists it for a refund.
+    if (o.status === 'cancelled') {
+      log.error('order.paid_after_cancel', { orderId: o.id, orderNumber: o.orderNumber, amount: o.totalMinor, source })
+      return { patch: { payment_status: 'paid', paid_at: new Date() }, event: 'payment.after_cancel', data: { amount: o.totalMinor } }
+    }
     const status: OrderStatus = canMoveOrder(o.status, 'confirmed') ? 'confirmed' : o.status
     await closeAbandonedAttempts(t, o)
     const c = getConfig()
@@ -559,6 +565,7 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
         ...(o.paymentMethod === 'cash_on_delivery' ? [] : email(o.paymentMethod === 'card' ? 'order_confirmed' : 'payment_received')),
         ...(o.invoiceStatus === 'pending' ? [{ kind: 'fgo.invoice' as const, orderId: o.id, dedupeKey: `fgo.invoice:${o.id}` }] : []),
       ]
+    case 'payment.after_cancel':
     case 'order.abandoned':
     case 'order.processing':
     case 'order.delivered':
@@ -575,7 +582,10 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
     case 'order.cancelled': {
       // An unpaid card attempt was never confirmed to the customer: no email, and no CRM record unless one exists.
       const known = o.paymentMethod !== 'card' || !!data.wasPaid
-      return [...(known || o.ghlOpportunityId ? crm() : []), ...(known ? email('order_cancelled') : [])]
+      // An invoice already issued (a refused cash-on-delivery parcel, a cancelled paid order) needs a credit
+      // note: automatic with FGO_AUTO_STORNO=true, as for refunds; otherwise /admin lists it for the accountant.
+      const storno = c.fgo?.autoStorno && o.fgoInvoiceNumber && !o.fgoStornoNumber ? [{ kind: 'fgo.storno' as const, orderId: o.id, dedupeKey: `fgo.storno:${o.id}` }] : []
+      return [...(known || o.ghlOpportunityId ? crm() : []), ...(known ? email('order_cancelled') : []), ...storno]
     }
     case 'payment.refunded':
       return [
