@@ -525,8 +525,20 @@ async function enqueueAll(t: Queryable, list: NewJob[]) {
 export function jobsFor(event: string, o: Order, data: Record<string, unknown> = {}): NewJob[] {
   const c = getConfig()
   const crm = (): NewJob[] => (c.ghl ? [{ kind: 'ghl.sync', orderId: o.id, dedupeKey: `ghl.sync:${o.id}:${event}${event === 'payment.refunded' ? `:${o.refundedMinor}` : ''}` }] : [])
-  const email = (template: string): NewJob[] =>
-    c.email.transport === 'none' ? [] : [{ kind: 'email.send', orderId: o.id, dedupeKey: `email:${template}:${o.id}`, payload: { template } }]
+  const email = (template: string, runAt?: Date): NewJob[] =>
+    c.email.transport === 'none' ? [] : [{ kind: 'email.send', orderId: o.id, dedupeKey: `email:${template}:${o.id}`, payload: { template }, ...(runAt && { runAt }) }]
+  // Our own mailbox (or files in development). The messages added with it (reminders, follow-up, team notes)
+  // never go through GoHighLevel, which would send them with the NEUROS sender.
+  const ownMail = c.email.transport === 'smtp' || c.email.transport === 'file'
+  const later = (template: string, runAt: Date) => (ownMail ? email(template, runAt) : [])
+  // The team's notifications (orders@), one per event and order; the delayed ones are rechecked before sending.
+  const notifyOn = ownMail && !!c.email.notifyTo
+  const notify = (event: string, runAt?: Date): NewJob[] =>
+    notifyOn ? [{ kind: 'notify.send', orderId: o.id, dedupeKey: `notify:${event}:${o.id}`, payload: { event }, ...(runAt && { runAt }) }] : []
+  const inDays = (d: number) => new Date(Date.now() + d * 86_400_000)
+  const prepOverdue = () => notify('prep_overdue', inDays(2))
+  // An invoice already issued for money that is going back needs a credit note; without FGO_AUTO_STORNO a person does it.
+  const stornoByHand = () => (o.fgoInvoiceNumber && !o.fgoStornoNumber && !c.fgo?.autoStorno ? notify('storno_needed') : [])
 
   // The card kept for the post-purchase offer is released as soon as the offer is settled.
   const release = (parentId: string, at?: Date): NewJob[] =>
@@ -538,11 +550,15 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
       // an abandonment (a declined or failed offer is not an abandoned checkout).
       if (o.kind === 'upsell') return [{ kind: 'stripe.reconcile', orderId: o.id, dedupeKey: `reconcile:${o.id}`, runAt: new Date(Date.now() + 10 * 60_000) }]
       // Cash on delivery: confirmed at once. The confirmation email says what to pay the courier.
-      if (o.paymentMethod === 'cash_on_delivery') return [...crm(), ...email('cod_confirmed')]
+      if (o.paymentMethod === 'cash_on_delivery') return [...crm(), ...email('cod_confirmed'), ...notify('new_cod'), ...prepOverdue()]
       return o.paymentMethod === 'bank_transfer'
         ? [
             ...crm(),
             ...email('transfer_instructions'),
+            ...notify('new_transfer'),
+            // Reminder to the customer after 2 days and a note to the team after 5, both only if still unpaid.
+            ...later('transfer_reminder', inDays(2)),
+            ...notify('transfer_overdue', inDays(5)),
             ...(c.transferExpiryDays
               ? [{ kind: 'order.transfer_expiry' as const, orderId: o.id, dedupeKey: `transfer_expiry:${o.id}`, runAt: new Date(Date.now() + c.transferExpiryDays * 86_400_000) }]
               : []),
@@ -564,18 +580,30 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
         // The customer paid the courier in person: no "payment received" email for a collection.
         ...(o.paymentMethod === 'cash_on_delivery' ? [] : email(o.paymentMethod === 'card' ? 'order_confirmed' : 'payment_received')),
         ...(o.invoiceStatus === 'pending' ? [{ kind: 'fgo.invoice' as const, orderId: o.id, dedupeKey: `fgo.invoice:${o.id}` }] : []),
+        // A collection (cash on delivery) is the end of the order, not news for the warehouse.
+        ...(o.paymentMethod === 'cash_on_delivery'
+          ? []
+          : [...notify(o.kind === 'upsell' ? 'upsell_paid' : o.paymentMethod === 'card' ? 'new_card_paid' : 'transfer_paid'), ...prepOverdue()]),
       ]
     case 'payment.after_cancel':
+      return [...crm(), ...notify('refund_after_cancel')]
     case 'order.abandoned':
     case 'order.processing':
-    case 'order.delivered':
       return crm()
+    case 'order.delivered':
+      // The service email the day after delivery (W6 P1), once per purchase: an added product shares its parent's parcel.
+      return [...crm(), ...(c.email.deliveryFollowup && o.kind === 'checkout' ? later('delivery_followup', inDays(1)) : [])]
     case 'order.shipped':
-      return [...crm(), ...email('order_shipped'), ...(o.invoiceStatus === 'pending' ? [{ kind: 'fgo.invoice' as const, orderId: o.id, dedupeKey: `fgo.invoice:${o.id}` }] : [])]
+      return [
+        ...crm(),
+        ...email('order_shipped'),
+        ...(o.invoiceStatus === 'pending' ? [{ kind: 'fgo.invoice' as const, orderId: o.id, dedupeKey: `fgo.invoice:${o.id}` }] : []),
+        ...notify('delivery_overdue', inDays(5)),
+      ]
     case 'return.requested':
       return crm()
     case 'return.received':
-      return [...crm(), ...email('return_received')]
+      return [...crm(), ...email('return_received'), ...notify('refund_after_return')]
     case 'payment.cancelled':
       // Never confirmed to the customer: only keep an existing CRM record in step.
       return o.ghlOpportunityId ? crm() : []
@@ -585,13 +613,20 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
       // An invoice already issued (a refused cash-on-delivery parcel, a cancelled paid order) needs a credit
       // note: automatic with FGO_AUTO_STORNO=true, as for refunds; otherwise /admin lists it for the accountant.
       const storno = c.fgo?.autoStorno && o.fgoInvoiceNumber && !o.fgoStornoNumber ? [{ kind: 'fgo.storno' as const, orderId: o.id, dedupeKey: `fgo.storno:${o.id}` }] : []
-      return [...(known || o.ghlOpportunityId ? crm() : []), ...(known ? email('order_cancelled') : []), ...storno]
+      return [
+        ...(known || o.ghlOpportunityId ? crm() : []),
+        ...(known ? email('order_cancelled') : []),
+        ...storno,
+        ...(data.wasPaid ? notify('refund_after_cancel') : []),
+        ...stornoByHand(),
+      ]
     }
     case 'payment.refunded':
       return [
         ...crm(),
         ...email(data.full ? 'refund_full' : `refund_partial_${o.refundedMinor}`).map((j) => ({ ...j, payload: { template: 'refund_issued' } })),
         ...(data.full && c.fgo?.autoStorno && o.fgoInvoiceNumber ? [{ kind: 'fgo.storno' as const, orderId: o.id, dedupeKey: `fgo.storno:${o.id}` }] : []),
+        ...(data.full ? stornoByHand() : []),
       ]
     default:
       return []

@@ -10,8 +10,9 @@ import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { FgoError, fgo } from '@/server/integrations/fgo'
 import { GhlError, TAGS, ghl, tagsFor } from '@/server/integrations/ghl'
-import { renderEmail, type EmailTemplate } from '@/server/integrations/email/templates'
-import { deliver } from '@/server/integrations/email/transport'
+import { renderEmail, stillDue, type EmailTemplate } from '@/server/integrations/email/templates'
+import { deliver, EmailError } from '@/server/integrations/email/transport'
+import { NOTIFICATIONS, renderNotification, type NotifyEvent } from '@/server/notifications'
 import { errText, log } from '@/server/log'
 import { marketingStatus } from '@/server/marketing/sync'
 import { orders } from '@/server/orders/repository'
@@ -66,6 +67,8 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     let o = await orders.byId(db, j.orderId!)
     if (!o) throw new Skip('order gone')
     const template = j.payload.template as EmailTemplate
+    const due = stillDue[template]
+    if (due && !due(o)) throw new Skip(`no longer due: ${o.status} / ${o.paymentStatus}`)
     if (c.email.transport === 'ghl' && !o.ghlContactId) {
       await syncCrm(o.id)
       o = (await orders.byId(db, o.id))!
@@ -73,8 +76,30 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const withdrawal = template === 'withdrawal_received' ? await withdrawals.byId(String(j.payload.withdrawalId ?? '')) : null
     if (template === 'withdrawal_received' && !withdrawal) throw new Skip('withdrawal statement gone')
     const mail = renderEmail(template, o, { siteUrl: c.siteUrl, bank: c.bank, withdrawal: withdrawal ?? undefined })
-    const ref = await deliver(c, { ...mail, name: `${o.orderNumber}-${template}${withdrawal ? `-${withdrawal.reference}` : ''}`, ghlContactId: o.ghlContactId })
+    const ref = await deliver(c, { ...mail, name: `${o.orderNumber}-${template}${withdrawal ? `-${withdrawal.reference}` : ''}`, to: o.email, ghlContactId: o.ghlContactId })
     await orders.event(db, o.id, 'email.sent', 'system', { template, ref })
+    return ref
+  },
+
+  // The team's notification for one event of one order (orders@), rechecked against the order first.
+  'notify.send': async (j) => {
+    const c = getConfig()
+    if (!notificationsOn()) throw new Skip('notifications off')
+    const db = await getDb()
+    const o = await orders.byId(db, j.orderId!)
+    if (!o) throw new Skip('order gone')
+    const event = j.payload.event as NotifyEvent
+    if (!NOTIFICATIONS[event]) throw new Permanent(`unknown notification ${String(event)}`)
+    const failed = event === 'job_failed' ? await jobs.byId(db, Number(j.payload.jobId)) : null
+    const ctx = {
+      siteUrl: c.siteUrl,
+      parentNumber: o.parentOrderId ? ((await orders.byId(db, o.parentOrderId))?.orderNumber ?? null) : null,
+      ...(failed && { job: { id: failed.id, kind: failed.kind, status: failed.status, lastError: failed.lastError, template: failed.payload.template as string | undefined } }),
+    }
+    if (!NOTIFICATIONS[event].stillTrue(o, ctx)) throw new Skip(`no longer true: ${o.status} / ${o.paymentStatus}`)
+    const mail = renderNotification(event, o, ctx)
+    const ref = await deliver(c, { ...mail, to: c.email.notifyTo!, name: `notify-${j.dedupeKey.replace(/[^\w.-]+/g, '-')}` })
+    await orders.event(db, o.id, 'notify.sent', 'system', { event, ref })
     return ref
   },
 
@@ -137,6 +162,12 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
   },
 }
 
+/** Team notifications go out only through our own mailbox (or files in development). */
+export const notificationsOn = () => {
+  const e = getConfig().email
+  return !!e.notifyTo && (e.transport === 'smtp' || e.transport === 'file')
+}
+
 let running: Promise<number> | null = null
 
 /** Runs due jobs; concurrent calls in one process share the same run. */
@@ -156,9 +187,15 @@ export function runDueJobs(limit = 20): Promise<number> {
             await jobs.done(db, job.id, 'skipped', e.message)
             continue
           }
-          const permanent = e instanceof Permanent || (e instanceof GhlError && !e.retryable && e.status !== 404 && e.status !== 401)
+          const permanent =
+            e instanceof Permanent || (e instanceof EmailError && !e.retryable) || (e instanceof GhlError && !e.retryable && e.status !== 404 && e.status !== 401)
           const dead = await jobs.fail(db, job, errText(e), permanent)
           log[dead ? 'error' : 'warn'](dead ? 'job.failed' : 'job.retry', { job: job.kind, jobId: job.id, orderId: job.orderId, attempt: job.attempts, error: errText(e) })
+          // Stopped for good: the team hears about it once (never about its own notifications, which would loop).
+          if (dead && job.orderId && job.kind !== 'notify.send' && notificationsOn())
+            await jobs
+              .enqueue(db, { kind: 'notify.send', orderId: job.orderId, dedupeKey: `notify:job_failed:${job.id}`, payload: { event: 'job_failed', jobId: job.id } })
+              .catch((err) => log.error('job.failed_alert_error', { jobId: job.id, error: errText(err) }))
         }
       }
     } catch (e) {

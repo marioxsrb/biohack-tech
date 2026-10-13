@@ -14,7 +14,8 @@ vi.mock('next/headers', () => ({ headers: async () => new Headers({ authorizatio
 
 const { freshDb, person, lines, TEST_ENV } = await import('./helpers')
 const svc = await import('@/server/orders/service')
-const { orders, QUEUES } = await import('@/server/orders/repository')
+const { orders } = await import('@/server/orders/repository')
+type Queue = keyof typeof import('@/server/orders/repository').QUEUES
 const { jobs } = await import('@/server/jobs/outbox')
 const { runDueJobs } = await import('@/server/jobs/runner')
 const actions = await import('@/app/[lang]/(site)/admin/actions')
@@ -52,7 +53,7 @@ describe('work queues', () => {
     const unpaidCard = await place('card')
     await svc.markAbandonedIfUnpaid(unpaidCard.id)
 
-    const ids = async (queue: keyof typeof QUEUES) => (await orders.list(db, { queue })).map((o) => o.id).sort()
+    const ids = async (queue: Queue) => (await orders.list(db, { queue })).map((o) => o.id).sort()
     expect(await ids('transfer')).toEqual([transfer.id])
     expect(await ids('pregatire')).toEqual([cod.id])
     expect(await ids('expediate')).toEqual([shippedCod.id])

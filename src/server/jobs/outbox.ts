@@ -12,6 +12,7 @@ export type JobKind =
   | 'fgo.invoice'
   | 'fgo.storno'
   | 'email.send'
+  | 'notify.send'
   | 'order.abandon_check'
   | 'stripe.reconcile'
   | 'order.transfer_expiry'
@@ -95,6 +96,11 @@ export const jobs = {
        where status in ('failed','retry') and ($1::uuid is null or order_id = $1) and ($2::bigint is null or id = $2)`,
       [where.orderId ?? null, where.id ?? null],
     ),
+
+  async byId(q: Queryable, id: number) {
+    const { rows } = await q.query('select * from jobs where id = $1', [id])
+    return rows[0] ? toJob(rows[0]) : null
+  },
 
   async forOrder(q: Queryable, orderId: string) {
     return (await q.query('select * from jobs where order_id = $1 order by id', [orderId])).rows.map(toJob)

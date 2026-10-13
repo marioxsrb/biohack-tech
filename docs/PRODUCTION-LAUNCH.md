@@ -420,9 +420,20 @@ Use one dedicated test contact with a mailbox you own. Do not use a customer or 
 - W4–W7: move the test order in /admin and check the tasks. W7 removes the contact from the others.
 
 ### 10.6 Email sending (see §11)
-Settings → Email Services: dedicated sending domain on biohack-tech.ro, verified. `EMAIL_FROM` must be an address on it.
+GHL does **not** send BiohackTech email (13 Oct 2026). The NEUROS location's Workflow Domain and default domain are `lc.imedisync-neuros.com`, and GHL rewrites every sender, in workflows **and** in Conversations sent through the API, to "Contact Neuros <contact@imedisync-neuros.com>". It also refuses order emails to any address that unsubscribed from NEUROS marketing. `lc.biohack-tech.ro` is verified but can only be used after adding it to the shared Workflow Domain pool, which splits NEUROS traffic. Not done.
 
-## 11. Email domain setup
+**Phase 2 decision:** the application sends everything itself (§11a). W1, W3, W4, W5, W6 and W7 stay **Draft**: the application now sends their emails and notifications (W1/W4/W5/W7 notes → `notify.send`; W3 T1 → `transfer_reminder`; W6 P1 → `delivery_followup`). Publishing them would send the same message twice, with the NEUROS sender. W2 stays Draft until the abandoned-checkout phase (consent and legal review). GHL keeps contacts, opportunities, stages, tags, consent fields and attribution.
+
+## 11a. Application email (phase 2)
+
+- **Transport:** `EMAIL_TRANSPORT=smtp`. Our own mailbox `contact@biohack-tech.ro` on `mail.biohack-tech.ro:465` (implicit TLS, the cPanel server at 188.241.116.202). SPF for biohack-tech.ro includes that IP and `default._domainkey` signs with DKIM. Sender: `EMAIL_FROM=Biohack Tech <contact@biohack-tech.ro>`. Variables: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, Production scope only, never in Preview or git.
+- **Team notifications:** `NOTIFY_EMAIL=orders@biohack-tech.ro`. One email per event and order: new paid card order, new transfer order, transfer confirmed, new cash-on-delivery order, product added after payment (names the parent order), transfer unpaid after 5 days, not shipped 2 days after payment or COD order, shipped and not delivered after 5 days, paid order cancelled (refund to do), return received (refund to do), invoice to reverse in FGO (when `FGO_AUTO_STORNO` is off), an integration stopped after all retries. Each one has the order number, statuses, products, the action and the /admin link, with no customer address, phone or email.
+- **Customer emails added:** `transfer_reminder` (2 days, only while the transfer is unpaid) and `delivery_followup` (1 day after delivery, service, no review request; `DELIVERY_FOLLOWUP=off` stops it).
+- **Delayed steps:** they are outbox jobs with `run_at` and are checked against the order right before sending. A paid, cancelled, shipped, delivered, refunded or returned order skips the obsolete message ("sărit" in /admin).
+- **Retries:** each message is one job with a stable dedupe key, a backoff of 1, 2, 4 … minutes up to 6 h, 8 attempts, and a visible state and manual "Reîncearcă" in /admin. A 550 from the recipient's server stops at once. **No exactly-once guarantee over SMTP:** if the server accepts a message and the connection drops before its answer, the retry sends it again with the same Message-ID. The risk is a rare duplicate, never a lost email.
+- **With `EMAIL_TRANSPORT=ghl`** (the state before the switch) nothing new is queued: no notifications, no reminder, no follow-up.
+
+## 11. Email domain setup (GHL, superseded by §11a for BiohackTech)
 
 1. GHL → Settings → Email Services → **Dedicated domain** → add `mail.biohack-tech.ro` (GHL suggests a subdomain). GHL shows the DNS records.
 2. At the DNS provider add exactly the records GHL shows: **SPF** (TXT), **DKIM** (TXT/CNAME), the MX/CNAME for bounces if shown.
@@ -442,7 +453,9 @@ Settings → Email Services: dedicated sending domain on biohack-tech.ro, verifi
 | `order_cancelled` | Comanda #{nr} a fost anulată | Cancelled in /admin (transfer or paid orders) | number, refund note | – | Transactional |
 | `refund_issued` | Rambursare pentru comanda #{nr} | Refund (Stripe webhook or /admin) | amount refunded | – | Transactional |
 | `withdrawal_received` | Am primit cererea de retragere pentru comanda #{nr} | Online withdrawal statement matching an order (`/retragere`) | reference, date and time, name, order, products, message, next steps (return within 14 days, refund within 14 days) | – | Transactional (OUG 34/2014 art. 11^1 acknowledgement) |
-| R1, T1, P1, REV | see §10.5 | GHL workflows | GHL merge fields | as designed | R1, REV marketing (consent + unsubscribe link); T1, P1 transactional/service |
+| `transfer_reminder` | Reamintire: comanda {nr} așteaptă plata | 2 days after a transfer order, only if still unpaid (replaces W3 T1) | number, amount, order link | Văd datele de plată | Service |
+| `delivery_followup` | Comanda {nr} a ajuns. Te ajutăm la început | 1 day after delivery, unless refunded or returned (replaces W6 P1) | number, support | – | Service |
+| R1, REV | see §10.5 | GHL workflows (Draft) | GHL merge fields | as designed | Marketing (consent + unsubscribe link) |
 
 Every site email: plain text version included, support line with the order number, no marketing blocks. They go out whatever the customer's marketing choice is: they are needed for the order. Unsubscribing never stops them.
 

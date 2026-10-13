@@ -33,3 +33,12 @@ export const tone = (s: string) =>
     : ['failed', 'cancelled', 'refunded'].includes(s)
       ? 'bg-[#fdecec] text-red-deep'
       : 'bg-mist text-ink'
+
+export const JOB_STATUS: Record<string, string> = {
+  pending: 'în așteptare',
+  running: 'rulează',
+  retry: 'reîncercare',
+  done: 'gata',
+  failed: 'oprit, are nevoie de o persoană',
+  skipped: 'sărit',
+}

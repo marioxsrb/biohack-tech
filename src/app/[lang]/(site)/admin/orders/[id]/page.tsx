@@ -6,7 +6,8 @@ import { attributionSummary } from '@/lib/attribution'
 import { formatLei } from '@/lib/money'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
-import { jobs } from '@/server/jobs/outbox'
+import { jobs, type Job } from '@/server/jobs/outbox'
+import { jobLabel, NOTIFICATIONS, type NotifyEvent } from '@/server/notifications'
 import { customerName, formatAddress, PAYMENT_METHOD_LABEL } from '@/server/orders/model'
 import { shipmentFor } from '@/server/fulfillment/courier'
 import { marketing } from '@/server/marketing/consent'
@@ -26,10 +27,24 @@ import {
   returnRequestedAction,
   shipAction,
 } from '../../actions'
-import { INVOICE_LABEL, ORDER_LABEL, PAYMENT_LABEL, tone } from '../../labels'
+import { INVOICE_LABEL, JOB_STATUS, ORDER_LABEL, PAYMENT_LABEL, tone } from '../../labels'
 
 const dt = (d: Date | string | null) =>
   d ? new Date(d).toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '–'
+
+/** What a job is, in words: the customer email by template, the team notification by event, the integration by name. */
+const jobTitle = (j: Job) =>
+  j.kind === 'email.send'
+    ? `Email client · ${String(j.payload.template)}`
+    : j.kind === 'notify.send'
+      ? `Notificare echipă · ${NOTIFICATIONS[j.payload.event as NotifyEvent]?.title ?? String(j.payload.event)}`
+      : jobLabel(j.kind)
+const jobState = (j: Job) =>
+  j.status === 'pending' && j.runAt.getTime() > Date.now()
+    ? `programat pentru ${dt(j.runAt)}`
+    : j.status === 'retry'
+      ? `reîncercare ${j.attempts} · următoarea la ${dt(j.runAt)}`
+      : (JOB_STATUS[j.status] ?? j.status)
 
 export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admin/orders/[id]'>) {
   await connection()
@@ -366,16 +381,15 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
             )}
           </Panel>
 
-          <Panel title="Sincronizări">
+          <Panel title="Emailuri, notificări și sincronizări">
             <ul className="space-y-2 text-[14px]">
               {jobList.map((j) => (
                 <li key={j.id} className="flex items-start justify-between gap-3">
                   <span>
-                    <span className="font-medium">{j.kind}</span>
-                    {j.payload.template ? ` · ${String(j.payload.template)}` : ''}
-                    <span className="block text-[13px] text-muted">
-                      {j.status}
-                      {j.attempts ? ` · ${j.attempts} încercări` : ''}
+                    <span className="font-medium">{jobTitle(j)}</span>
+                    <span className={`block text-[13px] ${j.status === 'failed' || j.status === 'retry' ? 'text-red-deep' : 'text-muted'}`}>
+                      {jobState(j)}
+                      {j.attempts && j.status !== 'retry' ? ` · ${j.attempts} încercări` : ''}
                       {j.lastError ? ` · ${j.lastError}` : ''}
                     </span>
                   </span>

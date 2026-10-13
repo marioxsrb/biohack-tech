@@ -6,8 +6,8 @@ Updated 29 September 2026 (phase 3/4). Everything that is code is built; what is
 
 1. **Production host and database.** A PostgreSQL database (`DATABASE_URL`) on the production host, with every variable from `.env.example` set there (the local `.env.local` is not deployed). Without it, checkout offers email/phone ordering only.
 2. **Stripe live.** Activated account, live keys, live webhook endpoint `https://biohack-tech.ro/api/webhooks/stripe` and its secret (runbook §8). Test mode works end to end today. Do not switch before the go-live procedure (§21).
-3. **Email sending domain.** Domain verified in GHL, `EMAIL_FROM`, `EMAIL_TRANSPORT=ghl` (planned 30 Sep). Without it no customer email goes out (order confirmation, transfer details, shipping, return, refund).
-4. **W1–W7 missing actions** (all Draft in Kerrsid, runbook §10.5): W1/W4 notification recipient, W3/W4/W5/W6/W7 task assignees, W2/W3/W6 sender, W6 review link. Test each with the test contact, then publish one by one.
+3. **Email: switch to our own SMTP** (runbook §11a). Needs the `contact@biohack-tech.ro` mailbox password in Vercel (`SMTP_USER`, `SMTP_PASSWORD`, Production only), then `EMAIL_TRANSPORT=smtp` and `NOTIFY_EMAIL=orders@biohack-tech.ro`. Until then emails go through GHL with the NEUROS sender and the team gets no notifications.
+4. **W1–W7 stay Draft** (runbook §10.6): the application replaces W1, W3–W7. W2 waits for the abandoned-checkout phase. W6 review link still missing.
 5. **FGO API credentials** in production (`FGO_*`). Without them every paid order is “Factură: Manual”.
 6. **Bank details on the host.** `BANK_BENEFICIARY`, `BANK_NAME`, `BANK_IBAN` (valid locally; set the same values in production).
 7. **`ADMIN_PASSWORD`** on the host (12+ characters). Without it /admin does not exist, so nobody can confirm a transfer or mark a shipment.

@@ -4,6 +4,7 @@ import { formatLei } from '@/lib/money'
 import { loadConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { jobs } from '@/server/jobs/outbox'
+import { jobLabel } from '@/server/notifications'
 import { customerName } from '@/server/orders/model'
 import { isQueue, orders, QUEUES, type QueueKey } from '@/server/orders/repository'
 import { withdrawals } from '@/server/orders/withdrawal'
@@ -139,7 +140,8 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
             {problems.map((j) => (
               <li key={j.id} className="flex flex-wrap items-center justify-between gap-3 py-2">
                 <span>
-                  <span className="font-medium">{j.kind}</span> · {j.status === 'failed' ? 'oprit' : `reîncercare ${j.attempts}`} · <span className="text-muted">{j.lastError}</span>
+                  <span className="font-medium">{jobLabel(j.kind, (j.payload.template ?? j.payload.event) as string | undefined)}</span> · {j.status === 'failed' ? 'oprit' : `reîncercare ${j.attempts}`} ·{' '}
+                  <span className="text-muted">{j.lastError}</span>
                 </span>
                 {j.orderId && (
                   <Link href={`/admin/orders/${j.orderId}`} className="underline underline-offset-4">

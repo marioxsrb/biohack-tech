@@ -1,6 +1,6 @@
 /**
  * Transactional emails, rendered by us from the canonical order and delivered by the
- * configured transport (GoHighLevel in production). One data contract, six templates.
+ * configured transport (our own SMTP mailbox in production). One data contract, one template per message.
  * Plain Romanian, one idea per sentence, no marketing blocks. Every email also has a
  * plain-text version.
  */
@@ -21,6 +21,8 @@ export type EmailTemplate =
   | 'refund_issued'
   | 'withdrawal_received'
   | 'return_received'
+  | 'transfer_reminder'
+  | 'delivery_followup'
 
 export const EMAIL_TEMPLATES: Record<EmailTemplate, { subject: (o: Order) => string; kind: 'transactional' }> = {
   order_confirmed: { subject: (o) => `Comanda ta Biohack Tech #${o.orderNumber}`, kind: 'transactional' },
@@ -33,6 +35,18 @@ export const EMAIL_TEMPLATES: Record<EmailTemplate, { subject: (o: Order) => str
   refund_issued: { subject: (o) => `Rambursare pentru comanda #${o.orderNumber}`, kind: 'transactional' },
   withdrawal_received: { subject: (o) => `Am primit cererea de retragere pentru comanda #${o.orderNumber}`, kind: 'transactional' },
   return_received: { subject: (o) => `Am primit produsele returnate din comanda #${o.orderNumber}`, kind: 'transactional' },
+  // Service messages about an order already placed (W3 T1, W6 P1), not marketing: no unsubscribe link, no offers.
+  transfer_reminder: { subject: (o) => `Reamintire: comanda ${o.orderNumber} așteaptă plata`, kind: 'transactional' },
+  delivery_followup: { subject: (o) => `Comanda ${o.orderNumber} a ajuns. Te ajutăm la început`, kind: 'transactional' },
+}
+
+/**
+ * Delayed emails are checked against the order right before sending: a transfer paid or an order cancelled,
+ * refunded or returned in the meantime gets no obsolete message.
+ */
+export const stillDue: Partial<Record<EmailTemplate, (o: Order) => boolean>> = {
+  transfer_reminder: (o) => o.paymentMethod === 'bank_transfer' && o.paymentStatus === 'awaiting_transfer' && o.status !== 'cancelled',
+  delivery_followup: (o) => o.status === 'delivered' && (o.paymentStatus === 'paid' || o.paymentStatus === 'awaiting_collection') && !o.returnStatus,
 }
 
 /** The withdrawal statement being acknowledged (withdrawal_received only). */
@@ -209,6 +223,24 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
               : `Îți returnăm banii ${refundWay(o)}, în cel mult 14 zile de la cererea de retragere. Îți scriem când rambursarea este procesată.`,
           ),
         ],
+      }
+    case 'transfer_reminder':
+      return {
+        lead: `Bună, ${first}. Comanda ${o.orderNumber} este înregistrată și așteaptă plata prin transfer bancar.`,
+        blocks: [
+          rows([['Suma', formatLei(o.totalMinor)]]),
+          p('Datele pentru transfer sunt pe pagina comenzii.'),
+          p(`Scrie ${o.orderNumber} la detaliile plății. Așa potrivim transferul cu comanda.`),
+          p('Ai plătit deja? Ignoră acest mesaj. Îți scriem când primim suma.'),
+          p('Te-ai răzgândit? Răspunde la acest email și anulăm comanda.'),
+        ],
+        cta: { label: 'Văd datele de plată', url: orderUrl },
+      }
+    case 'delivery_followup':
+      return {
+        lead: `Bună, ${first}. Sperăm că produsele au ajuns bine.`,
+        // The contact line below the message already gives the reply, email and phone options.
+        blocks: [p('Ai o întrebare despre folosire sau ceva nu merge cum te aștepți? Te ajutăm să pornești corect.')],
       }
     case 'refund_issued':
       return {

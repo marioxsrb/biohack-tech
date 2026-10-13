@@ -35,7 +35,19 @@ export type FgoConfig = {
   autoStorno: boolean
 }
 export type GhlConfig = { token: string; locationId: string; pipelineId: string; apiBase: string; emailFrom?: string }
-export type EmailConfig = { transport: 'ghl' | 'file' | 'none'; replyTo?: string; fileDir: string }
+export type SmtpConfig = { host: string; port: number; secure: boolean; user: string; password: string }
+export type EmailConfig = {
+  transport: 'smtp' | 'ghl' | 'file' | 'none'
+  /** "Biohack Tech <contact@biohack-tech.ro>": the sender of every email the application sends itself (smtp, file). */
+  from: string
+  replyTo?: string
+  fileDir: string
+  smtp: SmtpConfig | null
+  /** Where the team's operational notifications go (orders@). Null = no notifications. Needs smtp or file. */
+  notifyTo: string | null
+  /** The service email the day after delivery (W6 P1). On unless DELIVERY_FOLLOWUP=off. */
+  deliveryFollowup: boolean
+}
 
 export type Config = {
   appEnv: AppEnv
@@ -167,6 +179,23 @@ function readGhl(issues: ConfigIssue[]): GhlConfig | null {
   return { token, locationId, pipelineId, apiBase: str('GHL_API_BASE') ?? 'https://services.leadconnectorhq.com', emailFrom: str('EMAIL_FROM') }
 }
 
+/** A bare address gets the brand name: "contact@biohack-tech.ro" → "Biohack Tech <contact@biohack-tech.ro>". */
+export const senderOf = (v: string | undefined) => (!v ? 'Biohack Tech <contact@biohack-tech.ro>' : v.includes('<') ? v : `Biohack Tech <${v}>`)
+
+/** The application's own mail server account (contact@ on mail.biohack-tech.ro, implicit TLS on 465). */
+function readSmtp(issues: ConfigIssue[], needed: boolean): SmtpConfig | null {
+  const host = str('SMTP_HOST')
+  const user = str('SMTP_USER')
+  const password = str('SMTP_PASSWORD')
+  if (!host && !user && !password) return null
+  if (!host || !user || !password) {
+    if (needed) issues.push({ area: 'email', level: 'error', message: 'Sunt necesare SMTP_HOST, SMTP_USER și SMTP_PASSWORD.' })
+    return null
+  }
+  const port = positiveInt(str('SMTP_PORT')) ?? 465
+  return { host, port, secure: port === 465, user, password }
+}
+
 const positiveInt = (v: string | undefined) => {
   const n = Number(v)
   return v !== undefined && Number.isInteger(n) && n > 0 ? n : null
@@ -194,7 +223,14 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
 
   const transportRaw = isolated ? 'file' : str('EMAIL_TRANSPORT')
   const ghl = isolated ? null : readGhl(issues)
-  const transport: EmailConfig['transport'] = transportRaw === 'ghl' || transportRaw === 'file' || transportRaw === 'none' ? transportRaw : appEnv === 'development' ? 'file' : 'none'
+  const transport: EmailConfig['transport'] =
+    transportRaw === 'smtp' || transportRaw === 'ghl' || transportRaw === 'file' || transportRaw === 'none' ? transportRaw : appEnv === 'development' ? 'file' : 'none'
+  const smtp = isolated ? null : readSmtp(issues, transport === 'smtp')
+  if (transport === 'smtp' && !smtp) issues.push({ area: 'email', level: 'error', message: 'EMAIL_TRANSPORT=smtp are nevoie de SMTP_HOST, SMTP_USER și SMTP_PASSWORD.' })
+  if (transport === 'ghl' && appEnv === 'production')
+    issues.push({ area: 'email', level: 'warn', message: 'EMAIL_TRANSPORT=ghl: GoHighLevel trimite emailurile cu expeditorul NEUROS, iar notificările către echipă sunt oprite. Treci pe smtp.' })
+  const notifyTo = str('NOTIFY_EMAIL') ?? null
+  if (notifyTo && transport !== 'smtp' && transport !== 'file') issues.push({ area: 'email', level: 'warn', message: `NOTIFY_EMAIL este setat, dar notificările către echipă pleacă doar prin smtp (acum: ${transport}).` })
   if (transport === 'ghl' && !ghl) issues.push({ area: 'email', level: 'error', message: 'EMAIL_TRANSPORT=ghl are nevoie de configurarea GoHighLevel.' })
   if (transport === 'none') issues.push({ area: 'email', level: appEnv === 'production' ? 'error' : 'warn', message: 'Emailurile tranzacționale sunt oprite (EMAIL_TRANSPORT).' })
   if (transport === 'file' && appEnv === 'production') issues.push({ area: 'email', level: 'error', message: 'EMAIL_TRANSPORT=file nu trimite emailuri reale.' })
@@ -221,7 +257,15 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     bank: readBank(issues),
     fgo: isolated ? null : readFgo(appEnv, issues, siteUrl),
     ghl,
-    email: { transport, replyTo: str('EMAIL_REPLY_TO'), fileDir: str('EMAIL_FILE_DIR') ?? '.data/emails' },
+    email: {
+      transport,
+      from: senderOf(str('EMAIL_FROM')),
+      replyTo: str('EMAIL_REPLY_TO'),
+      fileDir: str('EMAIL_FILE_DIR') ?? '.data/emails',
+      smtp,
+      notifyTo,
+      deliveryFollowup: str('DELIVERY_FOLLOWUP') !== 'off',
+    },
     admin: adminPassword && adminPassword.length >= 12 ? { user: adminUser ?? 'admin', password: adminPassword } : null,
     cronSecret,
     abandonAfterMinutes: positiveInt(str('ABANDON_AFTER_MINUTES')) ?? 60,
