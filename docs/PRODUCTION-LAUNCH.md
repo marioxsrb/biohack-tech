@@ -848,7 +848,7 @@ Homepage (last section before the footer) and /contact-us. Fields: name, email, 
 
 A third payment method next to card and bank transfer, in the same order system (no parallel flow).
 
-- **Switch:** `NEXT_PUBLIC_COD_ENABLED` (on by default; needs only the database) and optional `NEXT_PUBLIC_COD_MAX_LEI` (a courier's cash-on-delivery ceiling). One file, `src/config/payments.ts`, read by the product pages, the checkout and the server, so all three agree. Changing either needs a rebuild (public variables).
+- **Switch:** `NEXT_PUBLIC_COD_ENABLED` (on by default; needs only the database) with no order-value ceiling (business decision, 13 Oct 2026). One file, `src/config/payments.ts`, read by the product pages, the checkout and the server, so all three agree. Changing either needs a rebuild (public variables).
 - **Order:** `payment_method = cash_on_delivery`, `payment_status = awaiting_collection`, `status = confirmed` at once; `cod_amount_minor` = the total the courier collects (bundle promotions included). No Stripe call of any kind. Earlier abandoned card attempts of the same address are closed.
 - **Fulfilment:** prepared and shipped while unpaid (`canFulfil`). /admin shows the parcel data for the AWB, with the amount to collect (`shipmentFor`, `server/fulfillment/courier.ts`); a courier API can send exactly that. No AWB is booked and no collection is automated today (manual courier provider).
 - **Payment:** delivery never pays the order. A person records the courier's settlement in /admin: the exact total and its reference (borderou / payment order). Only then `paid`, with `cod_reference`, `paid_at` and the reference in the order history. A refused parcel can be cancelled after shipping.

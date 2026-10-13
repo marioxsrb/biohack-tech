@@ -17,7 +17,7 @@ import { useLocale } from '@/i18n/LocaleProvider'
 import { ui } from '@/i18n/ui'
 import type { Locale } from '@/i18n/locales'
 import { attributionParams } from '@/lib/attribution'
-import { cashOnDelivery, codAllowedFor } from '@/config/payments'
+import { cashOnDelivery } from '@/config/payments'
 import { site, terms } from '@/config/site'
 import { track } from '@/lib/analytics'
 import { MARKETING_CONSENT_TEXT, MARKETING_CONSENT_TEXT_EN } from '@/lib/consent/marketing'
@@ -92,7 +92,6 @@ const COPY = {
     transferText: 'Primești datele pentru plată imediat după comandă. Pregătim coletul după ce primim plata.',
     cod: 'Ramburs (plata la livrare)',
     codText: 'Plătești curierului când primești coletul. Nu plătești nimic acum.',
-    codOver: (max: string) => `Disponibil pentru comenzi de până la ${max}. Alege cardul sau transferul.`,
     codAfter: (amount: string) => `Comanda se confirmă imediat. Plătești ${amount} curierului când primești coletul.`,
     edit: 'Modifică',
     accept: 'Am citit și accept',
@@ -167,7 +166,6 @@ const COPY = {
     transferText: 'You get the payment details right after you order. We pack your order once the payment arrives.',
     cod: 'Cash on delivery',
     codText: 'You pay the courier when the parcel arrives. Nothing to pay now.',
-    codOver: (max: string) => `Available for orders up to ${max}. Please choose card or bank transfer.`,
     codAfter: (amount: string) => `Your order is confirmed right away. You pay ${amount} to the courier when the parcel arrives.`,
     edit: 'Edit',
     accept: 'I have read and accept the',
@@ -285,9 +283,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
   const locale: Locale = useLocale()
   const t = COPY[locale]
   const { total, pricing, progress } = useCart()
-  // Cash on delivery up to the configured ceiling (config/payments.ts); the server applies the same rule.
-  const codOverLimit = offered.cod && !codAllowedFor(total)
-  const methods: Methods = { ...offered, cod: offered.cod && !codOverLimit }
+  const methods: Methods = offered
   const anyMethod = methods.card || methods.transfer || methods.cod
 
   const [form, setForm] = useState<OrderForm>(() => readDraft(methods, preferred))
@@ -517,9 +513,8 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
                     id="cod"
                     icon={<Truck className="h-6 w-6" />}
                     title={t.cod}
-                    text={codOverLimit && cashOnDelivery.maxTotalMinor ? t.codOver(formatLei(cashOnDelivery.maxTotalMinor)) : t.codText}
+                    text={t.codText}
                     available={methods.cod}
-                    unavailableNote={codOverLimit ? '' : undefined}
                     checked={form.paymentMethod === 'cod'}
                     onSelect={() => patch({ paymentMethod: 'cod' })}
                   />

@@ -7,7 +7,7 @@ import { priceLines } from '@/lib/promotions'
 import { PRICES_RON } from '@/config/prices'
 import { socialProof } from '@/config/social-proof'
 import { site } from '@/config/site'
-import { cashOnDelivery, codAllowedFor } from '@/config/payments'
+import { cashOnDelivery } from '@/config/payments'
 
 const read = (f: string) => readFileSync(join(process.cwd(), f), 'utf8')
 
@@ -60,9 +60,8 @@ describe('bundle offers on the product page', () => {
 })
 
 describe('order buttons', () => {
-  it('cash on delivery is on by default, with no ceiling unless configured', () => {
-    expect(cashOnDelivery).toEqual({ enabled: true, maxTotalMinor: null })
-    expect(codAllowedFor(1490000)).toBe(true)
+  it('cash on delivery is on by default, with no order-value ceiling', () => {
+    expect(cashOnDelivery).toEqual({ enabled: true })
   })
   it('"Comandă cu plata la livrare" carries product, variant, quantity and the method, never a price', () => {
     const item = encodeItem({ productId: 'brain-flow', variantId: '13-zone', quantity: 2 })

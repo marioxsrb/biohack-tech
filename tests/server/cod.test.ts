@@ -3,11 +3,12 @@
  * GoHighLevel answered by an in-memory fake (no network, no real invoice, payment or message):
  * checkout route → order → CRM and email → shipment with the invoice → delivery → recorded collection.
  */
+import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NextRequest } from 'next/server'
 import { TEST_PRICES } from '../fixtures'
 
-vi.mock('@/config/prices', () => ({ PRICES_RON: { ...TEST_PRICES, 'balance-wave': 638000 } }))
+vi.mock('@/config/prices', () => ({ PRICES_RON: { ...TEST_PRICES, 'balance-wave': 638000, 'brain-flow': { '1-zona': 1290000, '4-zone': 1490000, '13-zone': 1390000 } } }))
 vi.mock('next/server', async (orig) => ({ ...(await orig<typeof import('next/server')>()), after: (fn: () => unknown) => void fn() }))
 
 const { freshDb, person, lines, TEST_ENV } = await import('./helpers')
@@ -21,7 +22,6 @@ const { shipmentFor } = await import('@/server/fulfillment/courier')
 const { getConfig } = await import('@/server/config')
 const { canCancel, canFulfil } = await import('@/server/orders/state')
 const { isConfirmedPurchase } = await import('@/lib/segments')
-const { codAllowedFor } = await import('@/config/payments')
 const { POST: checkout } = await import('@/app/api/checkout/route')
 
 type Call = { url: string; method: string; body: Record<string, unknown> | null }
@@ -40,6 +40,7 @@ function fakeApis() {
     const json = (x: unknown, status = 200) => new Response(JSON.stringify(x), { status, headers: { 'content-type': 'application/json' } })
     if (url.includes('stripe.com')) return json({ error: { message: 'Stripe must not be called for cash on delivery' } }, 500)
     if (url.includes('/factura/emitere')) return json({ Success: true, Factura: { Serie: 'BT', Numar: String(++invoiceNo), Link: 'https://fgo/f.pdf' } })
+    if (url.includes('/factura/stornare')) return json({ Success: true, Factura: { Serie: 'BT', Numar: String(++invoiceNo) } })
     if (url.includes('/contacts/upsert')) return json({ contact: { id: 'contact-1' } })
     if (url.includes('/tags')) return json({ tags: body?.tags })
     if (url.includes('/opportunities/pipelines')) return json({ pipelines: [{ id: 'pipe1', stages: stages.map((n, i) => ({ id: `stage-${n}`, name: n, i })) }] })
@@ -123,10 +124,32 @@ describe('cash on delivery: placing the order', () => {
     expect((await orders.byId(db, card.id))!).toMatchObject({ status: 'cancelled', cancelReason: 'înlocuită de o comandă plătită' })
   })
 
-  it('is offered only while switched on and within the configured ceiling', async () => {
-    expect(codAllowedFor(79000, { enabled: true, maxTotalMinor: null })).toBe(true)
-    expect(codAllowedFor(79000, { enabled: true, maxTotalMinor: 50000 })).toBe(false)
-    expect(codAllowedFor(79000, { enabled: false, maxTotalMinor: null })).toBe(false)
+  it('has no order-value ceiling: every product, up to the largest possible cart, can be paid on delivery', async () => {
+    // Business decision (13 Oct 2026): no maximum for cash on delivery. A ceiling must not come back
+    // through configuration either, so the old variable is set here and must change nothing.
+    vi.stubEnv('NEXT_PUBLIC_COD_MAX_LEI', '100')
+    try {
+      for (const raw of [
+        [{ productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 1 }],
+        [{ productId: 'brainlink-pro', quantity: 1 }],
+        [{ productId: 'balance-wave', quantity: 10 }],
+        [{ productId: 'brain-flow', variantId: '4-zone', quantity: 10 }],
+      ]) {
+        const o = await codOrder(raw)
+        expect(o).toMatchObject({ paymentMethod: 'cash_on_delivery', paymentStatus: 'awaiting_collection', status: 'confirmed', stripePaymentIntentId: null })
+        expect(o.codAmountMinor).toBe(o.totalMinor)
+      }
+      const flow = (await db.query<{ total_minor: number }>("select max(total_minor)::int as total_minor from orders")).rows[0].total_minor
+      expect(flow).toBeGreaterThan(10_000_000) // over 100.000 lei, still cash on delivery
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+
+  it('keeps no ceiling setting anywhere in the code', () => {
+    for (const f of ['src/config/payments.ts', 'src/app/api/checkout/route.ts', 'src/app/[lang]/(checkout)/checkout/CheckoutView.tsx']) {
+      expect(readFileSync(f, 'utf8')).not.toMatch(/COD_MAX|maxTotalMinor|codAllowedFor/)
+    }
   })
 })
 
@@ -247,6 +270,41 @@ describe('cash on delivery: CRM, email, invoice, fulfillment', () => {
     const { order: card } = await svc.placeOrder({ lines: lines([{ productId: 'brainlink-pro', quantity: 1 }]), form: person, attemptId: 'card-shipped' })
     await db.query("update orders set payment_status = 'paid', status = 'shipped' where id = $1", [card.id])
     expect((await svc.cancelOrder(card.id, 'admin', 'x')).reason).toBe('status_shipped')
+  })
+
+  it('a parcel refused before its invoice went out gets no invoice at all', async () => {
+    const o = await codOrder()
+    await drain()
+    await ship(o.id) // queues the invoice for the parcel
+    await svc.cancelOrder(o.id, 'admin', 'colet refuzat la livrare')
+    await drain()
+    expect(calls.some((c) => c.url.includes('/factura/'))).toBe(false)
+    expect((await orders.byId(db, o.id))!).toMatchObject({ status: 'cancelled', invoiceStatus: 'none', fgoInvoiceNumber: null })
+    expect((await orders.followUps(db)).orders).toEqual([])
+  })
+
+  it('a refused parcel whose invoice was issued is listed for a credit note (FGO_AUTO_STORNO off: a person decides)', async () => {
+    const o = await codOrder()
+    await ship(o.id)
+    await drain()
+    expect((await orders.byId(db, o.id))!.fgoInvoiceNumber).toBeTruthy()
+    await svc.cancelOrder(o.id, 'admin', 'colet refuzat la livrare')
+    await drain()
+    expect(calls.some((c) => c.url.includes('/factura/stornare'))).toBe(false)
+    expect((await orders.followUps(db)).orders).toEqual([expect.objectContaining({ id: o.id, storno: true, refund: false })])
+  })
+
+  it('with FGO_AUTO_STORNO=true the issued invoice of a refused parcel is credited once, and leaves the list', async () => {
+    db = await freshDb({ ...TEST_ENV, FGO_AUTO_STORNO: 'true' })
+    const o = await codOrder()
+    await ship(o.id)
+    await drain()
+    await svc.cancelOrder(o.id, 'admin', 'colet refuzat la livrare')
+    await drain()
+    await drain()
+    expect(calls.filter((c) => c.url.includes('/factura/stornare'))).toHaveLength(1)
+    expect((await orders.byId(db, o.id))!.fgoStornoNumber).toMatch(/^BT /)
+    expect((await orders.followUps(db)).orders).toEqual([])
   })
 
   it('a delivered order can be withdrawn from before the courier settles', async () => {

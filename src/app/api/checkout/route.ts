@@ -1,10 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { codAllowedFor } from '@/config/payments'
 import { site } from '@/config/site'
 import { sanitizeAttribution } from '@/lib/attribution'
 import { normalizeOrder, validateOrder } from '@/lib/checkout'
 import { resolveOrderLines } from '@/lib/orders/resolve'
-import { priceLines } from '@/lib/promotions'
 import { getConfig, paymentMethods } from '@/server/config'
 import { StripeError, stripe } from '@/server/integrations/stripe'
 import { kickJobs } from '@/server/jobs/runner'
@@ -49,9 +47,7 @@ export async function POST(req: NextRequest) {
       : fail(409, 'BAD_LINE', 'Un produs din coș s-a schimbat între timp. Reîncarcă pagina și verifică din nou coșul.')
   }
 
-  const methods = paymentMethods()
-  // The same ceiling the checkout shows: cash on delivery only up to the configured total.
-  const available = { ...methods, cod: methods.cod && codAllowedFor(priceLines(resolved.lines).totalMinor) }
+  const available = paymentMethods()
   if (!available.card && !available.transfer && !available.cod) return fail(503, 'UNAVAILABLE', `Comenzile online nu sunt active încă. ${contact}`)
 
   const form = normalizeOrder(body.order)
