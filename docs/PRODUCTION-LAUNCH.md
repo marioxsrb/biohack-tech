@@ -432,6 +432,7 @@ GHL does **not** send BiohackTech email (13 Oct 2026). The NEUROS location's Wor
 - **Delayed steps:** they are outbox jobs with `run_at` and are checked against the order right before sending. A paid, cancelled, shipped, delivered, refunded or returned order skips the obsolete message ("sărit" in /admin).
 - **Retries:** each message is one job with a stable dedupe key, a backoff of 1, 2, 4 … minutes up to 6 h, 8 attempts, and a visible state and manual "Reîncearcă" in /admin. A 550 from the recipient's server stops at once. **No exactly-once guarantee over SMTP:** if the server accepts a message and the connection drops before its answer, the retry sends it again with the same Message-ID. The risk is a rare duplicate, never a lost email.
 - **With `EMAIL_TRANSPORT=ghl`** (the state before the switch) nothing new is queued: no notifications, no reminder, no follow-up.
+- **Real delivery check before the switch:** `SMTP_LIVE=1 SMTP_USER=contact@biohack-tech.ro SMTP_PASSWORD=… npx vitest run tests/manual/smtp-live.test.ts` runs a synthetic transfer order through the real outbox on an embedded database. It sends 3 emails to `marioxsrb@gmail.com` and 3 to `orders@`. Check that they are in the inbox, from "Biohack Tech <contact@biohack-tech.ro>", with SPF/DKIM pass in "Show original". Then set the Production variables and `EMAIL_TRANSPORT=smtp`, `NOTIFY_EMAIL=orders@biohack-tech.ro`, and redeploy.
 
 ## 11. Email domain setup (GHL, superseded by §11a for BiohackTech)
 
