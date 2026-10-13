@@ -10,7 +10,7 @@ Updated 29 September 2026 (phase 3/4). Everything that is code is built; what is
 4. **W1–W7 stay Draft** (runbook §10.6): the application replaces W1, W3–W7. W2 waits for the abandoned-checkout phase. W6 review link still missing.
 5. **FGO API credentials** in production (`FGO_*`). Without them every paid order is “Factură: Manual”.
 6. **Bank details on the host.** `BANK_BENEFICIARY`, `BANK_NAME`, `BANK_IBAN` (valid locally; set the same values in production).
-7. **`ADMIN_PASSWORD`** on the host (12+ characters). Without it /admin does not exist, so nobody can confirm a transfer or mark a shipment.
+7. **`ADMIN_PASSWORD`** on the host (10+ characters). Without it /admin does not exist, so nobody can confirm a transfer or mark a shipment.
 8. **Domains (phase 4).** Connect `biohack-tech.ro`, `www`, and the four landing hostnames (runbook §27). No DNS has been changed.
 9. **Legal review** (items below under NEEDS BUSINESS INPUT, “Legal”), in particular the marketing-consent wording used for recovery, the order-button labels and the devices' regulatory status, before ads or marketing emails run.
 10. **GPSR product information** (per product, none of it exists in the sources; not invented):

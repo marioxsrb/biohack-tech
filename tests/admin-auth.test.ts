@@ -19,6 +19,28 @@ describe('admin credentials', () => {
     expect(checkAdminAuth('Bearer a-long-test-password', env)).toBe('denied')
     expect(checkAdminAuth(null, env)).toBe('denied')
   })
+  it('needs at least 10 characters: 9 keeps /admin off, 10 works, still only with the exact credentials', async () => {
+    const nine = { ADMIN_USER: 'ops', ADMIN_PASSWORD: 'abcdefghi' }
+    const ten = { ADMIN_USER: 'ops', ADMIN_PASSWORD: 'abcdefghij' }
+    expect(checkAdminAuth(basic('ops:abcdefghi'), nine)).toBe('disabled')
+    expect(checkAdminAuth(basic('ops:abcdefghij'), ten)).toBe('ok')
+    expect(checkAdminAuth(basic('ops:abcdefghik'), ten)).toBe('denied')
+    expect(checkAdminAuth(undefined, ten)).toBe('denied')
+    const { loadConfig, resetConfig } = await import('@/server/config')
+    for (const [password, admin, error] of [
+      ['abcdefghi', null, true],
+      ['abcdefghij', { user: 'ops', password: 'abcdefghij' }, false],
+    ] as const) {
+      vi.stubEnv('ADMIN_USER', 'ops')
+      vi.stubEnv('ADMIN_PASSWORD', password)
+      resetConfig()
+      const { config, issues } = loadConfig()
+      expect(config.admin).toEqual(admin)
+      expect(issues.some((i) => i.area === 'admin' && i.level === 'error')).toBe(error)
+    }
+    vi.unstubAllEnvs()
+    resetConfig()
+  })
   it('defaults the user to "admin"', () => {
     expect(checkAdminAuth(basic('admin:a-long-test-password'), { ADMIN_PASSWORD: env.ADMIN_PASSWORD })).toBe('ok')
   })

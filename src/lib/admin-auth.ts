@@ -6,6 +6,9 @@
  */
 export type AdminAuth = 'ok' | 'denied' | 'disabled'
 
+/** Shorter passwords leave /admin switched off (the readiness report says why). */
+export const ADMIN_PASSWORD_MIN = 10
+
 /** Constant-time comparison that does not leak which part differs or the expected length. */
 function safeEqual(a: string, b: string): boolean {
   let diff = a.length ^ b.length
@@ -16,7 +19,7 @@ function safeEqual(a: string, b: string): boolean {
 
 export function checkAdminAuth(authorization: string | null | undefined, env: Record<string, string | undefined> = process.env): AdminAuth {
   const password = env.ADMIN_PASSWORD
-  if (!password || password.length < 12) return 'disabled'
+  if (!password || password.length < ADMIN_PASSWORD_MIN) return 'disabled'
   const user = env.ADMIN_USER || 'admin'
   const [scheme, encoded] = (authorization ?? '').split(' ')
   if (scheme !== 'Basic' || !encoded) return 'denied'

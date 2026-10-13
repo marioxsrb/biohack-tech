@@ -117,7 +117,7 @@ Not needed: a separate email provider (GHL sends), Redis, a queue service, a CMS
 - [ ] `FGO_COD_UNIC`, `FGO_PRIVATE_KEY`, `FGO_SERIE`, `FGO_VAT_RATE` (production), plus the same for the FGO test account
 - [ ] `GHL_PRIVATE_TOKEN`, `GHL_LOCATION_ID`, `GHL_PIPELINE_ID`
 - [ ] `BANK_BENEFICIARY`, `BANK_NAME`, `BANK_IBAN` (+ `BANK_SWIFT` if you want it shown)
-- [ ] `ADMIN_PASSWORD` (12+ characters, from a password manager), `CRON_SECRET` (random, 32+ characters)
+- [ ] `ADMIN_PASSWORD` (10+ characters, from a password manager), `CRON_SECRET` (random, 32+ characters)
 - [ ] `EMAIL_FROM` (an address on the domain verified in GHL)
 
 ## 6. Required API keys, by integration

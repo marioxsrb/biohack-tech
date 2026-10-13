@@ -6,6 +6,7 @@
  */
 import 'server-only'
 import { missingCompanyFields } from '@/config/company'
+import { ADMIN_PASSWORD_MIN } from '@/lib/admin-auth'
 import { cashOnDelivery } from '@/config/payments'
 
 export type AppEnv = 'development' | 'staging' | 'production'
@@ -238,7 +239,8 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
   const adminUser = str('ADMIN_USER')
   const adminPassword = str('ADMIN_PASSWORD')
   if (!adminPassword) issues.push({ area: 'admin', level: appEnv === 'production' ? 'error' : 'warn', message: 'ADMIN_PASSWORD lipsește: pagina /admin este oprită.' })
-  else if (adminPassword.length < 12) issues.push({ area: 'admin', level: 'error', message: 'ADMIN_PASSWORD trebuie să aibă cel puțin 12 caractere.' })
+  else if (adminPassword.length < ADMIN_PASSWORD_MIN)
+    issues.push({ area: 'admin', level: 'error', message: `ADMIN_PASSWORD trebuie să aibă cel puțin ${ADMIN_PASSWORD_MIN} caractere.` })
 
   const missingCompany = missingCompanyFields()
   if (missingCompany.length) {
@@ -266,7 +268,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
       notifyTo,
       deliveryFollowup: str('DELIVERY_FOLLOWUP') !== 'off',
     },
-    admin: adminPassword && adminPassword.length >= 12 ? { user: adminUser ?? 'admin', password: adminPassword } : null,
+    admin: adminPassword && adminPassword.length >= ADMIN_PASSWORD_MIN ? { user: adminUser ?? 'admin', password: adminPassword } : null,
     cronSecret,
     abandonAfterMinutes: positiveInt(str('ABANDON_AFTER_MINUTES')) ?? 60,
     transferExpiryDays: positiveInt(str('TRANSFER_EXPIRY_DAYS')),
