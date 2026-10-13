@@ -177,7 +177,6 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
                 ? 'Suma plătită îți este returnată pe aceeași cale. Îți scriem când rambursarea este procesată.'
                 : 'Nu ai nimic de plătit pentru această comandă.',
           ),
-          p(`Pentru orice întrebare, scrie-ne la ${site.email}.`),
         ],
       }
     case 'withdrawal_received': {
@@ -209,7 +208,6 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
               ? 'Rambursarea a fost deja procesată. Nu mai ai nimic de făcut.'
               : `Îți returnăm banii ${refundWay(o)}, în cel mult 14 zile de la cererea de retragere. Îți scriem când rambursarea este procesată.`,
           ),
-          p(`Pentru orice întrebare, scrie-ne la ${site.email}.`),
         ],
       }
     case 'refund_issued':
@@ -222,7 +220,8 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
               : o.paymentMethod === 'cash_on_delivery'
                 ? 'Suma ajunge prin transfer bancar, în contul pe care ni l-ai indicat.'
                 : 'Suma ajunge în contul din care ai plătit.',
-          ), p(`Pentru orice întrebare, scrie-ne la ${site.email}.`)],
+          ),
+        ],
       }
   }
 }

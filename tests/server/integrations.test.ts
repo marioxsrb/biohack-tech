@@ -104,4 +104,14 @@ describe('transactional emails', () => {
     expect(say('refunded')).toContain('ți-a fost returnată')
     expect(say('refunded')).not.toContain('nimic de plătit')
   })
+
+  it('every email gives the support contact once, not twice', async () => {
+    const { order } = await placeOrder({ lines: lines([{ productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 1 }]), form: { ...person, paymentMethod: 'transfer' }, attemptId: 'a-mail-3' })
+    const ctx = { siteUrl: 'https://test.biohack-tech.ro', bank: getConfig().bank }
+    for (const t of ['order_confirmed', 'transfer_instructions', 'payment_received', 'invoice_issued', 'order_shipped', 'order_cancelled', 'refund_issued', 'return_received'] as const) {
+      const text = renderEmail(t, { ...order, refundedMinor: order.totalMinor, fgoInvoiceSeries: 'BT', fgoInvoiceNumber: '7' }, ctx).text
+      expect(text.match(/Ai o întrebare\?/g), t).toHaveLength(1)
+      expect(text, t).not.toContain('Pentru orice întrebare')
+    }
+  })
 })
