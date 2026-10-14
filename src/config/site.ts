@@ -9,10 +9,10 @@ export const site = {
   phone: '+40 757 890 707',
   phoneHref: 'tel:+40757890707',
   /**
-   * The official WhatsApp number for orders (+40 765 874 571, confirmed 08.10.2026), digits only in
+   * The official WhatsApp number for orders (+40 757 890 707, the same as the phone; confirmed 14.10.2026), digits only in
    * international format, as wa.me expects. null hides the WhatsApp button.
    */
-  whatsapp: '40765874571' as string | null,
+  whatsapp: '40757890707' as string | null,
 } as const
 
 /** Commercial terms stated on the current biohack-tech.ro. Used everywhere they are repeated. */

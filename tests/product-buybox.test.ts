@@ -28,7 +28,7 @@ describe('social proof', () => {
 
 describe('WhatsApp', () => {
   it('uses the official number, digits only, for wa.me', () => {
-    expect(site.whatsapp).toBe('40765874571')
+    expect(site.whatsapp).toBe('40757890707')
   })
   it('prefills product, variant, quantity and the intent to order', () => {
     const src = read('src/components/product/BuyBox.tsx')
