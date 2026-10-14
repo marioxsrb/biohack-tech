@@ -381,4 +381,39 @@ alter table leads add column if not exists device_key text;
 create index if not exists leads_device_idx on leads (device_key, created_at desc)
 `,
   },
+  {
+    // Promo codes, managed in /admin/coduri. A redemption is one order that used a code; it counts towards the
+    // limits while its order stands (a cancelled order or an unpaid card attempt frees it). Row level security
+    // on, no policy: server only.
+    id: '011_promo_codes',
+    sql: `
+create table if not exists promo_codes (
+  code text primary key,
+  kind text not null check (kind in ('percent','fixed')),
+  value integer not null check (value > 0),
+  products text[],
+  min_order_minor integer not null default 0,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  max_uses integer,
+  once_per_email boolean not null default false,
+  active boolean not null default true,
+  note text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table promo_codes enable row level security;
+create table if not exists promo_redemptions (
+  order_id uuid primary key references orders(id) on delete cascade,
+  code text not null references promo_codes(code),
+  email text not null,
+  discount_minor integer not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists promo_redemptions_code_idx on promo_redemptions (code, email);
+alter table promo_redemptions enable row level security;
+alter table orders add column if not exists promo_code text;
+alter table order_items add column if not exists code_discount_minor integer not null default 0
+`,
+  },
 ]

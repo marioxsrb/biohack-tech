@@ -2,7 +2,7 @@
 
 import Link from '@/components/ui/Link'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { cloneElement, useEffect, useRef, useState, useSyncExternalStore, type ReactElement, type ReactNode } from 'react'
+import { cloneElement, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactElement, type ReactNode } from 'react'
 import { useCart, type ResolvedLine } from '@/components/cart/CartProvider'
 import { cartStore } from '@/components/cart/cart-store'
 import { CarryLink } from '@/components/cart/CarryLink'
@@ -22,6 +22,7 @@ import { cashOnDelivery } from '@/config/payments'
 import { site, terms } from '@/config/site'
 import { itemOf, track } from '@/lib/analytics'
 import { CommunicationsConsent } from '@/components/consent/CommunicationsConsent'
+import { priceLines, type PromoCodeRule } from '@/lib/promotions'
 import {
   COUNTIES,
   DRAFT_KEY,
@@ -52,6 +53,12 @@ const COPY = {
     emptyText: 'Adaugă un produs în coș ca să poți finaliza comanda.',
     cardLoading: 'Plata cu cardul se încarcă. Încearcă din nou într-o clipă.',
     failed: 'Ceva nu a funcționat. Încearcă din nou.',
+    promoLabel: 'Ai un cod promoțional?',
+    promoPlaceholder: 'Cod promoțional',
+    promoApply: 'Aplică',
+    promoApplying: 'Se verifică…',
+    promoRemove: 'Elimină',
+    promoApplied: (code: string) => `Codul ${code} este aplicat.`,
     offline: 'Nu ne-am putut conecta. Verifică internetul și încearcă din nou.',
     title: 'Finalizează comanda',
     yourOrder: 'Comanda ta',
@@ -124,6 +131,12 @@ const COPY = {
     emptyText: 'Add a product to your cart to check out.',
     cardLoading: 'The card payment is still loading. Try again in a moment.',
     failed: 'Something went wrong. Please try again.',
+    promoLabel: 'Have a promo code?',
+    promoPlaceholder: 'Promo code',
+    promoApply: 'Apply',
+    promoApplying: 'Checking…',
+    promoRemove: 'Remove',
+    promoApplied: (code: string) => `Code ${code} is applied.`,
     offline: 'We could not connect. Check your internet connection and try again.',
     title: 'Check out',
     yourOrder: 'Your order',
@@ -288,7 +301,14 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
   const router = useRouter()
   const locale: Locale = useLocale()
   const t = COPY[locale]
-  const { total, pricing, progress } = useCart()
+  const { pricing: cartPricing, progress } = useCart()
+  // A promo code checked by the server (/api/promo): its rule prices the cart here exactly as the order will.
+  const [promo, setPromo] = useState<{ input: string; rule: PromoCodeRule | null; error: string | null; busy: boolean; open: boolean }>({ input: '', rule: null, error: null, busy: false, open: false })
+  const priced = useMemo(() => lines.map((l) => ({ key: l.key, productId: l.product.id, quantity: l.quantity, unitAmount: l.unit })), [lines])
+  const withCode = useMemo(() => (promo.rule ? priceLines(priced, undefined, promo.rule) : null), [priced, promo.rule])
+  // A cart change can make an applied code stop fitting (minimum, products): the totals fall back, and the order says why.
+  const pricing = withCode && !withCode.code?.problem ? withCode : cartPricing
+  const total = pricing.totalMinor
   const methods: Methods = offered
   const anyMethod = methods.card || methods.transfer || methods.cod
 
@@ -390,6 +410,8 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
           lines: lines.map((l) => ({ productId: l.product.id, variantId: l.variant?.id, quantity: l.quantity })),
           order: form,
           acceptedTerms: accepted,
+          locale,
+          ...(promo.rule && { promoCode: promo.rule.code }),
           attemptId,
           // Landing and UTM parameters from the URL, if any, and where the first product was added.
           // The server validates them.
@@ -398,13 +420,17 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
       })
       const data = await res.json().catch(() => ({}))
       // Fields the server rejected (rare: client and server checks agree) are marked like the client's own.
-      if (res.status === 422 && data.fields && typeof data.fields === 'object') {
+      if (res.status === 422 && data.error === 'PROMO') {
+        // The code stopped being usable since it was applied (expired, used up, cart changed): said at the code.
+        setPromo((p) => ({ ...p, rule: null, error: data.message ?? t.failed, open: true }))
+        document.getElementById('f-promo')?.focus()
+      } else if (res.status === 422 && data.fields && typeof data.fields === 'object') {
         setServerFields(data.fields as Partial<Record<FieldName, string>>)
         const first = ORDER.find((f) => (data.fields as Record<string, string>)[f])
         if (first) document.getElementById(first === 'paymentMethod' ? `pm-${form.paymentMethod}` : `f-${first}`)?.focus()
       }
-      // The server answers in Romanian; the English site shows its own message.
-      if (!res.ok) throw new Error(locale === 'en' ? t.failed : (data.message ?? t.failed))
+      // The server answers in the checkout's language (it gets `locale`).
+      if (!res.ok) throw new Error(data.message ?? t.failed)
 
       const orderUrl = `/comanda/${data.token}`
       if (data.method === 'transfer' || data.method === 'cod' || data.paid || data.submitted) {
@@ -618,6 +644,8 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
                 <SummaryLine key={l.key} line={l} />
               ))}
             </ul>
+
+            {anyMethod && <PromoField promo={promo} setPromo={setPromo} lines={lines} email={form.email} locale={locale} t={t} codeProblem={withCode?.code?.problem ? true : false} />}
 
             <div className="mt-4">
               <Totals pricing={pricing} />
@@ -877,3 +905,92 @@ function Field({
     </div>
   )
 }
+
+type PromoState = { input: string; rule: PromoCodeRule | null; error: string | null; busy: boolean; open: boolean }
+
+/** The promo code field: folded until asked for, checked by the server, removable. */
+function PromoField({
+  promo,
+  setPromo,
+  lines,
+  email,
+  locale,
+  t,
+  codeProblem,
+}: {
+  promo: PromoState
+  setPromo: React.Dispatch<React.SetStateAction<PromoState>>
+  lines: ResolvedLine[]
+  email: string
+  locale: Locale
+  t: (typeof COPY)[Locale]
+  codeProblem: boolean
+}) {
+  async function apply() {
+    if (promo.busy) return
+    const code = promo.input.trim()
+    if (!code) return setPromo((p) => ({ ...p, error: locale === 'en' ? 'Enter the promo code.' : 'Scrie codul promoțional.' }))
+    setPromo((p) => ({ ...p, busy: true, error: null }))
+    try {
+      const res = await fetch('/api/promo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, email, locale, lines: lines.map((l) => ({ productId: l.product.id, variantId: l.variant?.id, quantity: l.quantity })) }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (data.ok && data.rule) setPromo((p) => ({ ...p, rule: data.rule as PromoCodeRule, input: (data.rule as PromoCodeRule).code, busy: false, error: null }))
+      else setPromo((p) => ({ ...p, rule: null, busy: false, error: data.message ?? t.failed }))
+    } catch {
+      setPromo((p) => ({ ...p, busy: false, error: t.offline }))
+    }
+  }
+
+  if (promo.rule && !codeProblem)
+    return (
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-[12px] bg-mist px-4 py-3 text-[14.5px]">
+        <span className="text-ink">{t.promoApplied(promo.rule.code)}</span>
+        <button type="button" onClick={() => setPromo({ input: '', rule: null, error: null, busy: false, open: false })} className="text-muted underline underline-offset-4 hover:text-ink">
+          {t.promoRemove}
+        </button>
+      </div>
+    )
+  if (!promo.open && !promo.error && !codeProblem)
+    return (
+      <button type="button" onClick={() => setPromo((p) => ({ ...p, open: true }))} className="mt-4 text-[14.5px] text-ink underline underline-offset-4">
+        {t.promoLabel}
+      </button>
+    )
+  return (
+    <div className="mt-4">
+      <div className="flex gap-2">
+        <input
+          id="f-promo"
+          value={promo.input}
+          onChange={(e) => setPromo((p) => ({ ...p, input: e.target.value.toUpperCase(), error: null }))}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              void apply()
+            }
+          }}
+          placeholder={t.promoPlaceholder}
+          aria-label={t.promoPlaceholder}
+          aria-invalid={!!promo.error}
+          aria-describedby={promo.error ? 'e-promo' : undefined}
+          autoComplete="off"
+          autoCapitalize="characters"
+          className={`field flex-1 uppercase ${promo.error ? 'field-error' : ''}`}
+        />
+        <button type="button" onClick={() => void apply()} disabled={promo.busy} className="btn-secondary shrink-0">
+          {promo.busy ? t.promoApplying : t.promoApply}
+        </button>
+      </div>
+      {(promo.error || codeProblem) && (
+        <p id="e-promo" className="mt-1.5 text-[14px] text-red-deep">
+          {promo.error ?? (locale === 'en' ? 'The code no longer applies to this cart.' : 'Codul nu se mai aplică acestui coș.')}
+        </p>
+      )}
+    </div>
+  )
+}
+

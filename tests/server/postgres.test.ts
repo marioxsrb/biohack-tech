@@ -47,6 +47,16 @@ describe.skipIf(!url)('on real PostgreSQL', () => {
     expect(list.filter((j) => j.kind === 'fgo.invoice')).toHaveLength(1)
   })
 
+  it('a promo code limited to 3 uses: ten simultaneous orders, three get it', async () => {
+    const { promoCodes } = await import('@/server/promo')
+    await promoCodes.create(db, { code: 'RACE3', kind: 'percent', value: 10, products: null, minOrderMinor: 0, startsAt: null, endsAt: null, maxUses: 3, oncePerEmail: false, note: null })
+    const cart = lines([{ productId: 'brainlink-pro', quantity: 1 }])
+    const res = await Promise.allSettled(Array.from({ length: 10 }, (_, i) => svc.placeOrder({ lines: cart, form: { ...person, email: `race${i}@exemplu.ro` }, attemptId: `promo-race-${i}`, promoCode: 'RACE3' })))
+    expect(res.filter((r) => r.status === 'fulfilled')).toHaveLength(3)
+    expect(res.filter((r) => r.status === 'rejected' && r.reason instanceof svc.PromoError && r.reason.problem === 'used_up')).toHaveLength(7)
+    expect((await promoCodes.uses(db, 'RACE3')).total).toBe(3)
+  })
+
   it('two workers never claim the same job', async () => {
     const [a, b] = await Promise.all([jobs.claim(db, 50), jobs.claim(db, 50)])
     const ids = [...a, ...b].map((j) => j.id)

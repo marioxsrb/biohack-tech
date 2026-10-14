@@ -11,6 +11,8 @@ import { courier } from '@/server/fulfillment/courier'
 import { enquiries, type EnquiryStatus } from '@/server/enquiries'
 import { cancelScheduledCalls, disableCalling, retryCall } from '@/server/calling/admin'
 import { getConfig } from '@/server/config'
+import { CODE_RE, normalizeCode, promoCodes } from '@/server/promo'
+import { products } from '@/content/catalog'
 import { cancelOrder, confirmPayment, markDelivered, markProcessing, markReturnReceived, markReturnRequested, markShipped, recordRefund } from '@/server/orders/service'
 
 /**
@@ -150,3 +152,60 @@ export async function callAction(f: FormData) {
   if (op === 'retry') await runDueJobs()
   revalidatePath('/admin/leaduri')
 }
+
+/** A Bucharest date and time from the form (`2026-11-01T00:00`) as an instant, or null. */
+function bucharest(v: string): Date | null {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v)) return null
+  // Romania is UTC+3 in summer (last Sunday of March to last Sunday of October), UTC+2 otherwise.
+  const guess = new Date(`${v}:00Z`)
+  const offset = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Bucharest', timeZoneName: 'shortOffset' }).formatToParts(guess).find((p) => p.type === 'timeZoneName')?.value ?? 'GMT+2'
+  const hours = Number(offset.replace('GMT', '')) || 2
+  return new Date(guess.getTime() - hours * 3_600_000)
+}
+
+export type PromoFormState = { error?: string; created?: string }
+
+export async function createPromoAction(_: PromoFormState, f: FormData): Promise<PromoFormState> {
+  await guard()
+  const code = normalizeCode(text(f, 'code', 40))
+  if (!CODE_RE.test(code)) return { error: 'Codul are 3–32 caractere: litere, cifre, - sau _.' }
+  const kind = text(f, 'kind') === 'fixed' ? 'fixed' : 'percent'
+  const raw = Number(text(f, 'value').replace(',', '.'))
+  const value = kind === 'percent' ? Math.round(raw) : Math.round(raw * 100)
+  if (!Number.isFinite(raw) || value <= 0 || (kind === 'percent' && value > 90)) return { error: kind === 'percent' ? 'Procentul este între 1 și 90.' : 'Suma este mai mare decât 0 lei.' }
+  const chosen = f.getAll('products').map(String).filter((id) => products.some((p) => p.id === id))
+  const min = Number(text(f, 'min').replace(',', '.') || '0')
+  if (!Number.isFinite(min) || min < 0) return { error: 'Comanda minimă nu este validă.' }
+  const startsAt = bucharest(text(f, 'starts'))
+  const endsAt = bucharest(text(f, 'ends'))
+  if (startsAt && endsAt && endsAt <= startsAt) return { error: 'Data de sfârșit este înaintea celei de început.' }
+  const maxRaw = text(f, 'max')
+  const maxUses = maxRaw ? Math.round(Number(maxRaw)) : null
+  if (maxUses !== null && (!Number.isFinite(maxUses) || maxUses < 1)) return { error: 'Numărul maxim de utilizări este cel puțin 1.' }
+  const ok = await promoCodes.create(await getDb(), {
+    code,
+    kind,
+    value,
+    products: chosen.length && chosen.length < products.length ? chosen : null,
+    minOrderMinor: Math.round(min * 100),
+    startsAt,
+    endsAt,
+    maxUses,
+    oncePerEmail: f.get('once') === 'da',
+    note: text(f, 'note', 200) || null,
+  })
+  if (!ok) return { error: `Codul ${code} există deja.` }
+  log.info('admin.promo_created', { code })
+  revalidatePath('/admin/coduri')
+  return { created: code }
+}
+
+export async function togglePromoAction(f: FormData) {
+  await guard()
+  const code = normalizeCode(text(f, 'code', 40))
+  const active = text(f, 'active') === 'true'
+  await promoCodes.setActive(await getDb(), code, active)
+  log.info('admin.promo_toggled', { code, active })
+  revalidatePath('/admin/coduri')
+}
+

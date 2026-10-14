@@ -21,6 +21,7 @@ function toOrder(r: Row, items: OrderItem[]): Order {
     subtotalMinor: Number(r.subtotal_minor),
     discountMinor: Number(r.discount_minor ?? 0),
     promotions: (r.promotions as Order['promotions']) ?? [],
+    promoCode: (r.promo_code as string) ?? null,
     shippingMinor: Number(r.shipping_minor),
     totalMinor: Number(r.total_minor),
     refundedMinor: Number(r.refunded_minor),
@@ -79,6 +80,7 @@ const toItem = (r: Row): OrderItem => ({
   lineTotalMinor: Number(r.line_total_minor),
   discountMinor: Number(r.discount_minor ?? 0),
   promotionId: (r.promotion_id as string) ?? null,
+  codeDiscountMinor: Number(r.code_discount_minor ?? 0),
 })
 
 async function withItems(q: Queryable, rows: Row[]): Promise<Order[]> {
@@ -201,8 +203,8 @@ export const orders = {
     await q.query(
       `insert into orders (id, order_number, public_token, idempotency_key, status, payment_status, payment_method, invoice_status,
         currency, subtotal_minor, shipping_minor, total_minor, email, phone, customer, billing_address, shipping_address, notes,
-        marketing_consent, terms_accepted_at, attribution, discount_minor, promotions, kind, parent_order_id)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)`,
+        marketing_consent, terms_accepted_at, attribution, discount_minor, promotions, kind, parent_order_id, promo_code)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)`,
       [
         o.id, o.orderNumber, o.publicToken, idempotencyKey, o.status, o.paymentStatus, o.paymentMethod, o.invoiceStatus,
         o.currency, o.subtotalMinor, o.shippingMinor, o.totalMinor, o.email, o.phone, JSON.stringify(o.customer),
@@ -212,13 +214,14 @@ export const orders = {
         JSON.stringify(o.promotions),
         o.kind,
         o.parentOrderId,
+        o.promoCode,
       ],
     )
     for (const i of o.items) {
       await q.query(
-        `insert into order_items (order_id, position, product_id, variant_id, product_name, variant_name, sku, quantity, unit_price_minor, line_total_minor, discount_minor, promotion_id)
-         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
-        [o.id, i.position, i.productId, i.variantId, i.productName, i.variantName, i.sku, i.quantity, i.unitPriceMinor, i.lineTotalMinor, i.discountMinor, i.promotionId],
+        `insert into order_items (order_id, position, product_id, variant_id, product_name, variant_name, sku, quantity, unit_price_minor, line_total_minor, discount_minor, promotion_id, code_discount_minor)
+         values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+        [o.id, i.position, i.productId, i.variantId, i.productName, i.variantName, i.sku, i.quantity, i.unitPriceMinor, i.lineTotalMinor, i.discountMinor, i.promotionId, i.codeDiscountMinor],
       )
     }
   },

@@ -17,7 +17,8 @@ import { canSendAbandonedCheckoutEmail, newRecoveryToken, recoveryExpiry } from 
 import type { Attribution } from '@/lib/attribution'
 import { lineRef } from '@/content/catalog'
 import type { OrderForm } from '@/lib/checkout'
-import { priceLines } from '@/lib/promotions'
+import { priceLines, type PromoCodeRule } from '@/lib/promotions'
+import { normalizeCode, promoCodes, ruleOf, type PromoProblem } from '@/server/promo'
 import { upsellsFor } from '@/lib/upsell'
 import { UPSELL_WINDOW_MINUTES } from '@/config/upsell'
 import type { OrderLine } from '@/lib/orders/resolve'
@@ -41,11 +42,23 @@ type PlaceInput = {
   attemptId: string
   /** Validated by sanitizeAttribution(); not part of the idempotency key. */
   attribution?: Attribution | null
+  /** A promo code typed in the checkout (checked again here, inside the order's transaction). */
+  promoCode?: string
+}
+
+/** The promo code cannot be used for this order (the checkout shows why, next to the code field). */
+export class PromoError extends Error {
+  constructor(
+    public problem: PromoProblem | 'invalid' | 'min_order' | 'no_products',
+    public rule?: PromoCodeRule,
+  ) {
+    super(`promo code: ${problem}`)
+  }
 }
 
 /** Same attempt + same content = same order. A changed cart or form is a new order. */
 export function idempotencyKey(input: PlaceInput) {
-  const canonical = JSON.stringify({ a: input.attemptId, l: input.lines.map((l) => [l.key, l.quantity]), f: input.form })
+  const canonical = JSON.stringify({ a: input.attemptId, l: input.lines.map((l) => [l.key, l.quantity]), f: input.form, ...(input.promoCode && { c: normalizeCode(input.promoCode) }) })
   return createHash('sha256').update(canonical).digest('hex')
 }
 
@@ -63,14 +76,22 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
   const f = input.form
   const method: PaymentMethod = f.paymentMethod === 'transfer' ? 'bank_transfer' : f.paymentMethod === 'cod' ? 'cash_on_delivery' : 'card'
   const cod = method === 'cash_on_delivery'
-  // Promotions are recomputed here from the catalog-priced lines, whatever the caller passed.
-  const pricing = priceLines(input.lines)
-  const subtotal = pricing.subtotalMinor
-  const discount = pricing.discountMinor
   const shipping = shippingFor()
 
   try {
     const order = await db.tx(async (t) => {
+      // Promotions are recomputed here from the catalog-priced lines, whatever the caller passed; a promo code
+      // is checked with its row locked, so a limited code's last use goes to one order only.
+      let rule: PromoCodeRule | undefined
+      if (input.promoCode) {
+        const checked = await promoCodes.check(t, input.promoCode, { email: f.email, lock: true })
+        if (!checked.ok) throw new PromoError(checked.problem)
+        rule = ruleOf(checked.code)
+      }
+      const pricing = priceLines(input.lines, undefined, rule)
+      if (pricing.code?.problem) throw new PromoError(pricing.code.problem, rule)
+      const subtotal = pricing.subtotalMinor
+      const discount = pricing.discountMinor
       const now = new Date()
       const id = randomUUID()
       const orderNumber = formatOrderNumber(await orders.nextSeq(t, orderDay(now).iso), now)
@@ -89,6 +110,7 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
           subtotalMinor: subtotal,
           discountMinor: discount,
           promotions: pricing.promotions,
+          promoCode: rule?.code ?? null,
           kind: 'checkout',
           parentOrderId: null,
           shippingMinor: shipping,
@@ -116,6 +138,7 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
             lineTotalMinor: l.unitAmount * l.quantity,
             discountMinor: pricing.lineDiscounts[l.key] ?? 0,
             promotionId: pricing.linePromotion[l.key] ?? null,
+            codeDiscountMinor: pricing.lineCodeDiscounts[l.key] ?? 0,
           })),
         },
         key,
@@ -131,6 +154,7 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
         marketingConsent: f.marketingConsent,
         ...(input.attribution && { attribution: input.attribution }),
       })
+      if (rule && pricing.code?.amountMinor) await promoCodes.redeem(t, { orderId: id, code: rule.code, email: f.email, discountMinor: pricing.code.amountMinor })
       // Proof of the ticked box: exact wording, version, time, order. An unticked box records nothing.
       if (f.marketingConsent) await marketing.grant(t, { email: f.email, source: 'checkout', orderId: id, page: '/checkout' })
       // The same box names the AI calls: their consent is recorded separately, by phone number (no call follows
@@ -293,6 +317,8 @@ export async function placeUpsellOrder(parent: Order, line: OrderLine): Promise<
           subtotalMinor: pricing.subtotalMinor,
           discountMinor: pricing.discountMinor,
           promotions: pricing.promotions,
+          // The post-purchase offer is priced on its own: the checkout's promo code does not apply to it.
+          promoCode: null,
           shippingMinor: 0,
           totalMinor: pricing.totalMinor,
           kind: 'upsell',
@@ -318,6 +344,7 @@ export async function placeUpsellOrder(parent: Order, line: OrderLine): Promise<
               lineTotalMinor: line.unitAmount * line.quantity,
               discountMinor: pricing.lineDiscounts[line.key] ?? 0,
               promotionId: pricing.linePromotion[line.key] ?? null,
+              codeDiscountMinor: 0,
             },
           ],
         },

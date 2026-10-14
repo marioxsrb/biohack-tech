@@ -80,6 +80,8 @@ export type OrderItem = {
   /** This line's share of the order's promotions (0 when none). Invoiced amount = lineTotal − discount. */
   discountMinor: number
   promotionId: string | null
+  /** The promo code's share of `discountMinor` (0 without a code). */
+  codeDiscountMinor: number
 }
 
 /** A normal checkout order, or the optional one added right after a card payment (linked to its parent). */
@@ -101,6 +103,8 @@ export type Order = {
   subtotalMinor: number
   discountMinor: number
   promotions: AppliedPromotion[]
+  /** The promo code used (its discount is among `promotions`, id `cod:<CODE>`), or null. */
+  promoCode: string | null
   shippingMinor: number
   totalMinor: number
   refundedMinor: number

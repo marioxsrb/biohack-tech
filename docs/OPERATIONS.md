@@ -53,3 +53,15 @@ unsubscribe, no consent, one sequence per person). Its link restores the cart; a
   history, retries), printing (`/admin/print`: preparation sheet, shipping sheet, internal parcel label, order
   details; A4). The internal label is not a courier AWB; courier and AWB are entered by hand until a courier is chosen
   (`server/fulfillment/courier.ts` is the adapter point for a future integration).
+
+## Promo codes (since 14.10.2026)
+
+- Created and switched off in Admin → Coduri promoționale. Percent (1–90) or fixed amount; optional products,
+  minimum order (after automatic promotions), start/end date (Bucharest time), maximum uses, once per email.
+- Applied by the application, not Stripe: works for card, transfer and cash on delivery; Stripe charges the order
+  total. The code applies **after** the automatic promotions, on what is left (business decision 14.10.2026).
+- Checked when typed (`/api/promo`) and again when the order is placed, with the code row locked (the last use of a
+  limited code goes to one order). A use counts while its order stands: a cancelled order or an unpaid card
+  attempt frees it.
+- FGO: each line shows the automatic promotion and the code separately ("cod VARA10: -X lei"); totals match.
+  Post-purchase offers (upsell) never take the checkout's code.

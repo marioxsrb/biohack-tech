@@ -17,6 +17,18 @@ export type PricedLine = { key: string; productId: string; quantity: number; uni
 
 export type AppliedPromotion = { id: string; label: string; amountMinor: number }
 
+/**
+ * A promo code as the pricing needs it (validity, dates and usage are checked by the server before). It
+ * applies after the automatic promotions, on what is left to pay for its eligible lines.
+ *   percent: `value` percent (1–90) of that amount; fixed: `value` bani, at most that amount.
+ *   products: the eligible products (null: all). minOrderMinor: the cart after automatic promotions must reach it.
+ */
+export type PromoCodeRule = { code: string; kind: 'percent' | 'fixed'; value: number; products: string[] | null; minOrderMinor: number }
+
+/** The applied id of a promo code (`cod:VARA10`), and whether an applied id is one. */
+export const codeId = (code: string) => `cod:${code}`
+export const isCodeId = (id: string) => id.startsWith('cod:')
+
 export type Pricing = {
   subtotalMinor: number
   discountMinor: number
@@ -25,8 +37,12 @@ export type Pricing = {
   promotions: AppliedPromotion[]
   /** Discount per line key; lines without a discount are absent. Sums to `discountMinor`. */
   lineDiscounts: Record<string, number>
-  /** Line key → the promotion that discounted it (one per line: the rules never overlap). */
+  /** Line key → the automatic promotion that discounted it (one per line: the rules never overlap). */
   linePromotion: Record<string, string>
+  /** Line key → the promo code's share of the line's discount (already included in `lineDiscounts`). */
+  lineCodeDiscounts: Record<string, number>
+  /** The code applied, or why it did not lower anything ('min_order' | 'no_products'). */
+  code?: { code: string; amountMinor: number; problem?: 'min_order' | 'no_products' }
 }
 
 /**
@@ -102,7 +118,7 @@ function applyOne(p: Promotion, lines: PricedLine[]): Applied[] {
   return [{ id: p.id, amount, own, perLine: allocate(amount, own.map((l) => l.unitAmount * l.quantity)), label: p.label }]
 }
 
-export function priceLines(lines: PricedLine[], promotions: Promotion[] = PROMOTIONS): Pricing {
+export function priceLines(lines: PricedLine[], promotions: Promotion[] = PROMOTIONS, promo?: PromoCodeRule | null): Pricing {
   const subtotalMinor = lines.reduce((s, l) => s + l.unitAmount * l.quantity, 0)
   const applied: AppliedPromotion[] = []
   const lineDiscounts: Record<string, number> = {}
@@ -118,8 +134,32 @@ export function priceLines(lines: PricedLine[], promotions: Promotion[] = PROMOT
       })
     }
   }
+  const lineCodeDiscounts: Record<string, number> = {}
+  let code: Pricing['code']
+  if (promo) {
+    // After the automatic promotions: what is left of each eligible line.
+    const left = (l: PricedLine) => l.unitAmount * l.quantity - (lineDiscounts[l.key] ?? 0)
+    const afterAuto = lines.reduce((s, l) => s + left(l), 0)
+    const own = lines.filter((l) => !promo.products || promo.products.includes(l.productId))
+    const base = own.map(left)
+    const eligible = base.reduce((s, b) => s + b, 0)
+    if (!own.length || !eligible) code = { code: promo.code, amountMinor: 0, problem: 'no_products' }
+    else if (afterAuto < promo.minOrderMinor) code = { code: promo.code, amountMinor: 0, problem: 'min_order' }
+    else {
+      const amount = Math.min(eligible, promo.kind === 'percent' ? percentOf(eligible, Math.min(90, Math.max(0, promo.value))) : Math.max(0, promo.value))
+      code = { code: promo.code, amountMinor: amount }
+      if (amount) {
+        applied.push({ id: codeId(promo.code), label: `Cod ${promo.code}`, amountMinor: amount })
+        allocate(amount, base).forEach((part, i) => {
+          if (!part) return
+          lineDiscounts[own[i].key] = (lineDiscounts[own[i].key] ?? 0) + part
+          lineCodeDiscounts[own[i].key] = part
+        })
+      }
+    }
+  }
   const discountMinor = applied.reduce((s, a) => s + a.amountMinor, 0)
-  return { subtotalMinor, discountMinor, totalMinor: subtotalMinor - discountMinor, promotions: applied, lineDiscounts, linePromotion }
+  return { subtotalMinor, discountMinor, totalMinor: subtotalMinor - discountMinor, promotions: applied, lineDiscounts, linePromotion, lineCodeDiscounts, ...(code && { code }) }
 }
 
 export type PromotionHint = { id: string; text: string }

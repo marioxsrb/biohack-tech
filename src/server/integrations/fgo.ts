@@ -26,10 +26,17 @@ const lei = (minor: number) => Number((minor / 100).toFixed(2))
 function lineName(i: Order['items'][number], o: Order) {
   const base = i.variantName ? `${i.productName} (${i.variantName})` : i.productName
   if (!i.discountMinor) return base
-  const label = o.promotions.find((p) => p.id === i.promotionId)?.label ?? 'reducere'
-  // A per-product discount names its product ("20% la 3 bucăți NEUROS Calm"); the line already does.
-  const promo = label.endsWith(` ${i.productName}`) ? label.slice(0, -i.productName.length - 1) : label
-  return `${base}, ${promo}: -${(i.discountMinor / 100).toFixed(2)} lei`
+  const parts: string[] = []
+  const auto = i.discountMinor - i.codeDiscountMinor
+  if (auto) {
+    const label = o.promotions.find((p) => p.id === i.promotionId)?.label ?? 'reducere'
+    // A per-product discount names its product ("20% la 3 bucăți NEUROS Calm"); the line already does.
+    const promo = label.endsWith(` ${i.productName}`) ? label.slice(0, -i.productName.length - 1) : label
+    parts.push(`${promo}: -${(auto / 100).toFixed(2)} lei`)
+  }
+  // A promo code applies after the automatic promotion: its share is named on its own ("cod VARA10").
+  if (i.codeDiscountMinor) parts.push(`cod ${o.promoCode ?? ''}: -${(i.codeDiscountMinor / 100).toFixed(2)} lei`.replace('cod :', 'cod:'))
+  return `${base}, ${parts.join(', ')}`
 }
 
 /** The invoice request, built from the canonical order only. */

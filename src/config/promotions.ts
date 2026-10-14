@@ -91,6 +91,8 @@ export const promoText = (ro: string, locale: Locale = 'ro'): string => {
   if (locale !== 'en') return ro
   if (EN[ro]) return EN[ro]
   // An applied per-product label: "20% la 3 bucăți NEUROS Calm" → "20% off 3 units, NEUROS Calm".
+  // A promo code: "Cod VARA10" → "Code VARA10".
+  if (ro.startsWith('Cod ')) return `Code ${ro.slice(4)}`
   const m = ro.match(/^(\d+% la \d+ bucăți) (.+)$/)
   return m && EN[m[1]] ? `${EN[m[1]]}, ${m[2]}` : ro
 }

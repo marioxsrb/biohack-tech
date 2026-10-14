@@ -14,6 +14,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <Link href="/admin/stats" className="hover:text-ink">
               A/B și vânzări
             </Link>
+            <Link href="/admin/coduri" className="hover:text-ink">
+              Coduri promoționale
+            </Link>
           </span>
           <span className="flex items-center gap-4">
             <span className="text-[11px] text-ink/40">Operațional</span>
