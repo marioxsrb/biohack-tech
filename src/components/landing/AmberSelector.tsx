@@ -9,6 +9,7 @@ import { terms } from '@/config/site'
 import { itemOf, track } from '@/lib/analytics'
 import type { LandingSlug } from '@/lib/landing-hosts'
 import { formatLei } from '@/lib/money'
+import { RevealPanel, useGate } from '@/components/gate/Gate'
 import { priceLines, promotionProgress } from '@/lib/promotions'
 import { amberCopy } from '@/lib/offer-copy'
 import { MAX_QTY } from '@/lib/purchase'
@@ -42,6 +43,7 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
   const summaryRef = useRef<HTMLDivElement>(null)
   const [summaryVisible, setSummaryVisible] = useState(true)
   const [inSection, setInSection] = useState(false)
+  const { locked } = useGate()
 
   useEffect(() => {
     // Restored after hydration so the server and the first client render agree.
@@ -110,6 +112,36 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
         : { big: c.headline, small: '' }
   const active = !!progress?.active
   const steps = [0, 1, 2].map((i) => i < (units % 3 === 0 && units > 0 ? 3 : units % 3))
+
+  // Price-gated funnel, before the form: the four frames as objects, no price, no offer, one way forward.
+  if (locked) {
+    return (
+      <section id="comanda" aria-labelledby="alege-title" className="lp-wrap scroll-mt-20 py-[var(--sec)]">
+        <h2 id="alege-title" className="text-[clamp(34px,4vw,56px)] leading-[1] tracking-[-0.045em] text-[var(--lp-ink)]">
+          Patru rame. Aceeași lentilă.
+        </h2>
+        <p className="mt-4 max-w-[34em] text-[17px] leading-relaxed text-[var(--lp-muted)]">Combină ramele cum vrei: una pentru birou, una pentru seară. Toate au aceleași lentile chihlimbar.</p>
+        <div className="mt-10 grid items-start gap-6 lg:grid-cols-12">
+          <ul className="grid grid-cols-2 gap-3 sm:gap-4 lg:col-span-8">
+            {variants.map((v) => {
+              const img = v.images.find((i) => i.kind === 'cutout') ?? product.cutout
+              return (
+                <li key={v.id} className="flex flex-col rounded-[20px] bg-paper p-3 sm:p-4">
+                  <div className="relative aspect-[16/10] rounded-[14px] bg-[var(--lp-bg)]">
+                    <Image src={img.src} alt={img.alt} fill sizes="(min-width: 1024px) 360px, 45vw" className="object-contain p-[10%]" />
+                  </div>
+                  <p className="mt-3 text-[16px] leading-snug font-medium text-ink sm:text-[17px]">{variantLabel(product, v)}</p>
+                </li>
+              )
+            })}
+          </ul>
+          <div className="rounded-[22px] bg-paper p-5 shadow-[inset_0_0_0_1px_var(--lp-line)] sm:p-6 lg:sticky lg:top-6 lg:col-span-4">
+            <RevealPanel productId={product.id} />
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   const cta = (
     <a

@@ -17,6 +17,7 @@ import { useLocale } from '@/i18n/LocaleProvider'
 import { ui } from '@/i18n/ui'
 import type { Locale } from '@/i18n/locales'
 import { attributionParams } from '@/lib/attribution'
+import { normalizeContact, validateContact } from '@/lib/lead'
 import { cashOnDelivery } from '@/config/payments'
 import { site, terms } from '@/config/site'
 import { track } from '@/lib/analytics'
@@ -306,6 +307,39 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
     // Once per visit of the page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Progressive capture: once the contact step identifies the visitor (a valid email, plus a name or a phone),
+  // what they typed and the cart are saved as a checkout lead, so an abandoned checkout can be followed up
+  // (only with marketing consent). Debounced; the same content is never sent twice. Off unless
+  // ABANDONED_CHECKOUT_ENABLED (the server answers "skipped").
+  const contactKey = JSON.stringify([`${form.firstName} ${form.lastName}`.trim(), form.email.trim(), form.phone.trim(), form.marketingConsent, lines.map((l) => [l.product.id, l.variant?.id, l.quantity])])
+  const sentKey = useRef('')
+  useEffect(() => {
+    const [name, email, phone] = JSON.parse(contactKey) as [string, string, string]
+    const contact = normalizeContact({ name, email, phone })
+    const bad = validateContact(contact, ['email'])
+    if (bad.email || !contact.email || (!contact.name && !contact.phone) || (contact.phone && bad.phone) || contactKey === sentKey.current) return
+    const timer = setTimeout(() => {
+      sentKey.current = contactKey
+      void fetch('/api/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
+        body: JSON.stringify({
+          action: 'checkout',
+          ...contact,
+          marketingConsent: form.marketingConsent,
+          cart: lines.map((l) => ({ productId: l.product.id, variantId: l.variant?.id, quantity: l.quantity })),
+          attribution: Object.fromEntries(attributionParams(window.location.search)),
+        }),
+      }).catch(() => {
+        sentKey.current = ''
+      })
+    }, 1500)
+    return () => clearTimeout(timer)
+    // contactKey carries every input of the request.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contactKey])
 
   const errors = validateOrder(form, accepted, methods, locale)
   const show = (f: FieldName) => (submitted || touched[f] ? errors[f] : undefined)

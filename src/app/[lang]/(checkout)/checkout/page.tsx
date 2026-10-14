@@ -1,3 +1,4 @@
+import { VisitBeacon } from '@/components/gate/VisitBeacon'
 import type { Metadata } from 'next'
 import { connection } from 'next/server'
 import { Suspense } from 'react'
@@ -19,6 +20,7 @@ export default async function CheckoutPage() {
   return (
     <section className="pt-10 pb-[var(--sec)] max-sm:pt-6">
       <div className="wrap">
+        <VisitBeacon page="checkout" />
         <Suspense fallback={<div className="min-h-[60vh]" />}>
           <CheckoutView methods={paymentMethods(c)} stripeKey={c.stripe?.publishableKey ?? null} />
         </Suspense>

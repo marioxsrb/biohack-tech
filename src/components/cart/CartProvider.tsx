@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { resolveLine, variantLabel, type Product, type ProductId, type Variant } from '@/content/catalog'
 import { useLocale } from '@/i18n/LocaleProvider'
+import { itemOf, track } from '@/lib/analytics'
 import { priceLines, promotionHints, promotionProgress } from '@/lib/promotions'
 import { sourceForPath, type EntrySource } from '@/lib/purchase'
 import { cartStore, lineKey } from './cart-store'
@@ -46,6 +47,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     if (!resolved || resolved.unit === null) return false
     cartStore.add(productId, variantId, quantity, source ?? sourceForPath(window.location.pathname))
     setConfirmation({ key: lineKey({ productId, variantId }), quantity, at: Date.now() })
+    track('add_to_cart', { value: resolved.unit * quantity, items: [itemOf(resolved.product, resolved.variant, resolved.variant && variantLabel(resolved.product, resolved.variant), quantity)] })
     const label = resolved.variant ? `${resolved.product.name}, ${variantLabel(resolved.product, resolved.variant)}` : resolved.product.name
     setAnnouncement(locale === 'en' ? `${label} was added to your cart.` : `${label} a fost adăugat în coș.`)
     return true
@@ -53,6 +55,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addMany = useCallback((picks: { productId: ProductId; variantId?: string; quantity?: number }[], source?: EntrySource) => {
     if (!cartStore.addMany(picks, source ?? sourceForPath(window.location.pathname))) return false
+    const items = picks.flatMap((p) => {
+      const r = resolveLine(p.productId, p.variantId, locale)
+      return r && r.unit !== null ? [{ unit: r.unit * (p.quantity ?? 1), item: itemOf(r.product, r.variant, r.variant && variantLabel(r.product, r.variant), p.quantity ?? 1) }] : []
+    })
+    track('add_to_cart', { value: items.reduce((s, i) => s + i.unit, 0), items: items.map((i) => i.item) })
     const n = picks.reduce((s, p) => s + (p.quantity ?? 1), 0)
     setAnnouncement(locale === 'en' ? `${n === 1 ? '1 pair was' : `${n} pairs were`} added to your cart.` : `${n === 1 ? 'O pereche a fost adăugată' : `${n} perechi au fost adăugate`} în coș.`)
     return true

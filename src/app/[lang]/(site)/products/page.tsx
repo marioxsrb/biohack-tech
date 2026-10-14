@@ -1,3 +1,4 @@
+import { VisitBeacon } from '@/components/gate/VisitBeacon'
 import type { Metadata } from 'next'
 import { Lineup } from '@/components/site/Lineup'
 import { getLocale } from '@/i18n/server'
@@ -28,6 +29,7 @@ export default async function ProductsPage() {
   const t = COPY[await getLocale()]
   return (
     <div className="bg-mist pt-[var(--nav-h)]">
+      <VisitBeacon page="products" />
       <Lineup title={t.heading} headingLevel={1} />
     </div>
   )

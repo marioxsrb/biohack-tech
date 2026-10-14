@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
+import { VisitBeacon } from '@/components/gate/VisitBeacon'
 import { LandingPage } from '@/components/landing/LandingPage'
 import { getProduct, productHref } from '@/content/catalog'
 import { getLanding, landings } from '@/content/landings'
@@ -35,5 +36,10 @@ export async function generateMetadata({ params }: PageProps<'/[lang]/lp/[slug]'
 export default async function LandingRoute({ params }: PageProps<'/[lang]/lp/[slug]'>) {
   const landing = getLanding((await params).slug)
   if (!landing) notFound()
-  return <LandingPage landing={landing} />
+  return (
+    <>
+      <VisitBeacon page={landing.slug} />
+      <LandingPage landing={landing} />
+    </>
+  )
 }

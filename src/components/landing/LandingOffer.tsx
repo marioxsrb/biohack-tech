@@ -13,6 +13,7 @@ import type { LandingSlug } from '@/lib/landing-hosts'
 import { formatLei } from '@/lib/money'
 import { priceLines } from '@/lib/promotions'
 import { checkoutHref, isPlainClick, startCheckout } from './checkout-link'
+import { RevealPanel, useGate } from '@/components/gate/Gate'
 
 export type VariantNote = { big: string; text: string }
 
@@ -49,6 +50,7 @@ export function LandingOffer({ slug, productId, title, text, cta, notes, layout 
   const priced = price !== null ? priceLines([{ key: 'offer', productId: product.id, quantity, unitAmount: price }]) : null
   const image = variant?.images.find((i) => i.kind === 'cutout') ?? product.cutout
   const router = useRouter()
+  const { locked } = useGate()
 
   useEffect(() => {
     track('view_item', { value: price ?? 0, items: [itemOf(product, variant, variant && variantLabel(product, variant))] })
@@ -71,7 +73,24 @@ export function LandingOffer({ slug, productId, title, text, cta, notes, layout 
     startCheckout(router.push, slug, pick)
   }
 
-  const buy = (
+  const buy = locked ? (
+    <>
+      <RevealPanel productId={product.id} variantId={variant?.id} />
+      {details && (
+        <div className="mt-8 border-t border-[var(--lp-line)] pt-5">
+          <p className="text-[15px] font-semibold text-[var(--lp-ink)]">Ce primești</p>
+          <dl className="mt-2 divide-y divide-[var(--lp-line)]">
+            {details.map(([k, v]) => (
+              <div key={k} className="grid gap-0.5 py-2.5 sm:grid-cols-[150px_1fr] sm:gap-4">
+                <dt className="text-[14.5px] text-[var(--lp-muted)]">{k}</dt>
+                <dd className="text-[15px] text-[var(--lp-ink)]">{v}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      )}
+    </>
+  ) : (
     <>
       {withQuantity && price !== null && (
         <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -146,7 +165,7 @@ export function LandingOffer({ slug, productId, title, text, cta, notes, layout 
                 </span>
                 <span className="mt-2 text-[17px] font-semibold text-[var(--lp-ink)]">{variantLabel(product, v)}</span>
                 {n && <span className="mt-2 text-[15px] leading-snug text-[var(--lp-muted)]">{n.text}</span>}
-                <span className="mt-auto pt-3 text-[22px] md:pt-6 font-medium tracking-[-0.02em] text-[var(--lp-ink)] tabular-nums">{vp !== null ? formatLei(vp) : ''}</span>
+                <span className="mt-auto pt-3 text-[22px] md:pt-6 font-medium tracking-[-0.02em] text-[var(--lp-ink)] tabular-nums">{vp !== null && !locked ? formatLei(vp) : ''}</span>
               </button>
             )
           })}

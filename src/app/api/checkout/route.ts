@@ -7,6 +7,9 @@ import { getConfig, paymentMethods } from '@/server/config'
 import { StripeError, stripe } from '@/server/integrations/stripe'
 import { kickJobs } from '@/server/jobs/runner'
 import { errText, log } from '@/server/log'
+import { cookieFrom, funnelForHost, VISITOR_COOKIE } from '@/lib/lead'
+import { getDb } from '@/server/db'
+import { linkOrder } from '@/server/leads'
 import { customerName } from '@/server/orders/model'
 import { attachPaymentIntent, placeOrder, setStripeCustomer } from '@/server/orders/service'
 import { clientIp, rateLimit } from '@/server/rate-limit'
@@ -59,8 +62,17 @@ export async function POST(req: NextRequest) {
   let order
   try {
     // Campaign data is optional and never trusted as sent: unknown landings, hosts and keys are dropped.
-    const attribution = sanitizeAttribution(body.attribution, new URL(site.url).host)
-    ;({ order } = await placeOrder({ lines: resolved.lines, form, attemptId, attribution }))
+    // The funnel is the hostname's (biohack-tech.ro and its landings, or the price-gated acces.<domain>).
+    const funnel = funnelForHost(req.headers.get('host'))
+    const attribution = { ...(sanitizeAttribution(body.attribution, new URL(site.url).host) ?? {}), funnel }
+    let created: boolean
+    ;({ order, created } = await placeOrder({ lines: resolved.lines, form, attemptId, attribution }))
+    // This browser's leads now point to the order (its checkout step and, on acces, its product interests).
+    const visitor = cookieFrom(req.headers.get('cookie'), VISITOR_COOKIE)
+    if (created && visitor && /^[0-9a-f-]{36}$/.test(visitor)) {
+      const placed = order
+      await (await getDb()).tx((t) => linkOrder(t, visitor, placed)).catch((e) => log.error('lead.link_failed', { orderId: placed.id, error: errText(e) }))
+    }
   } catch (e) {
     // The customer gets a calm sentence and a short reference; the cause (database, schema...) stays in
     // the server log under the same reference. No personal data in either.

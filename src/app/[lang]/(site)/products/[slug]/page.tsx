@@ -1,3 +1,4 @@
+import { ProductViewed, VisitBeacon } from '@/components/gate/VisitBeacon'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ProductHero } from '@/components/product/ProductHero'
@@ -56,6 +57,8 @@ export default async function ProductPage({ params }: PageProps<'/[lang]/product
         </div>
       </section>
 
+      <VisitBeacon page={product.slug} />
+      <ProductViewed productId={product.id} />
       <ReviewMarquee productId={product.id} className="mb-[var(--sec)]" />
       <ProductSections product={product} content={content} locale={locale} />
 

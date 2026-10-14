@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Price } from '@/components/cart/Price'
 import type { ProductId } from '@/content/catalog'
+import { RevealButton, useGate } from '@/components/gate/Gate'
 
 /**
  * Phones and tablets: a slim purchase bar once the hero is gone, hidden again while the purchase block
@@ -10,6 +11,7 @@ import type { ProductId } from '@/content/catalog'
  */
 export function StickyBuy({ name, productId, cta }: { name: string; productId: ProductId; cta: string }) {
   const [show, setShow] = useState(false)
+  const { locked } = useGate()
   useEffect(() => {
     const hero = document.getElementById('lp-hero')
     const buy = document.getElementById('comanda')
@@ -34,13 +36,19 @@ export function StickyBuy({ name, productId, cta }: { name: string; productId: P
       <div className="lp-wrap flex items-center gap-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))]">
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-semibold text-[var(--lp-ink)]">{name}</p>
-          <p className="text-[14px] text-[var(--lp-muted)] tabular-nums">
-            <Price productId={productId} pendingClassName="" />
-          </p>
+          {!locked && (
+            <p className="text-[14px] text-[var(--lp-muted)] tabular-nums">
+              <Price productId={productId} pendingClassName="" />
+            </p>
+          )}
         </div>
-        <a href="#comanda" className="cta sm !min-h-12">
-          {cta}
-        </a>
+        {locked ? (
+          <RevealButton productId={productId} className="cta sm !min-h-12" label="Vezi prețul" />
+        ) : (
+          <a href="#comanda" className="cta sm !min-h-12">
+            {cta}
+          </a>
+        )}
       </div>
     </div>
   )

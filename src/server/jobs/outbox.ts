@@ -18,6 +18,8 @@ export type JobKind =
   | 'order.transfer_expiry'
   | 'upsell.release'
   | 'ghl.enquiry'
+  | 'ghl.lead'
+  | 'lead.recovery'
 export type JobStatus = 'pending' | 'running' | 'retry' | 'done' | 'failed' | 'skipped'
 
 export type Job = {

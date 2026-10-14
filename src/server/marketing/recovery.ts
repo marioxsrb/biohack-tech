@@ -15,6 +15,7 @@ import type { Order } from '@/server/orders/model'
 import { orders } from '@/server/orders/repository'
 import { isPaid } from '@/server/orders/state'
 import type { ConsentState } from './consent'
+import { leadRecoveryCart } from '@/server/leads'
 
 /** How long a recovery link works after the order is marked abandoned. */
 export const RECOVERY_LINK_DAYS = 7
@@ -60,8 +61,11 @@ export const recoveryExpiry = (from = new Date()) => new Date(from.getTime() + R
  */
 export async function recoveryCart(token: string, now = new Date()) {
   if (!/^[\w-]{20,64}$/.test(token)) return null
-  const o = await orders.byRecoveryToken(await getDb(), token)
-  if (!o || o.status !== 'abandoned' || o.paymentMethod !== 'card' || isPaid(o.paymentStatus)) return null
+  const db = await getDb()
+  const o = await orders.byRecoveryToken(db, token)
+  // A lead's recovery link (price form or checkout contact step): its own selection, only what is still sold.
+  if (!o) return (await leadRecoveryCart(db, token))?.cart ?? null
+  if (o.status !== 'abandoned' || o.paymentMethod !== 'card' || isPaid(o.paymentStatus)) return null
   if (!o.recoveryExpiresAt || o.recoveryExpiresAt.getTime() <= now.getTime()) return null
   return o.items.map((i) => ({ productId: i.productId, variantId: i.variantId ?? undefined, quantity: i.quantity }))
 }

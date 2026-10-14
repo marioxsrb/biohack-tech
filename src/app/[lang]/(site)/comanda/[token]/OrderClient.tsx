@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { cartStore } from '@/components/cart/cart-store'
 import { Check, Copy } from '@/components/ui/icons'
-import { canTrack, track } from '@/lib/analytics'
+import { canTrack, track, trackFunnel } from '@/lib/analytics'
 import { DRAFT_KEY } from '@/lib/checkout'
 
 type PurchaseItem = { item_id: string; item_name: string; item_variant?: string; price: number; quantity: number }
@@ -14,7 +14,21 @@ type PurchaseItem = { item_id: string; item_name: string; item_variant?: string;
  * page never empties a new cart), forget the form, report the purchase once (only with analytics or marketing consent).
  * A convenience only: payment state never depends on it, and it tolerates unavailable storage.
  */
-export function OrderEffects({ orderNumber, clearKeys, purchase }: { orderNumber: string; clearKeys: string[]; purchase: { orderNumber: string; value: number; items: PurchaseItem[] } | null }) {
+export function OrderEffects({
+  orderNumber,
+  clearKeys,
+  purchase,
+  placed,
+  funnel,
+}: {
+  orderNumber: string
+  clearKeys: string[]
+  /** Only for a confirmed payment (card, or a transfer that arrived). */
+  purchase: { orderNumber: string; value: number; items: PurchaseItem[] } | null
+  /** Cash on delivery or a transfer not yet received: an order, not a payment (Meta custom event OrderPlaced). */
+  placed?: { orderNumber: string; value: number; payment: 'cod' | 'transfer' } | null
+  funnel?: 'visible_price' | 'gated_price'
+}) {
   useEffect(() => {
     if (!clearKeys.length) return
     const key = `bt-cart-cleared-${orderNumber}`
@@ -38,6 +52,16 @@ export function OrderEffects({ orderNumber, clearKeys, purchase }: { orderNumber
     } catch {}
     track('purchase', { value: purchase.value, items: purchase.items, transaction_id: purchase.orderNumber })
   }, [purchase])
+
+  useEffect(() => {
+    if (!placed || !canTrack()) return
+    const key = `bt-placed-${placed.orderNumber}`
+    try {
+      if (localStorage.getItem(key)) return
+      localStorage.setItem(key, '1')
+    } catch {}
+    trackFunnel('OrderPlaced', { value: placed.value, payment: placed.payment, funnel }, `placed-${placed.orderNumber}`)
+  }, [placed, funnel])
 
   return null
 }

@@ -14,6 +14,7 @@ const { resetConfig } = await import('@/server/config')
 const { migrate, postgres, setDb } = await import('@/server/db')
 const svc = await import('@/server/orders/service')
 const { jobs } = await import('@/server/jobs/outbox')
+const { captureLead, CART_INTEREST } = await import('@/server/leads')
 
 describe.skipIf(!url)('on real PostgreSQL', () => {
   let db: Awaited<ReturnType<typeof postgres>>
@@ -21,7 +22,7 @@ describe.skipIf(!url)('on real PostgreSQL', () => {
     for (const [k, v] of Object.entries(TEST_ENV)) vi.stubEnv(k, v)
     resetConfig()
     db = await postgres(url!)
-    await db.exec('drop table if exists jobs, webhook_events, order_events, order_items, orders, schema_migrations cascade; drop sequence if exists order_seq')
+    await db.exec('drop schema public cascade; create schema public')
     await migrate(db)
     await Promise.all([migrate(db), migrate(db)]) // concurrent boots
     setDb(db)
@@ -57,4 +58,29 @@ describe.skipIf(!url)('on real PostgreSQL', () => {
     const nums = res.map((r) => r.order.orderNumber)
     expect(new Set(nums).size).toBe(20)
   })
+
+  it('ten simultaneous submits of the same lead form give one lead and one set of follow-up jobs', async () => {
+    vi.stubEnv('ABANDONED_CHECKOUT_ENABLED', 'true')
+    resetConfig()
+    const visitorId = crypto.randomUUID()
+    const input = { visitorId, funnel: 'gated_price' as const, stage: 'lead' as const, productId: 'balance-wave', contact: { name: 'Ana Popescu', email: 'race@exemplu.ro', phone: '0722123456' }, marketingConsent: true }
+    const res = await Promise.all(Array.from({ length: 10 }, () => db.tx((t) => captureLead(t, input))))
+    expect(new Set(res.map((r) => r.lead.id)).size).toBe(1)
+    expect(res.filter((r) => r.created)).toHaveLength(1)
+    const { rows } = await db.query<{ n: number }>(`select count(*)::int as n from jobs where payload->>'leadId' = $1 and kind = 'lead.recovery'`, [res[0].lead.id])
+    expect(rows[0].n).toBe(2)
+    // A checkout lead next to it, with a different interest key.
+    await db.tx((t) => captureLead(t, { ...input, stage: 'checkout_started', productId: CART_INTEREST, cart: [{ productId: 'balance-wave', quantity: 1 }] }))
+    expect((await db.query<{ n: number }>('select count(*)::int as n from leads where visitor_id = $1', [visitorId])).rows[0].n).toBe(2)
+  })
+
+  it('lead tables are closed to the public Supabase roles (row level security on, no policies)', async () => {
+    const { rows } = await db.query<{ relname: string; relrowsecurity: boolean }>(`select relname, relrowsecurity from pg_class where relname in ('leads', 'funnel_visits') order by relname`)
+    expect(rows).toEqual([
+      { relname: 'funnel_visits', relrowsecurity: true },
+      { relname: 'leads', relrowsecurity: true },
+    ])
+    expect((await db.query<{ n: number }>(`select count(*)::int as n from pg_policies where tablename in ('leads', 'funnel_visits')`)).rows[0].n).toBe(0)
+  })
 })
+

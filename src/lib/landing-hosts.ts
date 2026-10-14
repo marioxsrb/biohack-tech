@@ -97,3 +97,49 @@ export function wwwRedirect(hostHeader: string | null | undefined, siteUrl: stri
   }
   return host === `www.${main.hostname}` ? `${main.origin}${pathAndQuery}` : null
 }
+
+/**
+ * The price-gated funnel's hostname: acces.<base> (acces.localhost outside production). Same app and checkout;
+ * the proxy maps its short paths onto app/[lang]/(landing)/acces.
+ */
+export const GATED_HOST_LABEL = 'acces'
+
+export function isGatedHostname(hostHeader: string | null | undefined, base = landingBaseDomain(), dev = process.env.NODE_ENV !== 'production'): boolean {
+  if (!hostHeader) return false
+  const host = hostHeader.trim().toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '')
+  return host === `${GATED_HOST_LABEL}.${base}` || (dev && host === `${GATED_HOST_LABEL}.localhost`)
+}
+
+/** What the gated hostname serves itself, besides its own pages: the purchase path's later steps and the legal pages. */
+const GATED_PASSTHROUGH = [
+  /^\/comanda\/[\w-]+\/?$/,
+  /^\/reluare\/[\w-]+\/?$/,
+  /^\/dezabonare\/[\w-]+\/?$/,
+  /^\/_next\//,
+  /^\/(terms-of-service|privacy-policy|politica-cookies|politica-livrare|politica-retur|garantie|plati)\/?$/,
+  /^\/retragere(\/confirmare)?\/?$/,
+  /^\/(icon\.svg|favicon\.ico|robots\.txt)$/,
+]
+
+/**
+ * What the gated hostname does with a path. `enabled` is PRICE_GATE_ENABLED: switched off, the funnel's pages
+ * send visitors to the same product on the main site (where the price is visible), while order, recovery and
+ * unsubscribe links already sent keep working. `unlocked`: the visitor has the gate cookie; the cart and the
+ * checkout show prices, so without it they go back to the funnel's home. Pure, tested without a server.
+ */
+export function routeGated(pathname: string, enabled: boolean, unlocked: boolean): LandingRoute | { action: 'main'; path: string } {
+  const p = pathname.replace(/\/+$/, '') || '/'
+  const slug = /^\/(?:acces\/|products\/)?([\w-]+)$/.exec(p)?.[1]
+  if (GATED_PASSTHROUGH.some((r) => r.test(pathname))) return { action: 'next' }
+  if (!enabled) {
+    if (p === '/' || p === '/acces') return { action: 'main', path: '/' }
+    if (slug && isLandingSlug(slug)) return { action: 'main', path: `/products/${slug}` }
+    return { action: 'main', path: pathname }
+  }
+  if (p === '/') return { action: 'rewrite', path: '/acces' }
+  if (isLandingSlug(p.slice(1))) return { action: 'rewrite', path: `/acces${p}` }
+  if (p === '/acces' || p === '/products') return { action: 'redirect', path: '/' }
+  if (slug && isLandingSlug(slug)) return { action: 'redirect', path: `/${slug}` }
+  if (p === '/cart' || p === '/checkout') return unlocked ? { action: 'next' } : { action: 'redirect', path: '/' }
+  return { action: 'main', path: pathname }
+}

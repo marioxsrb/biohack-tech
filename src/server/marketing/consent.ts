@@ -12,7 +12,7 @@ import { randomBytes } from 'node:crypto'
 import type { Queryable } from '@/server/db'
 import { MARKETING_CONSENT_TEXTS, MARKETING_CONSENT_VERSION, type MarketingConsentVersion } from '@/lib/consent/marketing'
 
-export type ConsentSource = 'checkout' | 'unsubscribe_link' | 'ghl' | 'admin'
+export type ConsentSource = 'checkout' | 'lead_form' | 'unsubscribe_link' | 'ghl' | 'admin'
 export type ConsentState = { granted: boolean; at: Date; version: string; source: ConsentSource }
 
 const norm = (email: string) => email.trim().toLowerCase()
@@ -46,6 +46,16 @@ export const marketing = {
     )
     const r = rows[0]
     return r ? { granted: r.granted, at: new Date(r.created_at), version: r.text_version, source: r.source } : null
+  },
+
+  /** The latest decision for several addresses at once (for /admin lists): email → granted. */
+  async states(q: Queryable, emails: string[]): Promise<Map<string, boolean>> {
+    if (!emails.length) return new Map()
+    const { rows } = await q.query<{ email: string; granted: boolean }>(
+      'select distinct on (email) email, granted from marketing_consent_events where email = any($1::text[]) order by email, id desc',
+      [[...new Set(emails.map(norm))]],
+    )
+    return new Map(rows.map((r) => [r.email, r.granted]))
   },
 
   grant: (q: Queryable, e: { email: string; source: ConsentSource; orderId?: string; page?: string }) => record(q, { ...e, granted: true }),

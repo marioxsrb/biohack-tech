@@ -12,6 +12,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <Link href="/admin" className="hover:text-ink">
             Comenzi
           </Link>
+          <Link href="/admin/leaduri" className="hover:text-ink">
+            Leaduri
+          </Link>
           <Link href="/admin/mesaje" className="hover:text-ink">
             Mesaje
           </Link>

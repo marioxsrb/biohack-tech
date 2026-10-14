@@ -24,6 +24,9 @@ export type Vendor = {
   purpose: string
 }
 
+/** BiohackTech's Meta Pixel (Events Manager). */
+export const META_PIXEL_ID = '826932839766824'
+
 const PRIVATE_PAGES = /^\/(checkout|comanda|reluare|dezabonare|retragere|admin)(\/|$)/
 
 export const VENDORS: Vendor[] = [
@@ -48,7 +51,8 @@ export const VENDORS: Vendor[] = [
     id: 'meta',
     name: 'Meta Pixel',
     category: 'marketing',
-    key: process.env.NEXT_PUBLIC_META_PIXEL_ID,
+    // On only with META_PIXEL_ENABLED=true (inlined at build); the id is public by design.
+    key: process.env.NEXT_PUBLIC_META_PIXEL_ENABLED === 'true' ? process.env.NEXT_PUBLIC_META_PIXEL_ID || META_PIXEL_ID : undefined,
     cookies: [/^_fbp$/, /^_fbc$/],
     purpose: 'Măsurarea și afișarea reclamelor Biohack Tech pe Facebook și Instagram.',
   },

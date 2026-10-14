@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { site } from '@/config/site'
 import { checkAdminAuth } from '@/lib/admin-auth'
-import { DISCONTINUED_PATH, isLandingSlug, landingForHost, presentationPath, retiredLandingRedirect, routeLanding, wwwRedirect } from '@/lib/landing-hosts'
+import { DISCONTINUED_PATH, isGatedHostname, isLandingSlug, landingForHost, presentationPath, retiredLandingRedirect, routeGated, routeLanding, wwwRedirect } from '@/lib/landing-hosts'
+import { GATE_COOKIE } from '@/lib/lead'
 import { defaultLocale, splitLocale } from '@/i18n/locales'
 
 /**
@@ -12,6 +13,11 @@ import { defaultLocale, splitLocale } from '@/i18n/locales'
  *    redirect to the main site for everything else. Its presentation page (information only, no purchase)
  *    is at /prezentare. Landing responses are never indexed. Any other Host, including a forged one, is
  *    simply the main site.
+ *
+ * 1c. The price-gated funnel (acces.<domain>): its home at "/", each product at "/<slug>" (served from
+ *    app/[lang]/(landing)/acces), the cart and checkout once the visitor unlocked prices, order, recovery and
+ *    legal pages; everything else goes to the main site. PRICE_GATE_ENABLED off sends its pages to the main
+ *    site. Never indexed. Elsewhere, /acces/* is not served (it would show a form that cannot unlock).
  *
  * 0. www.<main host> → 308 to the same path on the main host (one canonical host). The hostname of a retired
  *    landing (a discontinued product) gets the same treatment, and the discontinued product's own pages
@@ -58,15 +64,28 @@ export function proxy(req: NextRequest) {
   // A discontinued product's pages, on any host and in any language: 410 Gone, never another product.
   const bare = splitLocale(pathname)
   if (DISCONTINUED_PATH.test(bare.path)) return gone(bare.locale)
-  const landing = landingForHost(req.headers.get('host'))
+  const host = req.headers.get('host') ?? ''
+  // Local *.localhost hosts send the rest to the local main site, not to production.
+  const mainOrigin = /\.localhost(:\d+)?$/.test(host) ? `${req.nextUrl.protocol}//${host.replace(/^[^.]+\./, '')}` : site.url
+
+  if (isGatedHostname(host)) {
+    const route = routeGated(pathname, process.env.PRICE_GATE_ENABLED === 'true', !!req.cookies.get(GATE_COOKIE)?.value)
+    if (route.action === 'main') return NextResponse.redirect(new URL(`${route.path}${search}`, mainOrigin), 307)
+    if (route.action === 'redirect') return noindex(NextResponse.redirect(new URL(`${route.path}${search}`, req.url), 307))
+    return noindex(serve(req, defaultLocale, route.action === 'rewrite' ? route.path : pathname, search))
+  }
+  // The gated pages exist only on their hostname.
+  if (/^\/(ro\/|en\/)?acces(\/|$)/.test(pathname)) {
+    const slug = /\/acces\/([\w-]+)\/?$/.exec(pathname)?.[1]
+    return NextResponse.redirect(new URL(slug && isLandingSlug(slug) ? `/products/${slug}` : '/', req.url), 307)
+  }
+
+  const landing = landingForHost(host)
 
   if (landing) {
     const route = routeLanding(landing, pathname)
     if (route.action === 'redirect') {
-      // Local <slug>.localhost hosts send the rest to the local main site, not to production.
-      const host = req.headers.get('host') ?? ''
-      const main = /\.localhost(:\d+)?$/.test(host) ? `${req.nextUrl.protocol}//${host.replace(/^[^.]+\./, '')}` : site.url
-      const to = route.path === '/' ? new URL(`/${search}`, req.url) : new URL(`${route.path}${search}`, main)
+      const to = route.path === '/' ? new URL(`/${search}`, req.url) : new URL(`${route.path}${search}`, mainOrigin)
       return NextResponse.redirect(to, 308)
     }
     // Landings and the purchase path they use are Romanian; the presentation page sits outside the language tree.

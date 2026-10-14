@@ -1,3 +1,4 @@
+import { VisitBeacon } from '@/components/gate/VisitBeacon'
 import type { Metadata } from 'next'
 import { ContactSection } from '@/components/home/ContactSection'
 import { Discover } from '@/components/home/Discover'
@@ -50,6 +51,7 @@ export async function generateMetadata(): Promise<Metadata> {
 export default function Home() {
   return (
     <>
+      <VisitBeacon page="home" />
       <Hero />
       <Discover />
       <Why />

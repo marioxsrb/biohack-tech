@@ -13,6 +13,11 @@ import { GhlError, TAGS, ghl, tagsFor } from '@/server/integrations/ghl'
 import { renderEmail, stillDue, type EmailTemplate } from '@/server/integrations/email/templates'
 import { deliver, EmailError } from '@/server/integrations/email/transport'
 import { NOTIFICATIONS, renderNotification, type NotifyEvent } from '@/server/notifications'
+import { CART_INTEREST, interestOf, leads, recoveryDecision, recoveryFacts } from '@/server/leads'
+import { renderLeadRecovery } from '@/server/leads-email'
+import { gatedOrigin } from '@/lib/lead'
+import { marketing } from '@/server/marketing/consent'
+import { INTEREST_TAG, LEAD_TAGS } from '@/server/integrations/ghl'
 import { errText, log } from '@/server/log'
 import { marketingStatus } from '@/server/marketing/sync'
 import { orders } from '@/server/orders/repository'
@@ -100,6 +105,61 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const mail = renderNotification(event, o, ctx)
     const ref = await deliver(c, { ...mail, to: c.email.notifyTo!, name: j.dedupeKey.replace(/[^\w.-]+/g, '-') })
     await orders.event(db, o.id, 'notify.sent', 'system', { event, ref })
+    return ref
+  },
+
+  // A lead's identity and interest in the CRM: contact upsert and tags only (no opportunity, no order fields).
+  'ghl.lead': async (j) => {
+    const c = getConfig()
+    if (!c.ghl) throw new Skip('ghl not configured')
+    const db = await getDb()
+    const lead = await leads.byId(db, String(j.payload.leadId ?? ''))
+    if (!lead) throw new Skip('lead gone')
+    const contactId = await ghl.upsertLeadContact(c.ghl, lead)
+    const products = lead.productId && lead.productId !== CART_INTEREST ? [lead.productId] : (lead.cart ?? []).map((l) => l.productId)
+    await ghl.addTags(c.ghl, contactId, [
+      LEAD_TAGS.lead,
+      lead.funnel === 'gated_price' ? LEAD_TAGS.gated : LEAD_TAGS.visible,
+      ...(lead.stage !== 'lead' ? [LEAD_TAGS.checkout] : []),
+      ...(lead.stage === 'ordered' || lead.stage === 'purchased' ? [LEAD_TAGS.converted] : []),
+      ...products.map((p) => INTEREST_TAG[p]).filter(Boolean),
+    ])
+    if (contactId !== lead.ghlContactId) await leads.update(db, lead.id, { ghl_contact_id: contactId })
+    return contactId
+  },
+
+  // One recovery step for a lead, decided now: abandonment is recorded; an email only with consent.
+  'lead.recovery': async (j) => {
+    const c = getConfig()
+    const db = await getDb()
+    const lead = await leads.byId(db, String(j.payload.leadId ?? ''))
+    if (!lead) throw new Skip('lead gone')
+    const step = Number(j.payload.step) === 2 ? 2 : 1
+    const own = c.email.transport === 'smtp' || c.email.transport === 'file'
+    const facts = await recoveryFacts(db, lead)
+    const now = new Date()
+    const d = recoveryDecision(lead, { stage: String(j.payload.stage), step, now, features: c.features, firstMinutes: c.recovery.firstMinutes, secondHours: c.recovery.secondHours, ...facts, canSend: own })
+    if (!d.send) {
+      const patch: Record<string, unknown> = {}
+      if (d.abandonment && !lead.abandonment) patch.abandonment = d.abandonment
+      if (d.status && d.status !== lead.recoveryStatus && lead.recoveryStatus !== 'stopped') Object.assign(patch, { recovery_status: d.status, recovery_reason: d.reason })
+      if (Object.keys(patch).length) await leads.update(db, lead.id, patch)
+      // Still active: the same step is planned again from the latest activity (a new key, so it is queued once).
+      if (d.later) await jobs.enqueue(db, { kind: 'lead.recovery', dedupeKey: `${j.dedupeKey}:${d.later.getTime()}`, payload: j.payload, runAt: d.later })
+      throw new Skip(d.reason)
+    }
+    const token = await marketing.unsubscribeToken(db, lead.email)
+    const base = lead.funnel === 'gated_price' ? gatedOrigin(c.siteUrl) : c.siteUrl
+    const mail = renderLeadRecovery({
+      step,
+      firstName: lead.name?.split(' ')[0] ?? null,
+      products: interestOf(lead),
+      abandonment: d.abandonment,
+      link: `${base}/api/lead/resume?t=${lead.recoveryToken}`,
+      unsubscribeUrl: `${c.siteUrl}/dezabonare/${token}`,
+    })
+    const ref = await deliver(c, { ...mail, to: lead.email, name: `lead-recovery-${lead.id}-${step}` })
+    await leads.update(db, lead.id, { abandonment: lead.abandonment ?? d.abandonment, recovery_status: 'sent', recovery_reason: `step ${step}`, recovery_sent: step, last_recovery_at: now })
     return ref
   },
 

@@ -1,7 +1,10 @@
 import { timingSafeEqual } from 'node:crypto'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getConfig } from '@/server/config'
+import { getDb } from '@/server/db'
 import { runDueJobs } from '@/server/jobs/runner'
+import { purgeStaleLeads } from '@/server/leads'
+import { errText, log } from '@/server/log'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -17,7 +20,16 @@ async function run(req: NextRequest) {
   if (!secret || given.length !== secret.length || !timingSafeEqual(Buffer.from(given), Buffer.from(secret))) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
   }
-  return NextResponse.json({ ran: await runDueJobs(50) })
+  const ran = await runDueJobs(50)
+  // Leads that never became an order are not kept past the retention period in the privacy policy.
+  let purged = 0
+  try {
+    purged = await purgeStaleLeads(await getDb())
+    if (purged) log.info('leads.purged', { count: purged })
+  } catch (e) {
+    log.error('leads.purge_failed', { error: errText(e) })
+  }
+  return NextResponse.json({ ran, purged })
 }
 
 export const GET = run

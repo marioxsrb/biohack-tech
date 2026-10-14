@@ -1,9 +1,11 @@
 /**
  * Where an order came from. The landing puts its slug and the campaign's UTM parameters on the
  * checkout link; the checkout sends them with the order; the server keeps only what this file
- * accepts. Nothing is stored in the browser: no cookie, no localStorage. Click ids (gclid, fbclid)
- * are deliberately not collected.
+ * accepts. Nothing is stored in the browser: no cookie, no localStorage. Meta's click id (fbclid) is
+ * kept with the order for campaign measurement (gclid is not collected). The funnel (visible or
+ * price-gated) is set by the server from the hostname, never from what the browser says.
  */
+import type { Funnel } from './lead'
 import { isLandingSlug, landingBaseDomain, landingHost, type LandingSlug } from './landing-hosts'
 import { ENTRY_LABEL, isEntrySource, type EntrySource } from './purchase'
 
@@ -19,6 +21,10 @@ export type Attribution = {
   utm?: Partial<Record<UtmKey, string>>
   /** Where the order's first product was added (home, catalog, product, landing, cart offer, recovery, link). */
   entry?: EntrySource
+  /** Meta click id from the ad link. */
+  fbclid?: string
+  /** visible_price (biohack-tech.ro and its landings) or gated_price (acces.<domain>). Server-set. */
+  funnel?: Funnel
 }
 
 const clean = (v: unknown) =>
@@ -39,6 +45,9 @@ export function attributionParams(search: string | URLSearchParams): URLSearchPa
     const v = clean(from.get(k))
     if (v) out.set(k, v)
   }
+  // Meta's click id is longer than the other values and has its own alphabet.
+  const fbclid = from.get('fbclid') ?? ''
+  if (/^[\w-]{10,500}$/.test(fbclid)) out.set('fbclid', fbclid)
   return out
 }
 
@@ -71,7 +80,9 @@ export function sanitizeAttribution(raw: unknown, mainHost?: string, base = land
   }
   if (Object.keys(utm).length) a.utm = utm
   if (isEntrySource(r.entry)) a.entry = r.entry
-  return a.landing || a.utm || a.entry ? a : null
+  const fbclid = typeof r.fbclid === 'string' && /^[\w-]{10,500}$/.test(r.fbclid) ? r.fbclid : ''
+  if (fbclid) a.fbclid = fbclid
+  return a.landing || a.utm || a.entry || a.fbclid ? a : null
 }
 
 /**
@@ -81,6 +92,7 @@ export function sanitizeAttribution(raw: unknown, mainHost?: string, base = land
 export function attributionSummary(a: Attribution | null | undefined): string {
   if (!a) return 'site'
   const parts = [a.landing ? `landing ${a.landing}` : a.entry ? `site, ${ENTRY_LABEL[a.entry]}` : 'site']
+  if (a.funnel === 'gated_price') parts[0] = `acces (preț după formular), ${parts[0]}`
   const u = a.utm
   if (u && (u.utm_source || u.utm_medium || u.utm_campaign)) parts.push([u.utm_source || '-', u.utm_medium || '-', u.utm_campaign || '-'].join(' / '))
   return parts.join(' · ').slice(0, 250)

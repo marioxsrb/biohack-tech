@@ -113,6 +113,23 @@ export const TAGS = {
   enquiry: 'bt-mesaj-contact',
 } as const
 /** One tag per product bought. Every catalog product must have one (tested). */
+/**
+ * Lead tags. None is used by a BiohackTech or NEUROS workflow: they only describe interest and source.
+ * The application, not GoHighLevel, sends any recovery email.
+ */
+export const LEAD_TAGS = {
+  lead: 'bt-lead',
+  gated: 'bt-lead-acces',
+  visible: 'bt-lead-site',
+  checkout: 'bt-lead-checkout',
+  converted: 'bt-lead-convertit',
+}
+export const INTEREST_TAG: Record<string, string> = {
+  'balance-wave': 'bt-interes-calm',
+  'brainlink-pro': 'bt-interes-focus',
+  'ochelari-biohack': 'bt-interes-amber',
+}
+
 export const PRODUCT_TAG: Record<string, string> = {
   'balance-wave': 'bt-cumparat-calm',
   'brainlink-pro': 'bt-cumparat-focus',
@@ -241,6 +258,23 @@ export const ghl = {
       ...(rest.length && { lastName: rest.join(' ') }),
       ...(e.phone && { phone: e.phone }),
       source: 'biohack-tech.ro contact',
+    })
+    return r.contact.id
+  },
+
+  /**
+   * A lead (price form or checkout contact step): identity only, like a contact-form sender. No order fields,
+   * no marketing fields, no pipeline or opportunity, so no ecommerce workflow (W1-W7) can start from it.
+   */
+  async upsertLeadContact(c: GhlConfig, l: { name: string | null; email: string; phone: string | null; funnel: string }) {
+    const [firstName, ...rest] = (l.name ?? '').split(' ')
+    const r = await call<{ contact: { id: string } }>(c, 'POST', '/contacts/upsert', {
+      locationId: c.locationId,
+      email: l.email,
+      ...(firstName && { firstName }),
+      ...(rest.length && { lastName: rest.join(' ') }),
+      ...(l.phone && { phone: l.phone }),
+      source: l.funnel === 'gated_price' ? 'acces.biohack-tech.ro (preț după formular)' : 'biohack-tech.ro checkout',
     })
     return r.contact.id
   },

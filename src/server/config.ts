@@ -67,6 +67,15 @@ export type Config = {
   abandonAfterMinutes: number
   /** Days after which an unpaid bank-transfer order is cancelled automatically; null = never (default). */
   transferExpiryDays: number | null
+  /**
+   * Conversion engine switches, each independent and off unless set to "true":
+   *   priceGate          acces.<domain> shows products with the price behind a short form (off: it sends visitors to the main site)
+   *   abandonedCheckout  leads from the checkout's contact step, and abandonment marking for every lead
+   *   recoveryEmail      recovery emails (still only with marketing consent; off: leads are kept, nothing is sent)
+   */
+  features: { priceGate: boolean; abandonedCheckout: boolean; recoveryEmail: boolean }
+  /** When the first and second recovery emails go out after the last activity (defaults 30 min, 24 h). */
+  recovery: { firstMinutes: number; secondHours: number }
 }
 
 /** ISO 13616 mod-97 check, so a mistyped IBAN is caught before a customer sees it. */
@@ -197,6 +206,9 @@ function readSmtp(issues: ConfigIssue[], needed: boolean): SmtpConfig | null {
   return { host, port, secure: port === 465, user, password }
 }
 
+/** A feature switch: on only when set to "true". */
+export const flag = (k: string) => str(k) === 'true'
+
 const positiveInt = (v: string | undefined) => {
   const n = Number(v)
   return v !== undefined && Number.isInteger(n) && n > 0 ? n : null
@@ -272,6 +284,8 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     cronSecret,
     abandonAfterMinutes: positiveInt(str('ABANDON_AFTER_MINUTES')) ?? 60,
     transferExpiryDays: positiveInt(str('TRANSFER_EXPIRY_DAYS')),
+    features: { priceGate: flag('PRICE_GATE_ENABLED'), abandonedCheckout: flag('ABANDONED_CHECKOUT_ENABLED'), recoveryEmail: flag('RECOVERY_EMAIL_ENABLED') },
+    recovery: { firstMinutes: positiveInt(str('RECOVERY_FIRST_MINUTES')) ?? 30, secondHours: positiveInt(str('RECOVERY_SECOND_HOURS')) ?? 24 },
   }
   cached = { config, issues }
   return cached

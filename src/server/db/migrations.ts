@@ -242,4 +242,62 @@ alter table orders add column if not exists cod_amount_minor integer;
 alter table orders add column if not exists cod_reference text
 `,
   },
+  {
+    // Conversion engine (phase 4/5/7): leads from the price-gated funnel (acces.biohack-tech.ro) and from the
+    // checkout's contact step, their abandonment and recovery state, and anonymous daily visit counts per
+    // funnel. One lead per visitor, funnel and product interest. Row level security on, no policy: only the
+    // server (table owner) reads or writes; Supabase's public API sees nothing.
+    id: '007_leads',
+    sql: `
+create table if not exists leads (
+  id uuid primary key,
+  visitor_id text not null,
+  funnel text not null check (funnel in ('visible_price', 'gated_price')),
+  product_id text not null default '',
+  variant_id text,
+  name text,
+  email text not null,
+  phone text,
+  stage text not null default 'lead' check (stage in ('lead', 'checkout_started', 'ordered', 'purchased')),
+  cart jsonb,
+  attribution jsonb,
+  landing_host text,
+  fbclid text,
+  privacy_version text,
+  marketing_consent boolean not null default false,
+  call_consent boolean not null default false,
+  contact_preference text,
+  order_id uuid references orders(id) on delete set null,
+  abandonment text check (abandonment in ('lead_abandoned', 'checkout_abandoned')),
+  recovery_status text not null default 'none',
+  recovery_reason text,
+  recovery_sent integer not null default 0,
+  last_recovery_at timestamptz,
+  recovery_token text unique,
+  ghl_contact_id text,
+  price_revealed_at timestamptz,
+  checkout_started_at timestamptz,
+  ordered_at timestamptz,
+  purchased_at timestamptz,
+  last_activity_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (visitor_id, funnel, product_id)
+);
+create index if not exists leads_email_idx on leads (email);
+create index if not exists leads_created_idx on leads (created_at desc);
+create index if not exists leads_funnel_idx on leads (funnel, created_at desc);
+create index if not exists leads_order_idx on leads (order_id);
+alter table leads enable row level security;
+create table if not exists funnel_visits (
+  day date not null,
+  funnel text not null,
+  page text not null,
+  visits integer not null default 0,
+  primary key (day, funnel, page)
+);
+alter table funnel_visits enable row level security;
+alter table orders add column if not exists lead_id uuid
+`,
+  },
 ]

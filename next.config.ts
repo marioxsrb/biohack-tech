@@ -6,6 +6,8 @@ const nextConfig: NextConfig = {
   // A second local instance (the Stripe TEST environment, scripts/stripe-test.mjs) builds into its own folder.
   ...(process.env.NEXT_DIST_DIR && { distDir: process.env.NEXT_DIST_DIR }),
   turbopack: { root: process.cwd() },
+  // META_PIXEL_ENABLED is a server variable; the browser bundle gets its value at build time.
+  env: { NEXT_PUBLIC_META_PIXEL_ENABLED: process.env.META_PIXEL_ENABLED ?? '' },
   // Pages live under app/[lang]; a URL that matches no route at all gets app/global-not-found.tsx.
   experimental: {
     globalNotFound: true,

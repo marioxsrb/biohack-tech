@@ -1,7 +1,9 @@
+import { mentionsOffer } from '@/lib/lead'
 import { getProduct } from '@/content/catalog'
 import type { Landing } from '@/content/landings'
 import { terms } from '@/config/site'
 import { formatLei } from '@/lib/money'
+import { GatedHeroPrice } from '@/components/gate/Gate'
 import { HeroCta } from '../HeroCta'
 import { LandingOffer } from '../LandingOffer'
 import { FinalCta, Help, LandingFaq, LandingShell, Testimonials } from '../kit'
@@ -14,17 +16,21 @@ const CTA = 'Comandă NEUROS Calm'
  * yourself) to the object, why the neck, how it is used, where it fits, what arrives, and the purchase.
  * Copy stays within the product page (product-content.ts): no health outcome is promised.
  */
-export function CalmLanding({ landing }: { landing: Landing }) {
+export function CalmLanding({ landing, gated = false }: { landing: Landing; gated?: boolean }) {
   const p = getProduct(landing.productId)!
   return (
     <LandingShell landing={landing} heroTone="light" cta="Comandă">
       <CalmHero
         name={p.name}
         buy={
+          gated ? (
+            <GatedHeroPrice productId={p.id} onDark />
+          ) : (
           <p className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-2">
             <span className="text-[30px] font-medium tracking-[-0.03em] text-white tabular-nums">{p.price !== null && formatLei(p.price)}</span>
             <span className="text-[14px] text-white/70">{terms.vat} · livrare gratuită</span>
           </p>
+          )
         }
         cta={<HeroCta slug={landing.slug} productId={p.id} label={CTA} />}
       />
@@ -46,7 +52,7 @@ export function CalmLanding({ landing }: { landing: Landing }) {
       />
 
       <Testimonials productId={p.id} />
-      <LandingFaq items={landing.faqs} />
+      <LandingFaq items={gated ? landing.faqs.filter((f) => !mentionsOffer(`${f.q} ${f.a}`)) : landing.faqs} />
       <Help title="Vrei să afli dacă ți se potrivește?" text="Spune-ne cum arată seara ta. Îți spunem sincer dacă NEUROS Calm este pentru tine." />
       <FinalCta title="Începe cu câteva minute, chiar în seara asta." cta={CTA} />
     </LandingShell>
