@@ -134,6 +134,11 @@ export const TAGS = {
   returnReceived: 'bt-retur-primit',
   /** Wrote to us through the site's contact form. Starts no order workflow. */
   enquiry: 'bt-mesaj-contact',
+  /**
+   * The person placed an order (cash on delivery or transfer as soon as placed, card once paid; not a cancelled
+   * one). Unlike bt-cumparat-* (only once the money is in), it stops campaign reminders right after the order.
+   */
+  orderPlaced: 'bt-comanda-plasata',
   /** Present only while an AI call consent is in force for one of the address's numbers (Supabase stays the proof). */
   callConsent: 'bt-acord-apel-ai',
 } as const
@@ -253,6 +258,13 @@ export function contactPayload(c: GhlConfig, o: Order, lifetime: { orders: numbe
       .map(([key, value]) => customField(key, value))
       .concat(marketingFields(m)),
   }
+}
+
+/** bt-comanda-plasata for an order that stands (see TAGS.orderPlaced); never for an upsell or a cancelled order. */
+export function placedTags(o: Order): string[] {
+  if (o.kind !== 'checkout' || o.status === 'cancelled') return []
+  const committed = o.paymentMethod !== 'card' || o.paymentStatus === 'paid' || o.paymentStatus === 'partially_refunded'
+  return committed ? [TAGS.orderPlaced] : []
 }
 
 /** Tags are added (never replaced): client + one per product bought, only once paid. */

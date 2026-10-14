@@ -60,6 +60,11 @@ export type Config = {
   bank: BankConfig | null
   fgo: FgoConfig | null
   ghl: GhlConfig | null
+  /**
+   * Other GoHighLevel sub-accounts that only receive the purchase tags (bt-cumparat-*) on contacts they already
+   * have, matched by email (e.g. Brain Event 2026, for the launch emails' "not bought" filter). Never creates.
+   */
+  ghlTagMirrors: GhlConfig[]
   email: EmailConfig
   admin: { user: string; password: string } | null
   cronSecret?: string
@@ -295,6 +300,10 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
 
   const transportRaw = isolated ? 'file' : str('EMAIL_TRANSPORT')
   const ghl = isolated ? null : readGhl(issues)
+  const mirrorToken = str('GHL_BRAINEVENT_TOKEN')
+  const mirrorLocation = str('GHL_BRAINEVENT_LOCATION_ID')
+  const ghlTagMirrors: GhlConfig[] =
+    !isolated && ghl && mirrorToken && mirrorLocation ? [{ token: mirrorToken, locationId: mirrorLocation, pipelineId: '', apiBase: ghl.apiBase }] : []
   const transport: EmailConfig['transport'] =
     transportRaw === 'smtp' || transportRaw === 'ghl' || transportRaw === 'file' || transportRaw === 'none' ? transportRaw : appEnv === 'development' ? 'file' : 'none'
   const smtp = isolated ? null : readSmtp(issues, transport === 'smtp')
@@ -330,6 +339,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     bank: readBank(issues),
     fgo: isolated ? null : readFgo(appEnv, issues, siteUrl),
     ghl,
+    ghlTagMirrors,
     email: {
       transport,
       from: senderOf(str('EMAIL_FROM')),

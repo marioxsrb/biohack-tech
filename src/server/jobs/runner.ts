@@ -9,7 +9,7 @@ import { after } from 'next/server'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { FgoError, fgo } from '@/server/integrations/fgo'
-import { GhlError, TAGS, ghl, tagsFor } from '@/server/integrations/ghl'
+import { GhlError, TAGS, ghl, placedTags, tagsFor } from '@/server/integrations/ghl'
 import { renderEmail, stillDue, type EmailTemplate } from '@/server/integrations/email/templates'
 import { deliver, EmailError } from '@/server/integrations/email/transport'
 import { NOTIFICATIONS, renderNotification, type NotifyEvent } from '@/server/notifications'
@@ -24,6 +24,7 @@ import { companyLine } from '@/config/company'
 import { errText, log } from '@/server/log'
 import { marketingStatus } from '@/server/marketing/sync'
 import { orders } from '@/server/orders/repository'
+import type { Order } from '@/server/orders/model'
 import { reconcileCardPayment } from '@/server/orders/reconcile'
 import { releaseUpsellCard } from '@/server/orders/upsell'
 import { syncEnquiry } from '@/server/enquiries'
@@ -52,6 +53,23 @@ const step = (r: StepResult) => {
   return r.note
 }
 
+/**
+ * The purchase tags also go to the mirror sub-accounts (only where the address already exists; never a new
+ * contact), so a "has not bought" filter there sees the purchase. A mirror failure never fails the order's sync.
+ */
+async function mirrorPurchaseTags(c: ReturnType<typeof getConfig>, o: Order) {
+  const tags = [...tagsFor(o).filter((t) => t.startsWith('bt-cumparat-')), ...placedTags(o)]
+  if (!tags.length) return
+  for (const m of c.ghlTagMirrors) {
+    try {
+      const id = await ghl.findContactId(m, o.email)
+      if (id) await ghl.addTags(m, id, tags)
+    } catch (e) {
+      log.warn('ghl.mirror_tags_failed', { orderId: o.id, location: m.locationId, error: errText(e) })
+    }
+  }
+}
+
 async function syncCrm(orderId: string) {
   const c = getConfig()
   if (!c.ghl) throw new Skip('ghl not configured')
@@ -62,7 +80,8 @@ async function syncCrm(orderId: string) {
   const latest = (await orders.latestKnown(db, o.email)) ?? o
   const m = await marketingStatus(db, o.email, c.siteUrl)
   const contactId = await ghl.upsertContact(c.ghl, latest, await orders.lifetime(db, o.email), m.fields, c.siteUrl, o.ghlContactId ?? latest.ghlContactId ?? (await knownContactId(db, o.email)))
-  await ghl.addTags(c.ghl, contactId, tagsFor(o))
+  await ghl.addTags(c.ghl, contactId, [...tagsFor(o), ...placedTags(o)])
+  await mirrorPurchaseTags(c, o)
   // The application sends the recovery email (lead system); the W2 tag is never set, and removed where it was.
   if (m.recoverable || m.hadRecovery) await ghl.removeTags(c.ghl, contactId, [TAGS.recovery])
   const parentNumber = o.parentOrderId ? (await orders.byId(db, o.parentOrderId))?.orderNumber : null
