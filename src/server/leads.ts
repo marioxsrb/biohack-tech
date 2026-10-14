@@ -270,7 +270,7 @@ export function recoveryDecision(
     secondHours?: number
     /** An order of this address placed after the lead (any method), or the lead's own order, paid or committed. */
     converted: boolean
-    /** A checkout lead of the same person exists (the product interest went on to the checkout). */
+    /** A checkout of the same person started after this lead (the product interest went on to the checkout). */
     superseded: boolean
     /** Another lead of the same person already got a recovery email recently: one sequence per person. */
     otherRecovery: boolean
@@ -319,7 +319,7 @@ export async function recoveryFacts(q: Queryable, lead: Lead) {
   const { rows: sup } =
     lead.productId === CART_INTEREST
       ? { rows: [] }
-      : await q.query(`select 1 from leads where email = $1 and product_id = '${CART_INTEREST}' and id <> $2 and coalesce(checkout_started_at, created_at) >= $3 limit 1`, [lead.email, lead.id, new Date(lead.createdAt.getTime() - RECOVERY_PERSON_DAYS * 86_400_000)])
+      : await q.query(`select 1 from leads where email = $1 and product_id = '${CART_INTEREST}' and id <> $2 and coalesce(checkout_started_at, created_at) >= $3 limit 1`, [lead.email, lead.id, lead.createdAt])
   // One sequence per person: another lead already got an email recently, or an older lead of the same person
   // still has its own recovery to come (it owns the sequence, even if its step was moved by new activity).
   const { rows: other } = await q.query(

@@ -328,6 +328,18 @@ describe('recovery emails', () => {
     expect(recoveries().length).toBe(2)
   })
 
+  it('an older checkout that was stopped (unsubscribed then) does not silence a newer lead with fresh consent', async () => {
+    await lead(post('/api/lead', MAIN, { action: 'checkout', ...ana, marketingConsent: true, cart: [{ productId: 'balance-wave', quantity: 1 }] }))
+    await marketing.withdraw(db, { email: 'ana@exemplu.ro', source: 'unsubscribe_link' })
+    await db.query(`update leads set last_activity_at = now() - interval '40 minutes', created_at = now() - interval '1 hour'`)
+    await later()
+    expect(recoveries()).toEqual([])
+    const fresh = await reveal({ marketingConsent: true })
+    await quiet(fresh.data.leadId, 40)
+    await later()
+    expect(recoveries().map((m) => m.subject)).toEqual(['NEUROS Calm: oferta pe care ai văzut-o'])
+  })
+
   it('the older lead owns the sequence: a product opened later never emails first, even when its step runs first', async () => {
     const first = await reveal({ marketingConsent: true })
     await lead(post('/api/lead', GATED, { action: 'interest', productId: 'brainlink-pro' }, { bt_vid: first.vid, bt_gate: first.gate }))
