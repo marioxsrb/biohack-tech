@@ -9,7 +9,7 @@
 import type { ResolvedLine } from '@/components/cart/CartProvider'
 import { lineRef, unitPrice, type Product, type Variant } from '@/content/catalog'
 import { consentStore } from '@/lib/consent/store'
-import { isLoaded } from '@/lib/consent/vendors'
+import { isConfigured, whenLoaded } from '@/lib/consent/vendors'
 
 export type EcomEvent = 'view_item' | 'select_item' | 'select_variant' | 'add_to_cart' | 'view_cart' | 'begin_checkout' | 'add_payment_info' | 'purchase'
 
@@ -35,8 +35,12 @@ const META_EVENT: Partial<Record<EcomEvent, string>> = {
   purchase: 'Purchase',
 }
 
-/** True when at least one running tool may receive events (used to avoid marking a purchase as reported). */
-export const canTrack = () => (consentStore.allows('analytics') && isLoaded('ga4')) || (consentStore.allows('marketing') && isLoaded('meta'))
+/** A tool the visitor allowed and that is configured (it starts on this page, if not already running). */
+const ga4On = () => consentStore.allows('analytics') && isConfigured('ga4')
+const metaOn = () => consentStore.allows('marketing') && isConfigured('meta')
+
+/** True when at least one allowed tool will receive events (used to avoid marking a purchase as reported). */
+export const canTrack = () => ga4On() || metaOn()
 
 export function track(
   event: EcomEvent,
@@ -45,18 +49,18 @@ export function track(
   if (typeof window === 'undefined' || !canTrack()) return
   const items = data.items.map((i) => ('product' in i ? lineItem(i) : i))
   const w = window as unknown as { gtag?: (...a: unknown[]) => void; fbq?: (...a: unknown[]) => void }
-  if (consentStore.allows('analytics') && isLoaded('ga4')) {
-    w.gtag?.('event', event, {
+  if (ga4On()) {
+    whenLoaded('ga4', () => w.gtag?.('event', event, {
       currency: 'RON',
       value: lei(data.value),
       ...(data.transaction_id && { transaction_id: data.transaction_id }),
       ...(data.payment_type && { payment_type: data.payment_type }),
       items,
-    })
+    }))
   }
   const meta = META_EVENT[event]
-  if (meta && consentStore.allows('marketing') && isLoaded('meta')) {
-    w.fbq?.('track', meta, { currency: 'RON', value: lei(data.value), content_type: 'product', content_ids: items.map((i) => i.item_id), num_items: items.reduce((n, i) => n + i.quantity, 0) }, data.transaction_id ? { eventID: data.transaction_id } : undefined)
+  if (meta && metaOn()) {
+    whenLoaded('meta', () => w.fbq?.('track', meta, { currency: 'RON', value: lei(data.value), content_type: 'product', content_ids: items.map((i) => i.item_id), num_items: items.reduce((n, i) => n + i.quantity, 0) }, data.transaction_id ? { eventID: data.transaction_id } : undefined))
   }
 }
 
@@ -66,8 +70,8 @@ export type UiPlacement = 'cart' | 'checkout' | 'post_purchase' | 'product_page'
 
 /** Same consent rule as `track`: nothing is sent, or queued, without analytics consent and a running GA4. */
 export function trackUi(event: UiEvent, params: { placement: UiPlacement; product_id?: string; variant_id?: string; items?: number }) {
-  if (typeof window === 'undefined' || !consentStore.allows('analytics') || !isLoaded('ga4')) return
-  ;(window as unknown as { gtag?: (...a: unknown[]) => void }).gtag?.('event', event, params)
+  if (typeof window === 'undefined' || !ga4On()) return
+  whenLoaded('ga4', () => (window as unknown as { gtag?: (...a: unknown[]) => void }).gtag?.('event', event, params))
 }
 
 /**
@@ -80,13 +84,12 @@ export function trackUi(event: UiEvent, params: { placement: UiPlacement; produc
 export type FunnelEvent = 'PriceRevealClick' | 'LeadFormStart' | 'Lead' | 'PriceRevealed' | 'OrderPlaced' | 'RecoveryVisit'
 
 export function trackFunnel(event: FunnelEvent, params: { product?: string; funnel?: 'visible_price' | 'gated_price'; value?: number; payment?: 'cod' | 'transfer' } = {}, eventId?: string) {
-  if (typeof window === 'undefined' || !consentStore.allows('marketing') || !isLoaded('meta')) return
-  const fbq = (window as unknown as { fbq?: (...a: unknown[]) => void }).fbq
+  if (typeof window === 'undefined' || !metaOn()) return
   const data = {
     ...(params.product && { content_ids: [params.product], content_type: 'product' }),
     ...(params.funnel && { funnel: params.funnel }),
     ...(params.value !== undefined && { currency: 'RON', value: lei(params.value) }),
     ...(params.payment && { payment_method: params.payment }),
   }
-  fbq?.(event === 'Lead' ? 'track' : 'trackCustom', event, data, eventId ? { eventID: eventId } : undefined)
+  whenLoaded('meta', () => (window as unknown as { fbq?: (...a: unknown[]) => void }).fbq?.(event === 'Lead' ? 'track' : 'trackCustom', event, data, eventId ? { eventID: eventId } : undefined))
 }

@@ -76,6 +76,18 @@ type W = Window & {
 
 const loaded = new Set<VendorId>()
 export const isLoaded = (id: VendorId) => loaded.has(id)
+export const isConfigured = (id: VendorId, list: Vendor[] = VENDORS) => loaded.has(id) || !!list.find((v) => v.id === id)?.key
+
+/**
+ * Runs `fn` once the tool has started on this page: at once if it already runs, otherwise when the consent
+ * manager starts it (its effect runs after the page's own, so a page's first event would otherwise be lost).
+ * Callers check consent first: nothing waits here for a tool the visitor did not allow.
+ */
+const waiting = new Map<VendorId, (() => void)[]>()
+export function whenLoaded(id: VendorId, fn: () => void) {
+  if (loaded.has(id)) return fn()
+  waiting.set(id, [...(waiting.get(id) ?? []), fn])
+}
 
 function addScript(src: string) {
   const s = document.createElement('script')
@@ -124,6 +136,8 @@ export function startVendor(v: Vendor) {
     w.fbq('track', 'PageView')
     addScript('https://connect.facebook.net/en_US/fbevents.js')
   }
+  for (const fn of waiting.get(v.id) ?? []) fn()
+  waiting.delete(v.id)
 }
 
 /** Removes the first-party cookies of tools whose consent was withdrawn. */

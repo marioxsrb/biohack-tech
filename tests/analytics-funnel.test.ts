@@ -4,7 +4,13 @@ import { beforeEach, expect, it, vi } from 'vitest'
 let marketing = false
 let loaded = false
 vi.mock('@/lib/consent/store', () => ({ consentStore: { allows: (c: string) => c === 'marketing' && marketing } }))
-vi.mock('@/lib/consent/vendors', () => ({ isLoaded: () => loaded }))
+// The real start-up order: events wait for the pixel only when it is allowed and configured.
+let pending: (() => void)[] = []
+vi.mock('@/lib/consent/vendors', () => ({ isConfigured: () => true, whenLoaded: (_id: string, fn: () => void) => (loaded ? fn() : pending.push(fn)) }))
+const start = () => {
+  loaded = true
+  pending.splice(0).forEach((f) => f())
+}
 const { trackFunnel, track, itemOf } = await import('@/lib/analytics')
 const { getProduct } = await import('@/content/catalog')
 
@@ -13,17 +19,27 @@ beforeEach(() => {
   fbq.mockClear()
   marketing = false
   loaded = false
+  pending = []
   vi.stubGlobal('window', { fbq })
 })
 
-it('sends nothing without marketing consent or without the pixel, and queues nothing for later', () => {
+it('sends nothing without marketing consent, and queues nothing for later', () => {
   trackFunnel('Lead', { product: 'balance-wave' }, 'lead-1')
-  loaded = true
-  trackFunnel('Lead', { product: 'balance-wave' }, 'lead-1')
-  marketing = true
-  loaded = false
+  track('view_item', { value: 1, items: [] })
+  start()
   trackFunnel('Lead', { product: 'balance-wave' }, 'lead-1')
   expect(fbq).not.toHaveBeenCalled()
+  expect(pending).toEqual([])
+})
+
+it('with consent, a page’s first event (sent before the consent manager starts the pixel) arrives once, after PageView', () => {
+  marketing = true
+  const p = getProduct('balance-wave')!
+  track('view_item', { value: p.price!, items: [itemOf(p)] })
+  expect(fbq).not.toHaveBeenCalled()
+  start()
+  start()
+  expect(fbq.mock.calls.map((c) => c[1])).toEqual(['ViewContent'])
 })
 
 it('Lead is a standard event with the lead id as event id; the others are custom; no personal data', () => {
