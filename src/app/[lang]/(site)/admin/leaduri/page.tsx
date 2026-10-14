@@ -58,9 +58,13 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
   const sp = await searchParams
   const funnel = sp.funnel === 'visible_price' || sp.funnel === 'gated_price' ? (sp.funnel as Funnel) : undefined
   const view = sp.view === 'abandoned' || sp.view === 'converted' ? sp.view : undefined
+  // Duplicate filter: one row per person (email), the newest form, unless every form is asked for.
+  const all = sp.dup === 'all' ? 'all' : undefined
   const db = await getDb()
   const c = getConfig()
-  const list = await leads.list(db, { funnel, view })
+  const rows = await leads.listWithForms(db, { funnel, view, unique: !all })
+  const list = rows.map((r) => r.lead)
+  const forms = new Map(rows.map((r) => [r.lead.id, r.forms]))
   // Consent belongs to the person (the latest decision for the address), not to one form: that is what recovery checks.
   const consent = await marketing.states(db, list.map((l) => l.email))
   // AI calling: consent by phone number, and each lead's latest call.
@@ -79,7 +83,7 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
     return now === undefined ? 'nu' : now ? (l.marketingConsent ? 'da (bifat aici)' : 'da (dat în alt formular)') : 'retras / dezabonat'
   }
   const q = (p: Record<string, string | undefined>) => {
-    const u = new URLSearchParams(Object.entries({ funnel, view, ...p }).filter((e): e is [string, string] => !!e[1]))
+    const u = new URLSearchParams(Object.entries({ funnel, view, dup: all, ...p }).filter((e): e is [string, string] => !!e[1]))
     return `/admin/leaduri${u.size ? `?${u}` : ''}`
   }
 
@@ -115,7 +119,16 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
             {f ? (f === 'gated_price' ? 'Acces (formular)' : 'Preț vizibil') : 'Ambele funnel-uri'}
           </Link>
         ))}
+        <span className="mx-1 self-center text-line">|</span>
+        {([undefined, 'all'] as const).map((d) => (
+          <Link key={d ?? 'unique'} href={q({ dup: d })} aria-current={all === d ? 'page' : undefined} className={`rounded-full px-3.5 py-1.5 ${all === d ? 'bg-ink text-white' : 'bg-paper text-ink'}`}>
+            {d ? 'Toate formularele' : 'Persoane unice (fără duplicate)'}
+          </Link>
+        ))}
       </nav>
+      <p className="mt-2 text-[13.5px] text-muted">
+        {all ? `${list.length} formulare` : `${list.length} persoane`} · o persoană = aceeași adresă de email; un device recunoscut nu mai completează formularul.
+      </p>
 
       <ul className="mt-5 space-y-3">
         {list.map((l) => (
@@ -123,6 +136,11 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <p className="text-[16px] font-semibold text-ink">
                 {l.name || '(fără nume)'} <span className="font-normal text-muted">· {interestOf(l).join(', ') || '–'}</span>
+                {(forms.get(l.id) ?? 1) > 1 && (
+                  <Link href={q({ dup: 'all' })} className="ml-2 rounded-full bg-mist px-2.5 py-0.5 align-middle text-[12.5px] font-medium text-ink">
+                    {forms.get(l.id)} formulare
+                  </Link>
+                )}
               </p>
               <p className="text-muted">{dt(l.createdAt)}</p>
             </div>
@@ -148,6 +166,7 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
               <Item k="Apel AI" v={callText(l)} />
               <Item k="Sursa" v={attributionSummary(l.attribution) || (l.landingHost ? l.landingHost : 'direct')} />
               <Item k="GHL" v={l.ghlContactId ? 'sincronizat' : 'în așteptare'} />
+              {l.funnel === 'gated_price' && <Item k="Termeni (formular)" v={l.termsAcceptedAt ? `acceptați ${dt(l.termsAcceptedAt)}` : 'nebifat'} />}
               <Item
                 k="Comanda"
                 v={

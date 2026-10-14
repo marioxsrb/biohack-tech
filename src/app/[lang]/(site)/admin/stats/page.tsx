@@ -40,6 +40,7 @@ export default async function StatsPage({ searchParams }: PageProps<'/[lang]/adm
     { label: 'Afișări de pagini', value: (s) => String(s.views) },
     { label: 'Afișări pagini de produs', value: (s) => String(s.productViews) },
     { label: 'Leaduri', value: (s) => String(s.leads), note: 'formular de preț sau pasul de contact din checkout' },
+    { label: 'Persoane unice', value: (s) => String(s.people), note: 'leaduri fără duplicate: aceeași adresă de email o singură dată' },
     { label: 'Prețuri deblocate', value: (s) => (s.funnel === 'gated_price' ? String(s.reveals) : '–') },
     { label: 'Checkout început', value: (s) => String(s.checkouts), note: 'contact completat în checkout' },
     { label: 'Comenzi plasate', value: (s) => String(s.orders) },

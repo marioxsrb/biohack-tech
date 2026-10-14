@@ -18,6 +18,8 @@ export type FunnelStats = {
   views: number
   productViews: number
   leads: number
+  /** Distinct people (email) behind the leads: the duplicate filter. */
+  people: number
   reveals: number
   checkouts: number
   abandoned: number
@@ -68,8 +70,8 @@ export async function funnelStats(q: Queryable, f: StatsFilter): Promise<FunnelS
     // The product filter on leads: its own interest or a line of its checkout's cart.
     product: "(product_id = ? or cart @> jsonb_build_array(jsonb_build_object('productId', ?::text)))",
   })
-  const leads = await q.query<{ funnel: Funnel; leads: number; reveals: number; checkouts: number; abandoned: number; recovery_emails: number; recovery_leads: number }>(
-    `select funnel, count(*)::int as leads, count(price_revealed_at)::int as reveals, count(checkout_started_at)::int as checkouts,
+  const leads = await q.query<{ funnel: Funnel; leads: number; people: number; reveals: number; checkouts: number; abandoned: number; recovery_emails: number; recovery_leads: number }>(
+    `select funnel, count(*)::int as leads, count(distinct email)::int as people, count(price_revealed_at)::int as reveals, count(checkout_started_at)::int as checkouts,
             count(*) filter (where abandonment = 'checkout_abandoned')::int as abandoned,
             coalesce(sum(recovery_sent), 0)::int as recovery_emails, count(*) filter (where recovery_sent > 0)::int as recovery_leads
      from leads where ${l.sql} group by funnel`,
@@ -103,6 +105,7 @@ export async function funnelStats(q: Queryable, f: StatsFilter): Promise<FunnelS
       views: vi?.views ?? 0,
       productViews: vi?.product_views ?? 0,
       leads: le?.leads ?? 0,
+      people: le?.people ?? 0,
       reveals: le?.reveals ?? 0,
       checkouts: le?.checkouts ?? 0,
       abandoned: le?.abandoned ?? 0,

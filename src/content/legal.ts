@@ -157,6 +157,7 @@ export const legalPages: LegalPage[] = [
                 ['Facturăm și ținem evidența contabilă', 'Datele de facturare; pentru firme, denumirea, CUI și nr. Reg. Com.', 'Obligație legală (art. 6 alin. 1 lit. c)'],
                 ['Încasăm plata și prevenim frauda', 'Rezultatul plății de la Stripe; la transfer, datele din extrasul de cont', 'Contractul și interesul legitim de a preveni frauda (lit. b și f)'],
                 ['Îți arătăm prețul și oferta, pe acces.biohack-tech.ro, după formularul scurt', 'Nume, email, telefon, produsul ales, sursa vizitei (de ex. reclama din care ai venit)', 'Pași înaintea unui contract, la cererea ta (lit. b)'],
+                ['Recunoaștem dispozitivul cu care ai completat formularul de preț, ca să nu ți-l cerem din nou (alt browser, fereastră privată, cookie șters); fără formular completat nu păstrăm nimic', 'Un cod derivat din caracteristici ale dispozitivului (ecran, fus orar, limbă, sistem) și din adresa de rețea, păstrat doar ca valoare criptografică; nu păstrăm adresa IP și nu îl folosim la altceva', 'Pași înaintea unui contract, la cererea ta (lit. b); strict necesar pentru serviciul cerut'],
                 ['Păstrăm ce ai scris în pasul de contact al comenzii înainte să o trimiți, ca să știm câte comenzi rămân neterminate și să îți putem reface coșul', 'Nume, email, telefon, produsele din coș', 'Interesul nostru legitim de a înțelege și îmbunătăți comanda (lit. f)'],
                 ['Îți trimitem noutăți, oferte, recomandări și un memento pentru o comandă sau o ofertă nefinalizată', 'Email, nume, produsele de care ai fost interesat', 'Consimțământul tău, dat prin bifă (lit. a)'],
                 ['Te sună asistentul nostru AI despre produsul ales, dacă nu ai finalizat comanda', 'Telefon, prenume, produsul ales, rezultatul apelului', 'Consimțământul tău separat pentru apeluri, dat prin bifă (lit. a)'],
@@ -224,7 +225,7 @@ export const legalPages: LegalPage[] = [
       },
       {
         heading: 'Ce stocăm în browserul tău',
-        body: ['Coșul, formularul de comandă neterminat, alegerea privind cookie-urile și, pe acces.biohack-tech.ro, faptul că ai completat formularul de preț. Detaliile sunt în [Politica de cookies](/politica-cookies).'],
+        body: ['Coșul, formularul de comandă neterminat, alegerea privind cookie-urile și, pe acces.biohack-tech.ro, faptul că ai completat formularul de preț (inclusiv recunoașterea dispozitivului). Detaliile sunt în [Politica de cookies](/politica-cookies).'],
       },
       {
         heading: 'Drepturile tale',
@@ -264,6 +265,9 @@ export const legalPages: LegalPage[] = [
                 ['bt-consent-v1', 'Stocare locală', 'Ține minte alegerea ta privind cookie-urile', `${Math.round(CONSENT_MAX_AGE_DAYS / 30)} luni`],
                 ['bt_vid', 'Cookie (doar după un formular)', 'Un cod aleator care leagă formularul de preț sau pasul de contact de comanda plasată din același browser, ca să nu apară de două ori', '90 de zile'],
                 ['bt_gate', 'Cookie, pe acces.biohack-tech.ro', 'Ține minte că ai completat formularul de preț, ca să nu ți-l cerem din nou', '90 de zile'],
+                ['bt-gate', 'Stocare locală, pe acces.biohack-tech.ro', 'Aceeași informație, dacă cookie-ul se șterge', '90 de zile (verificat de server)'],
+                ['bt-gate-checked', 'Stocare de sesiune', 'Verificăm o singură dată pe sesiune dacă dispozitivul a mai completat formularul', 'Până închizi fila'],
+                ['Recunoașterea dispozitivului', 'Citirea unor caracteristici ale dispozitivului (ecran, fus orar, limbă, sistem)', 'Când deschizi acces.biohack-tech.ro fără cookie, verificăm o dată dacă dispozitivul a completat deja formularul de preț, ca să nu ți-l cerem din nou. Trimitem doar un cod criptografic, nu caracteristicile; dacă nu ai completat formularul, nu păstrăm nimic', '90 de zile'],
                 ['bt-visit', 'Stocare de sesiune', 'Numără vizita o singură dată pe sesiune, pentru statisticile noastre agregate; nu trimite niciun identificator', 'Până închizi fila'],
                 ['bt-interest-*', 'Stocare de sesiune', 'Ține minte produsele deja văzute în sesiunea curentă pe acces.biohack-tech.ro', 'Până închizi fila'],
                 ['__stripe_mid, __stripe_sid', 'Cookie Stripe, doar pe pagina de plată', 'Securitatea plății și prevenirea fraudei', '1 an, respectiv 30 de minute'],

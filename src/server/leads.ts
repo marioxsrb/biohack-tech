@@ -41,6 +41,8 @@ export type Lead = {
   privacyVersion: string | null
   marketingConsent: boolean
   callConsent: boolean
+  /** The optional terms box on the price form (the checkout's own acceptance is on the order). */
+  termsAcceptedAt: Date | null
   /** AI calling: none | scheduled | dry_run | dialing | completed | failed | stopped | disabled. */
   callStatus: string
   callAttempts: number
@@ -63,6 +65,8 @@ export type Lead = {
   createdAt: Date
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 /** The row for a whole checkout (several products) in the lead table. */
 export const CART_INTEREST = 'cart'
 
@@ -84,6 +88,7 @@ const toLead = (r: Row): Lead => ({
   privacyVersion: (r.privacy_version as string) ?? null,
   marketingConsent: !!r.marketing_consent,
   callConsent: !!r.call_consent,
+  termsAcceptedAt: d(r.terms_accepted_at),
   callStatus: (r.call_status as string) ?? 'none',
   callAttempts: Number(r.call_attempts ?? 0),
   callOutcome: (r.call_outcome as string) ?? null,
@@ -136,6 +141,10 @@ export type CaptureInput = {
   attribution?: Attribution | null
   landingHost?: string | null
   page?: string
+  /** The price form's optional terms box. */
+  termsAccepted?: boolean
+  /** See server/device.ts: lets this device see prices again without the form. */
+  deviceKey?: string | null
 }
 
 /**
@@ -148,8 +157,9 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
   const now = new Date()
   const { rows } = await t.query(
     `insert into leads (id, visitor_id, funnel, product_id, variant_id, name, email, phone, stage, cart, attribution, landing_host, fbclid,
-       privacy_version, marketing_consent, recovery_token, price_revealed_at, checkout_started_at, last_activity_at, created_at, updated_at, call_consent)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$19,$19,$20)
+       privacy_version, marketing_consent, recovery_token, price_revealed_at, checkout_started_at, last_activity_at, created_at, updated_at, call_consent,
+       terms_accepted_at, device_key)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$19,$19,$20,$21,$22)
      on conflict (visitor_id, funnel, product_id) do update set
        variant_id = coalesce(excluded.variant_id, leads.variant_id),
        name = coalesce(nullif(excluded.name, ''), leads.name),
@@ -161,6 +171,8 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
        fbclid = coalesce(leads.fbclid, excluded.fbclid),
        marketing_consent = leads.marketing_consent or excluded.marketing_consent,
        call_consent = leads.call_consent or excluded.call_consent,
+       terms_accepted_at = coalesce(leads.terms_accepted_at, excluded.terms_accepted_at),
+       device_key = coalesce(excluded.device_key, leads.device_key),
        checkout_started_at = coalesce(leads.checkout_started_at, excluded.checkout_started_at),
        last_activity_at = excluded.last_activity_at,
        updated_at = excluded.updated_at
@@ -186,6 +198,8 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
       input.stage === 'checkout_started' ? now : null,
       now,
       !!input.callConsent,
+      input.termsAccepted ? now : null,
+      input.deviceKey ?? null,
     ],
   )
   const r = rows[0]
@@ -248,10 +262,41 @@ export const leads = {
   async forVisitor(q: Queryable, visitorId: string) {
     return (await q.query('select * from leads where visitor_id = $1 order by created_at', [visitorId])).rows.map(toLead)
   },
+  /**
+   * A lead that lets this device see prices again (price form, last GATE_DAYS): by the id the device kept, by its
+   * device key, or by the email the visitor types again. The newest one wins.
+   */
+  async recognize(q: Queryable, by: { id?: string; deviceKey?: string | null; email?: string }, days: number) {
+    const since = new Date(Date.now() - days * 86_400_000)
+    if (by.id && UUID_RE.test(by.id)) {
+      const { rows } = await q.query("select * from leads where id = $1 and funnel = 'gated_price' and created_at > $2", [by.id, since])
+      if (rows[0]) return toLead(rows[0])
+    }
+    if (by.deviceKey) {
+      const { rows } = await q.query("select * from leads where device_key = $1 and funnel = 'gated_price' and created_at > $2 order by created_at desc limit 1", [by.deviceKey, since])
+      if (rows[0]) return toLead(rows[0])
+    }
+    if (by.email) {
+      const { rows } = await q.query("select * from leads where email = $1 and funnel = 'gated_price' and created_at > $2 order by created_at desc limit 1", [by.email, since])
+      if (rows[0]) return toLead(rows[0])
+    }
+    return null
+  },
   /** For /admin: newest first. `view`: abandoned (lead or checkout), converted (ordered or paid), or all. */
-  async list(q: Queryable, f: { funnel?: Funnel; view?: 'abandoned' | 'converted'; limit?: number } = {}) {
+  async list(q: Queryable, f: { funnel?: Funnel; view?: 'abandoned' | 'converted'; limit?: number; unique?: boolean } = {}) {
+    return (await leads.listWithForms(q, f)).map((x) => x.lead)
+  },
+  /**
+   * The same list with, for each row, how many forms the person (email) sent in the filtered set. `unique`: one
+   * row per person, their newest form (the duplicate filter); otherwise every form.
+   */
+  async listWithForms(q: Queryable, f: { funnel?: Funnel; view?: 'abandoned' | 'converted'; limit?: number; unique?: boolean } = {}) {
     const where = f.view === 'abandoned' ? 'and abandonment is not null and order_id is null' : f.view === 'converted' ? "and stage in ('ordered','purchased')" : ''
-    return (await q.query(`select * from leads where ($1::text is null or funnel = $1) ${where} order by created_at desc limit $2`, [f.funnel ?? null, f.limit ?? 200])).rows.map(toLead)
+    const base = `select *, count(*) over (partition by email)::int as forms from leads where ($1::text is null or funnel = $1) ${where}`
+    const sql = f.unique
+      ? `select * from (select distinct on (email) * from (${base}) b order by email, created_at desc) u order by created_at desc limit $2`
+      : `${base} order by created_at desc limit $2`
+    return (await q.query(sql, [f.funnel ?? null, f.limit ?? 200])).rows.map((r) => ({ lead: toLead(r), forms: Number(r.forms) }))
   },
   update: (q: Queryable, id: string, patch: Record<string, unknown>) => {
     const keys = Object.keys(patch)

@@ -371,4 +371,14 @@ alter table visit_stats enable row level security;
 create index if not exists leads_order_created_idx on leads (created_at, funnel)
 `,
   },
+  {
+    // The price form: the optional terms box, and the device key that lets a returning device see prices again
+    // without the form (an HMAC of a device hash and the network prefix, never the raw signals or the IP).
+    id: '010_lead_device',
+    sql: `
+alter table leads add column if not exists terms_accepted_at timestamptz;
+alter table leads add column if not exists device_key text;
+create index if not exists leads_device_idx on leads (device_key, created_at desc)
+`,
+  },
 ]

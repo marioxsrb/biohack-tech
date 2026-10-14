@@ -9,6 +9,7 @@ import { kickJobs } from '@/server/jobs/runner'
 import { CART_INTEREST, captureLead, leads, sanitizeCart } from '@/server/leads'
 import { errText, log } from '@/server/log'
 import { clientIp, rateLimit } from '@/server/rate-limit'
+import { deviceKey } from '@/server/device'
 
 export const runtime = 'nodejs'
 
@@ -66,11 +67,40 @@ export async function POST(req: NextRequest) {
         if (Object.keys(fields).length) return NextResponse.json({ error: 'INVALID', fields }, { status: 422 })
         if (!rateLimit(`lead-email:${contact.email}`, 10, 60 * 60_000)) return NextResponse.json({ error: 'RATE_LIMIT' }, { status: 429 })
       }
-      const r = await db.tx((t) => captureLead(t, { visitorId, funnel, stage: 'lead', productId: product?.id ?? '', variantId, contact, marketingConsent: consent, callConsent, attribution, landingHost: host, page: typeof body.page === 'string' ? body.page.slice(0, 80) : undefined }))
+      const device = action === 'reveal' ? deviceKey(body.device, clientIp(req.headers)) : null
+      const r = await db.tx((t) =>
+        captureLead(t, {
+          visitorId,
+          funnel,
+          stage: 'lead',
+          productId: product?.id ?? '',
+          variantId,
+          contact,
+          marketingConsent: consent,
+          callConsent,
+          attribution,
+          landingHost: host,
+          page: typeof body.page === 'string' ? body.page.slice(0, 80) : undefined,
+          termsAccepted: action === 'reveal' && body.termsAccepted === true,
+          deviceKey: device,
+        }),
+      )
       kickJobs()
       log.info('lead.captured', { leadId: r.lead.id, funnel, action, created: r.created, product: product?.id ?? null })
       const res = NextResponse.json({ ok: true, leadId: r.lead.id, created: r.created })
       return withCookies(res, visitorId, action === 'reveal' ? r.lead.id : undefined, c.siteUrl.startsWith('https://'))
+    }
+    if (action === 'recognize') {
+      // A device that already gave its details: by the id it kept, its device key, or the email typed again.
+      // Nothing is recorded; prices are public on the main site, so a wrong match only shows a price.
+      if (funnel !== 'gated_price' || !c.features.priceGate) return NextResponse.json({ error: 'UNAVAILABLE' }, { status: 404 })
+      const email = typeof body.email === 'string' ? normalizeContact({ email: body.email }).email : ''
+      if (email && validateContact({ name: '', email, phone: '' }, ['email']).email) return NextResponse.json({ error: 'INVALID', fields: { email: 'Verifică adresa de email.' } }, { status: 422 })
+      if (email && !rateLimit(`lead-recognize:${clientIp(req.headers)}`, 10, 60 * 60_000)) return NextResponse.json({ error: 'RATE_LIMIT' }, { status: 429 })
+      const found = await leads.recognize(db, { id: typeof body.saved === 'string' ? body.saved : undefined, deviceKey: deviceKey(body.device, clientIp(req.headers)), email: email || undefined }, GATE_DAYS)
+      log.info('lead.recognize', { found: !!found, by: email ? 'email' : 'device' })
+      if (!found) return NextResponse.json({ ok: true, unlocked: false })
+      return withCookies(NextResponse.json({ ok: true, unlocked: true, leadId: found.id }), visitorId, found.id, c.siteUrl.startsWith('https://'))
     }
     if (action === 'checkout') {
       if (!c.features.abandonedCheckout) return NextResponse.json({ ok: true, skipped: 'off' })
