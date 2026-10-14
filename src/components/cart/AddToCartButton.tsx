@@ -1,5 +1,6 @@
 'use client'
 
+import { GateLabel } from '@/components/gate/GateLabel'
 import { useEffect, useState } from 'react'
 import { Check, Mail, Plus } from '@/components/ui/icons'
 import { getProduct, isPurchasable, type ProductId } from '@/content/catalog'
@@ -48,6 +49,9 @@ export function AddToCartButton({ productId, variantId, quantity = 1, className 
   return (
     <button
       type="button"
+      data-buy
+      data-product={productId}
+      data-variant={variantId}
       className={`${tone === 'secondary' ? 'btn-secondary' : 'cta'} ${size === 'sm' ? 'sm' : ''} ${added && tone === 'primary' ? 'is-done' : ''} ${className}`}
       onClick={() => {
         if (add(productId, variantId, quantity)) {
@@ -58,7 +62,9 @@ export function AddToCartButton({ productId, variantId, quantity = 1, className 
     >
       <span className="grid">
         <span className={`flex items-center justify-center gap-[inherit] [grid-area:1/1] transition-opacity duration-150 ${added ? 'invisible opacity-0' : ''}`}>
-          {ui.addToCart} <Plus />
+          <GateLabel locked={locale === 'en' ? 'See the price' : 'Vezi prețul'}>
+            {ui.addToCart} <Plus />
+          </GateLabel>
         </span>
         <span aria-hidden={!added} className={`flex items-center justify-center gap-[inherit] [grid-area:1/1] transition-opacity duration-150 ${added ? '' : 'invisible opacity-0'}`}>
           <Check className="check-pop" /> {ui.addedToCart}

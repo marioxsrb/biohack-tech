@@ -110,7 +110,7 @@ export function isGatedHostname(hostHeader: string | null | undefined, base = la
   return host === `${GATED_HOST_LABEL}.${base}` || (dev && host === `${GATED_HOST_LABEL}.localhost`)
 }
 
-/** What the gated hostname serves itself, besides its own pages: the purchase path's later steps and the legal pages. */
+/** Served on the gated hostname even with the gate off: order, recovery and unsubscribe links already sent, legal pages, files. */
 const GATED_PASSTHROUGH = [
   /^\/comanda\/[\w-]+\/?$/,
   /^\/reluare\/[\w-]+\/?$/,
@@ -121,25 +121,27 @@ const GATED_PASSTHROUGH = [
   /^\/(icon\.svg|favicon\.ico|robots\.txt)$/,
 ]
 
+export type GatedRoute = { action: 'site' } | { action: 'redirect'; path: string } | { action: 'main'; path: string }
+
 /**
- * What the gated hostname does with a path. `enabled` is PRICE_GATE_ENABLED: switched off, the funnel's pages
- * send visitors to the same product on the main site (where the price is visible), while order, recovery and
- * unsubscribe links already sent keep working. `unlocked`: the visitor has the gate cookie; the cart and the
- * checkout show prices, so without it they go back to the funnel's home. Pure, tested without a server.
+ * What the gated hostname does with a path. It is the same storefront as the main site (same pages, same
+ * components; prices are blurred until the short form, see components/gate): `site` serves the page as the
+ * main site would. Old funnel addresses (/<slug>, /acces/<slug>, /lp/<slug>) go to the product page here.
+ * The cart and the checkout need the unlocked state (the gate cookie). The admin and the presentation pages
+ * live on the main site. `enabled` is PRICE_GATE_ENABLED: off, visitors go to the same page on the main site,
+ * while links already sent (orders, recovery, unsubscribe) keep working. Pure, tested without a server.
  */
-export function routeGated(pathname: string, enabled: boolean, unlocked: boolean): LandingRoute | { action: 'main'; path: string } {
-  const p = pathname.replace(/\/+$/, '') || '/'
-  const slug = /^\/(?:acces\/|products\/|lp\/)?([\w-]+)$/.exec(p)?.[1]
-  if (GATED_PASSTHROUGH.some((r) => r.test(pathname))) return { action: 'next' }
-  if (!enabled) {
-    if (p === '/' || p === '/acces') return { action: 'main', path: '/' }
-    if (slug && isLandingSlug(slug)) return { action: 'main', path: `/products/${slug}` }
-    return { action: 'main', path: pathname }
-  }
-  if (p === '/') return { action: 'rewrite', path: '/acces' }
-  if (isLandingSlug(p.slice(1))) return { action: 'rewrite', path: `/acces${p}` }
-  if (p === '/acces' || p === '/products') return { action: 'redirect', path: '/' }
-  if (slug && isLandingSlug(slug)) return { action: 'redirect', path: `/${slug}` }
-  if (p === '/cart' || p === '/checkout') return unlocked ? { action: 'next' } : { action: 'redirect', path: '/' }
-  return { action: 'main', path: pathname }
+export function routeGated(pathname: string, enabled: boolean, unlocked: boolean): GatedRoute {
+  const en = /^\/en(\/|$)/.test(pathname)
+  const prefix = en ? '/en' : ''
+  const p = (en ? pathname.slice(3) : pathname).replace(/\/+$/, '') || '/'
+  if (GATED_PASSTHROUGH.some((r) => r.test(p))) return { action: 'site' }
+  const old = /^\/(?:acces\/|lp\/)?([\w-]+)$/.exec(p)?.[1]
+  const product = old && isLandingSlug(old) ? `${prefix}/products/${old}` : null
+  if (!enabled) return { action: 'main', path: product ?? (p === '/acces' ? prefix || '/' : pathname) }
+  if (product) return { action: 'redirect', path: product }
+  if (p === '/acces') return { action: 'redirect', path: prefix || '/' }
+  if (p === '/admin' || p.startsWith('/admin/') || p.startsWith('/prezentare') || p.startsWith('/lp/')) return { action: 'main', path: pathname }
+  if ((p === '/cart' || p === '/checkout') && !unlocked) return { action: 'redirect', path: prefix || '/' }
+  return { action: 'site' }
 }

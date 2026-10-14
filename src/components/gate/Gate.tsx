@@ -1,106 +1,113 @@
 'use client'
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { usePathname } from 'next/navigation'
 import { Sheet } from '@/components/offers/Sheet'
-import { Arrow, Lock } from '@/components/ui/icons'
-import { getProduct, type ProductId } from '@/content/catalog'
+import { Arrow } from '@/components/ui/icons'
+import { getProduct, getProductBySlug, type ProductId } from '@/content/catalog'
 import { attributionParams } from '@/lib/attribution'
 import { trackFunnel } from '@/lib/analytics'
 import { CALL_CONSENT_TEXT } from '@/lib/consent/calling'
 import { MARKETING_CONSENT_TEXT } from '@/lib/consent/marketing'
 import { GATE_COOKIE, LEAD_PRIVACY_TEXT, normalizeContact, validateContact, type LeadErrors } from '@/lib/lead'
-import { formatLei } from '@/lib/money'
-import { terms } from '@/config/site'
 
 /**
- * The price gate of the acces.<domain> funnel. Outside it (the main site and its landings) there is no provider
- * and every price shows as before. Inside it, prices and purchase controls render only after the visitor gave
- * name, email and phone (or already did on this device: a first-party cookie holding an opaque lead id). The
- * server's HTML of a gated page carries no price. This is a conversion experiment, not a protection: prices
- * are public on the main site.
+ * The price gate of acces.<domain>: the same storefront as the main site (same pages, same components), with
+ * every price blurred and every purchase control opening a short form until the visitor gives name, email
+ * and phone (or already did on this device: the first-party gate cookie). One mechanism for the whole site:
+ *
+ *   - GATE_SCRIPT runs in <head> before the first paint: on the acces host it sets <html data-gated="1"
+ *     data-gate="locked|open">, so prices are blurred from the very first frame (globals.css: [data-price]).
+ *   - GateRoot (in the root layout) intercepts clicks on purchase controls ([data-buy]) while locked and opens
+ *     the form; after it, data-gate becomes "open" and every price and button works, on every page.
+ *   - GateLabel swaps a button's label ("Vezi prețul și oferta") with CSS, so nothing flickers.
+ *
+ * A presentation and conversion mechanism, not a secret: prices are public on the main site.
  */
-type Gate = { gated: boolean; unlocked: boolean; open: (productId: ProductId, variantId?: string) => void }
+export const GATE_SCRIPT = `(function(){try{if(!/^acces\\./.test(location.hostname))return;var d=document.documentElement;d.setAttribute('data-gated','1');d.setAttribute('data-gate',/(?:^|; )${GATE_COOKIE}=/.test(document.cookie)?'open':'locked')}catch(e){}})()`
 
-const OPEN: Gate = { gated: false, unlocked: true, open: () => {} }
-const GateContext = createContext<Gate>(OPEN)
+type Target = { productId?: ProductId; variantId?: string }
+type Gate = { gated: boolean; locked: boolean; open: (target?: Target) => void }
 
-export const useGate = () => {
-  const g = useContext(GateContext)
-  return { ...g, locked: g.gated && !g.unlocked }
-}
+const GateContext = createContext<Gate>({ gated: false, locked: false, open: () => {} })
+export const useGate = () => useContext(GateContext)
 
-const readGate = () => (typeof document === 'undefined' ? null : (document.cookie.split('; ').find((c) => c.startsWith(`${GATE_COOKIE}=`))?.split('=')[1] ?? null))
+const productFromPath = (path: string) => getProductBySlug(/^(?:\/en)?\/products\/([\w-]+)/.exec(path)?.[1] ?? '')
 
-export function GateProvider({ productId, children }: { productId?: ProductId; children: ReactNode }) {
-  const [unlocked, setUnlocked] = useState(false)
-  const [form, setForm] = useState<{ productId: ProductId; variantId?: string } | null>(null)
+export function GateRoot({ children }: { children: ReactNode }) {
+  const [gated, setGated] = useState(false)
+  const [locked, setLocked] = useState(false)
+  const [form, setForm] = useState<Target | null>(null)
+  const pathname = usePathname()
 
   useEffect(() => {
-    const lead = readGate()
-    if (!lead) return
-    // Read after hydration so the server's HTML (always locked, no price) and the first client render agree.
+    const d = document.documentElement
+    // Set by GATE_SCRIPT before hydration; read once here so React and the CSS agree.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setUnlocked(true)
-    // An unlocked device opening another product: one lead for that interest too (no details are sent again).
-    if (!productId) return
-    const key = `bt-interest-${productId}`
+    setGated(d.dataset.gated === '1')
+    setLocked(d.dataset.gate === 'locked')
+  }, [])
+
+  const open = useCallback((target: Target = {}) => {
+    trackFunnel('PriceRevealClick', { product: target.productId, funnel: 'gated_price' })
+    setForm(target)
+  }, [])
+
+  // While locked, every purchase control opens the form instead (capture phase: before the control's own handler).
+  useEffect(() => {
+    if (!gated || !locked) return
+    const onClick = (e: MouseEvent) => {
+      const el = (e.target as Element | null)?.closest?.('[data-buy]') as HTMLElement | null
+      if (!el) return
+      e.preventDefault()
+      e.stopPropagation()
+      const id = el.dataset.product ?? productFromPath(location.pathname)?.id
+      open({ productId: id && getProduct(id) ? (id as ProductId) : undefined, variantId: el.dataset.variant || undefined })
+    }
+    document.addEventListener('click', onClick, true)
+    return () => document.removeEventListener('click', onClick, true)
+  }, [gated, locked, open])
+
+  // An unlocked device opening a product page: one lead for that interest too (no details are sent again).
+  useEffect(() => {
+    if (!gated || locked) return
+    const product = productFromPath(pathname)
+    if (!product) return
+    const key = `bt-interest-${product.id}`
     try {
       if (sessionStorage.getItem(key)) return
       sessionStorage.setItem(key, '1')
     } catch {}
-    void fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'interest', productId, attribution: Object.fromEntries(attributionParams(location.search)) }) }).catch(() => {})
-  }, [productId])
+    void fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'interest', productId: product.id, attribution: Object.fromEntries(attributionParams(location.search)) }) }).catch(() => {})
+  }, [gated, locked, pathname])
 
-  const open = useCallback((p: ProductId, variantId?: string) => {
-    trackFunnel('PriceRevealClick', { product: p, funnel: 'gated_price' })
-    setForm({ productId: p, variantId })
-  }, [])
-
-  const value = useMemo<Gate>(() => ({ gated: true, unlocked, open }), [unlocked, open])
+  const value = useMemo<Gate>(() => ({ gated, locked: gated && locked, open }), [gated, locked, open])
   return (
     <GateContext.Provider value={value}>
       {children}
-      <LeadForm
-        target={form}
-        onClose={() => setForm(null)}
-        onUnlocked={() => {
-          setUnlocked(true)
-          setForm(null)
-        }}
-      />
+      {gated && (
+        <LeadForm
+          target={form}
+          onClose={() => setForm(null)}
+          onUnlocked={() => {
+            document.documentElement.setAttribute('data-gate', 'open')
+            setLocked(false)
+            setForm(null)
+          }}
+        />
+      )}
     </GateContext.Provider>
   )
 }
 
-/** "Vezi prețul și oferta": opens the form. Rendered in place of a price or purchase button while locked. */
-export function RevealButton({ productId, variantId, className = 'cta', label = 'Vezi prețul și oferta' }: { productId: ProductId; variantId?: string; className?: string; label?: string }) {
-  const { open } = useGate()
-  return (
-    <button type="button" onClick={() => open(productId, variantId)} className={className}>
-      <Lock /> {label} <Arrow />
-    </button>
-  )
-}
-
-/** The locked purchase block: what happens next, and the button. */
-export function RevealPanel({ productId, variantId }: { productId: ProductId; variantId?: string }) {
-  return (
-    <div>
-      <p className="text-[17px] leading-relaxed text-[var(--lp-ink,var(--color-ink))]">Prețul și oferta de azi îți apar imediat, după trei câmpuri: nume, email și telefon.</p>
-      <RevealButton productId={productId} variantId={variantId} className="cta mt-5 w-full sm:w-auto" />
-      <p className="mt-3 text-[14px] text-[var(--lp-muted,var(--color-muted))]">Fără plată acum. Comanda o finalizezi doar dacă vrei.</p>
-    </div>
-  )
-}
-
-function LeadForm({ target, onClose, onUnlocked }: { target: { productId: ProductId; variantId?: string } | null; onClose: () => void; onUnlocked: () => void }) {
+function LeadForm({ target, onClose, onUnlocked }: { target: Target | null; onClose: () => void; onUnlocked: () => void }) {
   const [values, setValues] = useState({ name: '', email: '', phone: '' })
   const [consent, setConsent] = useState(false)
   const [callConsent, setCallConsent] = useState(false)
   const [errors, setErrors] = useState<LeadErrors>({})
   const [state, setState] = useState<'idle' | 'sending' | 'error'>('idle')
   const started = useRef(false)
-  const product = target ? getProduct(target.productId) : undefined
+  const product = target?.productId ? getProduct(target.productId) : undefined
 
   useEffect(() => {
     if (target) started.current = false
@@ -144,7 +151,6 @@ function LeadForm({ target, onClose, onUnlocked }: { target: { productId: Produc
       trackFunnel('PriceRevealed', { product: target.productId, funnel: 'gated_price' }, data.leadId ? `reveal-${data.leadId}` : undefined)
       setState('idle')
       onUnlocked()
-      requestAnimationFrame(() => document.getElementById('comanda')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
     } catch {
       setState('error')
     }
@@ -189,7 +195,7 @@ function LeadForm({ target, onClose, onUnlocked }: { target: { productId: Produc
       label="Vezi prețul și oferta"
       title={
         <p className="text-[17px] font-semibold text-ink">
-          Prețul și oferta pentru {product?.name ?? 'produs'}
+          {product ? `Prețul și oferta pentru ${product.name}` : 'Prețurile și ofertele de azi'}
         </p>
       }
     >
@@ -226,26 +232,4 @@ function LeadForm({ target, onClose, onUnlocked }: { target: { productId: Produc
       </form>
     </Sheet>
   )
-}
-
-/**
- * The hero's price line on a gated page: nothing priced until the visitor gave their details, then the same
- * line the visible landing shows. `onDark` matches the hero's colours.
- */
-export function GatedHeroPrice({ productId, onDark }: { productId: ProductId; onDark?: boolean }) {
-  const { locked } = useGate()
-  const p = getProduct(productId)
-  if (locked || !p || p.price === null)
-    return <p className={`mt-7 text-[16px] font-medium ${onDark ? 'text-white/85' : 'text-[var(--lp-muted)]'}`}>Prețul și oferta de azi îți apar după un formular scurt.</p>
-  return (
-    <p className="mt-7 flex flex-wrap items-center gap-x-4 gap-y-2">
-      <span className={`text-[30px] font-medium tracking-[-0.03em] tabular-nums ${onDark ? 'text-white' : ''}`}>{formatLei(p.price)}</span>
-      <span className={`text-[14px] ${onDark ? 'text-white/70' : 'text-[var(--lp-muted)]'}`}>{terms.vat} · livrare gratuită</span>
-    </p>
-  )
-}
-
-/** Renders its (non-price) children only once prices are visible: offer badges on a gated page. */
-export function WhenUnlocked({ children }: { children: ReactNode }) {
-  return useGate().locked ? null : <>{children}</>
 }

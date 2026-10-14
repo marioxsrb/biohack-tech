@@ -178,8 +178,8 @@ export function BundleOffer({ productId, variantId, quantity, onQuantity, classN
                 {deal && <span className="mt-0.5 block text-[13px] text-text">{amber ? t.amberLine : t.bundleLine(n, tier!.percent)}</span>}
               </span>
               <span className="flex-none text-right leading-snug">
-                <span className="block text-[15.5px] font-semibold text-ink tabular-nums">{formatLei(r.totalMinor)}</span>
-                {r.discountMinor > 0 && <span className="block text-[12.5px] font-medium text-red-deep tabular-nums">{t.save(formatLei(r.discountMinor))}</span>}
+                <span data-price className="block text-[15.5px] font-semibold text-ink tabular-nums">{formatLei(r.totalMinor)}</span>
+                {r.discountMinor > 0 && <span data-price className="block text-[12.5px] font-medium text-red-deep tabular-nums">{t.save(formatLei(r.discountMinor))}</span>}
               </span>
             </button>
           )

@@ -14,10 +14,10 @@ import { defaultLocale, splitLocale } from '@/i18n/locales'
  *    is at /prezentare. Landing responses are never indexed. Any other Host, including a forged one, is
  *    simply the main site.
  *
- * 1c. The price-gated funnel (acces.<domain>): its home at "/", each product at "/<slug>" (served from
- *    app/[lang]/(landing)/acces), the cart and checkout once the visitor unlocked prices, order, recovery and
- *    legal pages; everything else goes to the main site. PRICE_GATE_ENABLED off sends its pages to the main
- *    site. Never indexed. Elsewhere, /acces/* is not served (it would show a form that cannot unlock).
+ * 1c. The price-gated funnel (acces.<domain>): the same storefront as the main site (same pages and
+ *    components; prices are blurred until a short form, components/gate). The cart and checkout need the
+ *    unlocked state; the admin stays on the main site; old funnel addresses go to the product page.
+ *    PRICE_GATE_ENABLED off sends its pages to the main site. Never indexed.
  *
  * 0. www.<main host> → 308 to the same path on the main host (one canonical host). The hostname of a retired
  *    landing (a discontinued product) gets the same treatment, and the discontinued product's own pages
@@ -72,9 +72,11 @@ export function proxy(req: NextRequest) {
     const route = routeGated(pathname, process.env.PRICE_GATE_ENABLED === 'true', !!req.cookies.get(GATE_COOKIE)?.value)
     if (route.action === 'main') return NextResponse.redirect(new URL(`${route.path}${search}`, mainOrigin), 307)
     if (route.action === 'redirect') return noindex(NextResponse.redirect(new URL(`${route.path}${search}`, req.url), 307))
-    return noindex(serve(req, defaultLocale, route.action === 'rewrite' ? route.path : pathname, search))
+    // The same storefront as the main site, never indexed (prices are gated in the page, see components/gate).
+    return noindex(storefront(req, pathname, search))
   }
-  // The gated pages exist only on their hostname.
+
+  // Old price-gated funnel addresses on the main host (/acces/<slug>): the product page.
   if (/^\/(ro\/|en\/)?acces(\/|$)/.test(pathname)) {
     const slug = /\/acces\/([\w-]+)\/?$/.exec(pathname)?.[1]
     return NextResponse.redirect(new URL(slug && isLandingSlug(slug) ? `/products/${slug}` : '/', req.url), 307)
@@ -97,6 +99,11 @@ export function proxy(req: NextRequest) {
     return res
   }
 
+  return storefront(req, pathname, search)
+}
+
+/** The main storefront's routing (also used by the gated hostname): presentation previews, languages, admin. */
+function storefront(req: NextRequest, pathname: string, search: string) {
   // Presentation pages on the main host: /lp/<slug>/prezentare, for previews. Never indexed.
   const presentation = /^\/lp\/([\w-]+)\/prezentare\/?$/.exec(pathname)?.[1]
   if (presentation && isLandingSlug(presentation)) return noindex(NextResponse.rewrite(new URL(`${presentationPath(presentation)}${search}`, req.url)))

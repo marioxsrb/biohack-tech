@@ -1,11 +1,9 @@
-import { mentionsOffer } from '@/lib/lead'
 import { getProduct } from '@/content/catalog'
 import type { Landing } from '@/content/landings'
 import { terms } from '@/config/site'
 import { formatLei } from '@/lib/money'
 import { AmberSelector } from '../AmberSelector'
 import { AmberShowcase } from '../AmberShowcase'
-import { GatedHeroPrice } from '@/components/gate/Gate'
 import { HeroCta } from '../HeroCta'
 import { AmberHero, AmberWhy } from '../stories/amber'
 import { FinalCta, Help, LandingFaq, LandingShell, Testimonials } from '../kit'
@@ -18,16 +16,13 @@ const CTA = 'Alege perechile'
  * does and when to wear them, reviews, questions. One warm palette, set in globals.css under
  * [data-landing='amber']: ivory surfaces, warm black for text and buttons, amber as the only accent.
  */
-export function AmberLanding({ landing, gated = false }: { landing: Landing; gated?: boolean }) {
+export function AmberLanding({ landing }: { landing: Landing }) {
   const p = getProduct(landing.productId)!
   return (
     <LandingShell landing={landing} heroTone="dark" cta={CTA}>
       <AmberHero
         name={p.name}
         buy={
-          gated ? (
-            <GatedHeroPrice productId={p.id} />
-          ) : (
           <div className="mt-7 flex items-stretch gap-4">
             <div>
               <p className="text-[30px] font-medium tracking-[-0.03em] tabular-nums">{p.price !== null && formatLei(p.price)}</p>
@@ -38,7 +33,6 @@ export function AmberLanding({ landing, gated = false }: { landing: Landing; gat
               <span className="mt-1 text-[13px] text-white/75">la 3 perechi</span>
             </a>
           </div>
-          )
         }
         cta={<HeroCta slug={landing.slug} productId={p.id} label={CTA} />}
       />
@@ -48,9 +42,9 @@ export function AmberLanding({ landing, gated = false }: { landing: Landing; gat
       <AmberWhy />
 
       <Testimonials productId={p.id} />
-      <LandingFaq items={gated ? landing.faqs.filter((f) => !mentionsOffer(`${f.q} ${f.a}`)) : landing.faqs} />
+      <LandingFaq items={landing.faqs} />
       <Help title="Te ajutăm să alegi rama." text="Scrie-ne ce formă porți de obicei. Îți recomandăm rama potrivită." />
-      <FinalCta title={gated ? 'Patru rame, aceeași lentilă chihlimbar.' : 'Trei perechi, una gratuită.'} cta={CTA} />
+      <FinalCta title="Trei perechi, una gratuită." cta={CTA} />
     </LandingShell>
   )
 }

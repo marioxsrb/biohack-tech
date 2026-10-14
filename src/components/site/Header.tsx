@@ -117,6 +117,7 @@ export function Header() {
             {!offMain && <LanguageSwitch dark={dark} className="mr-2 max-md:mr-1" />}
             <Link
               href="/cart"
+              data-buy
               className={`relative -mr-3 flex h-11 items-center gap-2 rounded-full px-3 transition-colors max-md:mr-0 ${dark ? 'hover:bg-white/10' : 'hover:bg-ink/5'}`}
               aria-label={t.cartLabel(count)}
             >

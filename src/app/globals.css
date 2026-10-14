@@ -606,3 +606,15 @@ textarea.field { resize: vertical; }
 @keyframes amber-caption {
   from { opacity: 0; transform: translateY(6px); }
 }
+
+/*
+ * Price gate (acces.<domain>, components/gate): until the short form, every price is blurred and purchase
+ * controls show "Vezi prețul și oferta". <html data-gate> is set before the first paint; elsewhere nothing changes.
+ */
+.gate-label-locked { display: none; }
+html[data-gate='locked'] .gate-label-locked { display: inline; }
+html[data-gate='locked'] .gate-label-open { display: none; }
+html[data-gate='locked'] [data-price] {
+  filter: blur(7px);
+  user-select: none;
+}

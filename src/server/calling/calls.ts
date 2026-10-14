@@ -212,7 +212,7 @@ export function callVariables(lead: Lead, callId: string, productUrl: string) {
 
 export function productUrlFor(lead: Lead, c: Pick<Config, 'siteUrl'>, gatedOrigin: string) {
   const p = leadProduct(lead)!
-  return lead.funnel === 'gated_price' ? `${gatedOrigin}/${p.slug}` : `${c.siteUrl}/products/${p.slug}`
+  return `${lead.funnel === 'gated_price' ? gatedOrigin : c.siteUrl}/products/${p.slug}`
 }
 
 /** One `call.attempt` job: decide, record the attempt, place the call (or pretend to, in dry run). */

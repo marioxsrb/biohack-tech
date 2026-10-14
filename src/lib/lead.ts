@@ -59,9 +59,6 @@ export function validateContact(c: LeadContact, required: (keyof LeadContact)[] 
   return e
 }
 
-/** Copy that talks about the price or the offer (amounts, 2+1, discounts): left out of a locked gated page. */
-export const mentionsOffer = (text: string) => /\b\d[\d.,]*\s*lei\b|2\s*\+\s*1|gratis|gratuit[ăa]? la|reducer|discount|\d+\s*%/i.test(text)
-
 /** One cookie's value from a Cookie header (route handlers may get a plain Request, without `cookies`). */
 export function cookieFrom(header: string | null | undefined, name: string): string | undefined {
   for (const part of (header ?? '').split(/;\s*/)) {

@@ -40,7 +40,7 @@ const { POST: lead } = await import('@/app/api/lead/route')
 const { GET: resume } = await import('@/app/api/lead/resume/route')
 const { POST: checkout } = await import('@/app/api/checkout/route')
 const { POST: visit } = await import('@/app/api/visit/route')
-const { cookieFrom, mentionsOffer } = await import('@/lib/lead')
+const { cookieFrom } = await import('@/lib/lead')
 const { routeGated } = await import('@/lib/landing-hosts')
 
 const ENV = {
@@ -426,7 +426,7 @@ describe('recovery link', () => {
     const l = (await leads.byId(db, data.leadId))!
     const res = await resume(new NextRequest(`https://${GATED}/api/lead/resume?t=${l.recoveryToken}`, { headers: { host: GATED } }))
     expect(res.status).toBe(303)
-    expect(res.headers.get('location')).toBe(`https://${GATED}/calm?recuperare=1`)
+    expect(res.headers.get("location")).toBe(`https://${GATED}/products/calm?recuperare=1`)
     expect(value(setCookies(res).bt_gate)).toBe(l.id)
     const step = await (await lead(post('/api/lead', MAIN, { action: 'checkout', ...ana, cart: [{ productId: 'balance-wave', quantity: 1 }] }))).json()
     const c = (await leads.byId(db, step.leadId))!
@@ -476,35 +476,38 @@ describe('retention, measurement, helpers', () => {
     expect(two.stageChanged).toBe(false)
   })
 
-  it('cookie parsing and offer copy detection', () => {
+  it('cookie parsing', () => {
     expect(cookieFrom('a=1; bt_vid=abc%20d; bt_gate=x', 'bt_vid')).toBe('abc d')
     expect(cookieFrom(null, 'bt_vid')).toBeUndefined()
-    expect(mentionsOffer('Cum funcționează 2+1 gratis?')).toBe(true)
-    expect(mentionsOffer('Costă 315 lei')).toBe(true)
-    expect(mentionsOffer('10% la două bucăți')).toBe(true)
-    expect(mentionsOffer('Cât durează o sesiune?')).toBe(false)
   })
 })
 
 describe('gated hostname routing', () => {
   it.each([
-    ['/', true, false, { action: 'rewrite', path: '/acces' }],
-    ['/calm', true, false, { action: 'rewrite', path: '/acces/calm' }],
-    ['/products/calm', true, false, { action: 'redirect', path: '/calm' }],
-    ['/acces/focus', true, false, { action: 'redirect', path: '/focus' }],
+    // The same storefront: every page is served as on the main site.
+    ['/', true, false, { action: 'site' }],
+    ['/products/calm', true, false, { action: 'site' }],
+    ['/products', true, false, { action: 'site' }],
+    ['/about-us', true, false, { action: 'site' }],
+    ['/en/products/focus', true, false, { action: 'site' }],
+    // Old funnel addresses go to the product page, on acces.
+    ['/calm', true, false, { action: 'redirect', path: '/products/calm' }],
+    ['/acces/focus', true, false, { action: 'redirect', path: '/products/focus' }],
+    ['/lp/amber', true, true, { action: 'redirect', path: '/products/amber' }],
+    ['/acces', true, false, { action: 'redirect', path: '/' }],
+    // Cart and checkout only after the form.
     ['/checkout', true, false, { action: 'redirect', path: '/' }],
-    ['/checkout', true, true, { action: 'next' }],
-    ['/cart', true, true, { action: 'next' }],
-    ['/comanda/abc', true, false, { action: 'next' }],
-    ['/reluare/abc', false, false, { action: 'next' }],
-    ['/privacy-policy', true, false, { action: 'next' }],
+    ['/en/cart', true, false, { action: 'redirect', path: '/en' }],
+    ['/checkout', true, true, { action: 'site' }],
+    ['/cart', true, true, { action: 'site' }],
+    ['/comanda/abc', true, false, { action: 'site' }],
     ['/admin', true, true, { action: 'main', path: '/admin' }],
-    // The checkout's brand link from a landing (/lp/<slug>) stays on acces, where the cart is.
-    ['/lp/calm', true, true, { action: 'redirect', path: '/calm' }],
-    ['/lp/amber', false, false, { action: 'main', path: '/products/amber' }],
-    ['/brain-flow', true, false, { action: 'main', path: '/brain-flow' }],
+    ['/admin/leaduri', true, true, { action: 'main', path: '/admin/leaduri' }],
+    // Gate off: the main site, except links already sent.
     ['/', false, false, { action: 'main', path: '/' }],
     ['/calm', false, true, { action: 'main', path: '/products/calm' }],
+    ['/products/focus', false, false, { action: 'main', path: '/products/focus' }],
+    ['/reluare/abc', false, false, { action: 'site' }],
     ['/checkout', false, true, { action: 'main', path: '/checkout' }],
   ])('%s (enabled %s, unlocked %s)', (path, enabled, unlocked, expected) => {
     expect(routeGated(path, enabled, unlocked)).toEqual(expected)

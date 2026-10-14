@@ -83,7 +83,7 @@ export function AddedPopup() {
             {!line.variantLabel && confirmation.quantity === 1 ? line.product.purpose : null}
           </span>
         </span>
-        <span className="text-[15px] font-medium text-ink tabular-nums">{formatLei(line.unit * confirmation.quantity)}</span>
+        <span data-price className="text-[15px] font-medium text-ink tabular-nums">{formatLei(line.unit * confirmation.quantity)}</span>
       </div>
 
       <div className="mt-4 grid gap-2">

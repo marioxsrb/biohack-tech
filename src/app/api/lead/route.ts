@@ -48,7 +48,8 @@ export async function POST(req: NextRequest) {
     const db = await getDb()
     if (action === 'reveal' || action === 'interest') {
       if (funnel !== 'gated_price' || !c.features.priceGate) return NextResponse.json({ error: 'UNAVAILABLE' }, { status: 404 })
-      if (!product) return NextResponse.json({ error: 'BAD_PRODUCT' }, { status: 400 })
+      // The form may come from a page without a product (the home page): a lead without a product interest.
+      if (!product && (action === 'interest' || (typeof body.productId === 'string' && body.productId))) return NextResponse.json({ error: 'BAD_PRODUCT' }, { status: 400 })
       let contact = normalizeContact(body)
       let consent = body.marketingConsent === true
       // The separate AI calling box: only from the form itself, never copied or implied.
@@ -65,9 +66,9 @@ export async function POST(req: NextRequest) {
         if (Object.keys(fields).length) return NextResponse.json({ error: 'INVALID', fields }, { status: 422 })
         if (!rateLimit(`lead-email:${contact.email}`, 10, 60 * 60_000)) return NextResponse.json({ error: 'RATE_LIMIT' }, { status: 429 })
       }
-      const r = await db.tx((t) => captureLead(t, { visitorId, funnel, stage: 'lead', productId: product.id, variantId, contact, marketingConsent: consent, callConsent, attribution, landingHost: host, page: typeof body.page === 'string' ? body.page.slice(0, 80) : undefined }))
+      const r = await db.tx((t) => captureLead(t, { visitorId, funnel, stage: 'lead', productId: product?.id ?? '', variantId, contact, marketingConsent: consent, callConsent, attribution, landingHost: host, page: typeof body.page === 'string' ? body.page.slice(0, 80) : undefined }))
       kickJobs()
-      log.info('lead.captured', { leadId: r.lead.id, funnel, action, created: r.created, product: product.id })
+      log.info('lead.captured', { leadId: r.lead.id, funnel, action, created: r.created, product: product?.id ?? null })
       const res = NextResponse.json({ ok: true, leadId: r.lead.id, created: r.created })
       return withCookies(res, visitorId, action === 'reveal' ? r.lead.id : undefined, c.siteUrl.startsWith('https://'))
     }

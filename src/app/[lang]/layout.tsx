@@ -4,6 +4,7 @@ import { AddedPopup } from '@/components/cart/AddedPopup'
 import { CartProvider } from '@/components/cart/CartProvider'
 import { OfferSheetsProvider } from '@/components/offers/OfferSheets'
 import { ConsentManager } from '@/components/consent/ConsentManager'
+import { GATE_SCRIPT, GateRoot } from '@/components/gate/Gate'
 import { notFound } from 'next/navigation'
 import { lang } from 'next/root-params'
 import { site } from '@/config/site'
@@ -47,17 +48,23 @@ export default async function RootLayout({ children }: LayoutProps<'/[lang]'>) {
   if (!isLocale(locale)) notFound()
   return (
     <html lang={locale} data-scroll-behavior="smooth" className={`${geist.variable} ${geistMono.variable}`} suppressHydrationWarning>
+      <head>
+        {/* acces.<domain> only: marks prices as locked before the first paint (components/gate). */}
+        <script dangerouslySetInnerHTML={{ __html: GATE_SCRIPT }} />
+      </head>
       <body>
         {/* Site chrome (header, footer) lives in (site)/layout; advertising landings in (landing) have their own. */}
         <LocaleProvider locale={locale}>
           {/* First in the tab order, so the cookie choice is reachable before the page. */}
           <ConsentManager />
-          <CartProvider>
-            <OfferSheetsProvider>
-              {children}
-              <AddedPopup />
-            </OfferSheetsProvider>
-          </CartProvider>
+          <GateRoot>
+            <CartProvider>
+              <OfferSheetsProvider>
+                {children}
+                <AddedPopup />
+              </OfferSheetsProvider>
+            </CartProvider>
+          </GateRoot>
         </LocaleProvider>
         <JsonLd data={organizationJsonLd(locale)} />
       </body>

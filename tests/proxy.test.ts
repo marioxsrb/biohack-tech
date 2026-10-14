@@ -111,15 +111,16 @@ describe('proxy', () => {
   })
 
   describe('price-gated funnel (acces.<domain>)', () => {
-    it('serves its home and products from the gated pages, never indexed, keeping the campaign query', async () => {
+    it('serves the same storefront pages as the main site, never indexed, keeping the campaign query', async () => {
       vi.stubEnv('PRICE_GATE_ENABLED', 'true')
       const home = await run('https://acces.biohack-tech.ro/?utm_source=meta&fbclid=IwAR0abcdefghij', 'acces.biohack-tech.ro')
-      expect(getRewrittenUrl(home)).toBe('https://acces.biohack-tech.ro/ro/acces?utm_source=meta&fbclid=IwAR0abcdefghij')
+      expect(getRewrittenUrl(home)).toBe('https://acces.biohack-tech.ro/ro?utm_source=meta&fbclid=IwAR0abcdefghij')
       expect(home.headers.get('x-robots-tag')).toBe('noindex, nofollow')
-      expect(getRewrittenUrl(await run('https://acces.biohack-tech.ro/calm', 'acces.biohack-tech.ro'))).toBe('https://acces.biohack-tech.ro/ro/acces/calm')
-      // Product pages show prices: on acces they go to the gated page of the same product.
-      const product = await run('https://acces.biohack-tech.ro/products/focus', 'acces.biohack-tech.ro')
-      expect([product.status, product.headers.get('location')]).toEqual([307, 'https://acces.biohack-tech.ro/focus'])
+      expect(getRewrittenUrl(await run('https://acces.biohack-tech.ro/products/focus', 'acces.biohack-tech.ro'))).toBe('https://acces.biohack-tech.ro/ro/products/focus')
+      expect(getRewrittenUrl(await run('https://acces.biohack-tech.ro/en/products/focus', 'acces.biohack-tech.ro'))).toBe('https://acces.biohack-tech.ro/en/products/focus')
+      // Old funnel addresses (ads, recovery emails) go to the product page on acces.
+      const old = await run('https://acces.biohack-tech.ro/calm?utm_source=meta', 'acces.biohack-tech.ro')
+      expect([old.status, old.headers.get('location')]).toEqual([307, 'https://acces.biohack-tech.ro/products/calm?utm_source=meta'])
     })
 
     it('cart and checkout only after the form (gate cookie); everything else goes to the main site', async () => {

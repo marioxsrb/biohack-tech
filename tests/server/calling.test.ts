@@ -197,7 +197,7 @@ describe('placing calls', () => {
     const req = dials()[0].json!
     expect(req).toMatchObject({ agent_id: 'agent_test', agent_phone_number_id: 'phnum_test', to_number: PHONE, call_recording_enabled: false })
     const vars = (req.conversation_initiation_client_data as { dynamic_variables: Record<string, string> }).dynamic_variables
-    expect(vars).toMatchObject({ customer_first_name: 'Ana', product_name: 'NEUROS Calm', product_id: 'balance-wave', product_url: 'https://acces.biohack-tech.ro/calm', funnel: 'gated_price' })
+    expect(vars).toMatchObject({ customer_first_name: 'Ana', product_name: 'NEUROS Calm', product_id: 'balance-wave', product_url: 'https://acces.biohack-tech.ro/products/calm', funnel: 'gated_price' })
     expect(JSON.stringify(vars)).not.toMatch(/@|0722|Popescu/)
     const [call] = await callsOf(leadId)
     expect(call).toMatchObject({ status: 'dialing', attempt: 1, phone: PHONE, productId: 'balance-wave' })

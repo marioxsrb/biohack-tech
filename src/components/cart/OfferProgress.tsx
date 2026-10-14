@@ -31,7 +31,7 @@ export function OfferProgress({ progress, lines, compact = false, className = ''
                   <Check className="h-3.5 w-3.5" aria-hidden />
                 </span>
                 <span className="leading-snug">
-                  <span className="block text-[15px] font-semibold text-white">{c.headline}</span>
+                  <span data-price className="block text-[15px] font-semibold text-white">{c.headline}</span>
                   <span className={`block font-medium tracking-[-0.015em] text-white ${compact ? 'text-[19px]' : 'text-[22px]'}`}>{c.detail}</span>
                 </span>
               </div>
@@ -39,12 +39,12 @@ export function OfferProgress({ progress, lines, compact = false, className = ''
 
             {oneAway && (
               <div className={`rounded-[16px] bg-cyan-50 shadow-[inset_0_0_0_1.5px_var(--color-cyan-700)] ${compact ? 'px-4 py-3' : 'p-5'}`}>
-                <p className={`leading-snug font-semibold tracking-[-0.02em] text-cyan-700 ${compact ? 'text-[17px]' : 'text-[20px]'}`}>{c.nudge ?? c.headline}</p>
-                {gain > 0 && <p className="mt-1 text-[14px] text-text">{amber ? (locale === 'en' ? `Your free pair: ${formatLei(gain)}.` : `Perechea gratuită: ${formatLei(gain)}.`) : locale === 'en' ? `You save at least ${formatLei(gain)}.` : `Economisești cel puțin ${formatLei(gain)}.`}</p>}
+                <p data-price className={`leading-snug font-semibold tracking-[-0.02em] text-cyan-700 ${compact ? 'text-[17px]' : 'text-[20px]'}`}>{c.nudge ?? c.headline}</p>
+                {gain > 0 && <p data-price className="mt-1 text-[14px] text-text">{amber ? (locale === 'en' ? `Your free pair: ${formatLei(gain)}.` : `Perechea gratuită: ${formatLei(gain)}.`) : locale === 'en' ? `You save at least ${formatLei(gain)}.` : `Economisești cel puțin ${formatLei(gain)}.`}</p>}
               </div>
             )}
 
-            {!oneAway && (c.quiet || c.tone === 'progress') && <p className="px-1 text-[14px] leading-snug text-muted">{c.quiet ?? c.headline}</p>}
+            {!oneAway && (c.quiet || c.tone === 'progress') && <p data-price className="px-1 text-[14px] leading-snug text-muted">{c.quiet ?? c.headline}</p>}
           </div>
         )
       })}
