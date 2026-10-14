@@ -12,7 +12,7 @@ import { OfferProgress } from '@/components/cart/OfferProgress'
 import { Suggestions } from '@/components/offers/Suggestions'
 import { Totals } from '@/components/cart/Totals'
 import { Arrow, Bank, CardIcon, Lock, Mail, Truck } from '@/components/ui/icons'
-import { productHref, productsIn } from '@/content/catalog'
+import { productHref, productsIn, resolveLine, variantLabel } from '@/content/catalog'
 import { useLocale } from '@/i18n/LocaleProvider'
 import { ui } from '@/i18n/ui'
 import type { Locale } from '@/i18n/locales'
@@ -20,7 +20,7 @@ import { attributionParams } from '@/lib/attribution'
 import { normalizeContact, validateContact } from '@/lib/lead'
 import { cashOnDelivery } from '@/config/payments'
 import { site, terms } from '@/config/site'
-import { track } from '@/lib/analytics'
+import { itemOf, track } from '@/lib/analytics'
 import { MARKETING_CONSENT_TEXT, MARKETING_CONSENT_TEXT_EN } from '@/lib/consent/marketing'
 import {
   COUNTIES,
@@ -228,7 +228,16 @@ export function CheckoutView({ methods, stripeKey }: { methods: Methods; stripeK
   useEffect(() => {
     if (!items) return
     const direct = parseItems(new URLSearchParams(items.split('&').map((i) => ['item', i])), isLandingSlug(lp) ? 'landing' : 'link')
-    if (direct.length) cartStore.restore(direct)
+    if (direct.length) {
+      cartStore.restore(direct)
+      // A "buy now" button (landing or product page) adds to the cart here: AddToCart once per link (?item is
+      // dropped below, so a reload does not repeat it).
+      const added = direct.flatMap((d) => {
+        const r = resolveLine(d.productId, d.variantId)
+        return r && r.unit !== null ? [{ value: r.unit * d.quantity, item: itemOf(r.product, r.variant, r.variant && variantLabel(r.product, r.variant), d.quantity) }] : []
+      })
+      if (added.length) track('add_to_cart', { value: added.reduce((n, a) => n + a.value, 0), items: added.map((a) => a.item) })
+    }
     const url = new URL(window.location.href)
     url.searchParams.delete('item')
     url.searchParams.delete('plata')
