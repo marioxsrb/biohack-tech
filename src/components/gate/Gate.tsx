@@ -16,15 +16,21 @@ import { GATE_COOKIE, LEAD_PRIVACY_TEXT, normalizeContact, validateContact, type
  * every price blurred and every purchase control opening a short form until the visitor gives name, email
  * and phone (or already did on this device: the first-party gate cookie). One mechanism for the whole site:
  *
- *   - GATE_SCRIPT runs in <head> before the first paint: on the acces host it sets <html data-gated="1"
- *     data-gate="locked|open">, so prices are blurred from the very first frame (globals.css: [data-price]).
+ *   - GATE_SCRIPT runs in <head> before the first paint: on the acces host without the gate cookie it adds a
+ *     <style id="bt-gate"> that blurs every [data-price] and shows the "Vezi prețul și oferta" labels, so
+ *     prices are hidden from the very first frame. (A <style> node, not attributes on <html>: React resets the
+ *     root element's attributes when it hydrates in production, but leaves added <head> nodes alone.)
  *   - GateRoot (in the root layout) intercepts clicks on purchase controls ([data-buy]) while locked and opens
- *     the form; after it, data-gate becomes "open" and every price and button works, on every page.
- *   - GateLabel swaps a button's label ("Vezi prețul și oferta") with CSS, so nothing flickers.
+ *     the form; after it, the style is removed and every price and button works, on every page.
+ *   - GateLabel renders both labels; the style picks the locked one, so nothing flickers.
  *
  * A presentation and conversion mechanism, not a secret: prices are public on the main site.
  */
-export const GATE_SCRIPT = `(function(){try{if(!/^acces\\./.test(location.hostname))return;var d=document.documentElement;d.setAttribute('data-gated','1');d.setAttribute('data-gate',/(?:^|; )${GATE_COOKIE}=/.test(document.cookie)?'open':'locked')}catch(e){}})()`
+export const GATE_CSS = '[data-price]{filter:blur(7px)!important;-webkit-user-select:none;user-select:none}.gate-label-locked{display:inline!important}.gate-label-open{display:none!important}'
+export const GATE_STYLE_ID = 'bt-gate'
+const isGatedHere = () => /^acces\./.test(location.hostname)
+const unlockedHere = () => new RegExp(`(?:^|; )${GATE_COOKIE}=`).test(document.cookie)
+export const GATE_SCRIPT = `(function(){try{if(!/^acces\\./.test(location.hostname)||/(?:^|; )${GATE_COOKIE}=/.test(document.cookie)||document.getElementById('${GATE_STYLE_ID}'))return;var s=document.createElement('style');s.id='${GATE_STYLE_ID}';s.textContent=${JSON.stringify(GATE_CSS)};document.head.appendChild(s)}catch(e){}})()`
 
 type Target = { productId?: ProductId; variantId?: string }
 type Gate = { gated: boolean; locked: boolean; open: (target?: Target) => void }
@@ -41,11 +47,17 @@ export function GateRoot({ children }: { children: ReactNode }) {
   const pathname = usePathname()
 
   useEffect(() => {
-    const d = document.documentElement
-    // Set by GATE_SCRIPT before hydration; read once here so React and the CSS agree.
+    // Same rule as GATE_SCRIPT (which already blurred the page before hydration): the acces host, no gate cookie.
+    const gatedHere = isGatedHere()
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setGated(d.dataset.gated === '1')
-    setLocked(d.dataset.gate === 'locked')
+    setGated(gatedHere)
+    setLocked(gatedHere && !unlockedHere())
+    if (gatedHere && !unlockedHere() && !document.getElementById(GATE_STYLE_ID)) {
+      const st = document.createElement('style')
+      st.id = GATE_STYLE_ID
+      st.textContent = GATE_CSS
+      document.head.appendChild(st)
+    }
   }, [])
 
   const open = useCallback((target: Target = {}) => {
@@ -90,7 +102,7 @@ export function GateRoot({ children }: { children: ReactNode }) {
           target={form}
           onClose={() => setForm(null)}
           onUnlocked={() => {
-            document.documentElement.setAttribute('data-gate', 'open')
+            document.getElementById(GATE_STYLE_ID)?.remove()
             setLocked(false)
             setForm(null)
           }}

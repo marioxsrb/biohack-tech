@@ -608,16 +608,10 @@ textarea.field { resize: vertical; }
 }
 
 /*
- * Price gate (acces.<domain>, components/gate): until the short form, every price is blurred and purchase
- * controls show "Vezi prețul și oferta". <html data-gate> is set before the first paint; elsewhere nothing changes.
+ * Price gate (acces.<domain>, components/gate): the locked label is hidden by default; while prices are locked,
+ * a <style id="bt-gate"> added before the first paint blurs [data-price] and shows it. Elsewhere nothing changes.
  */
 .gate-label-locked { display: none; }
-html[data-gate='locked'] .gate-label-locked { display: inline; }
-html[data-gate='locked'] .gate-label-open { display: none; }
-html[data-gate='locked'] [data-price] {
-  filter: blur(7px);
-  user-select: none;
-}
 
 /* Admin print documents (/admin/print): A4, black on white, no browser chrome around the content. */
 @media print {
