@@ -41,7 +41,7 @@ const { POST: lead } = await import('@/app/api/lead/route')
 const { GET: resume } = await import('@/app/api/lead/resume/route')
 const { POST: checkout } = await import('@/app/api/checkout/route')
 const { POST: visit } = await import('@/app/api/visit/route')
-const { cookieFrom } = await import('@/lib/lead')
+const { cookieFrom, LEAD_PRIVACY_VERSION } = await import('@/lib/lead')
 const { routeGated } = await import('@/lib/landing-hosts')
 
 const ENV = {
@@ -145,7 +145,7 @@ describe('price-gated funnel: the form', () => {
     expect(cookies.bt_gate).not.toMatch(/HttpOnly/i)
     expect(gate).toBe(data.leadId)
     const l = (await leads.byId(db, data.leadId))!
-    expect(l).toMatchObject({ visitorId: vid, funnel: 'gated_price', productId: 'balance-wave', name: 'Ana Popescu', email: 'ana@exemplu.ro', phone: '0722 123 456', stage: 'lead', landingHost: GATED, fbclid: 'IwAR0abcdefghij', privacyVersion: 'lead-2026-10-14', marketingConsent: false, callConsent: false })
+    expect(l).toMatchObject({ visitorId: vid, funnel: 'gated_price', productId: 'balance-wave', name: 'Ana Popescu', email: 'ana@exemplu.ro', phone: '0722 123 456', stage: 'lead', landingHost: GATED, fbclid: 'IwAR0abcdefghij', privacyVersion: LEAD_PRIVACY_VERSION, marketingConsent: false, callConsent: false })
     expect(l.attribution).toMatchObject({ utm: { utm_source: 'facebook', utm_campaign: 'acces-test' }, fbclid: 'IwAR0abcdefghij' })
     expect(l.priceRevealedAt).toBeInstanceOf(Date)
     // No box ticked: no marketing consent recorded.

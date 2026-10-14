@@ -52,6 +52,7 @@ export function LandingShell({ landing, heroTone, cta, children }: { landing: La
 function LandingFooter({ dark }: { dark: boolean }) {
   const legal = [
     ['/terms-of-service', 'Termeni și condiții'],
+    ['/terms-of-service#comunicari', 'Comunicări comerciale'],
     ['/privacy-policy', 'Confidențialitate'],
     ['/politica-cookies', 'Cookies'],
     ['/politica-livrare', 'Livrare'],

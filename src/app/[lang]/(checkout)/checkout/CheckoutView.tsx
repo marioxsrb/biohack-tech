@@ -21,8 +21,7 @@ import { normalizeContact, validateContact } from '@/lib/lead'
 import { cashOnDelivery } from '@/config/payments'
 import { site, terms } from '@/config/site'
 import { itemOf, track } from '@/lib/analytics'
-import { MARKETING_CONSENT_TEXT, MARKETING_CONSENT_TEXT_EN } from '@/lib/consent/marketing'
-import { CALL_CONSENT_TEXT } from '@/lib/consent/calling'
+import { CommunicationsConsent } from '@/components/consent/CommunicationsConsent'
 import {
   COUNTIES,
   DRAFT_KEY,
@@ -96,10 +95,8 @@ const COPY = {
     codText: 'Plătești curierului când primești coletul. Nu plătești nimic acum.',
     codAfter: (amount: string) => `Comanda se confirmă imediat. Plătești ${amount} curierului când primești coletul.`,
     edit: 'Modifică',
-    accept: 'Am citit și accept',
-    terms: 'termenii și condițiile',
-    and: 'și',
-    returnsPolicy: 'politica de retur și retragere',
+    accept: 'Accept',
+    terms: 'Termenii și Condițiile',
     optional: '(opțional)',
     dataUse: 'Folosim datele tale ca să procesăm, să facturăm și să livrăm comanda. Detalii în',
     privacy: 'politica de confidențialitate',
@@ -170,10 +167,8 @@ const COPY = {
     codText: 'You pay the courier when the parcel arrives. Nothing to pay now.',
     codAfter: (amount: string) => `Your order is confirmed right away. You pay ${amount} to the courier when the parcel arrives.`,
     edit: 'Edit',
-    accept: 'I have read and accept the',
-    terms: 'terms and conditions',
-    and: 'and the',
-    returnsPolicy: 'returns and withdrawal policy',
+    accept: 'I accept the',
+    terms: 'Terms and Conditions',
     optional: '(optional)',
     dataUse: 'We use your details to process, invoice and deliver your order. Read more in our',
     privacy: 'privacy policy',
@@ -299,8 +294,8 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
 
   const [form, setForm] = useState<OrderForm>(() => readDraft(methods, preferred))
   const [accepted, setAccepted] = useState(false)
-  // The separate AI calling box (Romanian site only: the calls are in Romanian). Never part of the order.
-  const [callConsent, setCallConsent] = useState(false)
+  // The one communications box (form.marketingConsent) names email and AI calls: the checkout lead records both.
+  const callConsent = form.marketingConsent
   const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({})
   const [submitted, setSubmitted] = useState(false)
   const [sending, setSending] = useState(false)
@@ -649,10 +644,6 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
                       {t.accept}{' '}
                       <Link href="/terms-of-service" target="_blank" className="font-medium text-ink underline underline-offset-4">
                         {t.terms}
-                      </Link>{' '}
-                      {t.and}{' '}
-                      <Link href="/politica-retur" target="_blank" className="font-medium text-ink underline underline-offset-4">
-                        {t.returnsPolicy}
                       </Link>
                       .
                     </span>
@@ -662,25 +653,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
                       {errors.acceptedTerms}
                     </p>
                   )}
-                  <label className="flex cursor-pointer items-start gap-3 text-[15px] leading-snug text-text">
-                    <input
-                      type="checkbox"
-                      checked={form.marketingConsent}
-                      onChange={(e) => patch({ marketingConsent: e.target.checked })}
-                      className="mt-0.5 h-5 w-5 flex-none accent-[var(--color-ink)]"
-                    />
-                    <span>
-                      {locale === 'en' ? MARKETING_CONSENT_TEXT_EN : MARKETING_CONSENT_TEXT} <span className="text-muted">{t.optional}</span>
-                    </span>
-                  </label>
-                  {locale === 'ro' && (
-                    <label className="flex cursor-pointer items-start gap-3 text-[15px] leading-snug text-text">
-                      <input type="checkbox" checked={callConsent} onChange={(e) => setCallConsent(e.target.checked)} className="mt-0.5 h-5 w-5 flex-none accent-[var(--color-ink)]" />
-                      <span>
-                        {CALL_CONSENT_TEXT} <span className="text-muted">{t.optional}</span>
-                      </span>
-                    </label>
-                  )}
+                  <CommunicationsConsent checked={form.marketingConsent} onChange={(v) => patch({ marketingConsent: v })} locale={locale} className="text-[15px]" />
                   <p className="text-[13.5px] leading-snug text-muted">
                     {t.dataUse}{' '}
                     <Link href="/privacy-policy" target="_blank" className="underline underline-offset-4 hover:text-ink">

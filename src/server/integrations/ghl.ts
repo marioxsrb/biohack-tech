@@ -134,6 +134,8 @@ export const TAGS = {
   returnReceived: 'bt-retur-primit',
   /** Wrote to us through the site's contact form. Starts no order workflow. */
   enquiry: 'bt-mesaj-contact',
+  /** Present only while an AI call consent is in force for one of the address's numbers (Supabase stays the proof). */
+  callConsent: 'bt-acord-apel-ai',
 } as const
 /** One tag per product bought. Every catalog product must have one (tested). */
 /**

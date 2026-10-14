@@ -11,6 +11,8 @@ import { getDb, type Queryable } from '@/server/db'
 import { jobs, type NewJob } from '@/server/jobs/outbox'
 import { log } from '@/server/log'
 import { marketing } from '@/server/marketing/consent'
+import { callConsent } from '@/server/calling/consent'
+import { romanianE164 } from '@/lib/consent/calling'
 import { canSendAbandonedCheckoutEmail, newRecoveryToken, recoveryExpiry } from '@/server/marketing/recovery'
 import type { Attribution } from '@/lib/attribution'
 import { lineRef } from '@/content/catalog'
@@ -131,6 +133,13 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
       })
       // Proof of the ticked box: exact wording, version, time, order. An unticked box records nothing.
       if (f.marketingConsent) await marketing.grant(t, { email: f.email, source: 'checkout', orderId: id, page: '/checkout' })
+      // The same box names the AI calls: their consent is recorded separately, by phone number (no call follows
+      // a purchase; it is kept as the person's choice). The CRM tag follows on marketing.sync.
+      const phone = f.marketingConsent ? romanianE164(f.phone) : null
+      if (phone && !(await callConsent.state(t, phone))?.granted) {
+        const callId = await callConsent.grant(t, { phone, email: f.email, source: 'checkout', page: '/checkout' })
+        if (getConfig().ghl) await jobs.enqueue(t, { kind: 'marketing.sync', dedupeKey: `marketing.sync:call:${callId}`, payload: { email: f.email.trim().toLowerCase() }, runAt: new Date(Date.now() + 60_000) })
+      }
       const created = (await orders.byId(t, id))!
       // A cash-on-delivery order is a commitment, like a payment: earlier unpaid card attempts are closed.
       if (cod) await closeAbandonedAttempts(t, created)

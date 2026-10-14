@@ -11,6 +11,8 @@ import { jobLabel, NOTIFICATIONS, type NotifyEvent } from '@/server/notification
 import { customerName, formatAddress, PAYMENT_METHOD_LABEL } from '@/server/orders/model'
 import { shipmentFor } from '@/server/fulfillment/courier'
 import { marketing } from '@/server/marketing/consent'
+import { callConsent } from '@/server/calling/consent'
+import { romanianE164 } from '@/lib/consent/calling'
 import { orders } from '@/server/orders/repository'
 import { withdrawals } from '@/server/orders/withdrawal'
 import { awaitsCollection, canCancel, canFulfil, canMoveOrder, isPaid, isPurchased } from '@/server/orders/state'
@@ -53,7 +55,14 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
   const db = await getDb()
   const o = await orders.byId(db, id)
   if (!o) notFound()
-  const [events, jobList, consent, withdrawalList] = await Promise.all([orders.events(db, id), jobs.forOrder(db, id), marketing.state(db, o.email), withdrawals.forOrder(id)])
+  const phone = romanianE164(o.phone)
+  const [events, jobList, consent, withdrawalList, call] = await Promise.all([
+    orders.events(db, id),
+    jobs.forOrder(db, id),
+    marketing.state(db, o.email),
+    withdrawals.forOrder(id),
+    phone ? callConsent.state(db, phone) : null,
+  ])
   const c = getConfig()
   const paid = isPaid(o.paymentStatus)
   const cod = awaitsCollection(o)
@@ -217,6 +226,7 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                 ...Object.entries(o.attribution?.utm ?? {}).map(([k, v]) => [k, v] as [string, string]),
                 ['Bifă marketing la această comandă', o.marketingConsent ? 'Da' : 'Nu'],
                 ['Marketing email acum', consent ? `${consent.granted ? 'Acord' : 'Retras'} · ${dt(consent.at)} · ${consent.source} · ${consent.version}` : 'Fără acord'],
+                ['Apeluri AI acum', !phone ? 'Fără număr românesc' : call ? `${call.granted ? 'Acord' : 'Retras'} · ${dt(call.at)} · ${call.source}${call.version ? ` · ${call.version}` : ''}` : 'Fără acord'],
                 ...(o.recoveryStatus
                   ? ([['Recuperare checkout', `${o.recoveryStatus === 'eligible' ? 'Permisă' : 'Nepermisă'} (${o.recoveryReason})`]] as [string, string][])
                   : []),

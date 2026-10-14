@@ -193,6 +193,7 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
   const created = !!r.inserted
   const stageChanged = created || (r.prev_stage as string) !== lead.stage
   // Proof of the ticked box: the exact wording and version, linked to nothing but the address and page.
+  let synced = false
   if (input.marketingConsent) {
     const state = await marketing.state(t, lead.email)
     if (!state?.granted) {
@@ -201,6 +202,7 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
       // A minute later, so the lead's own contact sync (ghl.lead) has stored the contact id it updates: GHL's
       // search does not see a brand-new contact for a while, and a second lookup would create a duplicate.
       if (c.ghl) await jobs.enqueue(t, { kind: 'marketing.sync', dedupeKey: `marketing.sync:${id}`, payload: { email: lead.email }, runAt: new Date(Date.now() + 60_000) })
+      synced = true
     }
   }
   if (stageChanged || created) for (const j of leadJobs(lead, c)) await jobs.enqueue(t, j)
@@ -208,7 +210,11 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
   const phone = romanianE164(lead.phone)
   if (input.callConsent && phone) {
     const state = await callConsent.state(t, phone)
-    if (!state?.granted) await callConsent.grant(t, { phone, email: lead.email, source: input.funnel === 'gated_price' ? 'lead_form' : 'checkout', page: input.page, leadId: lead.id })
+    if (!state?.granted) {
+      const id = await callConsent.grant(t, { phone, email: lead.email, source: input.funnel === 'gated_price' ? 'lead_form' : 'checkout', page: input.page, leadId: lead.id })
+      // The CRM tag for calls follows on the same job as the marketing fields (one job when both changed).
+      if (c.ghl && !synced) await jobs.enqueue(t, { kind: 'marketing.sync', dedupeKey: `marketing.sync:call:${id}`, payload: { email: lead.email }, runAt: new Date(Date.now() + 60_000) })
+    }
   }
   if (lead.callConsent && phone && c.calling.enabled) await jobs.enqueue(t, firstCallJob(lead, c))
   return { lead, created, stageChanged }

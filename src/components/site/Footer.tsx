@@ -29,6 +29,7 @@ const help: FooterLink[] = [
 
 const legal: FooterLink[] = [
   { href: `/${page('terms-of-service').slug}`, label: { ro: 'Termeni și condiții', en: 'Terms and conditions' } },
+  { href: `/${page('terms-of-service').slug}#comunicari`, label: { ro: 'Comunicări comerciale', en: 'Commercial communications' } },
   { href: `/${page('privacy-policy').slug}`, label: { ro: 'Confidențialitate', en: 'Privacy' } },
   { href: `/${page('politica-cookies').slug}`, label: { ro: 'Politica de cookies', en: 'Cookie policy' } },
 ]

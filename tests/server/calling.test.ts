@@ -25,7 +25,7 @@ const { callConsent } = await import('@/server/calling/consent')
 const { retryCall, disableCalling, cancelScheduledCalls } = await import('@/server/calling/admin')
 const { marketing } = await import('@/server/marketing/consent')
 const { signWebhook, verifyWebhookSignature } = await import('@/server/integrations/elevenlabs')
-const { romanianE164 } = await import('@/lib/consent/calling')
+const { romanianE164, CALL_CONSENT_VERSION } = await import('@/lib/consent/calling')
 const { agentDefinition, agentKnowledge } = await import('@/server/calling/agent')
 const svc = await import('@/server/orders/service')
 const { runDueJobs } = await import('@/server/jobs/runner')
@@ -146,7 +146,7 @@ describe('consent', () => {
 
   it('ticked: recorded by phone with its text version and source; the first call is planned after the quiet time', async () => {
     const { leadId } = await reveal({ callConsent: true })
-    expect(await callConsent.state(db, PHONE)).toMatchObject({ granted: true, version: 'call-2026-10-14', source: 'lead_form' })
+    expect(await callConsent.state(db, PHONE)).toMatchObject({ granted: true, version: CALL_CONSENT_VERSION, source: 'lead_form' })
     const job = (await db.query<{ run_at: string }>(`select run_at from jobs where kind = 'call.attempt' and payload->>'leadId' = $1`, [leadId])).rows
     expect(job).toHaveLength(1)
     expect(Math.round((new Date(job[0].run_at).getTime() - Date.now()) / 60_000)).toBe(60)

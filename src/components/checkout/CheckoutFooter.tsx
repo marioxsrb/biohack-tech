@@ -8,6 +8,7 @@ import { getLocale } from '@/i18n/server'
 const LINKS = {
   ro: [
     ['/terms-of-service', 'Termeni și condiții'],
+    ['/terms-of-service#comunicari', 'Comunicări comerciale'],
     ['/privacy-policy', 'Confidențialitate'],
     ['/politica-cookies', 'Cookies'],
     ['/politica-livrare', 'Livrare'],
@@ -19,6 +20,7 @@ const LINKS = {
   ],
   en: [
     ['/terms-of-service', 'Terms and conditions'],
+    ['/terms-of-service#comunicari', 'Commercial communications'],
     ['/privacy-policy', 'Privacy'],
     ['/politica-cookies', 'Cookies'],
     ['/politica-livrare', 'Delivery'],

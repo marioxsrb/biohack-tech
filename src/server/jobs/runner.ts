@@ -18,6 +18,7 @@ import { renderLeadRecovery } from '@/server/leads-email'
 import { gatedOrigin } from '@/lib/lead'
 import { marketing } from '@/server/marketing/consent'
 import { CALL_TAGS, INTEREST_TAG, LEAD_TAGS, attributionTags, callOutcomeTag } from '@/server/integrations/ghl'
+import { callConsent } from '@/server/calling/consent'
 import { calls, leadProduct, renderCallLink, runCallAttempt, runCallCheck, type StepResult } from '@/server/calling/calls'
 import { companyLine } from '@/config/company'
 import { errText, log } from '@/server/log'
@@ -81,12 +82,21 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const email = String(j.payload.email ?? '')
     // Only addresses the CRM has (or gets) through an order or a lead; matched by email, so never a duplicate.
     const { rows } = await db.query('select 1 from orders where email = $1 and ghl_contact_id is not null union all select 1 from leads where email = $1 limit 1', [email])
-    if (!rows.length) throw new Skip('address not in the CRM')
+    if (!rows.length) {
+      // An order placed a moment ago reaches the CRM on its own job: wait for it instead of losing the update.
+      const pending = await db.query('select 1 from orders where email = $1 limit 1', [email])
+      if (pending.rows.length) throw new Error('the order is not in the CRM yet')
+      throw new Skip('address not in the CRM')
+    }
     const m = await marketingStatus(db, email, c.siteUrl)
     const contactId = await ghl.updateMarketing(c.ghl, email, m.fields, await knownContactId(db, email))
     await db.query('update leads set ghl_contact_id = $2 where email = $1 and ghl_contact_id is null', [email, contactId])
     if (m.recoverable || m.hadRecovery) await ghl.removeTags(c.ghl, contactId, [TAGS.recovery])
-    return m.fields.consent ? 'consent' : 'no consent'
+    // AI calls: their own consent (by phone number), shown as a tag, never inferred from the email consent.
+    const callable = await callConsent.grantedForEmail(db, email)
+    if (callable) await ghl.addTags(c.ghl, contactId, [TAGS.callConsent])
+    else await ghl.removeTags(c.ghl, contactId, [TAGS.callConsent])
+    return `${m.fields.consent ? 'consent' : 'no consent'}, calls ${callable ? 'yes' : 'no'}`
   },
 
   'email.send': async (j) => {

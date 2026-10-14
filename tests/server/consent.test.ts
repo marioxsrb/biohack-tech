@@ -204,6 +204,8 @@ describe('checkout recovery eligibility', () => {
 describe('unsubscribe', () => {
   it('withdrawal: future recovery is blocked, GHL gets consent=Nu and loses the recovery tag, once', async () => {
     const o = await abandon((await cardOrder('u1', true)).id)
+    // The order's own consent syncs (email and AI calls) run first; only the unsubscribe's is counted.
+    await runNow()
     calls.length = 0
     expect(await withdrawMarketing(person.email, 'unsubscribe_link', '/dezabonare')).toBe(true)
     expect(await withdrawMarketing(person.email, 'ghl')).toBe(false)

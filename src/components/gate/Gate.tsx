@@ -7,8 +7,7 @@ import { Arrow } from '@/components/ui/icons'
 import { getProduct, getProductBySlug, type ProductId } from '@/content/catalog'
 import { attributionParams } from '@/lib/attribution'
 import { trackFunnel } from '@/lib/analytics'
-import { CALL_CONSENT_TEXT } from '@/lib/consent/calling'
-import { MARKETING_CONSENT_TEXT } from '@/lib/consent/marketing'
+import { CommunicationsConsent } from '@/components/consent/CommunicationsConsent'
 import { GATE_COOKIE, LEAD_PRIVACY_TEXT, normalizeContact, validateContact, type LeadErrors } from '@/lib/lead'
 
 /**
@@ -114,8 +113,10 @@ export function GateRoot({ children }: { children: ReactNode }) {
 
 function LeadForm({ target, onClose, onUnlocked }: { target: Target | null; onClose: () => void; onUnlocked: () => void }) {
   const [values, setValues] = useState({ name: '', email: '', phone: '' })
+  // The one optional communications box: it names email and AI calls, so both consents follow it. The terms of
+  // sale are never asked here: seeing a price is not a purchase.
   const [consent, setConsent] = useState(false)
-  const [callConsent, setCallConsent] = useState(false)
+  const callConsent = consent
   const [errors, setErrors] = useState<LeadErrors>({})
   const [state, setState] = useState<'idle' | 'sending' | 'error'>('idle')
   const started = useRef(false)
@@ -218,18 +219,7 @@ function LeadForm({ target, onClose, onUnlocked }: { target: Target | null; onCl
           {field('email', 'Email', 'email', 'email')}
           {field('phone', 'Telefon', 'tel', 'tel', 'Pentru întrebări despre comandă.')}
         </div>
-        <label className="mt-5 flex cursor-pointer items-start gap-3 text-[14.5px] leading-snug text-text">
-          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-5 w-5 flex-none accent-[var(--color-ink)]" />
-          <span>
-            {MARKETING_CONSENT_TEXT} <span className="text-muted">(opțional)</span>
-          </span>
-        </label>
-        <label className="mt-3 flex cursor-pointer items-start gap-3 text-[14.5px] leading-snug text-text">
-          <input type="checkbox" checked={callConsent} onChange={(e) => setCallConsent(e.target.checked)} className="mt-0.5 h-5 w-5 flex-none accent-[var(--color-ink)]" />
-          <span>
-            {CALL_CONSENT_TEXT} <span className="text-muted">(opțional)</span>
-          </span>
-        </label>
+        <CommunicationsConsent checked={consent} onChange={setConsent} className="mt-5 text-[14.5px]" />
         <p className="mt-4 text-[13px] leading-relaxed text-muted">
           {LEAD_PRIVACY_TEXT} Detalii în{' '}
           <a href="/privacy-policy" target="_blank" rel="noopener" className="underline underline-offset-2">

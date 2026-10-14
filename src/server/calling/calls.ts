@@ -311,7 +311,8 @@ export async function applyCallResult(q: Queryable, c: Config, call: Call, r: Ca
   })
   const lead = await leads.byId(q, call.leadId)
   if (!lead) return true
-  if (optedOut) await callConsent.withdraw(q, { phone: call.phone, email: lead.email, source: 'call', leadId: lead.id })
+  if (optedOut && (await callConsent.withdraw(q, { phone: call.phone, email: lead.email, source: 'call', leadId: lead.id })) && c.ghl)
+    await jobs.enqueue(q, { kind: 'marketing.sync', dedupeKey: `marketing.sync:call-withdrawn:${call.id}`, payload: { email: lead.email } })
   let status = 'completed'
   if (optedOut || r.outcome === 'not_interested' || r.outcome === 'invalid_number') status = 'stopped'
   else if (RETRYABLE.includes(r.outcome)) {

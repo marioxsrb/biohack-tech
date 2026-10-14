@@ -1,7 +1,7 @@
 # AI calling (ElevenLabs)
 
-An ElevenLabs voice agent calls leads who left a purchase unfinished, **only** if they ticked the separate,
-optional call box. Supabase is the source of truth; GoHighLevel gets tags; nothing depends on /admin being open.
+An ElevenLabs voice agent calls leads who left a purchase unfinished, **only** if they ticked the optional
+communications box, whose text names the AI calls explicitly. Supabase is the source of truth; GoHighLevel gets tags; nothing depends on /admin being open.
 
 ```
 lead (Supabase) → eligibility (at run time) → call.attempt job → ElevenLabs outbound call
@@ -11,9 +11,11 @@ lead (Supabase) → eligibility (at run time) → call.attempt job → ElevenLab
 ## Legal basis (Romania / EU) — read before enabling
 
 - **Legea 506/2004, art. 12**: commercial communications through automated calling systems without human
-  intervention require the subscriber's **prior express consent**. An AI agent is such a system. Hence the
-  separate box (`CALL_CONSENT_TEXT`, versioned in `src/lib/consent/calling.ts`), never pre-ticked, never
-  required, never implied by the email consent, the price form or an order. Consent is logged by phone
+  intervention require the subscriber's **prior express consent**. An AI agent is such a system. Since
+  14.10.2026 one optional box (`src/lib/consent/communications.ts`, version `comms-2026-10-14`) names both
+  channels, email and AI calls, and records two separate consents; never pre-ticked, never required, never
+  implied by the terms, an older email-only consent, the price form or an order. The conditions are the
+  "Comunicări comerciale" section of the terms (`/terms-of-service#comunicari`, linked from the footer). Consent is logged by phone
   number (`call_consent_events`: text version, source, page, time); refusal during a call, an admin, or an
   email unsubscribe withdraw it.
 - **GDPR**: consent (art. 6(1)(a)); privacy policy section "Apeluri de la asistentul AI"; ElevenLabs and

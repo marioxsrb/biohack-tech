@@ -8,8 +8,7 @@
  */
 import { company, companyLine } from '@/config/company'
 import { site, terms } from '@/config/site'
-import { MARKETING_CONSENT_TEXT } from '@/lib/consent/marketing'
-import { CALL_CONSENT_TEXT } from '@/lib/consent/calling'
+import { COMMUNICATIONS_CONSENT_TEXT } from '@/lib/consent/communications'
 import { CONSENT_MAX_AGE_DAYS } from '@/lib/consent/cookies'
 import { configuredVendors } from '@/lib/consent/vendors'
 
@@ -68,7 +67,7 @@ export const legalPages: LegalPage[] = [
               'Alegi produsele și le pui în coș. În coș poți schimba cantitatea sau poți scoate produse.',
               'La finalizarea comenzii completezi datele de contact, facturare și livrare și alegi metoda de plată.',
               'Înainte de a trimite comanda vezi produsele, prețul fiecăruia, livrarea și totalul. Poți corecta orice câmp.',
-              'Bifezi acordul cu acești termeni și trimiți comanda cu butonul de plată sau „Comandă cu obligație de plată”.',
+              'Bifezi acordul cu acești termeni (obligatoriu) și, dacă vrei, acordul pentru comunicări (opțional), apoi trimiți comanda cu butonul de plată sau „Comandă cu obligație de plată”.',
               'Primești pe email confirmarea comenzii.',
             ],
           },
@@ -100,6 +99,23 @@ export const legalPages: LegalPage[] = [
         body: [
           'Produsele Biohack Tech sunt destinate stării generale de bine. Nu înlocuiesc sfatul medicului.',
           'Dacă ai o afecțiune sau urmezi un tratament, discută cu medicul înainte de utilizare. Rezultatele variază de la o persoană la alta.',
+        ],
+      },
+      {
+        heading: 'Comunicări comerciale',
+        id: 'comunicari',
+        body: [
+          `Îți trimitem comunicări comerciale doar dacă bifezi, în formularul de preț sau la finalizarea comenzii, căsuța: „${COMMUNICATIONS_CONSENT_TEXT}” Bifa este opțională și nu este bifată dinainte. Fără ea vezi prețurile și comanzi la fel. Acceptarea acestor termeni nu înseamnă acord pentru comunicări.`,
+          'Bifa acoperă două canale, pe care le înregistrăm separat (textul, data și pagina), pentru adresa de email și pentru numărul de telefon:',
+          {
+            list: [
+              'Emailuri: noutăți, oferte și recomandări despre produsele Biohack Tech.',
+              'Recuperarea comenzilor nefinalizate: dacă ai început o comandă sau ai cerut prețul și nu ai finalizat, îți putem trimite cel mult două emailuri de reamintire, cu linkul către produs sau coș. Ele se opresc imediat ce comanzi, te dezabonezi sau retragi acordul.',
+              'Apeluri de la asistentul AI: te poate suna un asistent AI al Biohack Tech, un sistem automat, despre produsul ales, dacă nu ai finalizat comanda. Îți spune de la început că este un asistent AI. Sună doar la un număr românesc, în zilele lucrătoare, între orele 10 și 19, de cel mult două ori pentru aceeași comandă nefinalizată. Nu înregistrăm apelul și nu îți cere date de card.',
+            ],
+          },
+          'Poți retrage acordul oricând, gratuit: din linkul de dezabonare din fiecare email de marketing (oprește și apelurile), spunându-i asistentului în timpul apelului că nu mai vrei să fii sunat (oprește apelurile) sau scriindu-ne. După retragere nu te mai contactăm în scop comercial. Emailurile despre comenzi (confirmare, plată, factură, livrare, rambursare) vin în continuare, pentru că sunt necesare comenzii.',
+          'Detalii despre cum folosim datele: [Politica de confidențialitate](/privacy-policy#marketing).',
         ],
       },
       {
@@ -158,7 +174,7 @@ export const legalPages: LegalPage[] = [
         heading: 'Emailuri de marketing',
         id: 'marketing',
         body: [
-          `Îți trimitem emailuri de marketing doar dacă bifezi, la comandă sau în formularul de preț, căsuța: „${MARKETING_CONSENT_TEXT}”`,
+          `Îți trimitem emailuri de marketing doar dacă bifezi, la comandă sau în formularul de preț, căsuța opțională: „${COMMUNICATIONS_CONSENT_TEXT}” Condițiile sunt în [Termeni și condiții, Comunicări comerciale](/terms-of-service#comunicari). Acceptarea termenilor de vânzare nu înseamnă acord pentru marketing.`,
           'Păstrăm dovada acordului: textul pe care l-ai văzut, data și comanda sau formularul în care l-ai dat.',
           'Dacă nu finalizezi o comandă sau o ofertă și ai bifat acordul, îți putem trimite cel mult două emailuri de reamintire, fără reduceri inventate. Ele se opresc imediat ce comanzi, te dezabonezi sau retragi acordul.',
           'Te poți dezabona oricând din linkul din fiecare email de marketing sau scriindu-ne. Emailurile despre comenzi (confirmare, plată, factură, livrare, rambursare) vin în continuare, pentru că sunt necesare comenzii.',
@@ -168,7 +184,7 @@ export const legalPages: LegalPage[] = [
         heading: 'Apeluri de la asistentul AI',
         id: 'apeluri',
         body: [
-          `Te putem suna cu un asistent AI doar dacă bifezi, separat, căsuța: „${CALL_CONSENT_TEXT}” Bifa este opțională și nu este necesară pentru a vedea prețul sau pentru a comanda. Acordul pentru emailuri nu înseamnă acord pentru apeluri.`,
+          `Te putem suna cu un asistent AI doar dacă bifezi căsuța care numește explicit apelurile: „${COMMUNICATIONS_CONSENT_TEXT}” Bifa este opțională și nu este necesară pentru a vedea prețul sau pentru a comanda. Acordul pentru apeluri este înregistrat separat, pentru numărul tău de telefon. Un acord mai vechi, dat doar pentru emailuri, nu înseamnă acord pentru apeluri.`,
           'Asistentul îți spune de la început că este un asistent AI al Biohack Tech. Te sună doar la un număr românesc, în zilele lucrătoare, între orele 10 și 19, de cel mult două ori pentru aceeași comandă nefinalizată. Nu îți cere date de card și nu face recomandări medicale.',
           'Nu înregistrăm apelul. Păstrăm doar data, durata și rezultatul (de exemplu „vrea mai multe informații” sau „nu mai dorește apeluri”), legate de solicitarea ta. Dacă ceri, îți trimitem pe email linkul către produs.',
           'Poți refuza oricând: spune-i asistentului că nu mai vrei să fii sunat, dezabonează-te din orice email sau scrie-ne. Nu te mai sunăm după ce comanzi.',

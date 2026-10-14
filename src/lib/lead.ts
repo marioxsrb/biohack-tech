@@ -30,9 +30,10 @@ export const GATE_DAYS = 90
 export const LEAD_PRIVACY_TEXTS = {
   'lead-2026-10-14':
     'Folosim numele, emailul și telefonul ca să îți arătăm prețul și oferta și să păstrăm alegerea ta pe acest dispozitiv. Nu primești reclame și nu te sunăm fără acordul tău.',
+  'lead-2026-10-14b': 'Folosim datele ca să îți arătăm prețul și oferta.',
 } as const
 export type LeadPrivacyVersion = keyof typeof LEAD_PRIVACY_TEXTS
-export const LEAD_PRIVACY_VERSION: LeadPrivacyVersion = 'lead-2026-10-14'
+export const LEAD_PRIVACY_VERSION: LeadPrivacyVersion = 'lead-2026-10-14b'
 export const LEAD_PRIVACY_TEXT = LEAD_PRIVACY_TEXTS[LEAD_PRIVACY_VERSION]
 
 export type LeadContact = { name: string; email: string; phone: string }

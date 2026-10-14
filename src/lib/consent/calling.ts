@@ -1,8 +1,10 @@
+import { COMMUNICATIONS_CONSENT_TEXT } from './communications'
+
 /**
- * Consent to be called by Biohack Tech's AI assistant: its own optional, unticked box, separate from email
- * marketing and never needed to see a price or to order. Romanian law (Legea 506/2004, art. 12) allows
- * commercial calls made by an automated system only with the subscriber's prior express consent, so
- * nothing else (a form, an order, the email consent) counts as this one.
+ * Consent to be called by Biohack Tech's AI assistant: an optional, unticked box whose text names the calls
+ * explicitly (today the communications box, which names email too), never needed to see a price or to order.
+ * Romanian law (Legea 506/2004, art. 12) allows commercial calls made by an automated system only with the
+ * subscriber's prior express consent, so nothing else (the terms, a form, an order, an earlier email-only consent) counts as this one.
  *
  * Shared by the forms (what the visitor reads) and the server (what is recorded as proof). Changing the
  * wording means a new version: add it here and keep the old ones.
@@ -10,10 +12,12 @@
 export const CALL_CONSENT_TEXTS = {
   'call-2026-10-14':
     'Sunt de acord să fiu sunat la acest număr de asistentul AI al Biohack Tech, despre produsul ales, dacă nu finalizez comanda. Apelul este făcut de un sistem automat. Pot refuza oricând, inclusiv în timpul apelului.',
+  // Since 14.10.2026: the one communications box, whose text names the AI calls explicitly (see ./communications).
+  'comms-2026-10-14': COMMUNICATIONS_CONSENT_TEXT,
 } as const
 
 export type CallConsentVersion = keyof typeof CALL_CONSENT_TEXTS
-export const CALL_CONSENT_VERSION: CallConsentVersion = 'call-2026-10-14'
+export const CALL_CONSENT_VERSION: CallConsentVersion = 'comms-2026-10-14'
 export const CALL_CONSENT_TEXT = CALL_CONSENT_TEXTS[CALL_CONSENT_VERSION]
 
 /**
