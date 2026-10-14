@@ -9,6 +9,7 @@
 import { company, companyLine } from '@/config/company'
 import { site, terms } from '@/config/site'
 import { MARKETING_CONSENT_TEXT } from '@/lib/consent/marketing'
+import { CALL_CONSENT_TEXT } from '@/lib/consent/calling'
 import { CONSENT_MAX_AGE_DAYS } from '@/lib/consent/cookies'
 import { configuredVendors } from '@/lib/consent/vendors'
 
@@ -142,6 +143,7 @@ export const legalPages: LegalPage[] = [
                 ['Îți arătăm prețul și oferta, pe acces.biohack-tech.ro, după formularul scurt', 'Nume, email, telefon, produsul ales, sursa vizitei (de ex. reclama din care ai venit)', 'Pași înaintea unui contract, la cererea ta (lit. b)'],
                 ['Păstrăm ce ai scris în pasul de contact al comenzii înainte să o trimiți, ca să știm câte comenzi rămân neterminate și să îți putem reface coșul', 'Nume, email, telefon, produsele din coș', 'Interesul nostru legitim de a înțelege și îmbunătăți comanda (lit. f)'],
                 ['Îți trimitem noutăți, oferte, recomandări și un memento pentru o comandă sau o ofertă nefinalizată', 'Email, nume, produsele de care ai fost interesat', 'Consimțământul tău, dat prin bifă (lit. a)'],
+                ['Te sună asistentul nostru AI despre produsul ales, dacă nu ai finalizat comanda', 'Telefon, prenume, produsul ales, rezultatul apelului', 'Consimțământul tău separat pentru apeluri, dat prin bifă (lit. a)'],
                 ['Răspundem la întrebări, reclamații și cereri de retragere', 'Ce ne scrii și datele comenzii', 'Contractul și obligația legală'],
                 ['Statistici și reclame, doar dacă accepți', 'Date despre folosirea site-ului, fără date de contact', 'Consimțământul tău (lit. a)'],
               ],
@@ -163,6 +165,16 @@ export const legalPages: LegalPage[] = [
         ],
       },
       {
+        heading: 'Apeluri de la asistentul AI',
+        id: 'apeluri',
+        body: [
+          `Te putem suna cu un asistent AI doar dacă bifezi, separat, căsuța: „${CALL_CONSENT_TEXT}” Bifa este opțională și nu este necesară pentru a vedea prețul sau pentru a comanda. Acordul pentru emailuri nu înseamnă acord pentru apeluri.`,
+          'Asistentul îți spune de la început că este un asistent AI al Biohack Tech. Te sună doar la un număr românesc, în zilele lucrătoare, între orele 10 și 19, de cel mult două ori pentru aceeași comandă nefinalizată. Nu îți cere date de card și nu face recomandări medicale.',
+          'Nu înregistrăm apelul. Păstrăm doar data, durata și rezultatul (de exemplu „vrea mai multe informații” sau „nu mai dorește apeluri”), legate de solicitarea ta. Dacă ceri, îți trimitem pe email linkul către produs.',
+          'Poți refuza oricând: spune-i asistentului că nu mai vrei să fii sunat, dezabonează-te din orice email sau scrie-ne. Nu te mai sunăm după ce comanzi.',
+        ],
+      },
+      {
         heading: 'Cine mai primește datele',
         body: [
           'Fiecare furnizor primește doar datele necesare pentru rolul lui:',
@@ -171,12 +183,13 @@ export const legalPages: LegalPage[] = [
               'Stripe: plata cu cardul. Datele cardului merg direct la Stripe; noi nu le vedem. După o plată cu cardul, Stripe păstrează cardul asociat comenzii cel mult 30 de minute, pentru oferta opțională de după plată; se încasează doar dacă o accepți explicit. Apoi cardul este dezasociat.',
               'FGO: emiterea facturilor.',
               'GoHighLevel (platforma LeadConnector): evidența clienților și trimiterea emailurilor.',
+              'ElevenLabs (vocea și conversația asistentului AI) și Twilio (rețeaua telefonică), doar dacă ai acceptat apelurile. Datele conversației sunt păstrate de furnizor cel mult 30 de zile.',
               'Firma de curierat: livrarea coletului.',
               'Furnizorul de găzduire al site-ului și al bazei de date.',
               'Autorități, doar când legea ne obligă.',
             ],
           },
-          'Stripe și GoHighLevel pot prelucra date și în afara Spațiului Economic European. În acest caz, transferul se face doar cu garanțiile cerute de GDPR (art. 44-46).',
+          'Stripe, GoHighLevel, ElevenLabs și Twilio pot prelucra date și în afara Spațiului Economic European. În acest caz, transferul se face doar cu garanțiile cerute de GDPR (art. 44-46).',
         ],
       },
       {
@@ -188,6 +201,7 @@ export const legalPages: LegalPage[] = [
               'Acordul pentru marketing și dezabonarea: cât timp primești emailuri și apoi cât ne pot fi cerute ca dovadă.',
               'Mesajele și cererile tale: cât durează rezolvarea și termenul în care ne pot fi cerute ca dovadă.',
               'Datele din formularul de preț și din pasul de contact al unei comenzi netrimise: cel mult 12 luni de la ultima ta activitate, apoi le ștergem automat. Dacă plasezi o comandă, rămân legate de comandă.',
+              'Acordul pentru apeluri și refuzul lui: cât timp ne pot fi cerute ca dovadă. Rezultatele apelurilor: împreună cu solicitarea de care țin.',
             ],
           },
         ],
@@ -399,7 +413,6 @@ export const legalPages: LegalPage[] = [
           'Plătești online, prin Stripe, procesatorul nostru de plăți. Datele cardului merg direct la Stripe. Noi nu le vedem și nu le păstrăm.',
           'Banca ta poate cere o confirmare suplimentară (3-D Secure), în aplicația băncii sau prin SMS.',
           'Comanda este confirmată când Stripe confirmă plata. Dacă plata nu reușește, nu ți se retrage nimic și poți încerca din nou.',
-          'Promoții: la NEUROS Calm și NEUROS Focus, reducerea se calculează separat pentru fiecare produs. Când comanda are 2 bucăți din același produs primești 10% reducere la acele bucăți, iar de la 3 bucăți primești 20%. Bucățile din produse diferite nu se adună, iar reducerea nu se aplică restului comenzii. Pentru un produs, cele două reduceri nu se cumulează: se aplică doar cea mai mare atinsă. La NEUROS Amber, din fiecare 3 perechi din aceeași comandă, una este gratuită (cea mai ieftină, dacă prețurile diferă). NEUROS Amber nu intră în această reducere și nu primește 10% sau 20%. Reducerile se calculează automat în coș, pe prețurile afișate, și apar separat în comandă și pe factură. Se aplică atât timp cât sunt afișate pe site.',
           'După o plată cu cardul îți putem propune, o singură dată, un produs opțional. Se plătește cu același card doar dacă apeși „Adaugă la comandă” și confirmi suma. Devine o comandă separată, cu factură separată; prima comandă rămâne plătită și confirmată oricum. Dacă banca cere confirmarea, se deschide pasul de verificare al băncii.',
         ],
       },
@@ -417,6 +430,13 @@ export const legalPages: LegalPage[] = [
           'După comandă primești datele pentru plată pe pagina comenzii și pe email: beneficiarul, IBAN-ul, banca și suma exactă.',
           'Scrie numărul comenzii la detaliile plății. Așa potrivim transferul cu comanda.',
           'Pregătim coletul după ce suma ajunge în cont. Îți scriem când primim plata.',
+        ],
+      },
+      {
+        heading: 'Promoții',
+        body: [
+          'La NEUROS Calm și NEUROS Focus, reducerea se calculează separat pentru fiecare produs. Când comanda are 2 bucăți din același produs primești 10% reducere la acele bucăți, iar de la 3 bucăți primești 20%. Bucățile din produse diferite nu se adună, iar reducerea nu se aplică restului comenzii. Pentru un produs, cele două reduceri nu se cumulează: se aplică doar cea mai mare atinsă. La NEUROS Amber, din fiecare 3 perechi din aceeași comandă, una este gratuită (cea mai ieftină, dacă prețurile diferă). NEUROS Amber nu intră în această reducere și nu primește 10% sau 20%. Reducerile se calculează automat în coș, pe prețurile afișate, și apar separat în comandă și pe factură. Se aplică atât timp cât sunt afișate pe site.',
+          'Promoțiile se aplică la fel indiferent de metoda de plată: card, ramburs sau transfer.',
         ],
       },
       {

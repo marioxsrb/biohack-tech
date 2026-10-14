@@ -9,6 +9,8 @@ import { runDueJobs } from '@/server/jobs/runner'
 import { log } from '@/server/log'
 import { courier } from '@/server/fulfillment/courier'
 import { enquiries, type EnquiryStatus } from '@/server/enquiries'
+import { cancelScheduledCalls, disableCalling, retryCall } from '@/server/calling/admin'
+import { getConfig } from '@/server/config'
 import { cancelOrder, confirmPayment, markDelivered, markProcessing, markReturnReceived, markReturnRequested, markShipped, recordRefund } from '@/server/orders/service'
 
 /**
@@ -129,4 +131,22 @@ export async function enquiryStatusAction(f: FormData) {
   const changed = await enquiries.setStatus(id, status)
   log.info('admin.action', { enquiryId: id, action: `enquiry_${status}`, changed })
   revalidatePath('/admin/mesaje')
+}
+
+/** AI calling, per lead: cancel the waiting attempt, stop calling for good, or queue one more attempt. */
+export async function callAction(f: FormData) {
+  await guard()
+  const id = text(f, 'lead')
+  if (!/^[0-9a-f-]{36}$/.test(id)) return
+  const db = await getDb()
+  const op = text(f, 'op')
+  let result = ''
+  if (op === 'cancel') result = `${await cancelScheduledCalls(db, id)} cancelled`
+  else if (op === 'disable') {
+    await disableCalling(db, id)
+    result = 'disabled'
+  } else if (op === 'retry') result = await retryCall(db, getConfig(), id)
+  log.info('admin.call_action', { leadId: id, op, result })
+  if (op === 'retry') await runDueJobs()
+  revalidatePath('/admin/leaduri')
 }

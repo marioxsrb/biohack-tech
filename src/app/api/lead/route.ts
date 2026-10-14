@@ -51,18 +51,21 @@ export async function POST(req: NextRequest) {
       if (!product) return NextResponse.json({ error: 'BAD_PRODUCT' }, { status: 400 })
       let contact = normalizeContact(body)
       let consent = body.marketingConsent === true
+      // The separate AI calling box: only from the form itself, never copied or implied.
+      let callConsent = body.callConsent === true
       if (action === 'interest') {
         // Only for a device that already gave its details: the contact is copied from that lead.
         const from = await leads.byId(db, cookieFrom(req.headers.get('cookie'), GATE_COOKIE) ?? '')
         if (!from || from.visitorId !== visitorId) return NextResponse.json({ error: 'LOCKED' }, { status: 403 })
         contact = { name: from.name ?? '', email: from.email, phone: from.phone ?? '' }
         consent = false
+        callConsent = false
       } else {
         const fields = validateContact(contact)
         if (Object.keys(fields).length) return NextResponse.json({ error: 'INVALID', fields }, { status: 422 })
         if (!rateLimit(`lead-email:${contact.email}`, 10, 60 * 60_000)) return NextResponse.json({ error: 'RATE_LIMIT' }, { status: 429 })
       }
-      const r = await db.tx((t) => captureLead(t, { visitorId, funnel, stage: 'lead', productId: product.id, variantId, contact, marketingConsent: consent, attribution, landingHost: host, page: typeof body.page === 'string' ? body.page.slice(0, 80) : undefined }))
+      const r = await db.tx((t) => captureLead(t, { visitorId, funnel, stage: 'lead', productId: product.id, variantId, contact, marketingConsent: consent, callConsent, attribution, landingHost: host, page: typeof body.page === 'string' ? body.page.slice(0, 80) : undefined }))
       kickJobs()
       log.info('lead.captured', { leadId: r.lead.id, funnel, action, created: r.created, product: product.id })
       const res = NextResponse.json({ ok: true, leadId: r.lead.id, created: r.created })
@@ -77,7 +80,7 @@ export async function POST(req: NextRequest) {
       const cart = sanitizeCart(body.cart)
       if (!cart.length) return NextResponse.json({ ok: true, skipped: 'empty cart' })
       const r = await db.tx((t) =>
-        captureLead(t, { visitorId, funnel, stage: 'checkout_started', productId: CART_INTEREST, contact, marketingConsent: body.marketingConsent === true, cart, attribution, landingHost: host, page: '/checkout' }),
+        captureLead(t, { visitorId, funnel, stage: 'checkout_started', productId: CART_INTEREST, contact, marketingConsent: body.marketingConsent === true, callConsent: body.callConsent === true, cart, attribution, landingHost: host, page: '/checkout' }),
       )
       kickJobs()
       return withCookies(NextResponse.json({ ok: true, leadId: r.lead.id }), visitorId, undefined, c.siteUrl.startsWith('https://'))

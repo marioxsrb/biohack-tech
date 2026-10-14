@@ -17,7 +17,9 @@ import { CART_INTEREST, interestOf, leads, recoveryDecision, recoveryFacts } fro
 import { renderLeadRecovery } from '@/server/leads-email'
 import { gatedOrigin } from '@/lib/lead'
 import { marketing } from '@/server/marketing/consent'
-import { INTEREST_TAG, LEAD_TAGS } from '@/server/integrations/ghl'
+import { CALL_TAGS, INTEREST_TAG, LEAD_TAGS, callOutcomeTag } from '@/server/integrations/ghl'
+import { calls, leadProduct, renderCallLink, runCallAttempt, runCallCheck, type StepResult } from '@/server/calling/calls'
+import { companyLine } from '@/config/company'
 import { errText, log } from '@/server/log'
 import { marketingStatus } from '@/server/marketing/sync'
 import { orders } from '@/server/orders/repository'
@@ -30,6 +32,12 @@ import { jobs, type Job } from './outbox'
 
 class Skip extends Error {}
 class Permanent extends Error {}
+
+/** A calling step's result, in the queue's terms. */
+const step = (r: StepResult) => {
+  if ('skip' in r) throw new Skip(r.skip)
+  return r.note
+}
 
 async function syncCrm(orderId: string) {
   const c = getConfig()
@@ -161,6 +169,51 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const ref = await deliver(c, { ...mail, to: lead.email, name: `lead-recovery-${lead.id}-${step}` })
     await leads.update(db, lead.id, { abandonment: lead.abandonment ?? d.abandonment, recovery_status: 'sent', recovery_reason: `step ${step}`, recovery_sent: step, last_recovery_at: now })
     return ref
+  },
+
+  // AI calling: one attempt, decided now (consent, purchase, refusal, hours, limits). Never retried by the
+  // queue after the provider was asked to dial: an uncertain request is left for a person, not redialed.
+  'call.attempt': async (j) => step(await runCallAttempt(await getDb(), getConfig(), { leadId: String(j.payload.leadId ?? ''), attempt: Number(j.payload.attempt ?? 1) }, gatedOrigin(getConfig().siteUrl), j.dedupeKey)),
+
+  // A call whose result did not arrive by webhook: read it back from ElevenLabs.
+  'call.check': async (j) => step(await runCallCheck(await getDb(), getConfig(), { callId: String(j.payload.callId ?? ''), round: Number(j.payload.round ?? 1) })),
+
+  // The product link the person asked for during the call (a service email, on request).
+  'call.link': async (j) => {
+    const c = getConfig()
+    const db = await getDb()
+    const call = await calls.byId(db, String(j.payload.callId ?? ''))
+    if (!call) throw new Skip('call gone')
+    const lead = await leads.byId(db, call.leadId)
+    const product = lead && leadProduct(lead)
+    if (!lead || !product || !lead.recoveryToken) throw new Skip('lead gone')
+    const own = c.email.transport === 'smtp' || c.email.transport === 'file'
+    if (!own) throw new Skip('no own email transport')
+    // The recovery link restores the context (an unlocked price on acces, or the cart of a checkout).
+    const base = lead.funnel === 'gated_price' ? gatedOrigin(c.siteUrl) : c.siteUrl
+    const mail = renderCallLink({ firstName: lead.name?.split(' ')[0] ?? null, productName: product.name, link: `${base}/api/lead/resume?t=${lead.recoveryToken}`, company: companyLine() || null })
+    return deliver(c, { ...mail, to: lead.email, name: `call-link-${call.id}` })
+  },
+
+  // A call's result in the CRM: contact upsert (no duplicate: by email) and outcome tags. Retried on its own.
+  'ghl.call': async (j) => {
+    const c = getConfig()
+    if (!c.ghl) throw new Skip('ghl not configured')
+    const db = await getDb()
+    const call = await calls.byId(db, String(j.payload.callId ?? ''))
+    if (!call) throw new Skip('call gone')
+    const lead = await leads.byId(db, call.leadId)
+    if (!lead) throw new Skip('lead gone')
+    const contactId = await ghl.upsertLeadContact(c.ghl, lead)
+    await ghl.addTags(c.ghl, contactId, [
+      CALL_TAGS.called,
+      ...(call.outcome ? [callOutcomeTag(call.outcome)] : []),
+      ...(call.followUp ? [CALL_TAGS.followUp] : []),
+      ...(call.optedOut ? [CALL_TAGS.optedOut] : []),
+      ...(INTEREST_TAG[call.productId] ? [INTEREST_TAG[call.productId]] : []),
+    ])
+    if (contactId !== lead.ghlContactId) await leads.update(db, lead.id, { ghl_contact_id: contactId })
+    return contactId
   },
 
   'fgo.invoice': async (j) => {

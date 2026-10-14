@@ -7,6 +7,11 @@ import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { funnelStats, interestOf, leads, type Lead } from '@/server/leads'
 import { marketing } from '@/server/marketing/consent'
+import { calls, type Call } from '@/server/calling/calls'
+import { callConsent } from '@/server/calling/consent'
+import { canRetryCall } from '@/server/calling/admin'
+import { romanianE164 } from '@/lib/consent/calling'
+import { callAction } from '../actions'
 
 const dt = (d: Date) => d.toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000)
@@ -23,6 +28,27 @@ const RECOVERY: Record<string, string> = {
   disabled: 'oprită din configurare',
   stopped: 'oprită',
   converted: 'a cumpărat',
+}
+const CALL_STATUS: Record<string, string> = {
+  none: 'neprogramat',
+  scheduled: 'programat',
+  dry_run: 'simulat (dry run)',
+  dialing: 'în curs',
+  completed: 'încheiat',
+  failed: 'eșuat',
+  stopped: 'oprit',
+  disabled: 'dezactivat',
+}
+const OUTCOME: Record<string, string> = {
+  interested: 'interesat',
+  more_info: 'vrea informații',
+  human_follow_up: 'cere un om',
+  not_interested: 'nu e interesat',
+  opted_out: 'a refuzat apelurile',
+  no_answer: 'nu a răspuns',
+  busy: 'ocupat',
+  invalid_number: 'număr greșit',
+  technical_failure: 'eroare tehnică',
 }
 const VIEWS = { '': 'Toate', abandoned: 'Abandonate', converted: 'Convertite' } as const
 
@@ -42,6 +68,17 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
   const [list, stats] = await Promise.all([leads.list(db, { funnel, view }), funnelStats(db, daysAgo(days))])
   // Consent belongs to the person (the latest decision for the address), not to one form: that is what recovery checks.
   const consent = await marketing.states(db, list.map((l) => l.email))
+  // AI calling: consent by phone number, and each lead's latest call.
+  const phones = list.map((l) => romanianE164(l.phone)).filter((p): p is string => !!p)
+  const [callConsents, callRows] = await Promise.all([callConsent.states(db, phones), calls.forLeads(db, list.map((l) => l.id))])
+  const lastCall = new Map<string, Call>()
+  for (const r of callRows) if (!lastCall.has(r.leadId)) lastCall.set(r.leadId, r)
+  const callText = (l: Lead) => {
+    const phone = romanianE164(l.phone)
+    const consent = phone ? callConsents.get(phone) : undefined
+    const consentPart = !phone ? 'fără număr românesc valid' : consent === undefined ? 'fără acord de apel' : consent ? 'acord de apel dat' : 'acord de apel retras'
+    return `${consentPart} · ${CALL_STATUS[l.callStatus] ?? l.callStatus}${l.callAttempts ? ` · ${l.callAttempts} încercări` : ''}${l.callOutcome ? ` · ${OUTCOME[l.callOutcome] ?? l.callOutcome}` : ''}`
+  }
   const consentText = (l: Lead) => {
     const now = consent.get(l.email.toLowerCase())
     return now === undefined ? 'nu' : now ? (l.marketingConsent ? 'da (bifat aici)' : 'da (dat în alt formular)') : 'retras / dezabonat'
@@ -57,7 +94,9 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
       <p className="mt-2 max-w-[60em] text-[14.5px] text-muted">
         Funnel cu preț după formular: {c.features.priceGate ? 'activ' : 'oprit'} · captare în checkout: {c.features.abandonedCheckout ? 'activă' : 'oprită'} · emailuri de recuperare:{' '}
         {c.features.recoveryEmail ? `active (${c.recovery.firstMinutes} min, ${c.recovery.secondHours} h)` : 'oprite'}. Recuperarea pleacă doar cu acord de marketing și se oprește la comandă,
-        dezabonare sau retragerea acordului.
+        dezabonare sau retragerea acordului. Apeluri AI: {c.calling.enabled ? (c.calling.dryRun ? 'active în dry run (nu se sună nimeni)' : 'ACTIVE') : 'oprite'}
+        {c.calling.testNumbers ? ` · doar numerele de test (${c.calling.testNumbers.length})` : ''} · ElevenLabs {c.elevenlabs ? 'configurat' : 'neconfigurat'}. Se sună doar cu acordul separat pentru
+        apeluri, {c.calling.hours.start}:00–{c.calling.hours.end}:00, maximum {c.calling.maxAttempts} încercări.
       </p>
 
       <h2 className="mt-8 text-[22px] tracking-[-0.02em]">Comparația funnel-urilor</h2>
@@ -147,7 +186,7 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
               <Item k="Abandon" v={l.abandonment ? ABANDON[l.abandonment] : '–'} />
               <Item k="Acord marketing" v={consentText(l)} />
               <Item k="Recuperare" v={`${RECOVERY[l.recoveryStatus] ?? l.recoveryStatus}${l.recoverySent ? ` · ${l.recoverySent} trimise` : ''}${l.lastRecoveryAt ? ` · ultima ${dt(l.lastRecoveryAt)}` : ''}`} />
-              <Item k="Apel (AI sau om)" v={l.callConsent ? 'acord dat' : 'neeligibil: fără acord pentru apel'} />
+              <Item k="Apel AI" v={callText(l)} />
               <Item k="Sursa" v={attributionSummary(l.attribution) || (l.landingHost ? l.landingHost : 'direct')} />
               <Item k="GHL" v={l.ghlContactId ? 'sincronizat' : 'în așteptare'} />
               <Item
@@ -163,6 +202,42 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
                 }
               />
             </dl>
+            {(() => {
+              const call = lastCall.get(l.id)
+              const waiting = l.callStatus === 'scheduled'
+              const canRetry = canRetryCall(l, c.calling.maxAttempts)
+              if (!call && !waiting && !canRetry && (l.callDisabled || l.callStatus === 'none')) return null
+              return (
+                <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3 text-[13.5px]">
+                  {call && (
+                    <span className="text-muted">
+                      Ultimul apel: {dt(call.createdAt)} · {call.status}
+                      {call.durationSecs != null && ` · ${call.durationSecs}s`}
+                      {call.followUp && ' · necesită urmărire'}
+                      {call.error && ` · eroare: ${call.error}`}
+                    </span>
+                  )}
+                  <form action={callAction} className="ml-auto flex flex-wrap gap-2">
+                    <input type="hidden" name="lead" value={l.id} />
+                    {waiting && (
+                      <button name="op" value="cancel" className="btn-secondary sm">
+                        Anulează apelul programat
+                      </button>
+                    )}
+                    {canRetry && (
+                      <button name="op" value="retry" className="btn-secondary sm">
+                        Reîncearcă
+                      </button>
+                    )}
+                    {!l.callDisabled && (
+                      <button name="op" value="disable" className="btn-secondary sm">
+                        Fără apeluri pentru acest lead
+                      </button>
+                    )}
+                  </form>
+                </div>
+              )
+            })()}
           </li>
         ))}
         {!list.length && <li className="rounded-[16px] bg-paper px-5 py-10 text-center text-muted">Niciun lead.</li>}

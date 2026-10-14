@@ -20,6 +20,10 @@ export type JobKind =
   | 'ghl.enquiry'
   | 'ghl.lead'
   | 'lead.recovery'
+  | 'call.attempt'
+  | 'call.check'
+  | 'call.link'
+  | 'ghl.call'
 export type JobStatus = 'pending' | 'running' | 'retry' | 'done' | 'failed' | 'skipped'
 
 export type Job = {

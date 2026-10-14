@@ -45,7 +45,7 @@ export default async function UnsubscribePage({ params, searchParams }: PageProp
           <>
             <h1 className="text-[clamp(28px,3.4vw,38px)] leading-tight tracking-[-0.035em]">Te dezabonezi de la emailurile de marketing?</h1>
             <p className="sub mt-4">
-              Nu mai primești noutăți, oferte, recomandări sau mementouri pentru comenzi nefinalizate pe {mask(email)}.
+              Nu mai primești noutăți, oferte, recomandări sau mementouri pentru comenzi nefinalizate pe {mask(email)}, iar asistentul nostru AI nu te mai sună.
             </p>
             <p className="mt-3 text-[15.5px] text-text">Emailurile despre comenzile tale (confirmare, plată, factură, livrare) vin în continuare.</p>
             <form action={unsubscribeAction} className="mt-8">

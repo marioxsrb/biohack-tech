@@ -6,6 +6,7 @@ import { Arrow, Lock } from '@/components/ui/icons'
 import { getProduct, type ProductId } from '@/content/catalog'
 import { attributionParams } from '@/lib/attribution'
 import { trackFunnel } from '@/lib/analytics'
+import { CALL_CONSENT_TEXT } from '@/lib/consent/calling'
 import { MARKETING_CONSENT_TEXT } from '@/lib/consent/marketing'
 import { GATE_COOKIE, LEAD_PRIVACY_TEXT, normalizeContact, validateContact, type LeadErrors } from '@/lib/lead'
 import { formatLei } from '@/lib/money'
@@ -95,6 +96,7 @@ export function RevealPanel({ productId, variantId }: { productId: ProductId; va
 function LeadForm({ target, onClose, onUnlocked }: { target: { productId: ProductId; variantId?: string } | null; onClose: () => void; onUnlocked: () => void }) {
   const [values, setValues] = useState({ name: '', email: '', phone: '' })
   const [consent, setConsent] = useState(false)
+  const [callConsent, setCallConsent] = useState(false)
   const [errors, setErrors] = useState<LeadErrors>({})
   const [state, setState] = useState<'idle' | 'sending' | 'error'>('idle')
   const started = useRef(false)
@@ -128,7 +130,7 @@ function LeadForm({ target, onClose, onUnlocked }: { target: { productId: Produc
       const res = await fetch('/api/lead', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ action: 'reveal', ...contact, productId: target.productId, variantId: target.variantId, marketingConsent: consent, page: location.pathname, attribution: Object.fromEntries(attributionParams(location.search)) }),
+        body: JSON.stringify({ action: 'reveal', ...contact, productId: target.productId, variantId: target.variantId, marketingConsent: consent, callConsent, page: location.pathname, attribution: Object.fromEntries(attributionParams(location.search)) }),
       })
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; leadId?: string; fields?: LeadErrors }
       if (res.status === 422 && data.fields) {
@@ -202,6 +204,12 @@ function LeadForm({ target, onClose, onUnlocked }: { target: { productId: Produc
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} className="mt-0.5 h-5 w-5 flex-none accent-[var(--color-ink)]" />
           <span>
             {MARKETING_CONSENT_TEXT} <span className="text-muted">(opțional)</span>
+          </span>
+        </label>
+        <label className="mt-3 flex cursor-pointer items-start gap-3 text-[14.5px] leading-snug text-text">
+          <input type="checkbox" checked={callConsent} onChange={(e) => setCallConsent(e.target.checked)} className="mt-0.5 h-5 w-5 flex-none accent-[var(--color-ink)]" />
+          <span>
+            {CALL_CONSENT_TEXT} <span className="text-muted">(opțional)</span>
           </span>
         </label>
         <p className="mt-4 text-[13px] leading-relaxed text-muted">

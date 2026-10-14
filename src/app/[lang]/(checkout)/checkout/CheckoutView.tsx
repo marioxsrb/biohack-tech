@@ -22,6 +22,7 @@ import { cashOnDelivery } from '@/config/payments'
 import { site, terms } from '@/config/site'
 import { itemOf, track } from '@/lib/analytics'
 import { MARKETING_CONSENT_TEXT, MARKETING_CONSENT_TEXT_EN } from '@/lib/consent/marketing'
+import { CALL_CONSENT_TEXT } from '@/lib/consent/calling'
 import {
   COUNTIES,
   DRAFT_KEY,
@@ -298,10 +299,13 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
 
   const [form, setForm] = useState<OrderForm>(() => readDraft(methods, preferred))
   const [accepted, setAccepted] = useState(false)
+  // The separate AI calling box (Romanian site only: the calls are in Romanian). Never part of the order.
+  const [callConsent, setCallConsent] = useState(false)
   const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({})
   const [submitted, setSubmitted] = useState(false)
   const [sending, setSending] = useState(false)
   const [serverError, setServerError] = useState<string | null>(null)
+  const [serverFields, setServerFields] = useState<Partial<Record<FieldName, string>>>({})
   const [attemptId] = useState(() => crypto.randomUUID())
   const card = useRef<CardApi | null>(null)
 
@@ -321,7 +325,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
   // what they typed and the cart are saved as a checkout lead, so an abandoned checkout can be followed up
   // (only with marketing consent). Debounced; the same content is never sent twice. Off unless
   // ABANDONED_CHECKOUT_ENABLED (the server answers "skipped").
-  const contactKey = JSON.stringify([`${form.firstName} ${form.lastName}`.trim(), form.email.trim(), form.phone.trim(), form.marketingConsent, lines.map((l) => [l.product.id, l.variant?.id, l.quantity])])
+  const contactKey = JSON.stringify([`${form.firstName} ${form.lastName}`.trim(), form.email.trim(), form.phone.trim(), form.marketingConsent, callConsent, lines.map((l) => [l.product.id, l.variant?.id, l.quantity])])
   const sentKey = useRef('')
   useEffect(() => {
     const [name, email, phone] = JSON.parse(contactKey) as [string, string, string]
@@ -338,6 +342,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
           action: 'checkout',
           ...contact,
           marketingConsent: form.marketingConsent,
+          callConsent,
           cart: lines.map((l) => ({ productId: l.product.id, variantId: l.variant?.id, quantity: l.quantity })),
           attribution: Object.fromEntries(attributionParams(window.location.search)),
         }),
@@ -351,7 +356,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
   }, [contactKey])
 
   const errors = validateOrder(form, accepted, methods, locale)
-  const show = (f: FieldName) => (submitted || touched[f] ? errors[f] : undefined)
+  const show = (f: FieldName) => (submitted || touched[f] ? errors[f] : undefined) ?? serverFields[f]
   const pj = form.buyerType === 'pj'
 
   const bind = (f: keyof OrderFields) => ({
@@ -367,6 +372,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
     if (sending) return
     setSubmitted(true)
     setServerError(null)
+    setServerFields({})
     const first = ORDER.find((f) => errors[f])
     if (first) {
       document.getElementById(first === 'paymentMethod' ? `pm-${form.paymentMethod}` : `f-${first}`)?.focus()
@@ -396,6 +402,12 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
         }),
       })
       const data = await res.json().catch(() => ({}))
+      // Fields the server rejected (rare: client and server checks agree) are marked like the client's own.
+      if (res.status === 422 && data.fields && typeof data.fields === 'object') {
+        setServerFields(data.fields as Partial<Record<FieldName, string>>)
+        const first = ORDER.find((f) => (data.fields as Record<string, string>)[f])
+        if (first) document.getElementById(first === 'paymentMethod' ? `pm-${form.paymentMethod}` : `f-${first}`)?.focus()
+      }
       // The server answers in Romanian; the English site shows its own message.
       if (!res.ok) throw new Error(locale === 'en' ? t.failed : (data.message ?? t.failed))
 
@@ -661,6 +673,14 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
                       {locale === 'en' ? MARKETING_CONSENT_TEXT_EN : MARKETING_CONSENT_TEXT} <span className="text-muted">{t.optional}</span>
                     </span>
                   </label>
+                  {locale === 'ro' && (
+                    <label className="flex cursor-pointer items-start gap-3 text-[15px] leading-snug text-text">
+                      <input type="checkbox" checked={callConsent} onChange={(e) => setCallConsent(e.target.checked)} className="mt-0.5 h-5 w-5 flex-none accent-[var(--color-ink)]" />
+                      <span>
+                        {CALL_CONSENT_TEXT} <span className="text-muted">{t.optional}</span>
+                      </span>
+                    </label>
+                  )}
                   <p className="text-[13.5px] leading-snug text-muted">
                     {t.dataUse}{' '}
                     <Link href="/privacy-policy" target="_blank" className="underline underline-offset-4 hover:text-ink">

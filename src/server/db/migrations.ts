@@ -300,4 +300,55 @@ alter table funnel_visits enable row level security;
 alter table orders add column if not exists lead_id uuid
 `,
   },
+  {
+    // AI calling (Group 3): the separate consent to automated calls (its own log, by phone number), one row
+    // per call attempt (status, outcome, provider ids; no transcript, no recording), and the calling state
+    // kept on the lead for the admin list. Row level security on, no policy: server only.
+    id: '008_ai_calling',
+    sql: `
+create table if not exists call_consent_events (
+  id bigserial primary key,
+  phone text not null,
+  email text,
+  granted boolean not null,
+  text_version text,
+  source text not null,
+  page text,
+  lead_id uuid,
+  created_at timestamptz not null default now()
+);
+create index if not exists call_consent_phone_idx on call_consent_events (phone, id desc);
+create index if not exists call_consent_email_idx on call_consent_events (email);
+alter table call_consent_events enable row level security;
+create table if not exists calls (
+  id uuid primary key,
+  lead_id uuid not null references leads(id) on delete cascade,
+  phone text not null,
+  product_id text not null default '',
+  attempt integer not null,
+  status text not null default 'scheduled' check (status in ('scheduled', 'dry_run', 'dialing', 'completed', 'failed', 'unknown', 'cancelled')),
+  provider text not null default 'elevenlabs',
+  provider_call_id text unique,
+  provider_call_sid text,
+  outcome text,
+  follow_up boolean not null default false,
+  opted_out boolean not null default false,
+  wants_link boolean not null default false,
+  error text,
+  started_at timestamptz,
+  ended_at timestamptz,
+  duration_secs integer,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (lead_id, attempt)
+);
+create index if not exists calls_phone_idx on calls (phone, created_at desc);
+alter table calls enable row level security;
+alter table leads add column if not exists call_status text not null default 'none';
+alter table leads add column if not exists call_attempts integer not null default 0;
+alter table leads add column if not exists call_outcome text;
+alter table leads add column if not exists last_call_at timestamptz;
+alter table leads add column if not exists call_disabled boolean not null default false
+`,
+  },
 ]

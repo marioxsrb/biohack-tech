@@ -17,6 +17,8 @@ import { getConfig } from '@/server/config'
 import type { Queryable, Row } from '@/server/db'
 import { jobs, type NewJob } from '@/server/jobs/outbox'
 import { marketing } from '@/server/marketing/consent'
+import { callConsent, firstCallJob } from '@/server/calling/consent'
+import { romanianE164 } from '@/lib/consent/calling'
 import type { Order } from '@/server/orders/model'
 
 export type LeadStage = 'lead' | 'checkout_started' | 'ordered' | 'purchased'
@@ -39,6 +41,12 @@ export type Lead = {
   privacyVersion: string | null
   marketingConsent: boolean
   callConsent: boolean
+  /** AI calling: none | scheduled | dry_run | dialing | completed | failed | stopped | disabled. */
+  callStatus: string
+  callAttempts: number
+  callOutcome: string | null
+  lastCallAt: Date | null
+  callDisabled: boolean
   orderId: string | null
   abandonment: 'lead_abandoned' | 'checkout_abandoned' | null
   recoveryStatus: string
@@ -76,6 +84,11 @@ const toLead = (r: Row): Lead => ({
   privacyVersion: (r.privacy_version as string) ?? null,
   marketingConsent: !!r.marketing_consent,
   callConsent: !!r.call_consent,
+  callStatus: (r.call_status as string) ?? 'none',
+  callAttempts: Number(r.call_attempts ?? 0),
+  callOutcome: (r.call_outcome as string) ?? null,
+  lastCallAt: d(r.last_call_at),
+  callDisabled: !!r.call_disabled,
   orderId: (r.order_id as string) ?? null,
   abandonment: (r.abandonment as Lead['abandonment']) ?? null,
   recoveryStatus: r.recovery_status as string,
@@ -117,6 +130,8 @@ export type CaptureInput = {
   variantId?: string | null
   contact: LeadContact
   marketingConsent: boolean
+  /** The separate, optional AI calling box (never implied by anything else). */
+  callConsent?: boolean
   cart?: CartSnapshot
   attribution?: Attribution | null
   landingHost?: string | null
@@ -133,8 +148,8 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
   const now = new Date()
   const { rows } = await t.query(
     `insert into leads (id, visitor_id, funnel, product_id, variant_id, name, email, phone, stage, cart, attribution, landing_host, fbclid,
-       privacy_version, marketing_consent, recovery_token, price_revealed_at, checkout_started_at, last_activity_at, created_at, updated_at)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$19,$19)
+       privacy_version, marketing_consent, recovery_token, price_revealed_at, checkout_started_at, last_activity_at, created_at, updated_at, call_consent)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$19,$19,$20)
      on conflict (visitor_id, funnel, product_id) do update set
        variant_id = coalesce(excluded.variant_id, leads.variant_id),
        name = coalesce(nullif(excluded.name, ''), leads.name),
@@ -145,6 +160,7 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
        attribution = coalesce(leads.attribution, excluded.attribution),
        fbclid = coalesce(leads.fbclid, excluded.fbclid),
        marketing_consent = leads.marketing_consent or excluded.marketing_consent,
+       call_consent = leads.call_consent or excluded.call_consent,
        checkout_started_at = coalesce(leads.checkout_started_at, excluded.checkout_started_at),
        last_activity_at = excluded.last_activity_at,
        updated_at = excluded.updated_at
@@ -169,6 +185,7 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
       input.funnel === 'gated_price' && input.productId !== CART_INTEREST ? now : null,
       input.stage === 'checkout_started' ? now : null,
       now,
+      !!input.callConsent,
     ],
   )
   const r = rows[0]
@@ -181,6 +198,13 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
     if (!state?.granted) await marketing.grant(t, { email: lead.email, source: 'lead_form', page: input.page ?? (input.funnel === 'gated_price' ? 'acces' : '/checkout') })
   }
   if (stageChanged || created) for (const j of leadJobs(lead, c)) await jobs.enqueue(t, j)
+  // AI calling: only with the separate box ticked here and a Romanian number. Recorded by phone number.
+  const phone = romanianE164(lead.phone)
+  if (input.callConsent && phone) {
+    const state = await callConsent.state(t, phone)
+    if (!state?.granted) await callConsent.grant(t, { phone, email: lead.email, source: input.funnel === 'gated_price' ? 'lead_form' : 'checkout', page: input.page, leadId: lead.id })
+  }
+  if (lead.callConsent && phone && c.calling.enabled) await jobs.enqueue(t, firstCallJob(lead, c))
   return { lead, created, stageChanged }
 }
 

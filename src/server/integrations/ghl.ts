@@ -124,6 +124,13 @@ export const LEAD_TAGS = {
   checkout: 'bt-lead-checkout',
   converted: 'bt-lead-convertit',
 }
+/**
+ * AI call results on the contact (tags only: no opportunity, no workflow trigger the app relies on). One tag
+ * per outcome, e.g. bt-apel-ai-interested; follow-up and refusal have their own, so the team can filter.
+ */
+export const CALL_TAGS = { called: 'bt-apel-ai', followUp: 'bt-apel-ai-urmarire', optedOut: 'bt-apel-ai-refuz' }
+export const callOutcomeTag = (outcome: string) => `bt-apel-ai-${outcome.replace(/_/g, '-')}`
+
 export const INTEREST_TAG: Record<string, string> = {
   'balance-wave': 'bt-interes-calm',
   'brainlink-pro': 'bt-interes-focus',

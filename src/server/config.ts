@@ -76,7 +76,34 @@ export type Config = {
   features: { priceGate: boolean; abandonedCheckout: boolean; recoveryEmail: boolean }
   /** When the first and second recovery emails go out after the last activity (defaults 30 min, 24 h). */
   recovery: { firstMinutes: number; secondHours: number; testRecipients: string[] | null }
+  /**
+   * AI calling (an ElevenLabs agent calls leads who explicitly agreed to it). Off by default, and in dry run
+   * (no real call, everything else recorded) unless AI_CALLING_DRY_RUN=false. Independent of lead capture,
+   * recovery emails and checkout.
+   */
+  calling: CallingConfig
+  /** ElevenLabs credentials; null until ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID and ELEVENLABS_PHONE_NUMBER_ID are set. */
+  elevenlabs: ElevenLabsConfig | null
 }
+
+export type CallingConfig = {
+  enabled: boolean
+  dryRun: boolean
+  provider: 'elevenlabs'
+  maxAttempts: number
+  /** Minutes of quiet after the lead's last activity before the first call. */
+  firstDelayMinutes: number
+  /** Hours between a missed attempt and the next one. */
+  retryHours: number
+  /** Allowed local calling window [startHour, endHour) on allowed weekdays (1 = Monday ... 7 = Sunday), in `timezone`. */
+  hours: { start: number; end: number }
+  days: number[]
+  timezone: string
+  /** Controlled testing: when set, only these numbers (E.164) can be called. */
+  testNumbers: string[] | null
+}
+
+export type ElevenLabsConfig = { apiKey: string; agentId: string; phoneNumberId: string; webhookSecret: string | null; apiBase: string }
 
 /** ISO 13616 mod-97 check, so a mistyped IBAN is caught before a customer sees it. */
 export function isValidIban(raw: string): boolean {
@@ -172,6 +199,38 @@ function readFgo(appEnv: AppEnv, issues: ConfigIssue[], siteUrl: string): FgoCon
     codInvoice: str('FGO_COD_INVOICE') === 'manual' ? 'manual' : str('FGO_COD_INVOICE') === 'on_collection' ? 'on_collection' : 'on_shipment',
     autoStorno: str('FGO_AUTO_STORNO') === 'true',
   }
+}
+
+/** "10-19" → { start: 10, end: 19 }; anything invalid falls back to the default. */
+function hourRange(raw: string | undefined, fallback: { start: number; end: number }) {
+  const m = raw?.match(/^(\d{1,2})-(\d{1,2})$/)
+  const r = m ? { start: Number(m[1]), end: Number(m[2]) } : fallback
+  return r.start >= 0 && r.end <= 24 && r.start < r.end ? r : fallback
+}
+
+function readCalling(issues: ConfigIssue[], isolated: boolean): { calling: CallingConfig; elevenlabs: ElevenLabsConfig | null } {
+  const days = (str('AI_CALLING_DAYS') ?? '1-5').match(/^([1-7])-([1-7])$/)
+  const calling: CallingConfig = {
+    enabled: flag('AI_CALLING_ENABLED'),
+    dryRun: str('AI_CALLING_DRY_RUN') !== 'false',
+    provider: 'elevenlabs',
+    maxAttempts: Math.min(positiveInt(str('AI_CALLING_MAX_ATTEMPTS')) ?? 2, 3),
+    firstDelayMinutes: positiveInt(str('AI_CALLING_FIRST_DELAY_MINUTES')) ?? 60,
+    retryHours: positiveInt(str('AI_CALLING_RETRY_HOURS')) ?? 24,
+    hours: hourRange(str('AI_CALLING_HOURS'), { start: 10, end: 19 }),
+    days: days && Number(days[1]) <= Number(days[2]) ? Array.from({ length: Number(days[2]) - Number(days[1]) + 1 }, (_, i) => Number(days[1]) + i) : [1, 2, 3, 4, 5],
+    timezone: str('AI_CALLING_TIMEZONE') ?? 'Europe/Bucharest',
+    testNumbers: str('AI_CALLING_TEST_NUMBERS')?.split(',').map((n) => n.trim()).filter(Boolean) || null,
+  }
+  const apiKey = isolated ? undefined : str('ELEVENLABS_API_KEY')
+  const agentId = str('ELEVENLABS_AGENT_ID')
+  const phoneNumberId = str('ELEVENLABS_PHONE_NUMBER_ID')
+  const elevenlabs = apiKey && agentId && phoneNumberId ? { apiKey, agentId, phoneNumberId, webhookSecret: str('ELEVENLABS_WEBHOOK_SECRET') ?? null, apiBase: (str('ELEVENLABS_API_BASE') ?? 'https://api.elevenlabs.io').replace(/\/$/, '') } : null
+  if (calling.enabled && !calling.dryRun && !elevenlabs)
+    issues.push({ area: 'calling', level: 'warn', message: 'AI_CALLING_ENABLED fără AI_CALLING_DRY_RUN: lipsesc ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID sau ELEVENLABS_PHONE_NUMBER_ID; nu se sună nimeni.' })
+  if (calling.enabled && elevenlabs && !elevenlabs.webhookSecret)
+    issues.push({ area: 'calling', level: 'warn', message: 'ELEVENLABS_WEBHOOK_SECRET lipsește: rezultatele apelurilor nu pot fi primite.' })
+  return { calling, elevenlabs }
 }
 
 function readGhl(issues: ConfigIssue[]): GhlConfig | null {
@@ -291,6 +350,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
       // Test mode for the activation: when set, recovery emails go only to these addresses (others: as if off).
       testRecipients: str('RECOVERY_TEST_RECIPIENTS')?.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean) || null,
     },
+    ...readCalling(issues, isolated),
   }
   cached = { config, issues }
   return cached
