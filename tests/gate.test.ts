@@ -38,7 +38,7 @@ describe('one mechanism for the whole storefront', () => {
   const src = (f: string) => readFileSync(f, 'utf8')
   it('the shared price component and computed prices are marked for the blur', () => {
     expect(src('src/components/cart/Price.tsx')).toMatch(/<span data-price/)
-    for (const f of ['src/components/product/BuyBox.tsx', 'src/components/offers/OfferSheets.tsx', 'src/components/cart/Totals.tsx', 'src/components/cart/OfferProgress.tsx'])
+    for (const f of ['src/components/product/BuyBox.tsx', 'src/components/offers/OfferSheets.tsx', 'src/components/cart/Totals.tsx', 'src/components/cart/LineOffer.tsx'])
       for (const line of src(f).split('\n').filter((l) => /formatLei\(/.test(l) && /<(span|p|dd)/.test(l))) expect(line, f).toMatch(/data-price/)
     expect(src('src/app/globals.css')).toMatch(/\.gate-label-locked \{ display: none; \}/)
   })

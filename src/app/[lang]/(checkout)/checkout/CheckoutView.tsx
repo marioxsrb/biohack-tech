@@ -8,7 +8,7 @@ import { cartStore } from '@/components/cart/cart-store'
 import { CarryLink } from '@/components/cart/CarryLink'
 import { Price } from '@/components/cart/Price'
 import { Thumb } from '@/components/cart/Thumb'
-import { OfferProgress } from '@/components/cart/OfferProgress'
+import { LineOffer } from '@/components/cart/LineOffer'
 import { Suggestions } from '@/components/offers/Suggestions'
 import { Totals } from '@/components/cart/Totals'
 import { Arrow, Bank, CardIcon, Lock, Mail, Truck } from '@/components/ui/icons'
@@ -301,7 +301,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
   const router = useRouter()
   const locale: Locale = useLocale()
   const t = COPY[locale]
-  const { pricing: cartPricing, progress } = useCart()
+  const { pricing: cartPricing } = useCart()
   // A promo code checked by the server (/api/promo): its rule prices the cart here exactly as the order will.
   const [promo, setPromo] = useState<{ input: string; rule: PromoCodeRule | null; error: string | null; busy: boolean; open: boolean }>({ input: '', rule: null, error: null, busy: false, open: false })
   const priced = useMemo(() => lines.map((l) => ({ key: l.key, productId: l.product.id, quantity: l.quantity, unitAmount: l.unit })), [lines])
@@ -651,7 +651,6 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
               <Totals pricing={pricing} />
             </div>
             <p className="text-right text-[13px] text-muted">{ui[locale].vat}</p>
-            <OfferProgress progress={progress} lines={lines} actions={false} compact className="mt-4" />
             {/* The only product suggestion in the checkout: light, before the payment decision. */}
             {anyMethod && <Suggestions placement="checkout" className="mt-4" />}
 
@@ -836,6 +835,7 @@ function SummaryLine({ line: l }: { line: ResolvedLine }) {
         <span className="block font-medium text-ink">{l.product.name}</span>
         <span className="block text-muted">{l.variantLabel ?? l.product.purpose}</span>
         {l.quantity > 1 && <span className="block text-[13px] text-muted">{formatLei(l.unit)} / {t.perUnit}</span>}
+        <LineOffer line={l} />
       </span>
       <span className="text-[15px] font-medium text-ink tabular-nums">{formatLei(l.unit * l.quantity)}</span>
     </li>

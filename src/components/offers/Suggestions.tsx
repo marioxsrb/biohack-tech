@@ -53,7 +53,11 @@ export function Suggestions({ placement, className = '' }: { placement: 'cart' |
   const { openAmber, openBundle, openVariant } = useOfferSheets()
   const locale = useLocale()
   const t = COPY[locale]
-  const recs = useMemo(() => recommend(lines.map((l) => ({ productId: l.product.id, variantId: l.variant?.id, quantity: l.quantity })), placement), [lines, placement])
+  // A product already in the cart gets its next offer on its own line (LineOffer), so it is not suggested again here.
+  const recs = useMemo(
+    () => recommend(lines.map((l) => ({ productId: l.product.id, variantId: l.variant?.id, quantity: l.quantity })), placement).filter((r) => !lines.some((l) => l.product.id === r.productId)),
+    [lines, placement],
+  )
   const [added, setAdded] = useState<string | null>(null)
   const seen = useRef('')
 

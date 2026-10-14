@@ -2,7 +2,7 @@
 
 import Link from '@/components/ui/Link'
 import { CarryLink } from '@/components/cart/CarryLink'
-import { OfferProgress } from '@/components/cart/OfferProgress'
+import { LineOffer } from '@/components/cart/LineOffer'
 import { Suggestions } from '@/components/offers/Suggestions'
 import { Totals } from '@/components/cart/Totals'
 import { useEffect, useSyncExternalStore } from 'react'
@@ -51,7 +51,7 @@ const useHydrated = () =>
 /** The cart as its own page: every line editable, one clear way forward. */
 export function CartView() {
   const hydrated = useHydrated()
-  const { lines, count, pricing, progress, setQuantity, remove } = useCart()
+  const { lines, count, pricing, setQuantity, remove } = useCart()
   const locale = useLocale()
   const t = COPY[locale]
   const ui = useUi()
@@ -110,6 +110,7 @@ export function CartView() {
                     </Link>
                     <p className="text-[15px] text-muted">{l.variantLabel ?? l.product.purpose}</p>
                     <p data-price className="mt-0.5 text-[14px] text-muted tabular-nums">{formatLei(l.unit)} {t.each}</p>
+                    <LineOffer line={l} />
                   </div>
                   <p data-price className="flex-none text-[17px] font-medium text-ink tabular-nums">{formatLei(l.unit * l.quantity)}</p>
                 </div>
@@ -138,7 +139,6 @@ export function CartView() {
               <Totals pricing={pricing} />
             </div>
             <p className="text-right text-[13px] text-muted">{ui.vat}</p>
-            <OfferProgress progress={progress} lines={lines} actions={false} compact className="mt-4" />
             <CarryLink href="/checkout" className="cta mt-5 w-full">
               <Lock /> {ui.checkout}
             </CarryLink>
