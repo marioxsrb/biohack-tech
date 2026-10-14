@@ -31,6 +31,7 @@ function fakeApis() {
     const json = (x: unknown, status = 200) => new Response(JSON.stringify(x), { status, headers: { 'content-type': 'application/json' } })
     if (url.includes('/factura/emitere')) return json({ Success: true, Factura: { Serie: 'BT', Numar: '1', Link: 'https://fgo/f.pdf' } })
     if (url.includes('/conversations/messages')) return json({ messageId: 'm1', emailMessageId: 'e1' })
+    if (url.includes('/contacts/search')) return json({ contacts: [] })
     if (url.includes('/contacts/upsert')) return json({ contact: { id: 'contact-1' } })
     if (url.includes('/tags')) return json({ tags: body?.tags })
     if (url.includes('/opportunities/pipelines')) return json({ pipelines: [{ id: 'pipe1', stages: Object.values(STAGES).map((n, i) => ({ id: `stage-${i}`, name: n })) }] })
@@ -40,8 +41,8 @@ function fakeApis() {
   })
 }
 
-const upserts = () => calls.filter((c) => c.url.includes('/contacts/upsert')).map((c) => c.body as { customFields: { key: string; fieldValue: string }[] })
-const field = (key: string) => upserts().at(-1)?.customFields.find((f) => f.key === key)?.fieldValue
+const upserts = () => calls.filter((c) => c.url.includes('/contacts/upsert')).map((c) => c.body as { customFields: { key: string; field_value: string }[] })
+const field = (key: string) => upserts().at(-1)?.customFields.find((f) => f.key === key)?.field_value
 const tagCalls = () => calls.filter((c) => c.url.includes('/tags') && c.method === 'POST').flatMap((c) => (c.body?.tags as string[]) ?? [])
 const templates = async (orderId: string) => (await jobs.forOrder(db, orderId)).filter((j) => j.kind === 'email.send').map((j) => String(j.payload.template))
 
@@ -104,7 +105,7 @@ describe('landing attribution: checkout request → order → CRM', () => {
       funnel: 'visible_price',
     })
     await runDueJobs()
-    expect(field('contact.bt_last_order_source')).toBe('landing calm · facebook / paid / lansare')
+    expect(field('bt_last_order_source')).toBe('landing calm · facebook / paid / lansare')
   })
 
   it('an order through the main site is recorded as "site"; garbage attribution is dropped', async () => {
@@ -113,7 +114,7 @@ describe('landing attribution: checkout request → order → CRM', () => {
     // Only the server-set funnel remains: the landing fields were invalid.
     expect(order.attribution).toEqual({ funnel: 'visible_price' })
     await runDueJobs()
-    expect(field('contact.bt_last_order_source')).toBe('site')
+    expect(field('bt_last_order_source')).toBe('site')
   })
 })
 

@@ -49,6 +49,7 @@ function fakeApis() {
         }
         return json({ messageId: 'm1', emailMessageId: `e${calls.length}` })
       }
+      if (url.includes('/contacts/search')) return json({ contacts: [] })
       if (url.includes('/contacts/upsert')) return json({ contact: { id: 'contact-1' } })
       if (url.includes('/tags')) return json({ tags: body?.tags })
       if (url.includes('/opportunities/pipelines')) return json({ pipelines: [{ id: 'pipe1', stages: Object.values(STAGES).map((n, i) => ({ id: `stage-${i}`, name: n })) }] })

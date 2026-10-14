@@ -41,6 +41,7 @@ function fakeApis() {
     }
     if (url.includes('/factura/emitere')) return json({ Success: true, Factura: { Serie: 'BT', Numar: '1', Link: 'https://fgo/f.pdf' } })
     if (url.includes('/conversations/messages')) return json({ messageId: 'm1', emailMessageId: `e${calls.length}` })
+    if (url.includes('/contacts/search')) return json({ contacts: [] })
     if (url.includes('/contacts/upsert')) return json({ contact: { id: 'contact-1' } })
     if (url.includes('/tags')) return json({ tags: body?.tags })
     if (url.includes('/opportunities/pipelines')) return json({ pipelines: [{ id: 'pipe1', stages: Object.values(STAGES).map((n, i) => ({ id: `stage-${i}`, name: n })) }] })
@@ -65,7 +66,7 @@ async function runNow() {
 const tagCalls = (method: 'POST' | 'DELETE') => calls.filter((c) => c.url.includes('/tags') && c.method === method).map((c) => c.body!.tags as string[])
 const lastUpsertFields = () => {
   const up = calls.filter((c) => c.url.includes('/contacts/upsert')).at(-1)!
-  return Object.fromEntries((up.body!.customFields as { key: string; fieldValue: string }[]).map((f) => [f.key, f.fieldValue]))
+  return Object.fromEntries((up.body!.customFields as { key: string; field_value: string }[]).map((f) => [f.key, f.field_value]))
 }
 const emails = () => calls.filter((c) => c.url.includes('/conversations/messages')).map((c) => String(c.body!.subject))
 
@@ -144,27 +145,28 @@ describe('checkout recovery eligibility', () => {
     expect(o).toMatchObject({ status: 'abandoned', recoveryStatus: 'ineligible', recoveryReason: 'no_marketing_consent', recoveryToken: null })
     expect(calls.some((c) => c.url.endsWith('/opportunities/') && c.method === 'POST')).toBe(true)
     expect(tagCalls('POST').flat()).not.toContain(TAGS.recovery)
-    expect(lastUpsertFields()).toMatchObject({ 'contact.bt_marketing_consent': 'Nu', 'contact.bt_recovery_url': '', 'contact.bt_unsubscribe_url': '' })
+    expect(lastUpsertFields()).toMatchObject({ 'bt_marketing_consent': 'Nu', 'bt_recovery_url': '', 'bt_unsubscribe_url': '' })
     expect(emails()).toEqual([])
     const events = await orders.events(db, o.id)
     expect(events.find((e) => e.type === 'order.abandoned')!.data).toEqual({ recovery: 'ineligible', reason: 'no_marketing_consent' })
   })
 
-  it('with consent: recovery tag and an opaque, expiring link that only restores the products', async () => {
+  it('with consent: an opaque, expiring link that only restores the products; no GHL recovery tag (the app owns the email)', async () => {
     const o = await abandon((await cardOrder('r2', true)).id)
     expect(o).toMatchObject({ status: 'abandoned', recoveryStatus: 'eligible', recoveryReason: 'marketing_consent' })
     expect(o.recoveryToken).toMatch(/^[\w-]{32}$/)
     expect(o.recoveryToken).not.toContain(o.id)
     expect(o.recoveryExpiresAt!.getTime() - Date.now()).toBeGreaterThan(6.9 * 86_400_000)
-    expect(tagCalls('POST').flat()).toContain(TAGS.recovery)
+    // W2's tag is never set any more: the recovery email is the application's (lead system), never GoHighLevel's.
+    expect(tagCalls('POST').flat()).not.toContain(TAGS.recovery)
     const f = lastUpsertFields()
-    expect(f['contact.bt_recovery_url']).toBe(`${TEST_ENV.NEXT_PUBLIC_SITE_URL}/reluare/${o.recoveryToken}`)
-    expect(f['contact.bt_unsubscribe_url']).toMatch(new RegExp(`^${TEST_ENV.NEXT_PUBLIC_SITE_URL}/dezabonare/[\\w-]{32}$`))
-    expect(f['contact.bt_marketing_consent']).toBe('Da')
+    expect(f['bt_recovery_url']).toBe(`${TEST_ENV.NEXT_PUBLIC_SITE_URL}/reluare/${o.recoveryToken}`)
+    expect(f['bt_unsubscribe_url']).toMatch(new RegExp(`^${TEST_ENV.NEXT_PUBLIC_SITE_URL}/dezabonare/[\\w-]{32}$`))
+    expect(f['bt_marketing_consent']).toBe('Da')
     expect(await recoveryCart(o.recoveryToken!)).toEqual([{ productId: 'balance-wave', variantId: undefined, quantity: 1 }])
     expect(await recoveryCart('x'.repeat(32))).toBeNull()
     expect(await recoveryCart(o.recoveryToken!, new Date(Date.now() + 8 * 86_400_000))).toBeNull()
-    // The site itself never emails about it: GHL W2 does, on the tag, while the tag is there.
+    // No recovery email from the order itself (ABANDONED_CHECKOUT_ENABLED is off here; with it, the lead sequence sends it).
     expect(emails()).toEqual([])
   })
 
@@ -173,7 +175,7 @@ describe('checkout recovery eligibility', () => {
     await svc.confirmPayment(o.id, 'stripe.webhook', { amountMinor: 638000, currency: 'ron' })
     await runNow()
     expect(tagCalls('DELETE').flat()).toContain(TAGS.recovery)
-    expect(lastUpsertFields()['contact.bt_recovery_url']).toBe('')
+    expect(lastUpsertFields()['bt_recovery_url']).toBe('')
     expect(await recoveryCart(o.recoveryToken!)).toBeNull()
   })
 
@@ -184,7 +186,7 @@ describe('checkout recovery eligibility', () => {
     expect((await orders.byId(db, first.id))!).toMatchObject({ status: 'cancelled', cancelReason: 'înlocuită de o comandă plătită' })
     await runNow()
     expect(tagCalls('DELETE').flat()).toContain(TAGS.recovery)
-    expect(lastUpsertFields()['contact.bt_recovery_url']).toBe('')
+    expect(lastUpsertFields()['bt_recovery_url']).toBe('')
     // The earlier attempt's opportunity is moved to "Anulată", and no customer email is sent about it.
     expect(emails().filter((s) => s.includes(first.orderNumber))).toEqual([])
   })
@@ -208,7 +210,7 @@ describe('unsubscribe', () => {
     await runNow()
     const syncs = calls.filter((c) => c.url.includes('/contacts/upsert'))
     expect(syncs).toHaveLength(1)
-    expect(lastUpsertFields()).toMatchObject({ 'contact.bt_marketing_consent': 'Nu', 'contact.bt_recovery_url': '' })
+    expect(lastUpsertFields()).toMatchObject({ 'bt_marketing_consent': 'Nu', 'bt_recovery_url': '' })
     expect(tagCalls('DELETE').flat()).toContain(TAGS.recovery)
     const state = await marketing.state(db, person.email)
     expect(canSendAbandonedCheckoutEmail((await orders.byId(db, o.id))!, state)).toEqual({ eligible: false, reason: 'consent_withdrawn' })

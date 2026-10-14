@@ -69,6 +69,7 @@ function fakeApis() {
     const json = (x: unknown, status = 200) => new Response(JSON.stringify(x), { status, headers: { 'content-type': 'application/json' } })
     if (url.includes('leadconnectorhq.com')) {
       ghl.push({ url, method: init.method ?? 'GET', json: init.body ? JSON.parse(String(init.body)) : null })
+      if (url.includes('/contacts/search')) return json({ contacts: [] })
       if (url.includes('/contacts/upsert')) return json({ contact: { id: 'contact-1' } })
       if (url.includes('/tags')) return json({ tags: [] })
       if (url.includes('/opportunities/pipelines')) return json({ pipelines: [{ id: 'pipe1', stages: [] }] })
@@ -256,18 +257,81 @@ describe('leads → orders → purchases', () => {
     expect((await leads.byId(db, step.leadId))!).toMatchObject({ stage: 'purchased', recoveryStatus: 'stopped' })
   })
 
-  it('an unpaid card order: the lead waits for the order’s own recovery, never a second email from the lead', async () => {
+})
+
+describe('unpaid card orders (application-owned recovery)', () => {
+  const card = (cookies: Record<string, string>, attemptId: string, host = GATED) =>
+    checkout(post('/api/checkout', host, { lines: [{ productId: 'balance-wave', quantity: 1 }], order: { ...person, email: 'ana@exemplu.ro', paymentMethod: 'card' }, acceptedTerms: true, attemptId }, cookies))
+  const recoveries = () => sent.filter((m) => m.to === 'ana@exemplu.ro' && /așteaptă|oferta|ajuta/.test(m.subject))
+  const abandonedOrder = async (id: string) => {
+    await svc.markAbandonedIfUnpaid(id)
+    await db.query(`update leads set last_activity_at = now() - interval '40 minutes'`)
+  }
+
+  it('waits while the payment is open; once abandoned, one email from the checkout, with a link that restores the cart', async () => {
     await marketing.grant(db, { email: 'ana@exemplu.ro', source: 'checkout' })
-    const first = await reveal()
-    const res = await order(GATED, { bt_vid: first.vid, bt_gate: first.gate }, 'card', 'gated-card-1')
-    expect(res.status).toBe(200)
-    const l = (await leads.byId(db, first.data.leadId))!
-    expect(l.stage).toBe('lead')
-    expect(l.orderId).not.toBeNull()
-    await quiet(l.id, 60 * 30)
+    const step = await (await lead(post('/api/lead', GATED, { action: 'checkout', ...ana, cart: [{ productId: 'balance-wave', quantity: 1 }] }))).json()
+    const vid = (await leads.byId(db, step.leadId))!.visitorId
+    const o = (await orders.byToken(db, (await (await card({ bt_vid: vid }, 'card-open-1')).json()).token))!
+    await quiet(step.leadId, 40)
     await later()
-    expect(sent.filter((m) => m.to === 'ana@exemplu.ro' && /oferta|ajuta/.test(m.subject))).toEqual([])
-    expect((await leads.byId(db, l.id))!).toMatchObject({ recoveryStatus: 'stopped', recoveryReason: 'order recovery' })
+    expect(recoveries()).toEqual([]) // the order is still within its payment window
+    await abandonedOrder(o.id)
+    await later()
+    expect(recoveries().map((m) => m.subject)).toEqual(['Comanda ta NEUROS Calm te așteaptă'])
+    const l = (await leads.byId(db, step.leadId))!
+    expect(l).toMatchObject({ orderId: o.id, abandonment: 'checkout_abandoned', recoverySent: 1 })
+    expect(recoveries()[0].text).toContain(`https://acces.biohack-tech.ro/api/lead/resume?t=${l.recoveryToken}`)
+    const { recoveryCart } = await import('@/server/marketing/recovery')
+    expect(await recoveryCart(l.recoveryToken!)).toEqual([{ productId: 'balance-wave', quantity: 1 }])
+  })
+
+  it('an order without any lead (no captured contact step) gets one when abandoned, and the same sequence', async () => {
+    await marketing.grant(db, { email: 'ana@exemplu.ro', source: 'checkout' })
+    const o = (await orders.byToken(db, (await (await card({}, 'card-nolead-1', MAIN)).json()).token))!
+    expect((await db.query('select count(*)::int as n from leads')).rows[0].n).toBe(0)
+    await abandonedOrder(o.id)
+    const created = (await db.query<{ id: string; funnel: string; stage: string }>('select id, funnel, stage from leads where order_id = $1', [o.id])).rows
+    expect(created).toMatchObject([{ funnel: 'visible_price', stage: 'checkout_started' }])
+    await later()
+    expect(recoveries()).toHaveLength(1)
+    expect((await db.query('select lead_id from orders where id = $1', [o.id])).rows[0].lead_id).toBe(created[0].id)
+  })
+
+  it('never after payment, cancellation, unsubscribe, or without consent; never twice', async () => {
+    // Paid before the window ends.
+    await marketing.grant(db, { email: 'ana@exemplu.ro', source: 'checkout' })
+    let o = (await orders.byToken(db, (await (await card({}, 'card-paid-1', MAIN)).json()).token))!
+    await abandonedOrder(o.id)
+    await svc.confirmPayment(o.id, 'stripe.webhook', { amountMinor: o.totalMinor, currency: 'ron' })
+    await later()
+    expect(recoveries()).toEqual([])
+    // Cancelled.
+    await setup()
+    await marketing.grant(db, { email: 'ana@exemplu.ro', source: 'checkout' })
+    o = (await orders.byToken(db, (await (await card({}, 'card-cancel-1', MAIN)).json()).token))!
+    await abandonedOrder(o.id)
+    await db.query(`update orders set status = 'cancelled' where id = $1`, [o.id])
+    await later()
+    expect(recoveries()).toEqual([])
+    // Unsubscribed.
+    await setup()
+    await marketing.grant(db, { email: 'ana@exemplu.ro', source: 'checkout' })
+    await marketing.withdraw(db, { email: 'ana@exemplu.ro', source: 'unsubscribe_link' })
+    o = (await orders.byToken(db, (await (await card({}, 'card-unsub-1', MAIN)).json()).token))!
+    await abandonedOrder(o.id)
+    await later()
+    expect(recoveries()).toEqual([])
+    // No consent at all.
+    await setup()
+    o = (await orders.byToken(db, (await (await card({}, 'card-noconsent-1', MAIN)).json()).token))!
+    await abandonedOrder(o.id)
+    await later()
+    expect(recoveries()).toEqual([])
+    expect((await db.query<{ recovery_status: string }>('select recovery_status from leads where order_id = $1', [o.id])).rows[0].recovery_status).toBe('ineligible')
+    // Abandonment repeated (job retry): still one lead, still one sequence.
+    await svc.markAbandonedIfUnpaid(o.id)
+    expect((await db.query('select count(*)::int as n from leads where order_id = $1', [o.id])).rows[0].n).toBe(1)
   })
 })
 
@@ -410,7 +474,11 @@ describe('recovery emails', () => {
     expect(recoveryDecision(base, { ...ctx, features: { abandonedCheckout: false, recoveryEmail: true } }).send).toBe(false)
     expect(recoveryDecision(base, { ...ctx, stage: 'checkout_started' })).toMatchObject({ send: false })
     expect(recoveryDecision(base, { ...ctx, converted: true })).toMatchObject({ send: false, status: 'stopped' })
-    expect(recoveryDecision({ ...(base as object), orderId: 'o1' } as never, ctx)).toMatchObject({ send: false, reason: 'order recovery' })
+    // The lead's own unpaid card order: wait while it can still be paid, stop if cancelled, recover once abandoned.
+    const order = (status: string, paymentStatus = 'pending') => ({ status, paymentMethod: 'card', paymentStatus, createdAt: new Date() })
+    expect(recoveryDecision({ ...(base as object), orderId: 'o1' } as never, { ...ctx, order: order('pending') })).toMatchObject({ send: false, reason: 'order awaiting payment', later: expect.any(Date) })
+    expect(recoveryDecision({ ...(base as object), orderId: 'o1' } as never, { ...ctx, order: order('cancelled', 'cancelled') })).toMatchObject({ send: false, reason: 'order cancelled', status: 'stopped' })
+    expect(recoveryDecision({ ...(base as object), orderId: 'o1' } as never, { ...ctx, order: order('abandoned') })).toEqual({ send: true, abandonment: 'lead_abandoned' })
     expect(recoveryDecision({ ...(base as object), lastActivityAt: new Date() } as never, ctx)).toMatchObject({ send: false, reason: 'still active', later: expect.any(Date) })
     expect(recoveryDecision(base, { ...ctx, otherRecovery: true })).toMatchObject({ send: false, reason: 'another recovery for this person' })
     expect(recoveryDecision(base, { ...ctx, consentGranted: null })).toMatchObject({ send: false, status: 'ineligible' })
@@ -444,9 +512,25 @@ describe('CRM copy', () => {
     await runDueJobs()
     expect(ghl.some((c) => c.url.includes('/contacts/upsert') && c.json?.email === 'ana@exemplu.ro')).toBe(true)
     const tags = ghl.filter((c) => c.url.endsWith('/tags')).flatMap((c) => c.json?.tags as string[])
-    expect(tags.sort()).toEqual(['bt-interes-calm', 'bt-lead', 'bt-lead-acces'])
+    // Interest, funnel and campaign as bt- tags; the contact's own source is left alone (no NEUROS data overwritten).
+    expect(tags.sort()).toEqual(['bt-campanie-acces-test', 'bt-interes-calm', 'bt-lead', 'bt-lead-acces', 'bt-sursa-facebook'])
+    expect(ghl.find((c) => c.url.includes('/contacts/upsert'))!.json).not.toHaveProperty('source')
     expect(ghl.filter((c) => c.url.includes('/opportunities'))).toEqual([])
     expect(tags).not.toContain('bt-recuperare-eligibil')
+  })
+})
+
+describe('CRM consent', () => {
+  it('a ticked box on the form reaches the CRM as the marketing consent field, on the same contact as the lead', async () => {
+    await reveal({ marketingConsent: true })
+    await runDueJobs()
+    await db.query("update jobs set run_at = now() where status = 'pending'")
+    await runDueJobs()
+    // The lead's sync created the contact (lookup first: none) and stored its id; the consent then updates that contact.
+    expect(ghl.filter((c) => c.url.includes('/contacts/upsert'))).toHaveLength(1)
+    const consent = ghl.filter((c) => c.method === 'PUT' && c.url.endsWith('/contacts/contact-1'))
+    expect(consent).toHaveLength(1)
+    expect(consent[0].json?.customFields).toEqual(expect.arrayContaining([{ key: 'bt_marketing_consent', field_value: 'Da' }]))
   })
 })
 

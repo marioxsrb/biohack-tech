@@ -86,6 +86,7 @@ function fakeApis() {
     if (url.includes('leadconnectorhq.com')) {
       if (ghlDown) return json({ message: 'down' }, 503)
       if (url.includes('/conversations/messages')) return json({ messageId: 'm1', emailMessageId: 'e1' })
+      if (url.includes('/contacts/search')) return json({ contacts: [] })
       if (url.includes('/contacts/upsert')) return json({ contact: { id: 'contact-1' } })
       if (url.includes('/tags')) return json({ tags: call.json?.tags })
       if (url.includes('/opportunities/pipelines')) return json({ pipelines: [{ id: 'pipe1', stages: Object.values(STAGES).map((n, i) => ({ id: `stage-${i}`, name: n })) }] })
@@ -139,7 +140,7 @@ describe('discounted orders agree everywhere', () => {
     expect(Math.round(lines.reduce((s, l) => s + l.PretTotal * 100, 0))).toBe(expected)
     expect(lines.map((l) => l.Denumire)).toEqual(['NEUROS Calm, 20% la 3 bucăți: -3828.00 lei', 'NEUROS Amber (Unisex pătrat · Negru), NEUROS Amber 2+1 gratis: -315.00 lei'])
     const f = contactPayload(c.ghl!, o, { orders: 1, valueMinor: o.totalMinor }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, c.siteUrl).customFields
-    expect(f.find((x) => x.key === 'contact.bt_last_order_value')!.fieldValue).toBe((expected / 100).toFixed(2))
+    expect(f.find((x) => x.key === 'bt_last_order_value')!.field_value).toBe((expected / 100).toFixed(2))
     const mail = renderEmail('order_confirmed', o, { siteUrl: c.siteUrl, bank: c.bank })
     for (const s of ['Subtotal: 20.085 lei', '20% la 3 bucăți NEUROS Calm: -3.828 lei', 'NEUROS Amber 2+1 gratis: -315 lei', 'Total: 15.942 lei']) expect(mail.text).toContain(s)
   })
@@ -316,8 +317,8 @@ describe('post-purchase offer', () => {
     // The CRM sync of the parent sends the parent's number as bt_last_order_number.
     await svc.markProcessing(parent.id, 'admin')
     await drain()
-    const last = calls.filter((c) => c.url.includes('/contacts/upsert')).at(-1)!.json as { customFields: { key: string; fieldValue: string }[] }
-    expect(last.customFields.find((f) => f.key === 'contact.bt_last_order_number')!.fieldValue).toBe(parent.orderNumber)
+    const last = calls.filter((c) => c.url.includes('/contacts/upsert')).at(-1)!.json as { customFields: { key: string; field_value: string }[] }
+    expect(last.customFields.find((f) => f.key === 'bt_last_order_number')!.field_value).toBe(parent.orderNumber)
     // Once an addition is paid, it is the last order.
     await db.query("update orders set status = 'confirmed', payment_status = 'paid' where id = $1", [failed.id])
     expect((await orders.latestKnown(db, parent.email))!.id).toBe(failed.id)

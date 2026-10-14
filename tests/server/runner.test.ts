@@ -30,6 +30,7 @@ function fakeApis() {
       if (fgoMode === 'reject') return json({ Success: false, Message: 'Codul unic nu este valid' })
       return json({ Success: true, Factura: { Serie: 'BT', Numar: String(++invoiceNo), Link: 'https://fgo/f.pdf' } })
     }
+    if (url.includes('/contacts/search')) return json({ contacts: [] })
     if (url.includes('/contacts/upsert')) return json({ contact: { id: 'contact-1' }, new: false })
     if (url.includes('/tags')) return json({ tags: body?.tags })
     if (url.includes('/opportunities/pipelines')) return json({ pipelines: [{ id: 'pipe1', stages: Object.values(STAGES).map((n, i) => ({ id: `stage-${i}`, name: n })) }] })

@@ -75,7 +75,12 @@ export async function syncEnquiry(enquiryId: string): Promise<string> {
   const { rows } = await db.query('select * from enquiries where id = $1', [enquiryId])
   if (!rows[0]) return 'enquiry gone'
   const e = toEnquiry(rows[0])
-  const contactId = await ghl.upsertEnquiryContact(c.ghl, e)
+  const { rows: known } = await db.query<{ id: string }>(
+    `select ghl_contact_id as id from enquiries where email = $1 and ghl_contact_id is not null
+     union all select ghl_contact_id from orders where email = $1 and ghl_contact_id is not null limit 1`,
+    [e.email.trim().toLowerCase()],
+  )
+  const contactId = await ghl.upsertEnquiryContact(c.ghl, e, known[0]?.id ?? null)
   await ghl.addTags(c.ghl, contactId, [TAGS.enquiry])
   await db.query('update enquiries set ghl_contact_id = $2 where id = $1', [e.id, contactId])
   return 'synced'

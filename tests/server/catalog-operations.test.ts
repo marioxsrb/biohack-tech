@@ -68,7 +68,7 @@ describe('the three-product catalog (NEUROS Flow discontinued 13.10.2026)', () =
     const c = getConfig()
     expect(invoicePayload(c.fgo!, order).Continut.map((l) => [l.Denumire, l.CodArticol, l.NrProduse, l.PretTotal])).toEqual([['NEUROS Flow (4 zone)', 'brain-flow/4-zone', 1, 14900]])
     const fields = contactPayload(c.ghl!, order, { orders: 1, valueMinor: order.totalMinor }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, c.siteUrl).customFields
-    expect(fields.find((f) => f.key === 'contact.bt_last_order_products')!.fieldValue).toBe('1 x NEUROS Flow (4 zone)')
+    expect(fields.find((f) => f.key === 'bt_last_order_products')!.field_value).toBe('1 x NEUROS Flow (4 zone)')
     expect(tagsFor({ ...order, paymentStatus: 'paid' })).toEqual(['bt-client', 'bt-cumparat-brain-flow'])
     for (const t of ['order_confirmed', 'refund_issued'] as const) {
       const mail = renderEmail(t, { ...order, paymentStatus: 'paid', refundedMinor: 1490000 }, { siteUrl: c.siteUrl, bank: c.bank })
@@ -98,8 +98,8 @@ describe('the three-product catalog (NEUROS Flow discontinued 13.10.2026)', () =
       ['NEUROS Focus, 10% la 2 bucăți: -158.00 lei', 2, 1422],
       ['NEUROS Amber (Unisex pătrat · Maro)', 2, 630],
     ])
-    const products = contactPayload(c.ghl!, order, { orders: 1, valueMinor: order.totalMinor }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, c.siteUrl).customFields.find((f) => f.key === 'contact.bt_last_order_products')!
-    expect(products.fieldValue).toBe('1 x NEUROS Calm, 2 x NEUROS Focus, 2 x NEUROS Amber (Unisex pătrat · Maro)')
+    const products = contactPayload(c.ghl!, order, { orders: 1, valueMinor: order.totalMinor }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, c.siteUrl).customFields.find((f) => f.key === 'bt_last_order_products')!
+    expect(products.field_value).toBe('1 x NEUROS Calm, 2 x NEUROS Focus, 2 x NEUROS Amber (Unisex pătrat · Maro)')
     const mail = renderEmail('order_confirmed', order, { siteUrl: c.siteUrl, bank: c.bank })
     for (const s of ['NEUROS Calm', 'NEUROS Focus', 'NEUROS Amber', '6.380 lei', '1.580 lei', '630 lei', '10% la 2 bucăți NEUROS Focus', '8.432 lei', order.orderNumber, 'Plata a fost confirmată']) expect(mail.text).toContain(s)
   })

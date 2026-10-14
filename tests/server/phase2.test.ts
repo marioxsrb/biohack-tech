@@ -68,6 +68,7 @@ function fakeApis() {
     }
     if (url.includes('leadconnectorhq.com')) {
       if (mode.ghl === 'down') return json({ message: 'Service Unavailable' }, 503)
+      if (url.includes('/contacts/search')) return json({ contacts: [] })
       if (url.includes('/contacts/upsert')) return json({ contact: { id: 'contact-1' } })
       if (url.includes('/tags')) return json({ tags: [] })
       if (url.includes('/opportunities/pipelines')) return json({ pipelines: [{ id: 'pipe1', stages: Object.values(STAGES).map((n, i) => ({ id: `stage-${i}`, name: n })) }] })

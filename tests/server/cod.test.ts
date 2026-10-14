@@ -5,6 +5,9 @@
  */
 import { readFileSync } from 'node:fs'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+// Draining the outbox runs FGO calls, which the client spaces by 1.1 s (FGO's rate limit).
+vi.setConfig({ testTimeout: 30_000 })
 import type { NextRequest } from 'next/server'
 import { TEST_PRICES } from '../fixtures'
 
@@ -41,6 +44,7 @@ function fakeApis() {
     if (url.includes('stripe.com')) return json({ error: { message: 'Stripe must not be called for cash on delivery' } }, 500)
     if (url.includes('/factura/emitere')) return json({ Success: true, Factura: { Serie: 'BT', Numar: String(++invoiceNo), Link: 'https://fgo/f.pdf' } })
     if (url.includes('/factura/stornare')) return json({ Success: true, Factura: { Serie: 'BT', Numar: String(++invoiceNo) } })
+    if (url.includes('/contacts/search')) return json({ contacts: [] })
     if (url.includes('/contacts/upsert')) return json({ contact: { id: 'contact-1' } })
     if (url.includes('/tags')) return json({ tags: body?.tags })
     if (url.includes('/opportunities/pipelines')) return json({ pipelines: [{ id: 'pipe1', stages: stages.map((n, i) => ({ id: `stage-${n}`, name: n, i })) }] })
@@ -73,7 +77,7 @@ const drain = async () => {
   for (let i = 0; i < 10; i++) if (!(await runDueJobs())) return
 }
 const ship = (id: string) => svc.markShipped(id, 'admin', { courier: 'Fan Courier', trackingNumber: 'AWB123' })
-const fieldsOf = (c: Call) => Object.fromEntries((c.body!.customFields as { key: string; fieldValue: string }[]).map((x) => [x.key, x.fieldValue]))
+const fieldsOf = (c: Call) => Object.fromEntries((c.body!.customFields as { key: string; field_value: string }[]).map((x) => [x.key, x.field_value]))
 
 beforeEach(async () => {
   db = await freshDb()
@@ -162,8 +166,8 @@ describe('cash on delivery: CRM, email, invoice, fulfillment', () => {
     const o = await codOrder()
     await drain()
     const upsert = calls.find((c) => c.url.includes('/contacts/upsert'))!
-    expect(fieldsOf(upsert)['contact.bt_last_payment_method']).toBe('Ramburs (plata la livrare)')
-    expect(fieldsOf(upsert)['contact.bt_last_payment_status']).toBe('ramburs, de încasat la livrare')
+    expect(fieldsOf(upsert)['bt_last_payment_method']).toBe('Ramburs (plata la livrare)')
+    expect(fieldsOf(upsert)['bt_last_payment_status']).toBe('ramburs, de încasat la livrare')
     const opp = calls.find((c) => c.url.endsWith('/opportunities/') && c.method === 'POST')!
     expect(opp.body).toMatchObject({ pipelineStageId: `stage-${STAGES.codToPrepare}`, status: 'open', monetaryValue: 790 })
     expect(tagsFor(o)).toEqual([]) // a parcel can still be refused: no "client" tag before the collection
@@ -324,7 +328,7 @@ describe('cash on delivery: CRM, email, invoice, fulfillment', () => {
     const cod = await codOrder()
     const { order: transfer } = await svc.placeOrder({ lines: lines([{ productId: 'brainlink-pro', quantity: 1 }]), form: { ...person, paymentMethod: 'transfer' }, attemptId: 'm-transfer' })
     const { order: card } = await svc.placeOrder({ lines: lines([{ productId: 'brainlink-pro', quantity: 1 }]), form: person, attemptId: 'm-card' })
-    const method = (o: typeof cod) => Object.fromEntries(contactPayload(c.ghl!, o, { orders: 1, valueMinor: 0 }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, 'https://t').customFields.map((x) => [x.key, x.fieldValue]))['contact.bt_last_payment_method']
+    const method = (o: typeof cod) => Object.fromEntries(contactPayload(c.ghl!, o, { orders: 1, valueMinor: 0 }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, 'https://t').customFields.map((x) => [x.key, x.field_value]))['bt_last_payment_method']
     expect([method(cod), method(transfer), method(card)]).toEqual(['Ramburs (plata la livrare)', 'Transfer bancar', 'Card'])
     expect(invoicePayload(c.fgo!, card).Text).toBe(`Comanda ${card.orderNumber}`)
   })

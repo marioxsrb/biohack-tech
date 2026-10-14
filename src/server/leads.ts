@@ -195,7 +195,13 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
   // Proof of the ticked box: the exact wording and version, linked to nothing but the address and page.
   if (input.marketingConsent) {
     const state = await marketing.state(t, lead.email)
-    if (!state?.granted) await marketing.grant(t, { email: lead.email, source: 'lead_form', page: input.page ?? (input.funnel === 'gated_price' ? 'acces' : '/checkout') })
+    if (!state?.granted) {
+      const id = await marketing.grant(t, { email: lead.email, source: 'lead_form', page: input.page ?? (input.funnel === 'gated_price' ? 'acces' : '/checkout') })
+      // The consent reaches the CRM like an unsubscribe does: the marketing fields only, on its own job.
+      // A minute later, so the lead's own contact sync (ghl.lead) has stored the contact id it updates: GHL's
+      // search does not see a brand-new contact for a while, and a second lookup would create a duplicate.
+      if (c.ghl) await jobs.enqueue(t, { kind: 'marketing.sync', dedupeKey: `marketing.sync:${id}`, payload: { email: lead.email }, runAt: new Date(Date.now() + 60_000) })
+    }
   }
   if (stageChanged || created) for (const j of leadJobs(lead, c)) await jobs.enqueue(t, j)
   // AI calling: only with the separate box ticked here and a Romanian number. Recorded by phone number.
@@ -269,6 +275,33 @@ export async function linkOrder(t: Queryable, visitorId: string, o: Order) {
   return rows.length
 }
 
+/**
+ * A card order was marked abandoned (unpaid after its payment window): it gets a checkout lead if it has none
+ * (no visitor cookie, or the contact step was not captured), so its recovery runs through the same lead
+ * sequence, consent rules and suppression as every other unfinished checkout. Called in the order's transaction.
+ */
+export async function ensureOrderLead(t: Queryable, o: Order) {
+  const c = getConfig()
+  if (!c.features.abandonedCheckout) return null
+  const { rows } = await t.query<{ id: string }>('select id from leads where order_id = $1 limit 1', [o.id])
+  if (rows.length) return rows[0].id
+  const r = await captureLead(t, {
+    visitorId: `order:${o.id}`,
+    funnel: o.attribution?.funnel ?? 'visible_price',
+    stage: 'checkout_started',
+    productId: CART_INTEREST,
+    // The person's email consent is already recorded by the checkout itself (marketing_consent_events).
+    contact: { name: `${o.customer.firstName} ${o.customer.lastName}`.trim(), email: o.email, phone: o.phone ?? '' },
+    marketingConsent: false,
+    cart: o.items.map((i) => ({ productId: i.productId, ...(i.variantId && { variantId: i.variantId }), quantity: i.quantity })),
+    attribution: o.attribution,
+    page: '/checkout',
+  })
+  await t.query('update leads set order_id = $2 where id = $1', [r.lead.id, o.id])
+  await t.query('update orders set lead_id = coalesce(lead_id, $2) where id = $1', [o.id, r.lead.id])
+  return r.lead.id
+}
+
 /** Payment confirmed for an order: its leads are purchases (called inside the order's transaction). */
 export async function markLeadsPurchased(t: Queryable, orderId: string) {
   await t.query("update leads set stage = 'purchased', purchased_at = coalesce(purchased_at, now()), recovery_status = case when recovery_status in ('none', 'scheduled', 'sent', 'ineligible', 'disabled') then 'stopped' else recovery_status end, recovery_reason = coalesce(recovery_reason, 'converted'), updated_at = now() where order_id = $1 and stage <> 'purchased'", [orderId])
@@ -299,6 +332,9 @@ export function recoveryDecision(
     /** Another lead of the same person already got a recovery email recently: one sequence per person. */
     otherRecovery: boolean
     consentGranted: boolean | null
+    /** The lead's own order, when it has one: an unpaid card order is recovered here once it is abandoned. */
+    order?: { status: string; paymentMethod: string; paymentStatus: string; createdAt: Date } | null
+    abandonAfterMinutes?: number
     canSend: boolean
     /** RECOVERY_TEST_RECIPIENTS is set and this address is not on it. */
     notTestRecipient?: boolean
@@ -307,9 +343,14 @@ export function recoveryDecision(
   if (!ctx.features.abandonedCheckout) return { send: false, reason: 'abandoned checkout off' }
   if (lead.stage === 'ordered' || lead.stage === 'purchased' || ctx.converted) return { send: false, reason: 'converted', status: 'stopped' }
   if (lead.stage !== ctx.stage) return { send: false, reason: `stage changed to ${lead.stage}` }
-  // An order exists but is not paid (a card payment left unfinished): the order's own recovery (one link, one
-  // email, the CRM tag) covers it. Never two recovery emails for the same purchase.
-  if (lead.orderId) return { send: false, reason: 'order recovery', status: 'stopped' }
+  // The lead's own order, not paid (a card payment left unfinished): cancelled → stop; still within its payment
+  // window → wait until it is marked abandoned; abandoned → recovered like any unfinished checkout (the
+  // application owns this email; no GoHighLevel workflow sends one).
+  if (lead.orderId) {
+    const o = ctx.order
+    if (!o || o.status === 'cancelled' || o.paymentStatus === 'cancelled') return { send: false, reason: 'order cancelled', status: 'stopped' }
+    if (o.status !== 'abandoned') return { send: false, reason: 'order awaiting payment', later: new Date(Math.max(ctx.now.getTime(), o.createdAt.getTime() + ((ctx.abandonAfterMinutes ?? 60) + 5) * 60_000)) }
+  }
   if (ctx.superseded) return { send: false, reason: 'went on to the checkout' }
   if (ctx.otherRecovery) return { send: false, reason: 'another recovery for this person', status: 'stopped' }
   // Activity since the step was planned (another visit, the checkout typed into): not abandoned yet.
@@ -355,7 +396,11 @@ export async function recoveryFacts(q: Queryable, lead: Lead) {
     [lead.email, lead.id, new Date(Date.now() - RECOVERY_PERSON_DAYS * 86_400_000), lead.createdAt],
   )
   const consent = await marketing.state(q, lead.email)
-  return { converted: conv.length > 0, superseded: sup.length > 0, otherRecovery: other.length > 0, consentGranted: consent ? consent.granted : null }
+  const { rows: own } = lead.orderId
+    ? await q.query<{ status: string; payment_method: string; payment_status: string; created_at: string }>('select status, payment_method, payment_status, created_at from orders where id = $1', [lead.orderId])
+    : { rows: [] }
+  const order = own[0] ? { status: own[0].status, paymentMethod: own[0].payment_method, paymentStatus: own[0].payment_status, createdAt: new Date(own[0].created_at) } : null
+  return { converted: conv.length > 0, superseded: sup.length > 0, otherRecovery: other.length > 0, consentGranted: consent ? consent.granted : null, order }
 }
 
 /** What a lead recovery link puts back in the cart (only what is still sold), or null. */

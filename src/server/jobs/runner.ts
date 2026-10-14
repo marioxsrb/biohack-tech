@@ -17,7 +17,7 @@ import { CART_INTEREST, interestOf, leads, recoveryDecision, recoveryFacts } fro
 import { renderLeadRecovery } from '@/server/leads-email'
 import { gatedOrigin } from '@/lib/lead'
 import { marketing } from '@/server/marketing/consent'
-import { CALL_TAGS, INTEREST_TAG, LEAD_TAGS, callOutcomeTag } from '@/server/integrations/ghl'
+import { CALL_TAGS, INTEREST_TAG, LEAD_TAGS, attributionTags, callOutcomeTag } from '@/server/integrations/ghl'
 import { calls, leadProduct, renderCallLink, runCallAttempt, runCallCheck, type StepResult } from '@/server/calling/calls'
 import { companyLine } from '@/config/company'
 import { errText, log } from '@/server/log'
@@ -32,6 +32,18 @@ import { jobs, type Job } from './outbox'
 
 class Skip extends Error {}
 class Permanent extends Error {}
+
+/** The GHL contact this site already linked to an address (an order, a lead or a message), if any. */
+async function knownContactId(db: Awaited<ReturnType<typeof getDb>>, email: string): Promise<string | null> {
+  const { rows } = await db.query<{ id: string }>(
+    `select ghl_contact_id as id from orders where email = $1 and ghl_contact_id is not null
+     union all select ghl_contact_id from leads where email = $1 and ghl_contact_id is not null
+     union all select ghl_contact_id from enquiries where email = $1 and ghl_contact_id is not null
+     limit 1`,
+    [email.trim().toLowerCase()],
+  )
+  return rows[0]?.id ?? null
+}
 
 /** A calling step's result, in the queue's terms. */
 const step = (r: StepResult) => {
@@ -48,9 +60,10 @@ async function syncCrm(orderId: string) {
   // The contact shows the address's latest order and its current marketing status, whichever order is syncing.
   const latest = (await orders.latestKnown(db, o.email)) ?? o
   const m = await marketingStatus(db, o.email, c.siteUrl)
-  const contactId = await ghl.upsertContact(c.ghl, latest, await orders.lifetime(db, o.email), m.fields, c.siteUrl)
-  await ghl.addTags(c.ghl, contactId, [...tagsFor(o), ...(m.recoverable ? [TAGS.recovery] : [])])
-  if (!m.recoverable && m.hadRecovery) await ghl.removeTags(c.ghl, contactId, [TAGS.recovery])
+  const contactId = await ghl.upsertContact(c.ghl, latest, await orders.lifetime(db, o.email), m.fields, c.siteUrl, o.ghlContactId ?? latest.ghlContactId ?? (await knownContactId(db, o.email)))
+  await ghl.addTags(c.ghl, contactId, tagsFor(o))
+  // The application sends the recovery email (lead system); the W2 tag is never set, and removed where it was.
+  if (m.recoverable || m.hadRecovery) await ghl.removeTags(c.ghl, contactId, [TAGS.recovery])
   const parentNumber = o.parentOrderId ? (await orders.byId(db, o.parentOrderId))?.orderNumber : null
   const oppId = await ghl.syncOpportunity(c.ghl, o, contactId, o.ghlOpportunityId, parentNumber)
   if (contactId !== o.ghlContactId || oppId !== o.ghlOpportunityId) await orders.update(db, o.id, { ghl_contact_id: contactId, ghl_opportunity_id: oppId })
@@ -66,11 +79,13 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     if (!c.ghl) throw new Skip('ghl not configured')
     const db = await getDb()
     const email = String(j.payload.email ?? '')
-    const { rows } = await db.query('select 1 from orders where email = $1 and ghl_contact_id is not null limit 1', [email])
+    // Only addresses the CRM has (or gets) through an order or a lead; matched by email, so never a duplicate.
+    const { rows } = await db.query('select 1 from orders where email = $1 and ghl_contact_id is not null union all select 1 from leads where email = $1 limit 1', [email])
     if (!rows.length) throw new Skip('address not in the CRM')
     const m = await marketingStatus(db, email, c.siteUrl)
-    const contactId = await ghl.updateMarketing(c.ghl, email, m.fields)
-    if (!m.recoverable && m.hadRecovery) await ghl.removeTags(c.ghl, contactId, [TAGS.recovery])
+    const contactId = await ghl.updateMarketing(c.ghl, email, m.fields, await knownContactId(db, email))
+    await db.query('update leads set ghl_contact_id = $2 where email = $1 and ghl_contact_id is null', [email, contactId])
+    if (m.recoverable || m.hadRecovery) await ghl.removeTags(c.ghl, contactId, [TAGS.recovery])
     return m.fields.consent ? 'consent' : 'no consent'
   },
 
@@ -123,7 +138,9 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const db = await getDb()
     const lead = await leads.byId(db, String(j.payload.leadId ?? ''))
     if (!lead) throw new Skip('lead gone')
-    const contactId = await ghl.upsertLeadContact(c.ghl, lead)
+    const contactId = await ghl.upsertLeadContact(c.ghl, lead, lead.ghlContactId ?? (await knownContactId(db, lead.email)))
+    // Stored at once on every lead of the address, so the next sync updates this contact instead of creating one.
+    await db.query('update leads set ghl_contact_id = $2 where email = $1 and (ghl_contact_id is null or id = $3)', [lead.email, contactId, lead.id])
     const products = lead.productId && lead.productId !== CART_INTEREST ? [lead.productId] : (lead.cart ?? []).map((l) => l.productId)
     await ghl.addTags(c.ghl, contactId, [
       LEAD_TAGS.lead,
@@ -131,8 +148,8 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
       ...(lead.stage !== 'lead' ? [LEAD_TAGS.checkout] : []),
       ...(lead.stage === 'ordered' || lead.stage === 'purchased' ? [LEAD_TAGS.converted] : []),
       ...products.map((p) => INTEREST_TAG[p]).filter(Boolean),
+      ...attributionTags(lead.attribution),
     ])
-    if (contactId !== lead.ghlContactId) await leads.update(db, lead.id, { ghl_contact_id: contactId })
     return contactId
   },
 
@@ -146,7 +163,7 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const own = c.email.transport === 'smtp' || c.email.transport === 'file'
     const facts = await recoveryFacts(db, lead)
     const now = new Date()
-    const d = recoveryDecision(lead, { stage: String(j.payload.stage), step, now, features: c.features, firstMinutes: c.recovery.firstMinutes, secondHours: c.recovery.secondHours, ...facts, canSend: own, notTestRecipient: !!c.recovery.testRecipients && !c.recovery.testRecipients.includes(lead.email.toLowerCase()) })
+    const d = recoveryDecision(lead, { stage: String(j.payload.stage), step, now, features: c.features, firstMinutes: c.recovery.firstMinutes, secondHours: c.recovery.secondHours, abandonAfterMinutes: c.abandonAfterMinutes, ...facts, canSend: own, notTestRecipient: !!c.recovery.testRecipients && !c.recovery.testRecipients.includes(lead.email.toLowerCase()) })
     if (!d.send) {
       const patch: Record<string, unknown> = {}
       if (d.abandonment && !lead.abandonment) patch.abandonment = d.abandonment
@@ -204,7 +221,9 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     if (!call) throw new Skip('call gone')
     const lead = await leads.byId(db, call.leadId)
     if (!lead) throw new Skip('lead gone')
-    const contactId = await ghl.upsertLeadContact(c.ghl, lead)
+    const contactId = await ghl.upsertLeadContact(c.ghl, lead, lead.ghlContactId ?? (await knownContactId(db, lead.email)))
+    // Stored at once on every lead of the address, so the next sync updates this contact instead of creating one.
+    await db.query('update leads set ghl_contact_id = $2 where email = $1 and (ghl_contact_id is null or id = $3)', [lead.email, contactId, lead.id])
     await ghl.addTags(c.ghl, contactId, [
       CALL_TAGS.called,
       ...(call.outcome ? [callOutcomeTag(call.outcome)] : []),
@@ -212,7 +231,6 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
       ...(call.optedOut ? [CALL_TAGS.optedOut] : []),
       ...(INTEREST_TAG[call.productId] ? [INTEREST_TAG[call.productId]] : []),
     ])
-    if (contactId !== lead.ghlContactId) await leads.update(db, lead.id, { ghl_contact_id: contactId })
     return contactId
   },
 

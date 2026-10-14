@@ -65,14 +65,14 @@ describe('GoHighLevel mapping', () => {
     const { order } = await placeOrder({ lines: lines([{ productId: 'brainlink-pro', quantity: 2 }]), form: company, attemptId: 'a-ghl-2' })
     const c = contactPayload(getConfig().ghl!, order, { orders: 3, valueMinor: 1234500 }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, 'https://test.biohack-tech.ro')
     expect(c).toMatchObject({ locationId: 'loc1', firstName: 'Ana', lastName: 'Popescu', email: 'ana@exemplu.ro', companyName: 'Exemplu SRL', country: 'RO' })
-    const f = Object.fromEntries(c.customFields.map((x) => [x.key, x.fieldValue]))
-    expect(f['contact.bt_last_order_number']).toBe(order.orderNumber)
-    expect(f['contact.bt_last_order_value']).toBe('1422.00') // 2 × 790 lei, −10% for 2 products
-    expect(f['contact.bt_last_order_products']).toBe('2 x NEUROS Focus')
-    expect(f['contact.bt_customer_type']).toBe('Persoană juridică')
-    expect(f['contact.bt_lifetime_value']).toBe('12345.00')
-    expect(f['contact.bt_last_order_url']).toBe(`https://test.biohack-tech.ro/comanda/${order.publicToken}`)
-    expect([f['contact.bt_marketing_consent'], f['contact.bt_recovery_url'], f['contact.bt_unsubscribe_url']]).toEqual(['Nu', '', ''])
+    const f = Object.fromEntries(c.customFields.map((x) => [x.key, x.field_value]))
+    expect(f['bt_last_order_number']).toBe(order.orderNumber)
+    expect(f['bt_last_order_value']).toBe('1422.00') // 2 × 790 lei, −10% for 2 products
+    expect(f['bt_last_order_products']).toBe('2 x NEUROS Focus')
+    expect(f['bt_customer_type']).toBe('Persoană juridică')
+    expect(f['bt_lifetime_value']).toBe('12345.00')
+    expect(f['bt_last_order_url']).toBe(`https://test.biohack-tech.ro/comanda/${order.publicToken}`)
+    expect([f['bt_marketing_consent'], f['bt_recovery_url'], f['bt_unsubscribe_url']]).toEqual(['Nu', '', ''])
   })
 })
 

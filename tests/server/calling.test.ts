@@ -82,6 +82,7 @@ function fakeApis() {
     if (url.includes('leadconnectorhq.com')) {
       if (mode.ghl === 'down') return json({ message: 'down' }, 503)
       ghl.push({ url, json: init.body ? JSON.parse(String(init.body)) : null })
+      if (url.includes('/contacts/search')) return json({ contacts: [] })
       if (url.includes('/contacts/upsert')) return json({ contact: { id: 'contact-1' } })
       return json({})
     }

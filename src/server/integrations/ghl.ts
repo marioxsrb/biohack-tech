@@ -42,6 +42,29 @@ async function call<T>(c: GhlConfig, method: string, path: string, body?: unknow
   return json as T
 }
 
+/**
+ * One contact per address: the known id (stored on the order or lead) or the oldest contact with this email is
+ * updated (PUT, without `source`, so an existing NEUROS contact keeps where it came from); only an address GHL
+ * does not have is created. A stale known id (contact deleted in GHL) falls back to the lookup.
+ */
+async function saveContact(c: GhlConfig, body: { locationId: string; email: string; source?: string; [k: string]: unknown }, knownId?: string | null): Promise<string> {
+  const { locationId: _l, source: _s, ...update } = body
+  void _l
+  void _s
+  for (const id of [knownId, null]) {
+    const target = id ?? (await ghl.findContactId(c, body.email))
+    if (!target) break
+    try {
+      await call(c, 'PUT', `/contacts/${encodeURIComponent(target)}`, update)
+      return target
+    } catch (e) {
+      if (!(e instanceof GhlError) || !id || (e.status !== 404 && e.status !== 400)) throw e
+    }
+  }
+  const r = await call<{ contact: { id: string } }>(c, 'POST', '/contacts/upsert', body)
+  return r.contact.id
+}
+
 /** Pipeline stage names, exactly as they must be created in GHL (see docs/PRODUCTION-LAUNCH.md). */
 export const STAGES = {
   awaitingTransfer: 'Așteaptă transferul',
@@ -131,6 +154,17 @@ export const LEAD_TAGS = {
 export const CALL_TAGS = { called: 'bt-apel-ai', followUp: 'bt-apel-ai-urmarire', optedOut: 'bt-apel-ai-refuz' }
 export const callOutcomeTag = (outcome: string) => `bt-apel-ai-${outcome.replace(/_/g, '-')}`
 
+/** Campaign tags for a lead: bt-sursa-facebook, bt-campanie-toamna (lowercase slugs, short; anything else is dropped). */
+export function attributionTags(a: { utm?: Record<string, string> } | null | undefined): string[] {
+  const slug = (v: string | undefined) => {
+    const s = (v ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+    return s.length >= 2 && s.length <= 40 ? s : null
+  }
+  const source = slug(a?.utm?.utm_source)
+  const campaign = slug(a?.utm?.utm_campaign)
+  return [...(source ? [`bt-sursa-${source}`] : []), ...(campaign ? [`bt-campanie-${campaign}`] : [])]
+}
+
 export const INTEREST_TAG: Record<string, string> = {
   'balance-wave': 'bt-interes-calm',
   'brainlink-pro': 'bt-interes-focus',
@@ -167,6 +201,12 @@ const ORDER_STATUS_RO: Record<Order['status'], string> = {
 export const paymentStatusRo = (s: Order['paymentStatus']) => PAYMENT_STATUS_RO[s]
 export const orderStatusRo = (s: Order['status']) => ORDER_STATUS_RO[s]
 
+/**
+ * A custom field as the GHL API accepts it: the short key (without "contact.") and `field_value`. The
+ * "contact.bt_…" key with `fieldValue` was silently ignored by the live API (verified 14.10.2026).
+ */
+const customField = (key: string, value: string) => ({ key: key.replace(/^contact\./, ''), field_value: value })
+
 /** What the site decided about marketing for this address, as GHL fields. The database stays the proof. */
 export type MarketingFields = { consent: boolean; recoveryUrl: string; unsubscribeUrl: string }
 
@@ -175,7 +215,7 @@ const marketingFields = (m: MarketingFields) =>
     [CONTACT_FIELDS.marketingConsent, m.consent ? 'Da' : 'Nu'],
     [CONTACT_FIELDS.recoveryUrl, m.recoveryUrl],
     [CONTACT_FIELDS.unsubscribeUrl, m.unsubscribeUrl],
-  ].map(([key, value]) => ({ key, fieldValue: value }))
+  ].map(([key, value]) => customField(key, value))
 
 /** The contact as GHL receives it: identity, address, the latest order at a glance, and the marketing decision. */
 export function contactPayload(c: GhlConfig, o: Order, lifetime: { orders: number; valueMinor: number }, m: MarketingFields, siteUrl: string) {
@@ -208,7 +248,7 @@ export function contactPayload(c: GhlConfig, o: Order, lifetime: { orders: numbe
       [CONTACT_FIELDS.lastOrderUrl, `${siteUrl}/comanda/${o.publicToken}`],
       [CONTACT_FIELDS.lastOrderSource, attributionSummary(o.attribution)],
     ]
-      .map(([key, value]) => ({ key, fieldValue: value }))
+      .map(([key, value]) => customField(key, value))
       .concat(marketingFields(m)),
   }
 }
@@ -241,49 +281,67 @@ async function stageIds(c: GhlConfig): Promise<Map<string, string>> {
 }
 
 export const ghl = {
-  async upsertContact(c: GhlConfig, o: Order, lifetime: { orders: number; valueMinor: number }, m: MarketingFields, siteUrl: string) {
-    const r = await call<{ contact: { id: string } }>(c, 'POST', '/contacts/upsert', contactPayload(c, o, lifetime, m, siteUrl))
-    return r.contact.id
+  /**
+   * The contact for an address, oldest first. The NEUROS location allows duplicate contacts, so GHL's own
+   * upsert does not match by email (verified on the live API, 14.10.2026): every save looks the address up first.
+   */
+  async findContactId(c: GhlConfig, email: string): Promise<string | null> {
+    const r = await call<{ contacts?: { id: string }[] }>(c, 'POST', '/contacts/search', {
+      locationId: c.locationId,
+      pageLimit: 1,
+      filters: [{ field: 'email', operator: 'eq', value: email.trim().toLowerCase() }],
+      sort: [{ field: 'dateAdded', direction: 'asc' }],
+    })
+    return r.contacts?.[0]?.id ?? null
   },
 
-  /** Only the marketing fields of an existing contact (after an unsubscribe), matched by email. */
-  async updateMarketing(c: GhlConfig, email: string, m: MarketingFields) {
-    const r = await call<{ contact: { id: string } }>(c, 'POST', '/contacts/upsert', { locationId: c.locationId, email, customFields: marketingFields(m) })
-    return r.contact.id
+  async upsertContact(c: GhlConfig, o: Order, lifetime: { orders: number; valueMinor: number }, m: MarketingFields, siteUrl: string, knownId?: string | null) {
+    return saveContact(c, contactPayload(c, o, lifetime, m, siteUrl), knownId)
+  },
+
+  /** Only the marketing fields of an existing contact (after an unsubscribe or a consent), matched by email. */
+  async updateMarketing(c: GhlConfig, email: string, m: MarketingFields, knownId?: string | null) {
+    return saveContact(c, { locationId: c.locationId, email, customFields: marketingFields(m) }, knownId)
   },
 
   /**
    * A contact-form sender: identity only (no order fields, no marketing fields, no pipeline), so no
    * ecommerce workflow can start from it. Matched by email like every other upsert.
    */
-  async upsertEnquiryContact(c: GhlConfig, e: { name: string; email: string; phone: string }) {
+  async upsertEnquiryContact(c: GhlConfig, e: { name: string; email: string; phone: string }, knownId?: string | null) {
     const [firstName, ...rest] = e.name.split(' ')
-    const r = await call<{ contact: { id: string } }>(c, 'POST', '/contacts/upsert', {
-      locationId: c.locationId,
-      email: e.email,
-      firstName,
-      ...(rest.length && { lastName: rest.join(' ') }),
-      ...(e.phone && { phone: e.phone }),
-      source: 'biohack-tech.ro contact',
-    })
-    return r.contact.id
+    return saveContact(
+      c,
+      {
+        locationId: c.locationId,
+        email: e.email,
+        firstName,
+        ...(rest.length && { lastName: rest.join(' ') }),
+        ...(e.phone && { phone: e.phone }),
+        source: 'biohack-tech.ro contact',
+      },
+      knownId,
+    )
   },
 
   /**
    * A lead (price form or checkout contact step): identity only, like a contact-form sender. No order fields,
-   * no marketing fields, no pipeline or opportunity, so no ecommerce workflow (W1-W7) can start from it.
+   * no pipeline or opportunity, so no ecommerce workflow (W1-W7) can start from it. The contact's own `source`
+   * is never set here, so an existing NEUROS contact keeps its own; the funnel and campaign go in bt- tags.
    */
-  async upsertLeadContact(c: GhlConfig, l: { name: string | null; email: string; phone: string | null; funnel: string }) {
+  async upsertLeadContact(c: GhlConfig, l: { name: string | null; email: string; phone: string | null; funnel: string }, knownId?: string | null) {
     const [firstName, ...rest] = (l.name ?? '').split(' ')
-    const r = await call<{ contact: { id: string } }>(c, 'POST', '/contacts/upsert', {
-      locationId: c.locationId,
-      email: l.email,
-      ...(firstName && { firstName }),
-      ...(rest.length && { lastName: rest.join(' ') }),
-      ...(l.phone && { phone: l.phone }),
-      source: l.funnel === 'gated_price' ? 'acces.biohack-tech.ro (preț după formular)' : 'biohack-tech.ro checkout',
-    })
-    return r.contact.id
+    return saveContact(
+      c,
+      {
+        locationId: c.locationId,
+        email: l.email,
+        ...(firstName && { firstName }),
+        ...(rest.length && { lastName: rest.join(' ') }),
+        ...(l.phone && { phone: l.phone }),
+      },
+      knownId,
+    )
   },
 
   async addTags(c: GhlConfig, contactId: string, tags: string[]) {

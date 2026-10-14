@@ -23,7 +23,7 @@ import { awaitsCollection, canCancel, canFulfil, canMoveOrder, canMovePayment, i
 import { formatOrderNumber, orderDay } from './number'
 import type { Address, Order, OrderStatus, PaymentMethod } from './model'
 import { orders } from './repository'
-import { markLeadsPurchased } from '@/server/leads'
+import { ensureOrderLead, markLeadsPurchased } from '@/server/leads'
 
 export type Source = 'checkout' | 'stripe.webhook' | 'stripe.reconcile' | 'upsell' | 'admin' | 'system'
 
@@ -180,6 +180,8 @@ async function transition(
     await orders.event(t, orderId, r.event, source, r.data ?? {})
     // The leads behind a paid order are purchases: their recovery stops in the same transaction.
     if (r.event === 'payment.confirmed') await markLeadsPurchased(t, orderId)
+    // An unpaid card order: its recovery runs through the lead system (application-owned email).
+    if (r.event === 'order.abandoned') await ensureOrderLead(t, (await orders.byId(t, orderId))!)
     const next = (await orders.byId(t, orderId))!
     await enqueueAll(t, jobsFor(r.event, next, r.data))
     return { changed: true, order: next }
