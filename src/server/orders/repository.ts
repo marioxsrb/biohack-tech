@@ -114,6 +114,8 @@ export const QUEUES = {
   ramburs: { label: 'Ramburs, de pregătit', where: `status in ('confirmed', 'processing') and payment_status = 'awaiting_collection'` },
   expediate: { label: 'Expediate', where: `status = 'shipped'` },
   incasare: { label: 'Ramburs de încasat', where: `payment_status = 'awaiting_collection' and status in ('shipped', 'delivered')` },
+  // A cash-on-delivery parcel that left and came back unpaid (refused or not picked up), cancelled by a person; nothing automatic.
+  intoarse: { label: 'Ramburs întors, neîncasat', where: `payment_method = 'cash_on_delivery' and status = 'cancelled' and shipped_at is not null and payment_status = 'awaiting_collection'` },
   livrate: { label: 'Livrate', where: `status = 'delivered'` },
   retururi: { label: 'Retururi', where: `return_status is not null` },
   rambursari: { label: 'Rambursări', where: `payment_status in ('refunded', 'partially_refunded')` },

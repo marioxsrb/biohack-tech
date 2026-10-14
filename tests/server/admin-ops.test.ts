@@ -62,6 +62,7 @@ describe('work queues', () => {
     expect(await ids('expediate')).toEqual([shippedCod.id])
     expect(await ids('incasare')).toEqual([shippedCod.id])
     expect(await ids('anulate')).toEqual([cancelled.id])
+    expect(await ids('intoarse')).toEqual([])
     expect(await ids('nefinalizate')).toEqual([unpaidCard.id])
     // Nothing failed yet; once the jobs run with GoHighLevel down, those orders need attention.
     expect(await ids('atentie')).toEqual([])
@@ -75,6 +76,16 @@ describe('work queues', () => {
     // A search inside a queue keeps both filters.
     expect((await orders.list(db, { queue: 'transfer', search: transfer.orderNumber.toLowerCase() })).map((o) => o.id)).toEqual([transfer.id])
     expect(await orders.list(db, { queue: 'transfer', search: cod.orderNumber.toLowerCase() })).toEqual([])
+  })
+
+  it('"ramburs întors": a cash-on-delivery parcel cancelled after shipping, never one cancelled before it left', async () => {
+    const back = await place('cod')
+    await svc.markShipped(back.id, 'admin', { courier: 'Fan Courier', trackingNumber: 'AWB2' })
+    await svc.cancelOrder(back.id, 'admin', 'colet refuzat')
+    const early = await place('cod')
+    await svc.cancelOrder(early.id, 'admin', 'clientul a renunțat')
+    expect((await orders.list(db, { queue: 'intoarse' })).map((o) => o.id)).toEqual([back.id])
+    expect((await orders.list(db, { queue: 'incasare' })).map((o) => o.id)).toEqual([])
   })
 
   it('"atenție" lists a cancelled order that was paid and still needs its refund', async () => {
