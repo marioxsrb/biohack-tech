@@ -320,7 +320,16 @@ export async function recoveryFacts(q: Queryable, lead: Lead) {
     lead.productId === CART_INTEREST
       ? { rows: [] }
       : await q.query(`select 1 from leads where email = $1 and product_id = '${CART_INTEREST}' and id <> $2 and coalesce(checkout_started_at, created_at) >= $3 limit 1`, [lead.email, lead.id, new Date(lead.createdAt.getTime() - RECOVERY_PERSON_DAYS * 86_400_000)])
-  const { rows: other } = await q.query(`select 1 from leads where email = $1 and id <> $2 and last_recovery_at >= $3 limit 1`, [lead.email, lead.id, new Date(Date.now() - RECOVERY_PERSON_DAYS * 86_400_000)])
+  // One sequence per person: another lead already got an email recently, or an older lead of the same person
+  // still has its own recovery to come (it owns the sequence, even if its step was moved by new activity).
+  const { rows: other } = await q.query(
+    `select 1 from leads l where l.email = $1 and l.id <> $2 and (
+       l.last_recovery_at >= $3
+       or (l.created_at < $4 and l.recovery_status not in ('stopped') and exists (
+         select 1 from jobs j where j.kind = 'lead.recovery' and j.payload->>'leadId' = l.id::text and j.status in ('pending', 'retry', 'running') and (j.payload->>'step')::int = 1)))
+     limit 1`,
+    [lead.email, lead.id, new Date(Date.now() - RECOVERY_PERSON_DAYS * 86_400_000), lead.createdAt],
+  )
   const consent = await marketing.state(q, lead.email)
   return { converted: conv.length > 0, superseded: sup.length > 0, otherRecovery: other.length > 0, consentGranted: consent ? consent.granted : null }
 }

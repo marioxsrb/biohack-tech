@@ -328,6 +328,22 @@ describe('recovery emails', () => {
     expect(recoveries().length).toBe(2)
   })
 
+  it('the older lead owns the sequence: a product opened later never emails first, even when its step runs first', async () => {
+    const first = await reveal({ marketingConsent: true })
+    await lead(post('/api/lead', GATED, { action: 'interest', productId: 'brainlink-pro' }, { bt_vid: first.vid, bt_gate: first.gate }))
+    await runDueJobs()
+    // The Calm lead was active again (its step moves later); the Focus interest's step is due now.
+    await db.query(`update leads set last_activity_at = now() - interval '40 minutes' where product_id = 'brainlink-pro'`)
+    await db.query(`update leads set last_activity_at = now() - interval '10 minutes' where product_id = 'balance-wave'`)
+    await db.query(`update jobs set run_at = now() where dedupe_key like 'lead.recovery:%:1'`)
+    await runDueJobs()
+    expect(recoveries()).toEqual([])
+    // Later the Calm lead's step: its email, and the Focus interest stays quiet.
+    await db.query(`update leads set last_activity_at = now() - interval '40 minutes'`)
+    await later()
+    expect(recoveries().map((m) => m.subject)).toEqual(['NEUROS Calm: oferta pe care ai văzut-o'])
+  })
+
   it('unsubscribe or withdrawn consent before a step: stopped, nothing sent', async () => {
     const { data } = await reveal({ marketingConsent: true })
     await marketing.withdraw(db, { email: 'ana@exemplu.ro', source: 'unsubscribe_link' })
