@@ -7,7 +7,7 @@ import { Close } from '@/components/ui/icons'
 import { useLocale } from '@/i18n/LocaleProvider'
 import { ALL, NONE, actionFor, withdrawn, type ConsentChoice, type OptionalCategory } from '@/lib/consent/cookies'
 import { consentStore } from '@/lib/consent/store'
-import { clearVendorCookies, configuredVendors, startVendor, vendorsToLoad } from '@/lib/consent/vendors'
+import { clearVendorCookies, configuredVendors, pageView, startVendor, vendorsToLoad } from '@/lib/consent/vendors'
 
 export const OPEN_COOKIE_SETTINGS = 'bt:cookie-settings'
 /** Any "Setări cookies" control on the site opens the preferences with this. */
@@ -84,6 +84,7 @@ export function ConsentManager() {
   // Start what the stored choice allows (again on each page: a page may exclude a tool).
   useEffect(() => {
     for (const v of vendorsToLoad(stored, pathname)) startVendor(v)
+    pageView()
   }, [stored, pathname])
 
   useEffect(() => {

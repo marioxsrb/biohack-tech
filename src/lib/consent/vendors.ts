@@ -69,7 +69,7 @@ export function vendorsToLoad(choice: ConsentChoice | null, path: string, list: 
 type W = Window & {
   dataLayer?: unknown[]
   gtag?: (...a: unknown[]) => void
-  fbq?: ((...a: unknown[]) => void) & { queue?: unknown[]; loaded?: boolean; version?: string; callMethod?: (...a: unknown[]) => void; push?: unknown }
+  fbq?: ((...a: unknown[]) => void) & { queue?: unknown[]; loaded?: boolean; version?: string; callMethod?: (...a: unknown[]) => void; push?: unknown; disablePushState?: boolean }
   _fbq?: unknown
   clarity?: ((...a: unknown[]) => void) & { q?: unknown[] }
 }
@@ -130,6 +130,10 @@ export function startVendor(v: Vendor) {
       w.fbq = f
       w._fbq = f
     }
+    // One PageView per page, sent by `pageView` below: Meta's own history tracking also counted URL
+    // clean-ups (the checkout replacing its `item` parameters), two PageViews for one page.
+    w.fbq.disablePushState = true
+    metaPage = location.pathname
     // No automatic event or form-field collection: only the events the site sends, without personal data.
     w.fbq('set', 'autoConfig', false, v.key)
     w.fbq('init', v.key)
@@ -138,6 +142,15 @@ export function startVendor(v: Vendor) {
   }
   for (const fn of waiting.get(v.id) ?? []) fn()
   waiting.delete(v.id)
+}
+
+let metaPage: string | undefined
+
+/** A client-side navigation to another page: a PageView, if the pixel already runs on this page load. */
+export function pageView() {
+  if (!loaded.has('meta') || location.pathname === metaPage) return
+  metaPage = location.pathname
+  ;(window as W).fbq?.('track', 'PageView')
 }
 
 /** Removes the first-party cookies of tools whose consent was withdrawn. */

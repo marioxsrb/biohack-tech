@@ -25,7 +25,7 @@ function fakeBrowser() {
     localStorage: { getItem: (k: string) => storage.get(k) ?? null, setItem: (k: string, v: string) => void storage.set(k, v) },
   }
   vi.stubGlobal('window', win)
-  vi.stubGlobal('location', { hostname: 'biohack-tech.ro' })
+  vi.stubGlobal('location', { hostname: 'biohack-tech.ro', pathname: '/' })
   vi.stubGlobal('document', {
     createElement: () => ({ async: false, src: '', dataset: {} }),
     head: { appendChild: (s: FakeScript) => void scripts.push(s) },
@@ -128,6 +128,21 @@ describe('script blocking', () => {
     expect(queue).toContainEqual(['track', 'Purchase', expect.objectContaining({ value: 6380, content_ids: ['balance-wave'] }), { eventID: 'BHT-1' }])
     expect(JSON.stringify(queue)).not.toMatch(/@|Popescu|0722/)
     expect(win.dataLayer).toBeUndefined()
+  })
+
+  it('one Meta PageView per page: not for a URL clean-up on the same page, never before consent', async () => {
+    const win = fakeBrowser()
+    const { startVendor, pageView } = await load()
+    pageView()
+    expect(win.fbq).toBeUndefined()
+    startVendor(vendors[2])
+    expect((win.fbq as { disablePushState?: boolean }).disablePushState).toBe(true)
+    pageView()
+    ;(location as { pathname: string }).pathname = '/checkout'
+    pageView()
+    pageView()
+    const views = (win.fbq as { queue: unknown[][] }).queue.filter((c) => c[1] === 'PageView')
+    expect(views).toHaveLength(2)
   })
 
   it('session recording never runs on checkout and order pages, even with consent', async () => {
