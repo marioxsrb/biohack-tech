@@ -355,6 +355,17 @@ describe('recovery emails', () => {
     expect((await leads.byId(db, data.leadId))!).toMatchObject({ abandonment: 'lead_abandoned', recoveryStatus: 'disabled' })
   })
 
+  it('test mode (RECOVERY_TEST_RECIPIENTS): only listed addresses get an email; everyone else is treated as off', async () => {
+    await setup({ ...ENV, RECOVERY_TEST_RECIPIENTS: 'marioxsrb@gmail.com' })
+    const other = await reveal({ marketingConsent: true })
+    const test = await reveal({ marketingConsent: true, email: 'MarioXsrb@gmail.com' })
+    await quiet(other.data.leadId, 40)
+    await quiet(test.data.leadId, 40)
+    await later()
+    expect(sent.map((m) => m.to)).toEqual(['marioxsrb@gmail.com'])
+    expect((await leads.byId(db, other.data.leadId))!).toMatchObject({ recoveryStatus: 'disabled', recoverySent: 0 })
+  })
+
   it('needs the own email transport (never GoHighLevel’s, so the CRM never sends a second copy)', async () => {
     await setup({ ...ENV, EMAIL_TRANSPORT: 'ghl' })
     const { data } = await reveal({ marketingConsent: true })

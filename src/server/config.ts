@@ -75,7 +75,7 @@ export type Config = {
    */
   features: { priceGate: boolean; abandonedCheckout: boolean; recoveryEmail: boolean }
   /** When the first and second recovery emails go out after the last activity (defaults 30 min, 24 h). */
-  recovery: { firstMinutes: number; secondHours: number }
+  recovery: { firstMinutes: number; secondHours: number; testRecipients: string[] | null }
 }
 
 /** ISO 13616 mod-97 check, so a mistyped IBAN is caught before a customer sees it. */
@@ -285,7 +285,12 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     abandonAfterMinutes: positiveInt(str('ABANDON_AFTER_MINUTES')) ?? 60,
     transferExpiryDays: positiveInt(str('TRANSFER_EXPIRY_DAYS')),
     features: { priceGate: flag('PRICE_GATE_ENABLED'), abandonedCheckout: flag('ABANDONED_CHECKOUT_ENABLED'), recoveryEmail: flag('RECOVERY_EMAIL_ENABLED') },
-    recovery: { firstMinutes: positiveInt(str('RECOVERY_FIRST_MINUTES')) ?? 30, secondHours: positiveInt(str('RECOVERY_SECOND_HOURS')) ?? 24 },
+    recovery: {
+      firstMinutes: positiveInt(str('RECOVERY_FIRST_MINUTES')) ?? 30,
+      secondHours: positiveInt(str('RECOVERY_SECOND_HOURS')) ?? 24,
+      // Test mode for the activation: when set, recovery emails go only to these addresses (others: as if off).
+      testRecipients: str('RECOVERY_TEST_RECIPIENTS')?.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean) || null,
+    },
   }
   cached = { config, issues }
   return cached

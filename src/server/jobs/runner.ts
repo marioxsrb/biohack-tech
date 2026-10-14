@@ -138,7 +138,7 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const own = c.email.transport === 'smtp' || c.email.transport === 'file'
     const facts = await recoveryFacts(db, lead)
     const now = new Date()
-    const d = recoveryDecision(lead, { stage: String(j.payload.stage), step, now, features: c.features, firstMinutes: c.recovery.firstMinutes, secondHours: c.recovery.secondHours, ...facts, canSend: own })
+    const d = recoveryDecision(lead, { stage: String(j.payload.stage), step, now, features: c.features, firstMinutes: c.recovery.firstMinutes, secondHours: c.recovery.secondHours, ...facts, canSend: own, notTestRecipient: !!c.recovery.testRecipients && !c.recovery.testRecipients.includes(lead.email.toLowerCase()) })
     if (!d.send) {
       const patch: Record<string, unknown> = {}
       if (d.abandonment && !lead.abandonment) patch.abandonment = d.abandonment

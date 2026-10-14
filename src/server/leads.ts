@@ -276,6 +276,8 @@ export function recoveryDecision(
     otherRecovery: boolean
     consentGranted: boolean | null
     canSend: boolean
+    /** RECOVERY_TEST_RECIPIENTS is set and this address is not on it. */
+    notTestRecipient?: boolean
   },
 ): RecoveryCheck {
   if (!ctx.features.abandonedCheckout) return { send: false, reason: 'abandoned checkout off' }
@@ -292,6 +294,7 @@ export function recoveryDecision(
   const abandonment = lead.stage === 'lead' ? 'lead_abandoned' : 'checkout_abandoned'
   if (lead.recoveryStatus === 'stopped') return { send: false, reason: lead.recoveryReason ?? 'stopped', abandonment }
   if (!ctx.features.recoveryEmail) return { send: false, reason: 'recovery email off', abandonment, status: 'disabled' }
+  if (ctx.notTestRecipient) return { send: false, reason: 'recovery email in test mode', abandonment, status: 'disabled' }
   if (ctx.consentGranted === null) return { send: false, reason: 'no marketing consent', abandonment, status: 'ineligible' }
   if (!ctx.consentGranted) return { send: false, reason: 'consent withdrawn', abandonment, status: 'stopped' }
   if (lead.recoverySent !== ctx.step - 1) return { send: false, reason: `step ${ctx.step} after ${lead.recoverySent} sent`, abandonment }
