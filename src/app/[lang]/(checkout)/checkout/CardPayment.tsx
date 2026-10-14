@@ -1,5 +1,6 @@
 'use client'
 
+import { cashOnDelivery } from '@/config/payments'
 import { Elements, PaymentElement, useElements, useStripe } from '@stripe/react-stripe-js'
 import type { Stripe } from '@stripe/stripe-js'
 import { loadStripe } from '@stripe/stripe-js/pure'
@@ -25,17 +26,17 @@ export type BillingDetails = {
 const COPY = {
   ro: {
     loading: 'Se încarcă formularul securizat pentru card…',
-    loadError: 'Formularul pentru card nu s-a putut încărca. Reîncarcă pagina sau alege transferul bancar.',
+    loadError: `Formularul pentru card nu s-a putut încărca. Reîncarcă pagina sau alege ${cashOnDelivery.enabled ? 'plata la livrare sau transferul bancar' : 'transferul bancar'}.`,
     checkCard: 'Verifică datele cardului.',
     declined: 'Plata nu a putut fi finalizată. Verifică datele cardului.',
-    notStarted: 'Plata cu cardul nu a putut fi pornită. Nu s-a efectuat nicio plată. Încearcă din nou sau alege transferul bancar.',
+    notStarted: `Plata cu cardul nu a putut fi pornită. Nu s-a efectuat nicio plată. Încearcă din nou sau alege ${cashOnDelivery.enabled ? 'plata la livrare sau transferul bancar' : 'transferul bancar'}.`,
   },
   en: {
     loading: 'Loading the secure card form…',
-    loadError: 'The card form did not load. Reload the page or choose bank transfer.',
+    loadError: `The card form did not load. Reload the page or choose ${cashOnDelivery.enabled ? 'cash on delivery or bank transfer' : 'bank transfer'}.`,
     checkCard: 'Check your card details.',
     declined: 'The payment did not go through. Check your card details.',
-    notStarted: 'The card payment could not start. You have not been charged. Try again or choose bank transfer.',
+    notStarted: `The card payment could not start. You have not been charged. Try again or choose ${cashOnDelivery.enabled ? 'cash on delivery or bank transfer' : 'bank transfer'}.`,
   },
 }
 

@@ -1,3 +1,4 @@
+import { cashOnDelivery } from '@/config/payments'
 import type { Metadata } from 'next'
 import Link from '@/components/ui/Link'
 import { notFound } from 'next/navigation'
@@ -120,7 +121,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
         )}
         {cardFailed && (
           <>
-            <p className="sub mt-4">Nu s-a efectuat nicio plată. Produsele sunt tot în coș și poți încerca din nou, cu cardul sau prin transfer bancar.</p>
+            <p className="sub mt-4">Nu s-a efectuat nicio plată. Produsele sunt tot în coș și poți încerca din nou, cu cardul{cashOnDelivery.enabled ? ', cu plata la livrare' : ''} sau prin transfer bancar.</p>
             <Link href="/checkout" className="cta mt-6">
               Încearcă din nou <Arrow />
             </Link>

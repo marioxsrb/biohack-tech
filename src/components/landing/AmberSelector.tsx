@@ -1,5 +1,6 @@
 'use client'
 
+import { cashOnDelivery } from '@/config/payments'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -265,7 +266,7 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
 
           <div className="mt-5">{cta}</div>
           <p className="mt-3 text-[13.5px] leading-snug text-[var(--lp-muted)]">
-            {terms.vat}. Livrare gratuită. Card sau transfer. {terms.returnDays} zile să te răzgândești. Garanție {terms.warrantyYears} ani.
+            {terms.vat}. Livrare gratuită. {cashOnDelivery.enabled ? 'Plată la livrare, card sau transfer.' : 'Card sau transfer.'} {terms.returnDays} zile să te răzgândești. Garanție {terms.warrantyYears} ani.
           </p>
         </div>
       </div>

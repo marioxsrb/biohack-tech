@@ -39,6 +39,7 @@ export function CalmLanding({ landing, gated = false }: { landing: Landing; gate
       <CalmMoments />
 
       <LandingOffer
+        withQuantity
         slug={landing.slug}
         productId={p.id}
         cta={CTA}

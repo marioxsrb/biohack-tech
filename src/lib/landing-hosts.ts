@@ -129,7 +129,7 @@ const GATED_PASSTHROUGH = [
  */
 export function routeGated(pathname: string, enabled: boolean, unlocked: boolean): LandingRoute | { action: 'main'; path: string } {
   const p = pathname.replace(/\/+$/, '') || '/'
-  const slug = /^\/(?:acces\/|products\/)?([\w-]+)$/.exec(p)?.[1]
+  const slug = /^\/(?:acces\/|products\/|lp\/)?([\w-]+)$/.exec(p)?.[1]
   if (GATED_PASSTHROUGH.some((r) => r.test(pathname))) return { action: 'next' }
   if (!enabled) {
     if (p === '/' || p === '/acces') return { action: 'main', path: '/' }

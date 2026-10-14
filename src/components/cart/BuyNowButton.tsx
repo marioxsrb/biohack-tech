@@ -8,6 +8,7 @@ import { getProduct, isPurchasable, type ProductId } from '@/content/catalog'
 import { useLocale } from '@/i18n/LocaleProvider'
 import { localePath } from '@/i18n/locales'
 import { encodeItem } from '@/lib/purchase'
+import { cashOnDelivery } from '@/config/payments'
 import { cartStore } from './cart-store'
 
 const COPY = {
@@ -16,6 +17,7 @@ const COPY = {
     codSub: 'Plătești curierului când primești coletul',
     online: 'Comandă acum',
     onlineSub: 'Cu cardul sau prin transfer bancar',
+    onlineSubCod: 'Plată la livrare, card sau transfer',
     secondary: 'Card / transfer',
     short: 'Comandă',
     opening: 'Se deschide comanda…',
@@ -25,6 +27,7 @@ const COPY = {
     codSub: 'Pay the courier when the parcel arrives',
     online: 'Order now',
     onlineSub: 'By card or bank transfer',
+    onlineSubCod: 'Cash on delivery, card or transfer',
     secondary: 'Card / transfer',
     short: 'Order',
     opening: 'Opening your order…',
@@ -56,7 +59,8 @@ export function BuyNowButton({ productId, variantId, quantity = 1, pay, look = '
   const product = getProduct(productId, locale)
   if (!product || !isPurchasable(product)) return null
 
-  const q = new URLSearchParams({ item: encodeItem({ productId, variantId, quantity }), plata: pay === 'cod' ? 'ramburs' : 'card' })
+  // With cash on delivery on, the general button lets the checkout open on its default (all three offered).
+  const q = new URLSearchParams({ item: encodeItem({ productId, variantId, quantity }), ...(pay === 'cod' ? { plata: 'ramburs' } : !cashOnDelivery.enabled && { plata: 'card' }) })
   const href = localePath(locale, `/checkout?${q}`)
   const label = pay === 'cod' ? t.cod : t.online
   const Icon = look === 'secondary' ? CardIcon : Bag
@@ -83,7 +87,7 @@ export function BuyNowButton({ productId, variantId, quantity = 1, pay, look = '
       ) : (
         <span className="flex min-w-0 flex-col items-start text-left leading-tight">
           <span className="text-[16.5px] font-semibold whitespace-normal">{pending ? t.opening : label}</span>
-          <span className="mt-0.5 text-[13px] font-normal whitespace-normal text-white/85">{pay === 'cod' ? t.codSub : t.onlineSub}</span>
+          <span className="mt-0.5 text-[13px] font-normal whitespace-normal text-white/85">{pay === 'cod' ? t.codSub : cashOnDelivery.enabled ? t.onlineSubCod : t.onlineSub}</span>
         </span>
       )}
     </a>

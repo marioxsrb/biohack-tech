@@ -499,6 +499,9 @@ describe('gated hostname routing', () => {
     ['/reluare/abc', false, false, { action: 'next' }],
     ['/privacy-policy', true, false, { action: 'next' }],
     ['/admin', true, true, { action: 'main', path: '/admin' }],
+    // The checkout's brand link from a landing (/lp/<slug>) stays on acces, where the cart is.
+    ['/lp/calm', true, true, { action: 'redirect', path: '/calm' }],
+    ['/lp/amber', false, false, { action: 'main', path: '/products/amber' }],
     ['/brain-flow', true, false, { action: 'main', path: '/brain-flow' }],
     ['/', false, false, { action: 'main', path: '/' }],
     ['/calm', false, true, { action: 'main', path: '/products/calm' }],

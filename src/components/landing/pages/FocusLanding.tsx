@@ -41,6 +41,7 @@ export function FocusLanding({ landing, gated = false }: { landing: Landing; gat
       <FocusWhere />
 
       <LandingOffer
+        withQuantity
         slug={landing.slug}
         productId={p.id}
         cta={CTA}

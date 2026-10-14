@@ -237,6 +237,30 @@ describe('NEUROS Amber selection: several frames in one handoff', () => {
   })
 })
 
+describe('a changed selection on a landing replaces the previous one (not added to it)', () => {
+  const pick = (variantId: string, quantity: number) => ({ productId: 'ochelari-biohack' as const, variantId, quantity })
+
+  it('Amber: a frame taken out on the landing leaves the cart; other products stay', async () => {
+    const p = await page('https://amber.biohack-tech.ro/')
+    p.cartStore.add('balance-wave', undefined, 1, 'home')
+    p.startCheckout(vi.fn(), 'amber', [pick('cat-eye-negru', 2), pick('cat-eye-bej', 1)], { exact: true })
+    // Back on the landing: Bej swapped for Maro.
+    p.startCheckout(vi.fn(), 'amber', [pick('cat-eye-negru', 2), pick('patrat-maro', 1)], { exact: true })
+    expect(p.cartStore.getSnapshot().map((l) => [l.productId, l.variantId ?? null, l.quantity])).toEqual([
+      ['balance-wave', null, 1],
+      ['ochelari-biohack', 'cat-eye-negru', 2],
+      ['ochelari-biohack', 'patrat-maro', 1],
+    ])
+  })
+
+  it('Calm with a quantity picker: a lower quantity chosen later is respected', async () => {
+    const p = await page('https://calm.biohack-tech.ro/')
+    p.startCheckout(vi.fn(), 'calm', { productId: 'balance-wave', quantity: 3 }, { exact: true })
+    p.startCheckout(vi.fn(), 'calm', { productId: 'balance-wave', quantity: 1 }, { exact: true })
+    expect(p.cartStore.getSnapshot().map((l) => [l.productId, l.quantity])).toEqual([['balance-wave', 1]])
+  })
+})
+
 describe('the checkout is focused', () => {
   const read = (f: string) => readFileSync(join(process.cwd(), f), 'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, '')
 

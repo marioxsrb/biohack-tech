@@ -122,12 +122,16 @@ export const cartStore = {
     commit(EMPTY)
   },
   /**
-   * A selection built on a landing (e.g. several NEUROS Amber frames): each of these lines gets exactly
-   * the chosen quantity; lines not in the selection are kept. Repeating it changes nothing.
+   * A selection built on a landing (several NEUROS Amber frames, or a quantity): each of these lines gets
+   * exactly the chosen quantity; other lines of the same products go, other products stay. Repeating it
+   * changes nothing.
    */
   put(selected: CartLine[]) {
-    const next = [...cartStore.getSnapshot()]
-    for (const l of sanitize(selected)) {
+    const clean = sanitize(selected)
+    // The selection replaces every earlier line of the same products (a frame taken out on the landing goes).
+    const products = new Set(clean.map((l) => l.productId))
+    const next = cartStore.getSnapshot().filter((x) => !products.has(x.productId) || clean.some((l) => lineKey(l) === lineKey(x)))
+    for (const l of clean) {
       const i = next.findIndex((x) => lineKey(x) === lineKey(l))
       if (i === -1) next.push(l)
       else next[i] = { ...next[i], quantity: l.quantity }

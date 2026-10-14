@@ -7,11 +7,13 @@ import { companyLine } from '@/config/company'
 import { site } from '@/config/site'
 import { getLocale, getUi } from '@/i18n/server'
 import type { Locale } from '@/i18n/locales'
+import { MainHostOnly } from './MainHostOnly'
 import { Wordmark } from './Wordmark'
 
 const page = (slug: string) => legalPages.find((p) => p.slug === slug)!
 
-type FooterLink = { href: string; label: Record<Locale, string> }
+/** `mainOnly`: pages that exist only on the main host (hidden on acces. and the landing hosts, see MainHostOnly). */
+type FooterLink = { href: string; label: Record<Locale, string>; mainOnly?: true }
 
 const help: FooterLink[] = [
   { href: `/${page('politica-livrare').slug}`, label: { ro: 'Livrare', en: 'Delivery' } },
@@ -20,9 +22,9 @@ const help: FooterLink[] = [
   { href: `/${page('garantie').slug}`, label: { ro: 'Garanție și reclamații', en: 'Warranty and complaints' } },
   // OUG 34/2014 art. 11^1: the online withdrawal function, reachable from every page.
   { href: '/retragere', label: { ro: 'Retrage-te din contract aici', en: 'Withdraw from the contract here' } },
-  { href: '/intrebari-frecvente', label: { ro: 'Întrebări frecvente', en: 'FAQ' } },
-  { href: '/contact-us', label: { ro: 'Contact', en: 'Contact' } },
-  { href: '/about-us', label: { ro: 'Despre noi', en: 'About us' } },
+  { href: '/intrebari-frecvente', label: { ro: 'Întrebări frecvente', en: 'FAQ' }, mainOnly: true },
+  { href: '/contact-us', label: { ro: 'Contact', en: 'Contact' }, mainOnly: true },
+  { href: '/about-us', label: { ro: 'Despre noi', en: 'About us' }, mainOnly: true },
 ]
 
 const legal: FooterLink[] = [
@@ -97,13 +99,16 @@ export async function Footer() {
               {t.help}
             </h2>
             <ul className="mt-4">
-              {help.map((l) => (
-                <li key={l.href}>
-                  <Link href={l.href} className="flex min-h-10 items-center hover:text-white">
-                    {l.label[locale]}
-                  </Link>
-                </li>
-              ))}
+              {help.map((l) => {
+                const item = (
+                  <li key={l.href}>
+                    <Link href={l.href} className="flex min-h-10 items-center hover:text-white">
+                      {l.label[locale]}
+                    </Link>
+                  </li>
+                )
+                return l.mainOnly ? <MainHostOnly key={l.href}>{item}</MainHostOnly> : item
+              })}
             </ul>
           </nav>
 

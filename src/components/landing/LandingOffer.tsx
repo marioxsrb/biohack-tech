@@ -1,5 +1,6 @@
 'use client'
 
+import { cashOnDelivery } from '@/config/payments'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -46,6 +47,7 @@ export function LandingOffer({ slug, productId, title, text, cta, notes, layout 
   const variant = variants.find((v) => v.id === variantId)
   const price = unitPrice(product, variant)
   const [quantity, setQuantity] = useState(1)
+  const pairs = product.id === 'ochelari-biohack'
   // Same engine as the cart and the server, for display only.
   const priced = price !== null ? priceLines([{ key: 'offer', productId: product.id, quantity, unitAmount: price }]) : null
   const image = variant?.images.find((i) => i.kind === 'cutout') ?? product.cutout
@@ -70,7 +72,8 @@ export function LandingOffer({ slug, productId, title, text, cta, notes, layout 
   const go = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (!isPlainClick(e)) return
     e.preventDefault()
-    startCheckout(router.push, slug, pick)
+    // With a quantity picker the checkout gets exactly the chosen quantity (also when it is lower than before).
+    startCheckout(router.push, slug, pick, { exact: !!withQuantity })
   }
 
   const buy = locked ? (
@@ -94,8 +97,8 @@ export function LandingOffer({ slug, productId, title, text, cta, notes, layout 
     <>
       {withQuantity && price !== null && (
         <div className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <QuantityStepper value={quantity} onChange={setQuantity} label="Câte perechi" size="sm" />
-          <span className="text-[15px] text-[var(--lp-muted)]">{quantity === 1 ? '1 pereche' : `${quantity} perechi`}</span>
+          <QuantityStepper value={quantity} onChange={setQuantity} label={pairs ? 'Câte perechi' : 'Câte bucăți'} size="sm" />
+          <span className="text-[15px] text-[var(--lp-muted)]">{pairs ? (quantity === 1 ? '1 pereche' : `${quantity} perechi`) : quantity === 1 ? '1 bucată' : `${quantity} bucăți`}</span>
         </div>
       )}
       <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[36px] font-medium tracking-[-0.03em] text-[var(--lp-ink)] tabular-nums" aria-live="polite">
@@ -114,7 +117,7 @@ export function LandingOffer({ slug, productId, title, text, cta, notes, layout 
         </a>
       )}
       <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-1.5 text-[14.5px] text-[var(--lp-muted)]">
-        <li>Card sau transfer bancar</li>
+        <li>{cashOnDelivery.enabled ? 'Plată la livrare, card sau transfer' : 'Card sau transfer bancar'}</li>
         <li>{terms.returnDays} zile să te răzgândești</li>
         <li>Garanție {terms.warrantyYears} ani</li>
       </ul>

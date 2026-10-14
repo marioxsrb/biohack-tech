@@ -68,7 +68,10 @@ describe('order buttons', () => {
     expect(item).toBe('ochelari-biohack:patrat-maro*2')
     expect(parseItems(new URLSearchParams({ item, plata: 'ramburs' }))).toEqual([{ productId: 'ochelari-biohack', variantId: 'patrat-maro', quantity: 2, source: 'link' }])
     const btn = read('src/components/cart/BuyNowButton.tsx')
-    expect(btn).toContain("plata: pay === 'cod' ? 'ramburs' : 'card'")
+    // Cash on delivery preselects ramburs; the general button names all three methods and lets the
+    // checkout open on its default when cash on delivery is on (card only when it is off).
+    expect(btn).toContain("pay === 'cod' ? { plata: 'ramburs' } : !cashOnDelivery.enabled && { plata: 'card' }")
+    expect(btn).toContain("onlineSubCod: 'Plată la livrare, card sau transfer'")
     expect(btn).toContain("cod: 'Comandă cu plata la livrare'")
     expect(btn).toContain("codSub: 'Plătești curierului când primești coletul'")
   })

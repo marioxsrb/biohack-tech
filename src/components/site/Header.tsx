@@ -11,6 +11,7 @@ import { Price } from '@/components/cart/Price'
 import { useLocale, useUi } from '@/i18n/LocaleProvider'
 import { splitLocale } from '@/i18n/locales'
 import { LanguageSwitch } from './LanguageSwitch'
+import { useOffMainHost } from './MainHostOnly'
 import { Wordmark } from './Wordmark'
 
 const COPY = {
@@ -33,6 +34,8 @@ export function Header() {
   const [overHero, setOverHero] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const navRef = useRef<HTMLElement>(null)
+  // On acces. and the landing hosts: brand and cart only (the rest is on the main site, with another cart).
+  const offMain = useOffMainHost()
   const sheetRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
@@ -84,7 +87,7 @@ export function Header() {
             <Wordmark tone={dark ? 'dark' : 'light'} />
           </Link>
 
-          <ul className="ml-auto hidden items-center gap-8 text-[15px] font-medium md:flex">
+          <ul className={`ml-auto hidden items-center gap-8 text-[15px] font-medium ${offMain ? '' : 'md:flex'}`}>
             <li>
               <button
                 type="button"
@@ -110,8 +113,8 @@ export function Header() {
             </li>
           </ul>
 
-          <div className="ml-auto flex items-center gap-1 md:ml-0">
-            <LanguageSwitch dark={dark} className="mr-2 max-md:mr-1" />
+          <div className={`ml-auto flex items-center gap-1 ${offMain ? '' : 'md:ml-0'}`}>
+            {!offMain && <LanguageSwitch dark={dark} className="mr-2 max-md:mr-1" />}
             <Link
               href="/cart"
               className={`relative -mr-3 flex h-11 items-center gap-2 rounded-full px-3 transition-colors max-md:mr-0 ${dark ? 'hover:bg-white/10' : 'hover:bg-ink/5'}`}
@@ -128,7 +131,7 @@ export function Header() {
             <button
               type="button"
               onClick={() => sheetRef.current?.showModal()}
-              className="-mr-2.5 flex h-11 w-11 items-center justify-center md:hidden"
+              className={`-mr-2.5 h-11 w-11 items-center justify-center md:hidden ${offMain ? 'hidden' : 'flex'}`}
               aria-label={t.openMenu}
               aria-haspopup="dialog"
               aria-controls="meniu"
@@ -139,7 +142,7 @@ export function Header() {
         </nav>
 
         {/* Product list: one line per product, in the bar's own colours */}
-        <div id="product-menu" hidden={!menuOpen} className={`max-md:hidden ${dark ? 'shadow-[0_-1px_0_var(--color-dark-line)]' : 'shadow-[0_-1px_0_rgb(8_17_19/0.06)]'}`}>
+        <div id="product-menu" hidden={!menuOpen || offMain} className={`max-md:hidden ${dark ? 'shadow-[0_-1px_0_var(--color-dark-line)]' : 'shadow-[0_-1px_0_rgb(8_17_19/0.06)]'}`}>
           <ul className="wrap grid grid-cols-2 gap-x-6 gap-y-2 py-6 lg:grid-cols-4">
             {products.map((p) => (
               <li key={p.id}>
