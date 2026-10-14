@@ -349,6 +349,21 @@ describe('delayed steps: rechecked against the order right before sending', () =
     expect(overdue[0].text).toContain(`AWB-${late.orderNumber}`)
   })
 
+  it('cash on delivery: a note 10 days after delivery only while the courier money is not recorded', async () => {
+    const unpaid = await place('cod', 'c1')
+    const settled = await place('cod', 'c2')
+    for (const o of [unpaid, settled]) {
+      await svc.markShipped(o.id, 'admin', { courier: 'Fan Courier', trackingNumber: `AWB-${o.orderNumber}` })
+      await svc.markDelivered(o.id, 'admin')
+    }
+    expect(Math.round(((await jobOf(unpaid.id, 'notify:cod_uncollected')).runAt.getTime() - Date.now()) / 86_400_000)).toBe(10)
+    await svc.confirmPayment(settled.id, 'admin')
+    await runNow()
+    const notes = toTeam().filter((m) => m.subject.includes('banii neîncasați'))
+    expect(notes.map((m) => m.subject)).toEqual([`Comanda ${unpaid.orderNumber}: livrată ramburs de 10 zile, banii neîncasați`])
+    expect(notes[0].text).toContain(`AWB-${unpaid.orderNumber}`)
+  })
+
   it('after delivery: the service email the next day; not for a refunded or returned order, not for an added product', async () => {
     const happy = await card('a1')
     const refunded = await card('a2', 'brainlink-pro')

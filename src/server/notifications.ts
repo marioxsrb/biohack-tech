@@ -21,6 +21,7 @@ export type NotifyEvent =
   | 'transfer_overdue'
   | 'prep_overdue'
   | 'delivery_overdue'
+  | 'cod_uncollected'
   | 'refund_after_cancel'
   | 'refund_after_return'
   | 'storno_needed'
@@ -72,6 +73,12 @@ export const NOTIFICATIONS: Record<NotifyEvent, { title: string; action: (o: Ord
     title: 'expediată de 5 zile, nelivrată',
     action: (o) => `Verifică la curier AWB ${o.trackingNumber ?? ''}${o.courier ? ` (${o.courier})` : ''}. Marchează „livrată” în /admin.`,
     stillTrue: (o) => o.status === 'shipped',
+  },
+  cod_uncollected: {
+    title: 'livrată ramburs de 10 zile, banii neîncasați',
+    action: (o) =>
+      `Verifică decontul curierului${o.courier ? ` (${o.courier})` : ''} pentru AWB ${o.trackingNumber ?? ''} și ${formatLei(o.codAmountMinor ?? o.totalMinor)}. Când banii au intrat, apasă „Rambursul a fost încasat” în /admin.`,
+    stillTrue: (o) => o.status === 'delivered' && o.paymentMethod === 'cash_on_delivery' && o.paymentStatus === 'awaiting_collection',
   },
   refund_after_cancel: {
     title: 'anulată după plată, de rambursat',
