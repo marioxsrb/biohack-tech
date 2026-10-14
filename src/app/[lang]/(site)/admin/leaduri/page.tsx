@@ -2,10 +2,9 @@ import Link from 'next/link'
 import { connection } from 'next/server'
 import { attributionSummary } from '@/lib/attribution'
 import type { Funnel } from '@/lib/lead'
-import { formatLei } from '@/lib/money'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
-import { funnelStats, interestOf, leads, type Lead } from '@/server/leads'
+import { interestOf, leads, type Lead } from '@/server/leads'
 import { marketing } from '@/server/marketing/consent'
 import { calls, type Call } from '@/server/calling/calls'
 import { callConsent } from '@/server/calling/consent'
@@ -14,10 +13,7 @@ import { romanianE164 } from '@/lib/consent/calling'
 import { callAction } from '../actions'
 
 const dt = (d: Date) => d.toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
-const daysAgo = (days: number) => new Date(Date.now() - days * 86_400_000)
-const pct = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1)}%` : '–')
 
-const FUNNEL: Record<Funnel, string> = { visible_price: 'Preț vizibil (site, landinguri)', gated_price: 'Preț după formular (acces)' }
 const STAGE: Record<Lead['stage'], string> = { lead: 'Formular trimis', checkout_started: 'Checkout început', ordered: 'Comandă plasată', purchased: 'Plătită' }
 const ABANDON: Record<NonNullable<Lead['abandonment']>, string> = { lead_abandoned: 'Abandon după preț', checkout_abandoned: 'Checkout abandonat' }
 const RECOVERY: Record<string, string> = {
@@ -62,10 +58,9 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
   const sp = await searchParams
   const funnel = sp.funnel === 'visible_price' || sp.funnel === 'gated_price' ? (sp.funnel as Funnel) : undefined
   const view = sp.view === 'abandoned' || sp.view === 'converted' ? sp.view : undefined
-  const days = [7, 30, 90].includes(Number(sp.zile)) ? Number(sp.zile) : 30
   const db = await getDb()
   const c = getConfig()
-  const [list, stats] = await Promise.all([leads.list(db, { funnel, view }), funnelStats(db, daysAgo(days))])
+  const list = await leads.list(db, { funnel, view })
   // Consent belongs to the person (the latest decision for the address), not to one form: that is what recovery checks.
   const consent = await marketing.states(db, list.map((l) => l.email))
   // AI calling: consent by phone number, and each lead's latest call.
@@ -84,7 +79,7 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
     return now === undefined ? 'nu' : now ? (l.marketingConsent ? 'da (bifat aici)' : 'da (dat în alt formular)') : 'retras / dezabonat'
   }
   const q = (p: Record<string, string | undefined>) => {
-    const u = new URLSearchParams(Object.entries({ funnel, view, zile: String(days), ...p }).filter((e): e is [string, string] => !!e[1]))
+    const u = new URLSearchParams(Object.entries({ funnel, view, ...p }).filter((e): e is [string, string] => !!e[1]))
     return `/admin/leaduri${u.size ? `?${u}` : ''}`
   }
 
@@ -99,48 +94,12 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
         apeluri, {c.calling.hours.start}:00–{c.calling.hours.end}:00, maximum {c.calling.maxAttempts} încercări.
       </p>
 
-      <h2 className="mt-8 text-[22px] tracking-[-0.02em]">Comparația funnel-urilor</h2>
-      <nav aria-label="Perioadă" className="mt-3 flex gap-2 text-[14px]">
-        {[7, 30, 90].map((d) => (
-          <Link key={d} href={q({ zile: String(d) })} aria-current={d === days ? 'page' : undefined} className={`rounded-full px-3.5 py-1.5 ${d === days ? 'bg-ink text-white' : 'bg-paper text-ink'}`}>
-            {d} zile
-          </Link>
-        ))}
-      </nav>
-      <div className="mt-4 overflow-x-auto rounded-[16px] bg-paper">
-        <table className="w-full min-w-[860px] text-left text-[14px] tabular-nums">
-          <thead className="text-[12.5px] text-muted uppercase">
-            <tr>
-              {['Funnel', 'Afișări pagini', 'Leaduri', 'Prețuri deblocate', 'Checkout început', 'Abandonate', 'Recuperări trimise', 'Comenzi', 'Plătite', 'Venit încasat', 'Comenzi / afișări', 'Comenzi / leaduri'].map((h) => (
-                <th key={h} className="px-4 py-3 font-semibold">
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {stats.map((s) => (
-              <tr key={s.funnel} className="border-t border-line">
-                <td className="px-4 py-3 font-medium text-ink">{FUNNEL[s.funnel as Funnel]}</td>
-                <td className="px-4 py-3">{s.visits}</td>
-                <td className="px-4 py-3">{s.leads}</td>
-                <td className="px-4 py-3">{s.funnel === 'gated_price' ? s.reveals : '–'}</td>
-                <td className="px-4 py-3">{s.checkouts}</td>
-                <td className="px-4 py-3">{s.abandoned}</td>
-                <td className="px-4 py-3">{s.recovered_sent}</td>
-                <td className="px-4 py-3">{s.orders}</td>
-                <td className="px-4 py-3">{s.purchases}</td>
-                <td className="px-4 py-3">{formatLei(s.revenue)}</td>
-                <td className="px-4 py-3">{pct(s.orders, s.visits)}</td>
-                <td className="px-4 py-3">{pct(s.orders, s.leads)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <p className="mt-2 max-w-[60em] text-[13px] text-muted">
-        Afișări = încărcări de pagină numărate anonim (fără cookie), nu vizitatori unici. Comenzile cu card se numără doar plătite; rambursul și transferul la plasare. Traficul nu se împarte
-        automat: comparația e corectă doar dacă cele două funnel-uri primesc trafic similar (de ex. două seturi de reclame Meta cu același buget și public).
+      <p className="mt-4 text-[14px]">
+        Comparația celor două funnel-uri (sesiuni, leaduri, comenzi, venit, recuperare) este în{' '}
+        <Link href="/admin/stats" className="font-medium text-ink underline underline-offset-4">
+          Stats
+        </Link>
+        .
       </p>
 
       <h2 className="mt-10 text-[22px] tracking-[-0.02em]">Lista</h2>

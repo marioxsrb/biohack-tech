@@ -417,34 +417,12 @@ export function interestOf(lead: Pick<Lead, 'productId' | 'cart'>): string[] {
   return [...new Set(ids)].map((id) => getProduct(id)?.name).filter((n): n is string => !!n)
 }
 
-/** Funnel comparison for /admin, from the database (no visitor tracking). */
-export async function funnelStats(q: Queryable, since: Date) {
-  const { rows } = await q.query<{ funnel: string; visits: number; leads: number; reveals: number; checkouts: number; abandoned: number; recovered_sent: number }>(
-    `with v as (select funnel, sum(visits)::int as visits from funnel_visits where day >= $1::date group by funnel),
-          l as (select funnel, count(*)::int as leads, count(price_revealed_at)::int as reveals, count(checkout_started_at)::int as checkouts,
-                       count(abandonment)::int as abandoned, sum(recovery_sent)::int as recovered_sent
-                from leads where created_at >= $1 group by funnel)
-     select f.funnel, coalesce(v.visits,0) as visits, coalesce(l.leads,0) as leads, coalesce(l.reveals,0) as reveals, coalesce(l.checkouts,0) as checkouts,
-            coalesce(l.abandoned,0) as abandoned, coalesce(l.recovered_sent,0) as recovered_sent
-     from (values ('visible_price'), ('gated_price')) f(funnel) left join v on v.funnel = f.funnel left join l on l.funnel = f.funnel`,
-    [since],
-  )
-  const { rows: ord } = await q.query<{ funnel: string; orders: number; purchases: number; revenue: number }>(
-    `select coalesce(attribution->>'funnel', 'visible_price') as funnel, count(*)::int as orders,
-            count(*) filter (where payment_status in ('paid','partially_refunded'))::int as purchases,
-            coalesce(sum(total_minor - refunded_minor) filter (where payment_status in ('paid','partially_refunded')), 0)::int as revenue
-     from orders where created_at >= $1 and kind = 'checkout' and (payment_method <> 'card' or payment_status in ('paid','partially_refunded','refunded'))
-     group by 1`,
-    [since],
-  )
-  return rows.map((r) => ({ ...r, ...(ord.find((o) => o.funnel === r.funnel) ?? { orders: 0, purchases: 0, revenue: 0 }) }))
-}
-
-export async function countVisit(q: Queryable, funnel: Funnel, page: string) {
+/** One page load (and, for the first page of a browser session, one session) in the anonymous daily counts. */
+export async function countVisit(q: Queryable, funnel: Funnel, page: string, v: { session?: boolean; source?: string; campaign?: string } = {}) {
   await q.query(
-    `insert into funnel_visits (day, funnel, page, visits) values ((now() at time zone 'Europe/Bucharest')::date, $1, $2, 1)
-     on conflict (day, funnel, page) do update set visits = funnel_visits.visits + 1`,
-    [funnel, page],
+    `insert into visit_stats (day, funnel, page, source, campaign, views, sessions) values ((now() at time zone 'Europe/Bucharest')::date, $1, $2, $3, $4, 1, $5)
+     on conflict (day, funnel, page, source, campaign) do update set views = visit_stats.views + 1, sessions = visit_stats.sessions + excluded.sessions`,
+    [funnel, page, v.source ?? '', v.campaign ?? '', v.session ? 1 : 0],
   )
 }
 

@@ -351,4 +351,24 @@ alter table leads add column if not exists last_call_at timestamptz;
 alter table leads add column if not exists call_disabled boolean not null default false
 `,
   },
+  {
+    // Admin stats: anonymous daily counts per funnel, page and campaign. `views` = page loads, `sessions` = the
+    // first page of a browser session (the browser remembers it locally; nothing identifies the visitor).
+    // Replaces funnel_visits (kept for its history). Row level security on, no policy: server only.
+    id: '009_visit_stats',
+    sql: `
+create table if not exists visit_stats (
+  day date not null,
+  funnel text not null,
+  page text not null,
+  source text not null default '',
+  campaign text not null default '',
+  views integer not null default 0,
+  sessions integer not null default 0,
+  primary key (day, funnel, page, source, campaign)
+);
+alter table visit_stats enable row level security;
+create index if not exists leads_order_created_idx on leads (created_at, funnel)
+`,
+  },
 ]

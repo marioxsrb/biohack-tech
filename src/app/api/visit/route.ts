@@ -7,17 +7,29 @@ import { clientIp, rateLimit } from '@/server/rate-limit'
 export const runtime = 'nodejs'
 
 const PAGES = new Set(['home', 'calm', 'focus', 'amber', 'products', 'checkout'])
+/** utm_source / utm_campaign as short slugs; anything else counts as no campaign. */
+const slug = (v: unknown) => (typeof v === 'string' && /^[\w.-]{1,40}$/.test(v) ? v.toLowerCase() : '')
 
 /**
- * Anonymous page counts per funnel and day, for comparing the two funnels in /admin. No cookie, no id, no IP
- * stored: one counter goes up. Not a visitor count (a person loading two pages counts twice).
+ * Anonymous page counts per funnel, day, page and campaign, for the admin stats. No cookie, no id, no IP
+ * stored: counters go up. `session` is true on the first page of a browser session (the browser remembers
+ * that locally), so sessions are deduplicated without identifying anyone. Accepts the old plain-text body.
  */
 export async function POST(req: NextRequest) {
   if (!rateLimit(`visit:${clientIp(req.headers)}`, 60, 10 * 60_000)) return new NextResponse(null, { status: 204 })
-  const page = (await req.text().catch(() => '')).slice(0, 20)
+  const raw = (await req.text().catch(() => '')).slice(0, 400)
+  let body: { page?: unknown; session?: unknown; source?: unknown; campaign?: unknown } = { page: raw }
+  if (raw.startsWith('{')) {
+    try {
+      body = JSON.parse(raw)
+    } catch {
+      return new NextResponse(null, { status: 204 })
+    }
+  }
+  const page = typeof body.page === 'string' ? body.page : ''
   if (!PAGES.has(page)) return new NextResponse(null, { status: 204 })
   try {
-    await countVisit(await getDb(), funnelForHost(req.headers.get('host')), page)
+    await countVisit(await getDb(), funnelForHost(req.headers.get('host')), page, { session: body.session === true, source: slug(body.source), campaign: slug(body.campaign) })
   } catch {}
   return new NextResponse(null, { status: 204 })
 }

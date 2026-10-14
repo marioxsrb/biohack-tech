@@ -31,7 +31,8 @@ vi.mock('nodemailer', () => ({
 }))
 
 const { freshDb, person, TEST_ENV } = await import('./helpers')
-const { leads, captureLead, recoveryDecision, purgeStaleLeads, funnelStats, CART_INTEREST } = await import('@/server/leads')
+const { leads, captureLead, recoveryDecision, purgeStaleLeads, CART_INTEREST } = await import('@/server/leads')
+const { funnelStats } = await import('@/server/stats')
 const { marketing } = await import('@/server/marketing/consent')
 const { orders } = await import('@/server/orders/repository')
 const svc = await import('@/server/orders/service')
@@ -542,13 +543,20 @@ describe('retention, measurement, helpers', () => {
     expect(await leads.byId(db, a.data.leadId)).toBeNull()
   })
 
-  it('anonymous page counts per funnel and the comparison table', async () => {
-    for (const [host, page] of [[GATED, 'calm'], [GATED, 'calm'], [MAIN, 'home'], [MAIN, 'evil']] as const)
-      await visit(new NextRequest(`https://${host}/api/visit`, { method: 'POST', headers: { host, 'x-forwarded-for': `10.8.0.${++ip}` }, body: page }))
+  it('anonymous visits: page loads and sessions per funnel, campaign kept; stats compare both funnels', async () => {
+    const send = (host: string, body: unknown) => visit(new NextRequest(`https://${host}/api/visit`, { method: 'POST', headers: { host, 'x-forwarded-for': `10.8.0.${++ip}` }, body: typeof body === 'string' ? body : JSON.stringify(body) }))
+    await send(GATED, { page: 'calm', session: true, source: 'facebook', campaign: 'toamna' })
+    await send(GATED, { page: 'home', session: false, source: 'facebook', campaign: 'toamna' })
+    await send(MAIN, { page: 'home', session: true })
+    await send(MAIN, 'calm') // the old plain-text beacon still counts a page load
+    await send(MAIN, { page: 'evil', session: true }) // unknown pages are ignored
     await reveal()
-    const stats = await funnelStats(db, new Date(Date.now() - 86_400_000))
-    expect(stats.find((s) => s.funnel === 'gated_price')).toMatchObject({ visits: 2, leads: 1, reveals: 1 })
-    expect(stats.find((s) => s.funnel === 'visible_price')).toMatchObject({ visits: 1, leads: 0 })
+    const range = { from: new Date(Date.now() - 86_400_000), to: new Date(Date.now() + 86_400_000) }
+    const stats = await funnelStats(db, range)
+    expect(stats.find((s) => s.funnel === 'gated_price')).toMatchObject({ sessions: 1, views: 2, productViews: 1, leads: 1, reveals: 1 })
+    expect(stats.find((s) => s.funnel === 'visible_price')).toMatchObject({ sessions: 1, views: 2, productViews: 1, leads: 0 })
+    expect((await funnelStats(db, { ...range, source: 'facebook' })).find((s) => s.funnel === 'gated_price')).toMatchObject({ sessions: 1, views: 2, leads: 1 })
+    expect((await funnelStats(db, { ...range, product: 'brainlink-pro' })).find((s) => s.funnel === 'gated_price')).toMatchObject({ productViews: 0, leads: 0 })
   })
 
   it('captureLead keeps the stage moving forward only', async () => {

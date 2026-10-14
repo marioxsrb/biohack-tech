@@ -248,6 +248,7 @@ export const legalPages: LegalPage[] = [
                 ['bt-consent-v1', 'Stocare locală', 'Ține minte alegerea ta privind cookie-urile', `${Math.round(CONSENT_MAX_AGE_DAYS / 30)} luni`],
                 ['bt_vid', 'Cookie (doar după un formular)', 'Un cod aleator care leagă formularul de preț sau pasul de contact de comanda plasată din același browser, ca să nu apară de două ori', '90 de zile'],
                 ['bt_gate', 'Cookie, pe acces.biohack-tech.ro', 'Ține minte că ai completat formularul de preț, ca să nu ți-l cerem din nou', '90 de zile'],
+                ['bt-visit', 'Stocare de sesiune', 'Numără vizita o singură dată pe sesiune, pentru statisticile noastre agregate; nu trimite niciun identificator', 'Până închizi fila'],
                 ['bt-interest-*', 'Stocare de sesiune', 'Ține minte produsele deja văzute în sesiunea curentă pe acces.biohack-tech.ro', 'Până închizi fila'],
                 ['__stripe_mid, __stripe_sid', 'Cookie Stripe, doar pe pagina de plată', 'Securitatea plății și prevenirea fraudei', '1 an, respectiv 30 de minute'],
               ],
