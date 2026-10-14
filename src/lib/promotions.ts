@@ -18,9 +18,10 @@ export type PricedLine = { key: string; productId: string; quantity: number; uni
 export type AppliedPromotion = { id: string; label: string; amountMinor: number }
 
 /**
- * A promo code as the pricing needs it (validity, dates and usage are checked by the server before). It
- * applies after the automatic promotions, on what is left to pay for its eligible lines.
- *   percent: `value` percent (1–90) of that amount; fixed: `value` bani, at most that amount.
+ * A promo code as the pricing needs it (validity, dates and usage are checked by the server before). It adds to
+ * the automatic promotions (business decision 14.10.2026): a percent code takes `value` percent of the eligible
+ * lines' full price, so 2 of a product (10%) + a 10% code = 20%, 3+ (20%) + 10% = 30%, as the launch emails say.
+ *   percent: `value` percent (1–90) of the eligible full price; fixed: `value` bani. Never more than what is left.
  *   products: the eligible products (null: all). minOrderMinor: the cart after automatic promotions must reach it.
  */
 export type PromoCodeRule = { code: string; kind: 'percent' | 'fixed'; value: number; products: string[] | null; minOrderMinor: number }
@@ -137,7 +138,7 @@ export function priceLines(lines: PricedLine[], promotions: Promotion[] = PROMOT
   const lineCodeDiscounts: Record<string, number> = {}
   let code: Pricing['code']
   if (promo) {
-    // After the automatic promotions: what is left of each eligible line.
+    // What is left of each eligible line after the automatic promotions (the cap, and the minimum order).
     const left = (l: PricedLine) => l.unitAmount * l.quantity - (lineDiscounts[l.key] ?? 0)
     const afterAuto = lines.reduce((s, l) => s + left(l), 0)
     const own = lines.filter((l) => !promo.products || promo.products.includes(l.productId))
@@ -146,11 +147,29 @@ export function priceLines(lines: PricedLine[], promotions: Promotion[] = PROMOT
     if (!own.length || !eligible) code = { code: promo.code, amountMinor: 0, problem: 'no_products' }
     else if (afterAuto < promo.minOrderMinor) code = { code: promo.code, amountMinor: 0, problem: 'min_order' }
     else {
-      const amount = Math.min(eligible, promo.kind === 'percent' ? percentOf(eligible, Math.min(90, Math.max(0, promo.value))) : Math.max(0, promo.value))
+      // Percent: of the full price (the discounts add up); split by full price, each line capped at what is left.
+      const full = own.map((l) => l.unitAmount * l.quantity)
+      const fullSum = full.reduce((s, b) => s + b, 0)
+      const amount = Math.min(eligible, promo.kind === 'percent' ? percentOf(fullSum, Math.min(90, Math.max(0, promo.value))) : Math.max(0, promo.value))
       code = { code: promo.code, amountMinor: amount }
       if (amount) {
         applied.push({ id: codeId(promo.code), label: `Cod ${promo.code}`, amountMinor: amount })
-        allocate(amount, base).forEach((part, i) => {
+        const parts = allocate(amount, promo.kind === 'percent' ? full : base)
+        // Safeguard: a line never goes below zero; any excess moves to lines that still have room.
+        let excess = 0
+        parts.forEach((part, i) => {
+          if (part > base[i]) {
+            excess += part - base[i]
+            parts[i] = base[i]
+          }
+        })
+        for (let i = 0; excess && i < parts.length; i++) {
+          const room = base[i] - parts[i]
+          const take = Math.min(room, excess)
+          parts[i] += take
+          excess -= take
+        }
+        parts.forEach((part, i) => {
           if (!part) return
           lineDiscounts[own[i].key] = (lineDiscounts[own[i].key] ?? 0) + part
           lineCodeDiscounts[own[i].key] = part

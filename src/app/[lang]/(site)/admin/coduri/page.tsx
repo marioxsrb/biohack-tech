@@ -23,7 +23,7 @@ export default async function PromoCodesPage() {
     <>
       <h1 className="mt-2 text-[34px] tracking-[-0.03em]">Coduri promoționale</h1>
       <p className="mt-2 max-w-[60em] text-[14.5px] text-muted">
-        Clientul scrie codul în checkout. Reducerea se aplică după promoțiile automate (Calm/Focus la 2 și 3+, Amber 2+1), la orice metodă de plată, și apare separat pe factură. O
+        Clientul scrie codul în checkout. Reducerea se adună cu promoțiile automate: un cod de 10% înseamnă 10% din prețul întreg, deci 2 bucăți = 20%, 3+ = 30% (Amber: 2+1 plus 10%). Merge la orice metodă de plată și apare separat pe factură. O
         utilizare contează cât timp comanda e valabilă: o comandă anulată sau o plată cu cardul neterminată eliberează codul.
       </p>
 

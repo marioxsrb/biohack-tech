@@ -59,7 +59,8 @@ unsubscribe, no consent, one sequence per person). Its link restores the cart; a
 - Created and switched off in Admin → Coduri promoționale. Percent (1–90) or fixed amount; optional products,
   minimum order (after automatic promotions), start/end date (Bucharest time), maximum uses, once per email.
 - Applied by the application, not Stripe: works for card, transfer and cash on delivery; Stripe charges the order
-  total. The code applies **after** the automatic promotions, on what is left (business decision 14.10.2026).
+  total. The discounts **add up** (business decision 14.10.2026): a 10% code is 10% of the full price, so 2 of a
+  product = 20%, 3+ = 30% (Amber: 2+1 plus 10%), never more than what is left to pay.
 - Checked when typed (`/api/promo`) and again when the order is placed, with the code row locked (the last use of a
   limited code goes to one order). A use counts while its order stands: a cancelled order or an unpaid card
   attempt frees it.

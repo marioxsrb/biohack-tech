@@ -65,16 +65,25 @@ const code = (c: Partial<Parameters<typeof promoCodes.create>[1]> & { code: stri
 describe('pricing (pure)', () => {
   const lines = (l: [string, number, number][]) => l.map(([productId, quantity, unitAmount], i) => ({ key: String(i), productId, quantity, unitAmount }))
 
-  it('stacks after the automatic promotion: 3 × Calm −20%, then −10% of what is left', () => {
+  it('adds to the automatic promotion: 3 × Calm 20% + code 10% = 30% of the full price', () => {
     const p = priceLines(lines([['balance-wave', 3, 638000]]), undefined, { code: 'X10', kind: 'percent', value: 10, products: null, minOrderMinor: 0 })
-    // 1 914 000 − 20% = 1 531 200; −10% = 153 120 → 1 378 080.
     expect(p.promotions.map((x) => [x.id, x.amountMinor])).toEqual([
       ['trei-produse-20:balance-wave', 382800],
-      ['cod:X10', 153120],
+      ['cod:X10', 191400],
     ])
-    expect(p.totalMinor).toBe(1378080)
-    expect(p.lineCodeDiscounts['0']).toBe(153120)
-    expect(p.lineDiscounts['0']).toBe(382800 + 153120)
+    expect(p.totalMinor).toBe(1914000 - 574200)
+    expect(p.lineCodeDiscounts['0']).toBe(191400)
+  })
+
+  it('the launch emails: 1 piece 10%, 2 of the same 20%, 3+ 30%', () => {
+    const rule = { code: 'NEUROS10', kind: 'percent' as const, value: 10, products: null, minOrderMinor: 0 }
+    for (const [q, pct] of [[1, 10], [2, 20], [3, 30], [4, 30]] as const) {
+      const p = priceLines(lines([['brainlink-pro', q, 79000]]), undefined, rule)
+      expect(p.discountMinor, `${q} × Focus`).toBe((79000 * q * pct) / 100)
+    }
+    // Amber: 3 pairs for the price of 2, plus 10% of the full price.
+    const amber = priceLines(lines([['ochelari-biohack', 3, 31500]]), undefined, rule)
+    expect(amber.discountMinor).toBe(31500 + 9450)
   })
 
   it('fixed amount: never more than what is left; split over eligible lines only', () => {
