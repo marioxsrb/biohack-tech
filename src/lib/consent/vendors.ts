@@ -69,7 +69,7 @@ export function vendorsToLoad(choice: ConsentChoice | null, path: string, list: 
 type W = Window & {
   dataLayer?: unknown[]
   gtag?: (...a: unknown[]) => void
-  fbq?: ((...a: unknown[]) => void) & { queue?: unknown[]; loaded?: boolean; version?: string; callMethod?: (...a: unknown[]) => void; push?: unknown; disablePushState?: boolean }
+  fbq?: ((...a: unknown[]) => void) & { queue?: unknown[]; loaded?: boolean; version?: string; callMethod?: (...a: unknown[]) => void; push?: unknown; disablePushState?: boolean; allowDuplicatePageViews?: boolean }
   _fbq?: unknown
   clarity?: ((...a: unknown[]) => void) & { q?: unknown[] }
 }
@@ -131,8 +131,11 @@ export function startVendor(v: Vendor) {
       w._fbq = f
     }
     // One PageView per page, sent by `pageView` below: Meta's own history tracking also counted URL
-    // clean-ups (the checkout replacing its `item` parameters), two PageViews for one page.
+    // clean-ups (the checkout replacing its `item` parameters), two PageViews for one page. Without its
+    // history tracking, fbevents drops every PageView after the first unless duplicates are allowed;
+    // `pageView` sends at most one per pathname.
     w.fbq.disablePushState = true
+    w.fbq.allowDuplicatePageViews = true
     metaPage = location.pathname
     // No automatic event or form-field collection: only the events the site sends, without personal data.
     w.fbq('set', 'autoConfig', false, v.key)

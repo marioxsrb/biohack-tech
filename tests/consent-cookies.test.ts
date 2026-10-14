@@ -136,7 +136,8 @@ describe('script blocking', () => {
     pageView()
     expect(win.fbq).toBeUndefined()
     startVendor(vendors[2])
-    expect((win.fbq as { disablePushState?: boolean }).disablePushState).toBe(true)
+    const f = win.fbq as { disablePushState?: boolean; allowDuplicatePageViews?: boolean }
+    expect([f.disablePushState, f.allowDuplicatePageViews]).toEqual([true, true])
     pageView()
     ;(location as { pathname: string }).pathname = '/checkout'
     pageView()
