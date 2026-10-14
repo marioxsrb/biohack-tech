@@ -20,6 +20,7 @@ The gate is a conversion experiment, not a secret: prices are public on the main
 | `RECOVERY_EMAIL_ENABLED` | sends the 2 recovery emails (own SMTP) | only to leads with marketing consent; see checklist below |
 | `META_PIXEL_ENABLED` | loads Meta Pixel 826932839766824 after marketing-cookie consent | build-time: change, then redeploy |
 | `RECOVERY_FIRST_MINUTES` / `RECOVERY_SECOND_HOURS` | delays (30 / 24) | second email waits at least half its delay after the first |
+| `RECOVERY_TEST_RECIPIENTS` | activation test mode: only these addresses get recovery emails | remove (and redeploy) to send to every eligible lead; leads whose first step ran in test mode are never emailed later |
 
 ## Lead lifecycle
 
@@ -40,6 +41,7 @@ Retention: leads without an order are deleted 12 months after the last activity 
 ## Meta Pixel
 
 Events: PageView (on load), ViewContent (product/landing), AddToCart, InitiateCheckout, AddPaymentInfo, Lead (only after the server stored it; eventID = lead id), Purchase (only a confirmed payment; eventID = order number). Custom: PriceRevealClick, LeadFormStart, PriceRevealed, OrderPlaced (COD / unpaid transfer, `payment_method`), RecoveryVisit.
+**Meta Traffic permissions:** on 14.10.2026 fbevents reported "826932839766824 is unavailable on this website due to its traffic permission settings" on biohack-tech.ro and acces.biohack-tech.ro: the pixel loads (after consent) but sends nothing. Fix in Events Manager → the dataset → Settings → Traffic permissions: allow biohack-tech.ro (and its subdomains acces., calm., focus., amber.), or remove the blocklist entry. No redeploy needed.
 Not yet: server-side Conversions API (so ad blockers and missing consent lose events), Purchase for COD at delivery. Verify in Events Manager → Test events before relying on it.
 
 ## A/B comparison
