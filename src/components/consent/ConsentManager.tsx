@@ -133,7 +133,7 @@ function Banner({ used, onAccept, onReject, onCustomize }: { used: Set<OptionalC
     <section
       role="region"
       aria-labelledby={titleId}
-      className="consent-in fixed z-[300] rounded-[20px] bg-paper p-5 text-[15px] leading-relaxed text-text shadow-[0_24px_60px_-20px_rgba(8,17,19,.4),0_0_0_1px_rgba(8,17,19,.06)] md:bottom-6 md:left-6 md:w-[430px] max-md:inset-x-3 max-md:bottom-[max(12px,env(safe-area-inset-bottom))]"
+      className="consent-in fixed z-[300] print:hidden rounded-[20px] bg-paper p-5 text-[15px] leading-relaxed text-text shadow-[0_24px_60px_-20px_rgba(8,17,19,.4),0_0_0_1px_rgba(8,17,19,.06)] md:bottom-6 md:left-6 md:w-[430px] max-md:inset-x-3 max-md:bottom-[max(12px,env(safe-area-inset-bottom))]"
     >
       <h2 id={titleId} className="text-[17px] leading-snug tracking-[-0.015em]">
         {t.bannerTitle}

@@ -154,11 +154,23 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
         </div>
       )}
 
-      <div className="mt-6 overflow-x-auto rounded-[16px] bg-paper">
+      {/* Select orders, then print their documents (A4) in one go. */}
+      <form action="/admin/print" method="get" target="_blank" className="mt-6">
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-[14px]">
+        <span className="text-muted">Pentru comenzile bifate:</span>
+        <button name="doc" value="pregatire" className="btn-secondary sm">Fișe de pregătire</button>
+        <button name="doc" value="livrare" className="btn-secondary sm">Fișe de livrare</button>
+        <button name="doc" value="eticheta" className="btn-secondary sm">Etichete colet (interne)</button>
+        <button name="doc" value="detalii" className="btn-secondary sm">Detalii comenzi</button>
+      </div>
+      <div className="overflow-x-auto rounded-[16px] bg-paper">
         <table className="w-full min-w-[900px] text-left text-[14.5px]">
           <thead className="text-[13px] text-muted">
             <tr className="border-b border-mist-2">
-              {['Comanda', 'Data', 'Client', 'Total', 'Plată', 'Stare plată', 'Stare comandă', 'Factură'].map((h) => (
+              <th className="w-10 px-4 py-3 font-medium">
+                <span className="sr-only">Selectează</span>
+              </th>
+              {['Comanda', 'Data', 'Client', 'Produse', 'Total', 'Plată', 'Stare plată', 'Stare comandă', 'Factură'].map((h) => (
                 <th key={h} className="px-4 py-3 font-medium">
                   {h}
                 </th>
@@ -168,6 +180,9 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
           <tbody>
             {list.map((o) => (
               <tr key={o.id} className="border-b border-mist-2 last:border-0 hover:bg-mist/60">
+                <td className="px-4 py-3">
+                  <input type="checkbox" name="ids" value={o.id} aria-label={`Selectează ${o.orderNumber}`} className="h-4 w-4 accent-[var(--color-ink)]" />
+                </td>
                 <td className="px-4 py-3 font-medium">
                   <Link href={`/admin/orders/${o.id}`} className="underline underline-offset-4">
                     {o.orderNumber}
@@ -181,6 +196,7 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
                   {o.customer.buyerType === 'pj' ? o.customer.company : customerName(o.customer)}
                   <span className="block text-[13px] text-muted">{o.email}</span>
                 </td>
+                <td className="px-4 py-3 text-[13px]">{o.items.map((i) => `${i.quantity} × ${i.productName.replace('NEUROS ', '')}${i.variantName ? ` (${i.variantName})` : ''}`).join(', ')}</td>
                 <td className="px-4 py-3 whitespace-nowrap tabular-nums">
                   {formatLei(o.totalMinor)}
                   {o.discountMinor > 0 && <span className="block text-[12.5px] text-cyan-700">reducere {formatLei(o.discountMinor)}</span>}
@@ -199,7 +215,7 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
             ))}
             {!list.length && (
               <tr>
-                <td colSpan={8} className="px-4 py-10 text-center text-muted">
+                <td colSpan={10} className="px-4 py-10 text-center text-muted">
                   {q || queue ? 'Nicio comandă găsită.' : 'Încă nu există comenzi.'}
                 </td>
               </tr>
@@ -207,6 +223,7 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
           </tbody>
         </table>
       </div>
+      </form>
     </>
   )
 }

@@ -55,18 +55,23 @@ describe('work queues', () => {
 
     const ids = async (queue: Queue) => (await orders.list(db, { queue })).map((o) => o.id).sort()
     expect(await ids('transfer')).toEqual([transfer.id])
-    expect(await ids('pregatire')).toEqual([cod.id])
+    // Paid orders and cash-on-delivery orders are prepared from separate queues.
+    expect(await ids('pregatire')).toEqual([])
+    expect(await ids('ramburs')).toEqual([cod.id])
+    expect(await ids('noi')).toEqual([cod.id, shippedCod.id, transfer.id].sort())
     expect(await ids('expediate')).toEqual([shippedCod.id])
     expect(await ids('incasare')).toEqual([shippedCod.id])
     expect(await ids('anulate')).toEqual([cancelled.id])
     expect(await ids('nefinalizate')).toEqual([unpaidCard.id])
     // Nothing failed yet; once the jobs run with GoHighLevel down, those orders need attention.
     expect(await ids('atentie')).toEqual([])
+    expect(await ids('joburi')).toEqual([])
     await runDueJobs()
     expect((await ids('atentie')).length).toBeGreaterThan(0)
+    expect((await ids('joburi')).length).toBeGreaterThan(0)
 
     const counts = await orders.queueCounts(db)
-    expect(counts).toMatchObject({ transfer: 1, pregatire: 1, expediate: 1, incasare: 1, anulate: 1, nefinalizate: 1, livrate: 0, retururi: 0 })
+    expect(counts).toMatchObject({ transfer: 1, pregatire: 0, ramburs: 1, expediate: 1, incasare: 1, anulate: 1, nefinalizate: 1, livrate: 0, retururi: 0, rambursari: 0, facturi: 0 })
     // A search inside a queue keeps both filters.
     expect((await orders.list(db, { queue: 'transfer', search: transfer.orderNumber.toLowerCase() })).map((o) => o.id)).toEqual([transfer.id])
     expect(await orders.list(db, { queue: 'transfer', search: cod.orderNumber.toLowerCase() })).toEqual([])

@@ -618,3 +618,10 @@ html[data-gate='locked'] [data-price] {
   filter: blur(7px);
   user-select: none;
 }
+
+/* Admin print documents (/admin/print): A4, black on white, no browser chrome around the content. */
+@media print {
+  @page { size: A4; margin: 12mm; }
+  html, body { background: #fff !important; }
+  .print-root ~ *, [data-nextjs-toast] { display: none !important; }
+}

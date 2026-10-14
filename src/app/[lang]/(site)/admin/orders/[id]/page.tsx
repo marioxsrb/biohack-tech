@@ -81,9 +81,23 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
         <h1 className="text-[34px] tracking-[-0.03em]">{o.orderNumber}</h1>
         <span className={`rounded-full px-3 py-1 text-[13px] font-medium ${tone(o.paymentStatus)}`}>{PAYMENT_LABEL[o.paymentStatus]}</span>
         <span className={`rounded-full px-3 py-1 text-[13px] font-medium ${tone(o.status)}`}>{ORDER_LABEL[o.status]}</span>
-        <Link href={`/comanda/${o.publicToken}`} className="ml-auto text-[14px] underline underline-offset-4" target="_blank">
-          Pagina clientului
-        </Link>
+        <span className="ml-auto flex flex-wrap gap-2 text-[14px]">
+          {(
+            [
+              ['pregatire', 'Fișă pregătire'],
+              ['livrare', 'Fișă livrare'],
+              ['eticheta', 'Etichetă colet'],
+              ['detalii', 'Detalii'],
+            ] as const
+          ).map(([doc, label]) => (
+            <Link key={doc} href={`/admin/print?doc=${doc}&ids=${o.id}`} target="_blank" className="btn-secondary sm">
+              {label}
+            </Link>
+          ))}
+          <Link href={`/comanda/${o.publicToken}`} className="self-center underline underline-offset-4" target="_blank">
+            Pagina clientului
+          </Link>
+        </span>
       </div>
       <p className="mt-1 text-[14.5px] text-muted">
         {dt(o.createdAt)} · {PAYMENT_METHOD_LABEL[o.paymentMethod]} · {formatLei(o.totalMinor)}
@@ -360,8 +374,14 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                 ['GHL contact', o.ghlContactId ?? '–'],
                 ['GHL oportunitate', o.ghlOpportunityId ?? '–'],
                 ['Curier / AWB', o.trackingNumber ? `${o.courier} · ${o.trackingNumber}` : '–'],
+                ['Livrare', o.deliveredAt ? `livrată ${dt(o.deliveredAt)}` : o.shippedAt ? `expediată ${dt(o.shippedAt)}` : 'neexpediată'],
               ]}
             />
+            {o.trackingUrl && (
+              <a href={o.trackingUrl} target="_blank" rel="noopener noreferrer" className="mt-2 mr-4 inline-block text-[14px] underline underline-offset-4">
+                Urmărește coletul
+              </a>
+            )}
             {o.fgoInvoiceLink && (
               <a href={o.fgoInvoiceLink} target="_blank" rel="noopener noreferrer" className="mt-2 inline-block text-[14px] underline underline-offset-4">
                 Descarcă factura

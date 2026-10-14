@@ -106,13 +106,21 @@ export const QUEUES = {
       or invoice_status = 'failed' or return_status = 'requested'
       or exists (select 1 from jobs j where j.order_id = orders.id and j.status in ('failed', 'retry'))`,
   },
+  noi: { label: 'Noi (48 h)', where: `created_at >= now() - interval '48 hours' and status <> 'cancelled' and (payment_method <> 'card' or payment_status in ('paid', 'partially_refunded'))` },
   transfer: { label: 'Așteaptă transferul', where: `payment_status = 'awaiting_transfer' and status <> 'cancelled'` },
-  pregatire: { label: 'De pregătit', where: `status in ('confirmed', 'processing') and payment_status in ('paid', 'partially_refunded', 'awaiting_collection')` },
+  pregatire: { label: 'Plătite, de pregătit', where: `status in ('confirmed', 'processing') and payment_status in ('paid', 'partially_refunded')` },
+  ramburs: { label: 'Ramburs, de pregătit', where: `status in ('confirmed', 'processing') and payment_status = 'awaiting_collection'` },
   expediate: { label: 'Expediate', where: `status = 'shipped'` },
   incasare: { label: 'Ramburs de încasat', where: `payment_status = 'awaiting_collection' and status in ('shipped', 'delivered')` },
   livrate: { label: 'Livrate', where: `status = 'delivered'` },
   retururi: { label: 'Retururi', where: `return_status is not null` },
-  anulate: { label: 'Anulate și rambursate', where: `status = 'cancelled' or payment_status in ('refunded', 'partially_refunded')` },
+  rambursari: { label: 'Rambursări', where: `payment_status in ('refunded', 'partially_refunded')` },
+  anulate: { label: 'Anulate', where: `status = 'cancelled'` },
+  joburi: { label: 'Joburi eșuate', where: `exists (select 1 from jobs j where j.order_id = orders.id and j.status in ('failed', 'retry'))` },
+  facturi: {
+    label: 'Facturi de verificat',
+    where: `invoice_status = 'failed' or (fgo_invoice_number is not null and fgo_storno_number is null and (status = 'cancelled' or payment_status = 'refunded'))`,
+  },
   nefinalizate: { label: 'Card nefinalizat', where: `payment_method = 'card' and status in ('pending', 'abandoned')` },
 } as const
 export type QueueKey = keyof typeof QUEUES
