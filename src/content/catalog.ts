@@ -175,7 +175,7 @@ const catalog: Omit<Product, 'price'>[] = [
       cut(blGeanta, 'NEUROS Focus lângă geanta de transport'),
       photo(blRelaxare, 'Femeie relaxată, cu ochii închiși, purtând NEUROS Focus'),
     ],
-    guidance: true,
+    guidance: false,
   },
   {
     id: 'ochelari-biohack',

@@ -48,7 +48,6 @@ export function FocusLanding({ landing }: { landing: Landing }) {
           ['Baterie', 'Până la 4 ore, după o oră de încărcare'],
           ['Certificări', 'CE, FCC'],
           ['Model hardware', 'BrainLink Pro'],
-          ['Ghidaj', 'Un specialist îți recomandă jocurile și programul'],
         ]}
       />
       <Testimonials productId={p.id} />

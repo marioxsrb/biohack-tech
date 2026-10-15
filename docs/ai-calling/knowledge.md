@@ -53,7 +53,7 @@ Ce oferă:
 - 3 senzori EEG, conectare Bluetooth la tabletă
 - Peste 10 jocuri și meditații ghidate
 - Până la 4 ore pe o încărcare
-- Un specialist îți recomandă programul
+- Neuros Game salvează fiecare sesiune, ca să îți vezi progresul
 - Antrenezi concentrarea: Prin jocuri scurte, pe tabletă.
 - Și calmul: Meditații ghidate, cu feedback în timp real.
 - Îți vezi progresul: Fiecare sesiune rămâne salvată.
@@ -74,14 +74,13 @@ Specificații:
 - Certificări: CE, FCC
 - Model hardware: BrainLink Pro
 - Garanție: 2 ani
-Include o discuție de inițiere cu un specialist, care recomandă programul de folosire.
 Întrebări frecvente:
 Î: Am nevoie de tabletă?
 R: Da. Aplicația Neuros Game rulează pe tabletă, iar casca se conectează prin Bluetooth.
 Î: Ce citește casca?
 R: Stări precum concentrarea și relaxarea. Gândurile rămân ale tale.
-Î: Mă ajută cineva să încep?
-R: Da. Un specialist îți recomandă jocurile și programul potrivite pentru ce vrei să obții.
+Î: Cum încep?
+R: Încarci casca, instalezi aplicația Neuros Game pe tabletă și o conectezi prin Bluetooth. Pentru întrebări, ne scrii sau ne suni.
 
 ## NEUROS Amber (Ochelari cu filtru pentru lumina albastră)
 Pentru ce este: Pentru ecrane. Filtrează lumina albastră a ecranelor. Ochii tăi primesc o lumină mai blândă. Alegi din patru rame.

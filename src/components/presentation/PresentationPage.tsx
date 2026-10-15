@@ -39,7 +39,7 @@ export function PresentationPage({ landing }: { landing: Landing }) {
           <FocusHow />
           <Studies p={p} />
           <FocusWhere />
-          <Facts image={p.cutout} rows={rows(p, [['Ghidaj', 'Un specialist îți recomandă jocurile și programul']])} />
+          <Facts image={p.cutout} rows={rows(p, [])} />
           <Questions landing={landing} />
           <Contact text="Spune-ne pentru ce o folosești: muncă, studiu sau relaxare. Îți explicăm cum începi." />
         </PresentationShell>

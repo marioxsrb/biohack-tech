@@ -127,7 +127,7 @@ export const productContent: Record<ProductId, ProductContent> = {
       '3 senzori EEG, conectare Bluetooth la tabletă',
       'Peste 10 jocuri și meditații ghidate',
       'Până la 4 ore pe o încărcare',
-      'Un specialist îți recomandă programul',
+      'Neuros Game salvează fiecare sesiune, ca să îți vezi progresul',
     ],
     benefits: [
       { title: 'Antrenezi concentrarea', text: 'Prin jocuri scurte, pe tabletă.' },
@@ -180,7 +180,7 @@ export const productContent: Record<ProductId, ProductContent> = {
     faqs: [
       { q: 'Am nevoie de tabletă?', a: 'Da. Aplicația Neuros Game rulează pe tabletă, iar casca se conectează prin Bluetooth.' },
       { q: 'Ce citește casca?', a: 'Stări precum concentrarea și relaxarea. Gândurile rămân ale tale.' },
-      { q: 'Mă ajută cineva să încep?', a: 'Da. Un specialist îți recomandă jocurile și programul potrivite pentru ce vrei să obții.' },
+      { q: 'Cum încep?', a: 'Încarci casca, instalezi aplicația Neuros Game pe tabletă și o conectezi prin Bluetooth. Pentru întrebări, ne scrii sau ne suni.' },
     ],
   },
 
@@ -308,7 +308,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       '3 EEG sensors, Bluetooth to a tablet',
       'Over 10 games and guided meditations',
       'Up to 4 hours on one charge',
-      'A specialist recommends your programme',
+      'Neuros Game saves every session, so you see your progress',
     ],
     benefits: [
       { title: 'Train your focus', text: 'With short games on a tablet.' },
@@ -361,7 +361,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
     faqs: [
       { q: 'Do I need a tablet?', a: 'Yes. The Neuros Game app runs on a tablet, and the headband connects to it by Bluetooth.' },
       { q: 'What does the headband read?', a: 'States such as focus and relaxation. Your thoughts stay yours.' },
-      { q: 'Will someone help me get started?', a: 'Yes. A specialist suggests the games and the routine that fit what you want to achieve.' },
+      { q: 'How do I start?', a: 'Charge the headband, install the Neuros Game app on your tablet and connect it by Bluetooth. If you have questions, write or call us.' },
     ],
   },
 
