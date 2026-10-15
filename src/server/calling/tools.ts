@@ -35,7 +35,7 @@ const SAMPLE = {
   product_names: 'NEUROS Calm',
   product_quantities: '1 × NEUROS Calm',
   cart_total: '6.380 lei',
-  discount: { eligible: true, percent: RECOVERY_PERCENT, code: 'BTTEST01', expires: 'mâine, ora 12:00', combinable_with_promotions: false },
+  discount: { eligible: true, percent: RECOVERY_PERCENT, code: 'BTTEST01', expires: 'mâine, ora 12:00', combinable_with_promotions: true },
   recovery_email: { sent: true, status: 'sent' },
 }
 
@@ -58,8 +58,8 @@ async function discountState(q: Queryable, call: Call, email: string) {
     percent: checked.code.value,
     code: checked.code.code,
     expires: checked.code.endsAt ? formatExpiry(checked.code.endsAt) : '',
-    combinable_with_promotions: false,
-    rule: 'Se aplică oferta mai avantajoasă: fie promoția din coș, fie codul de 10% din prețul întreg, nu amândouă.',
+    combinable_with_promotions: true,
+    rule: 'Se adaugă la promoțiile din coș: încă 10% din prețul întreg (de exemplu 20% la 3 bucăți + 10% = 30%).',
   }
 }
 

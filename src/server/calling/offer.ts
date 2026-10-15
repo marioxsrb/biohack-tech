@@ -1,7 +1,7 @@
 /**
  * The AI call recovery offer: one personal code per called lead (10% for 24 hours, one use, only for the
- * lead's own address, never after that address bought, never combined with the automatic promotions; the
- * pricing keeps whichever saves more) and the email that carries it.
+ * lead's own address, never after that address bought; like every promo code it adds to the automatic
+ * promotions: 10% of the full price on top, business decision 14.10.2026) and the email that carries it.
  *
  * The code is made by the server just before the call, never by the agent. The email goes out at the same
  * moment, only with the address's email marketing consent; the agent is told whether it was accepted for
@@ -74,7 +74,7 @@ export async function recoveryCode(q: Queryable, lead: Pick<Lead, 'id' | 'email'
     const code = newRecoveryCode()
     const { rows } = await q.query<{ code: string }>(
       `insert into promo_codes (code, kind, value, products, min_order_minor, starts_at, ends_at, max_uses, once_per_email, note, exclusive, lead_id, restricted_email, created_at)
-       values ($1, 'percent', $2, null, 0, $3, $4, 1, true, 'Apel AI: recuperare', true, $5, $6, $3) on conflict do nothing returning code`,
+       values ($1, 'percent', $2, null, 0, $3, $4, 1, true, 'Apel AI: recuperare', false, $5, $6, $3) on conflict do nothing returning code`,
       [code, RECOVERY_PERCENT, now, new Date(now.getTime() + RECOVERY_HOURS * 3_600_000), lead.id, lead.email.trim().toLowerCase()],
     )
     if (rows[0]) return (await promoCodes.get(q, rows[0].code))!
@@ -107,7 +107,7 @@ export function renderRecoveryOffer(x: { firstName: string | null; items: { name
     `Codul tău: ${x.code}`,
     `Îți dă ${RECOVERY_PERCENT}% reducere din prețul întreg, o singură dată, până pe ${until}.`,
     'Deschide linkul de mai jos, mergi la comandă și scrie codul la „Cod promoțional”.',
-    'Codul nu se cumulează cu promoțiile din coș (de exemplu reducerea la 2 bucăți sau Amber 2+1): se aplică automat oferta mai avantajoasă pentru tine.',
+    'Codul se adaugă la promoțiile din coș: încă 10% din prețul întreg. De exemplu, la 3 bucăți din același produs ai 20% + 10% = 30%.',
   ]
   const footer = `Primești acest email pentru că ai acceptat emailuri de la Biohack Tech. Te poți dezabona oricând: ${x.unsubscribeUrl}`
   const company = companyLine()

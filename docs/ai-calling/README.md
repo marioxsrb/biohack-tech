@@ -43,8 +43,8 @@ only they get the 2-minute delay (`AI_CALLING_TEST_DELAY_MINUTES`, max 10). Test
 ## The recovery offer (made by the server, never by the agent)
 
 Just before dialing (`src/server/calling/offer.ts`): one personal code per lead (`BTxxxxxx`, 10%, valid 24 hours,
-one use, only for the lead's email, dead once that address buys anything, not combined with the automatic
-promotions: the pricing keeps whichever saves more and refuses a code that saves no more). The code email goes out
+one use, only for the lead's email, dead once that address buys anything; like every promo code it adds to the
+automatic promotions: 10% of the full price on top, so 3 × Calm is 20% + 10% = 30%). The code email goes out
 at the same moment, only with email marketing consent in force (and `RECOVERY_TEST_RECIPIENTS`, if set); it counts
 as the lead's first recovery email, so the regular sequence never sends one on top of it (its first step waits
 while a call is due). The agent gets `recovery_email_sent` = da/nu and says "găsiți codul pe email" only for da.

@@ -1,7 +1,7 @@
 /**
  * AI call recovery: the two scenarios (a cart on the main site after 20 minutes, the price form on acces after
  * 30), test mode (2 minutes, listed numbers only), the personal 10% code (one use, own address, 24 hours, never
- * after a purchase, never on top of the automatic promotions), its email before the call (only with consent,
+ * after a purchase, added to the automatic promotions like every code), its email before the call (only with consent,
  * never twice), and the agent's server tools. ElevenLabs, GoHighLevel and SMTP are mocked; PGlite.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -138,7 +138,7 @@ describe('scenario A: a cart on the main site', () => {
     expect(sent.map((m) => m.subject)).toEqual(['Codul tău de 10% pentru NEUROS Calm'])
     expect(sent[0].text).toContain(String(vars.recovery_code))
     expect(sent[0].text).toContain('2 × NEUROS Calm')
-    expect(sent[0].text).toMatch(/nu se cumulează/)
+    expect(sent[0].text).toMatch(/20% \+ 10% = 30%/)
     expect(sent[0].text).toMatch(/dezabonare/)
     const [call] = await calls.forLeads(db, [leadId])
     expect(call).toMatchObject({ scenario: 'cart', funnel: 'visible_price', productInterest: '2 × NEUROS Calm', emailStatus: 'sent', discountCode: vars.recovery_code })
@@ -241,7 +241,7 @@ describe('the personal recovery code', () => {
 
   it('10% of the full price, once, for 24 hours, only for its own address', async () => {
     const code = await codeFor()
-    expect(code).toMatchObject({ kind: 'percent', value: 10, maxUses: 1, exclusive: true, restrictedEmail: ana.email })
+    expect(code).toMatchObject({ kind: 'percent', value: 10, maxUses: 1, exclusive: false, restrictedEmail: ana.email })
     expect(code.endsAt!.getTime() - code.createdAt.getTime()).toBe(24 * 3_600_000)
     expect((await recoveryCode(db, (await leads.byId(db, code.leadId!))!)).code).toBe(code.code) // one per lead
     expect(await promoCodes.check(db, code.code, { email: 'altcineva@exemplu.ro' })).toEqual({ ok: false, problem: 'other_email' })
@@ -260,24 +260,17 @@ describe('the personal recovery code', () => {
     expect(await promoCodes.check(db, b.code, { email: 'ion@exemplu.ro' })).toEqual({ ok: false, problem: 'inactive' })
   })
 
-  it('never on top of the automatic promotions: the better of the two, and a code that saves no more is refused', async () => {
+  it('adds to the automatic promotions like every promo code: 10% of the full price on top (20% + 10% = 30%)', async () => {
     const code = await codeFor()
     const rule = ruleOf(code)
     const price = (raw: { productId: string; quantity: number; unitAmount: number }[]) => priceLines(raw.map((l, i) => ({ key: String(i), ...l })), undefined, rule)
-    expect(price([{ productId: 'balance-wave', quantity: 1, unitAmount: 638000 }])).toMatchObject({ discountMinor: 63800, code: { amountMinor: 63800 } })
-    // Two of a product: 10% either way, the promotion stays; three: 20% beats the code; Amber 2+1 beats it too.
-    expect(price([{ productId: 'balance-wave', quantity: 2, unitAmount: 638000 }])).toMatchObject({ discountMinor: 127600, code: { amountMinor: 0, problem: 'not_better' } })
-    expect(price([{ productId: 'balance-wave', quantity: 3, unitAmount: 638000 }])).toMatchObject({ discountMinor: 382800, code: { problem: 'not_better' } })
-    expect(price([{ productId: 'ochelari-biohack', quantity: 3, unitAmount: 31500 }])).toMatchObject({ discountMinor: 31500, code: { problem: 'not_better' } })
-    // Calm alone (no promotion yet) and an Amber pair (2+1 needs three): the code wins, alone.
-    const mixed = price([
-      { productId: 'balance-wave', quantity: 1, unitAmount: 638000 },
-      { productId: 'ochelari-biohack', quantity: 2, unitAmount: 31500 },
-    ])
-    expect(mixed).toMatchObject({ discountMinor: 70100, promotions: [{ id: `cod:${code.code}` }] })
-    await expect(order(code.code, [{ productId: 'balance-wave', quantity: 2 }])).rejects.toMatchObject({ problem: 'not_better' })
-    // The campaign codes keep adding up as before (business decision 14.10).
-    expect(priceLines([{ key: '0', productId: 'balance-wave', quantity: 2, unitAmount: 638000 }], undefined, { ...rule, exclusive: false }).discountMinor).toBe(255200)
+    expect(price([{ productId: 'balance-wave', quantity: 1, unitAmount: 638000 }])).toMatchObject({ discountMinor: 63800, totalMinor: 574200 })
+    expect(price([{ productId: 'balance-wave', quantity: 2, unitAmount: 638000 }])).toMatchObject({ discountMinor: 255200, totalMinor: 1020800 }) // 10% + 10%
+    expect(price([{ productId: 'balance-wave', quantity: 3, unitAmount: 638000 }])).toMatchObject({ discountMinor: 574200, totalMinor: 1339800 }) // 20% + 10%
+    expect(price([{ productId: 'brainlink-pro', quantity: 3, unitAmount: 79000 }])).toMatchObject({ discountMinor: 71100, totalMinor: 165900 }) // 20% + 10%
+    expect(price([{ productId: 'ochelari-biohack', quantity: 3, unitAmount: 31500 }])).toMatchObject({ discountMinor: 40950 }) // 2+1 + 10%
+    const { order: o } = await order(code.code, [{ productId: 'balance-wave', quantity: 3 }])
+    expect(o.totalMinor).toBe(1339800)
   })
 
   it('personal codes stay out of the campaign codes list in /admin/coduri', async () => {
@@ -319,7 +312,7 @@ describe('the agent’s server tools', () => {
       abandonment_type: 'cos_nefinalizat',
       product_quantities: '1 × NEUROS Calm',
       cart_total: '6.380 lei',
-      discount: { eligible: true, percent: 10, code: call.discountCode, combinable_with_promotions: false },
+      discount: { eligible: true, percent: 10, code: call.discountCode, combinable_with_promotions: true },
       recovery_email: { sent: true, status: 'sent' },
     })
     expect(JSON.stringify(ctx)).not.toMatch(/@|0722|Popescu/)

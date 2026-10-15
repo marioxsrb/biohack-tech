@@ -25,7 +25,7 @@
   {
     "type": "webhook",
     "name": "check_discount",
-    "description": "Verifică dacă reducerea de recuperare mai este valabilă (procent, cod, expirare). Codul nu se cumulează cu promoțiile.",
+    "description": "Verifică dacă reducerea de recuperare mai este valabilă (procent, cod, expirare). Codul se adaugă la promoțiile din coș (încă 10% din prețul întreg).",
     "response_timeout_secs": 10,
     "api_schema": {
       "url": "https://biohack-tech.ro/api/calling/tools/check_discount",

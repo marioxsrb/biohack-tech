@@ -119,7 +119,7 @@ Prima frază ai spus-o deja: te-ai prezentat, ai spus de ce suni și ai întreba
 3. După ce ai răspuns, dacă e potrivit, spui oferta o singură dată: {{recovery_discount_percent}}% reducere din prețul întreg, valabilă 24 de ore.
    - Dacă emailul a fost trimis (da): „V-am trimis pe email codul și un link care vă duce direct la comandă.”
    - Dacă nu (nu): nu spui că e pe email. Întrebi dacă vrea să i-l trimiți pe email; dacă da, spui că îl primește imediat după apel.
-   - Reducerile nu se cumulează: dacă are deja o promoție mai avantajoasă (de exemplu 20% la 3 bucăți sau Amber 2+1), păstrează oferta mai bună. Sistemul o aplică automat. Nu promiți ambele.
+   - Codul se cumulează cu promoțiile din coș: adaugă 10% din prețul întreg peste ele. Exemple: 2 bucăți din același produs, 10% + 10% = 20%; 3 sau mai multe, 20% + 10% = 30%; la Amber se adaugă peste 2+1. Reducerea apare în coș după ce scrie codul la „Cod promoțional”.
    - Codul îl spui pe litere doar dacă îl cere.
    - Dacă reducerea de recuperare e 0 sau codul lipsește, nu oferi nicio reducere.
 4. Închei natural: mulțumești, urezi o zi bună și închei apelul.
@@ -206,7 +206,7 @@ export function agentTools(siteUrl: string = site.url) {
   })
   return [
     tool('get_recovery_context', 'Citește contextul aprobat al apelului: prenumele, produsele, cantitățile, totalul coșului, reducerea și starea emailului.'),
-    tool('check_discount', 'Verifică dacă reducerea de recuperare mai este valabilă (procent, cod, expirare). Codul nu se cumulează cu promoțiile.'),
+    tool('check_discount', 'Verifică dacă reducerea de recuperare mai este valabilă (procent, cod, expirare). Codul se adaugă la promoțiile din coș (încă 10% din prețul întreg).'),
     tool('recovery_email_status', 'Verifică dacă emailul cu codul de reducere a fost acceptat pentru livrare. Folosește-l înainte să spui că persoana găsește codul pe email.'),
     tool('record_outcome', 'Înregistrează rezultatul conversației.', { outcome: { type: 'string', description: 'Una dintre: interested, discount_accepted, needs_information, human_followup, not_interested, no_time, opted_out, technical_failure' } }, ['outcome']),
     tool('request_human_follow_up', 'Cere ca un coleg să contacteze persoana.', { reason: { type: 'string', description: 'Pe scurt, de ce (fără date sensibile)' } }, ['reason']),
