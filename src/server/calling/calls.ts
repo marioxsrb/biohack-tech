@@ -24,7 +24,7 @@ import { marketing } from '@/server/marketing/consent'
 import { callConsent } from './consent'
 import { callBlocklist } from './blocklist'
 import { callScenario, firstCallDelay, type CallScenario } from './delay'
-import { cartTotal, describeItems, existingDiscounts, lei, openingLine, prepareOffer, RECOVERY_PERCENT, type OfferEmailStatus } from './offer'
+import { cartTotal, describeItems, leadItems, existingDiscounts, lei, openingLine, prepareOffer, RECOVERY_PERCENT, type OfferEmailStatus } from './offer'
 
 /** What a call ended with. The first four come from the conversation, the rest from the line. */
 export const CALL_OUTCOMES = ['interested', 'discount_accepted', 'more_info', 'human_follow_up', 'not_interested', 'no_time', 'opted_out', 'no_answer', 'busy', 'invalid_number', 'technical_failure'] as const
@@ -257,7 +257,7 @@ export function callVariables(lead: Lead, callId: string, offer: { code: string;
   const firstName = lead.name?.split(' ')[0]?.slice(0, 40) ?? ''
   return {
     call_id: callId,
-    opening_line: openingLine({ firstName, cart: scenario === 'cart', productNames: items.names }),
+    opening_line: openingLine({ firstName, cart: scenario === 'cart', productNames: items.names, items: leadItems(lead) }),
     customer_first_name: firstName,
     funnel_type: lead.funnel,
     abandonment_type: scenario === 'cart' ? 'cos_nefinalizat' : 'oferta_solicitata',

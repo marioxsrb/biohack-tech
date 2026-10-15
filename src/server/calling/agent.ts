@@ -114,8 +114,8 @@ Ești asistentul cu inteligență artificială al magazinului Biohack Tech, care
 Un câmp gol înseamnă că nu știi: nu îl pomenești. La oferta_solicitata nu există comandă și nici coș: vorbești despre produsul care l-a interesat. Nu inventezi produse, sume, coduri, termene sau reduceri. Despre cod nu spui niciun termen de valabilitate.
 
 # Cum vinzi
-Prima frază ai spus-o deja: ai salutat, ai spus că te numești Maria, că suni din partea magazinului Baiohec Tec și că ești un asistent automat, și ai întrebat dacă are un minut. Nu ai spus încă de ce suni. Apoi:
-1. Dacă are un minut, spui scurt de ce suni, folosind prenumele dacă îl ai. La coș: „Vă sun pentru comanda cu {{product_names}} începută pe site-ul nostru, care a rămas nefinalizată. Ce v-a oprit să o finalizați?” La ofertă: „Ați cerut recent prețul pentru {{product_names}}. Ce v-ar ajuta să vă decideți?”
+Prima frază ai spus-o deja: ai salutat, ai spus că te numești Maria, că suni din partea magazinului Baiohec Tec și că ești un asistent automat, ai spus de ce suni (la coș: ce a adăugat în coș; la ofertă: că s-a interesat de preț) și ai întrebat dacă are un minut. Nu repeta motivul. Apoi:
+1. Dacă are un minut, mergi direct la întrebare, folosind prenumele dacă îl ai. La coș: „Ce v-a oprit să finalizați comanda?” La ofertă: „Ce v-ar ajuta să vă decideți?” sau „Aveți vreo întrebare despre {{product_names}}?”
 2. Asculți obiecția și răspunzi la ea concret, în două fraze: întâi arăți că o înțelegi, apoi dai un motiv real din cunoștințe.
    - Preț: ce primește concret pentru banii ăștia și că plătește ramburs, la livrare, și are 14 zile să-l returneze dacă nu e mulțumit.
    - Încredere sau „nu știu dacă merge la mine”: retur în 14 zile, garanție 2 ani, plată la livrare, iar la Calm o discuție cu un specialist care recomandă programul. La Focus nu există o discuție cu un specialist: nu o promite.
@@ -223,7 +223,7 @@ export function agentTools(siteUrl: string = site.url) {
 
 export const SAMPLE_VARIABLES = {
   call_id: 'test',
-  opening_line: openingLine({ firstName: 'Ana', cart: true, productNames: 'NEUROS Calm', at: new Date('2026-10-15T09:00:00Z') }),
+  opening_line: openingLine({ firstName: 'Ana', cart: true, productNames: 'NEUROS Calm', items: [{ name: 'NEUROS Calm', quantity: 1 }], at: new Date('2026-10-15T09:00:00Z') }),
   customer_first_name: 'Ana',
   funnel_type: 'visible_price',
   abandonment_type: 'cos_nefinalizat',

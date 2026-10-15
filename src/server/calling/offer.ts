@@ -160,10 +160,24 @@ export function describeItems(lead: Pick<Lead, 'productId' | 'variantId' | 'cart
 export const lei = (minor: number | null) => (minor === null ? '' : formatLei(minor))
 
 /** The agent's first sentence, per call: the AI disclosure, the reason for the call, and the question. */
-export function openingLine(x: { firstName: string; cart: boolean; productNames: string; at?: Date }) {
+const COUNT = ['', 'o bucată', 'două bucăți', 'trei bucăți', 'patru bucăți', 'cinci bucăți', 'șase bucăți', 'șapte bucăți', 'opt bucăți', 'nouă bucăți', 'zece bucăți']
+
+/** "NEUROS Calm", "două bucăți de NEUROS Calm și NEUROS Amber": what the cart holds, said out loud. */
+export function cartInWords(items: { name: string; quantity: number }[]) {
+  const by = new Map<string, number>()
+  for (const i of items) by.set(i.name, (by.get(i.name) ?? 0) + i.quantity)
+  const parts = [...by].map(([name, q]) => (q > 1 ? `${COUNT[q] ?? `${q} bucăți`} de ${name}` : name))
+  return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} și ${parts.at(-1)}` : (parts[0] ?? 'produsele noastre')
+}
+
+export function openingLine(x: { firstName: string; cart: boolean; productNames: string; items?: { name: string; quantity: number }[]; at?: Date }) {
   // "Bună ziua" until 18:00, "Bună seara" after, in Bucharest time. The company name spelled the Romanian way,
   // so the Romanian voice does not switch to an English accent. The AI disclosure stays (EU AI Act, art. 50).
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Bucharest', hour: '2-digit', hourCycle: 'h23' }).format(x.at ?? new Date()))
   const hello = hour >= 18 || hour < 5 ? 'Bună seara!' : 'Bună ziua!'
-  return `${hello} Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat. Aveți un minut la dispoziție?`
+  // The reason comes first, so "Aveți un minut?" has a context: the cart, or the price asked for.
+  const why = x.cart
+    ? `Am văzut că ați adăugat în coș ${x.items?.length ? cartInWords(x.items) : x.productNames || 'produse de pe site'}.`
+    : `Am văzut că v-ați interesat de prețul pentru ${x.productNames || 'produsele noastre'} pe site-ul nostru și m-am gândit să vă ajut cu informații.`
+  return `${hello} Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat. ${why} Aveți un minut?`
 }

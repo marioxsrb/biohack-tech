@@ -55,7 +55,7 @@ export function testVariables(id: string, x: TestCallInput) {
   const promo = !cart && lines[0] ? PROMOTIONS.find((p) => (p.products as string[]).includes(lines[0].productId)) : undefined
   return {
     call_id: `test-${id}`,
-    opening_line: openingLine({ firstName: x.firstName, cart, productNames: names }),
+    opening_line: openingLine({ firstName: x.firstName, cart, productNames: names, items: lines }),
     customer_first_name: x.firstName,
     funnel_type: x.funnel,
     abandonment_type: cart ? 'cos_nefinalizat' : 'oferta_solicitata',

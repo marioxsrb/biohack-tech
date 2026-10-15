@@ -209,7 +209,7 @@ describe('placing calls', () => {
       recovery_code: 'BIOHACK10',
       recovery_email_sent: 'nu', // no email marketing consent: nothing was sent before the call
     })
-    expect(vars.opening_line).toMatch(/^Bună (ziua|seara)! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec\. Sunt un asistent automat\. Aveți un minut la dispoziție\?$/)
+    expect(vars.opening_line).toMatch(/^Bună (ziua|seara)! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec\. Sunt un asistent automat\. Am văzut că v-ați interesat de prețul pentru NEUROS Calm pe site-ul nostru și m-am gândit să vă ajut cu informații\. Aveți un minut\?$/)
     expect(vars.checkout_recovery_url).toMatch(/^https:\/\/acces\.biohack-tech\.ro\/api\/lead\/resume\?t=[\w-]+&cod=BIOHACK10/)
     expect(JSON.stringify(vars)).not.toMatch(/@|0722|Popescu/)
     expect(sent).toEqual([])
