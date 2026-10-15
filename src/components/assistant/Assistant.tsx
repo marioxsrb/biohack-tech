@@ -863,14 +863,16 @@ function CancelCard({ id, o, t, done, mark }: { id: string; o: { orderNumber: st
  */
 function Teaser({ t, fresh, bottom, onOpen, onClose }: { t: Copy; fresh: boolean; bottom: string; onOpen: (text?: string) => void; onClose: () => void }) {
   const [typing, setTyping] = useState(fresh)
+  // Bumped when the sound plays later than the bubble (sound blocked until the first touch): the pop replays with it.
+  const [pop, setPop] = useState(0)
   useEffect(() => {
     if (!fresh) return
-    const show = setTimeout(() => setTyping(false), 1400)
-    const sound = setTimeout(() => ping(), 1400 + 180)
-    return () => {
-      clearTimeout(show)
-      clearTimeout(sound)
-    }
+    // The message replaces the dots and the sound starts in the same moment, so the pop and the first note land together.
+    const show = setTimeout(() => {
+      setTyping(false)
+      ping(() => setPop((n) => n + 1))
+    }, 1400)
+    return () => clearTimeout(show)
   }, [fresh])
   return (
     <div role="status" aria-live="polite" style={{ bottom }} className="fixed right-4 z-[231] flex w-[min(290px,calc(100vw-32px))] flex-col items-end sm:right-5 print:hidden">
@@ -885,7 +887,7 @@ function Teaser({ t, fresh, bottom, onOpen, onClose }: { t: Copy; fresh: boolean
           ))}
         </div>
       ) : (
-        <div className={`assistant-teaser-float w-full ${fresh ? 'assistant-teaser-pop' : ''}`}>
+        <div key={pop} className={`assistant-teaser-float w-full ${fresh || pop ? 'assistant-teaser-pop' : ''}`}>
           <div className="relative">
             <button type="button" onClick={() => onOpen()} className="imsg-in relative block w-full rounded-[20px] px-4 py-2.5 text-left text-[15.5px] leading-snug text-black">
               {t.teaserText}
@@ -923,7 +925,7 @@ function Teaser({ t, fresh, bottom, onOpen, onClose }: { t: Copy; fresh: boolean
 
 let pinged = false
 /** The notification sound the admin chose (/admin/setari); waits for the first touch when the browser blocks sound. */
-function ping() {
+function ping(onLate?: () => void) {
   if (pinged || typeof window === 'undefined') return
   const choice = (window.__BT_STORE__ as { chatSound?: string } | undefined)?.chatSound
   const sound: ChatSound = isChatSound(choice) ? choice : 'ping'
@@ -937,11 +939,17 @@ function ping() {
       playChatSound(ctx, sound)
     }
     if (ctx.state === 'running') return play()
+    // A context created without a touch starts suspended; resume() succeeds at once only when sound is allowed.
     void ctx.resume().then(() => (ctx.state === 'running' ? play() : undefined))
     // Still blocked (no touch yet): the sound plays on the first touch, key or click.
     const later = () => {
       remove()
-      void ctx.resume().then(play)
+      void ctx.resume().then(() => {
+        if (pinged) return
+        play()
+        // The bubble pops again with the sound, so the two stay together.
+        onLate?.()
+      })
     }
     const remove = () => ['pointerdown', 'keydown', 'touchstart'].forEach((e) => window.removeEventListener(e, later))
     ;['pointerdown', 'keydown', 'touchstart'].forEach((e) => window.addEventListener(e, later, { once: true, passive: true }))
