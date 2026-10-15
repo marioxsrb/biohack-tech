@@ -20,7 +20,8 @@ export type AssistantContext = {
   siteUrl: string
 }
 
-export function assistantInstructions(x: AssistantContext): string {
+/** Everything that stays the same between turns for one kind of page (cached by the provider). */
+export function assistantStableInstructions(x: AssistantContext): string {
   const lockedRules = x.locked
     ? `
 # Prețurile sunt ascunse pe această pagină (OBLIGATORIU)
@@ -37,6 +38,7 @@ Ești asistentul de cumpărături și suport al magazinului online Biohack Tech 
 - Scurt: de obicei 1-3 propoziții. Fără introduceri de umplutură. Liste doar când compari sau enumeri pași. Fără titluri markdown și fără tabele. Bold rar, doar pentru un cuvânt-cheie.
 - Ton premium și liniștit: consultant de încredere, nu vânzător insistent. Nu exagerezi, nu presezi.
 - Închei, când e firesc, cu un singur pas următor clar (o întrebare sau o acțiune).
+- Când folosești o unealtă, nu anunța dinainte ce faci: scrie răspunsul o singură dată, după rezultat, fără să repeți ce arată cardul sau butonul.
 
 # Ce poți face (prin unelte)
 - show_products: arată cardurile produselor (cu imagine${x.locked ? '' : ' și preț'}). Folosește-l când recomanzi sau compari produse.
@@ -81,15 +83,29 @@ ${lockedRules}
 # Id-uri pentru unelte
 ${productIdGuide()}
 
-# Pagina curentă
-Vizitatorul este acum pe: ${x.page || '/'}
-
 # Cunoștințe (singura sursă pentru produse, prețuri și condiții)
 ${agentKnowledge(x.siteUrl, { prices: !x.locked })}`
 }
 
+const pageNote = (x: AssistantContext) => `# Pagina curentă\nVizitatorul este acum pe: ${x.page || '/'}`
+
+export const assistantInstructions = (x: AssistantContext): string => `${assistantStableInstructions(x)}\n\n${pageNote(x)}`
+
+/**
+ * The instructions as system messages: the long stable part with a cache breakpoint (Anthropic prompt caching:
+ * later turns read it at a fraction of the price and latency), then the page, which changes as the visitor moves.
+ */
+export const assistantSystem = (x: AssistantContext) => [
+  { role: 'system' as const, content: assistantStableInstructions(x), providerOptions: { anthropic: { cacheControl: { type: 'ephemeral' as const } } } },
+  { role: 'system' as const, content: pageNote(x) },
+]
+
 /** On a locked page, amounts slipped into a reply are blanked before they reach the browser. */
-const MONEY = /\d[\d.,\s]*\d?\s*(?:lei|ron)\b/gi
-const PERCENT = /(?<!TVA\s?)\b\d{1,3}\s?%/g
+const MONEY = /\d[\d.,\s]*\d?\s*(?:de\s+)?(?:lei|ron)\b/gi
+/** Amounts written in words: "o mie opt sute de lei", "zece la sută". */
+const NUMBER_WORD = '(?:o|un|unu|una|doi|două|doua|trei|patru|cinci|șase|sase|șapte|sapte|opt|nouă|noua|zece|\\p{L}+sprezece|\\p{L}+zeci|sută|suta|sute|mie|mii|milion|milioane|și|si)'
+const MONEY_WORDS = new RegExp(`(?:(?<!\\p{L})${NUMBER_WORD}\\s+)+(?:de\\s+)?(?:lei|ron)\\b`, 'giu')
+const PERCENT = /(?<!TVA\s?)\b\d{1,3}(?:[.,]\d+)?\s?(?:%|la sută|la suta|procent\w*)/gi
+const PERCENT_WORDS = new RegExp(`(?:(?<!\\p{L})${NUMBER_WORD}\\s+)+(?:la sut[ăa]|procent\\p{L}*)`, 'giu')
 export const LOCKED_MASK = '[prețul după formular]'
-export const maskAmounts = (s: string) => s.replace(MONEY, LOCKED_MASK).replace(PERCENT, LOCKED_MASK)
+export const maskAmounts = (s: string) => s.replace(MONEY, LOCKED_MASK).replace(MONEY_WORDS, LOCKED_MASK).replace(PERCENT, LOCKED_MASK).replace(PERCENT_WORDS, LOCKED_MASK)

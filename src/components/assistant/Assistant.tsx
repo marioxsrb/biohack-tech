@@ -29,7 +29,7 @@ const COPY = {
     open: 'Deschide asistentul',
     close: 'Închide asistentul',
     title: 'Asistent Biohack Tech',
-    subtitle: 'Asistent automat · răspunde imediat',
+    subtitle: 'Asistent automat',
     hello: 'Bună! Te ajut să alegi produsul potrivit, cu întrebări despre comandă, livrare sau retur.',
     placeholder: 'Scrie un mesaj…',
     send: 'Trimite',
@@ -65,7 +65,7 @@ const COPY = {
     open: 'Open the assistant',
     close: 'Close the assistant',
     title: 'Biohack Tech assistant',
-    subtitle: 'Automated assistant · replies instantly',
+    subtitle: 'Automated assistant',
     hello: 'Hi! I can help you choose the right product, and with questions about orders, delivery or returns.',
     placeholder: 'Write a message…',
     send: 'Send',
@@ -708,7 +708,7 @@ function ToolView({ name, id, output, t, done, mark }: { name: string; id: strin
   if (name === 'create_support_request' && output.created)
     return (
       <p className="flex items-center gap-1.5 text-[13px] font-medium text-[#167a4a]">
-        <Check className="h-4 w-4" /> {t.request}: {String(output.ref)}
+        <Check className="h-4 w-4" /> {t.request}: {String(output.reference)}
       </p>
     )
 

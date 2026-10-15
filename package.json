@@ -18,6 +18,7 @@
     "stripe:test": "node scripts/stripe-test.mjs"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.81",
     "@ai-sdk/react": "^4.0.146",
     "@electric-sql/pglite": "^0.5.8",
     "@stripe/react-stripe-js": "^6.12.0",

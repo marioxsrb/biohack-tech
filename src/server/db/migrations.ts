@@ -576,4 +576,22 @@ create index if not exists order_otps_order on order_otps (order_id, created_at 
 alter table order_otps enable row level security
 `,
   },
+  {
+    // The website assistant's daily use (requests, tokens, errors): the admin sees it, and a daily cap reads it.
+    id: '019_assistant_usage',
+    sql: `
+create table if not exists assistant_usage (
+  day date primary key,
+  requests integer not null default 0,
+  input_tokens bigint not null default 0,
+  output_tokens bigint not null default 0,
+  cache_read_tokens bigint not null default 0,
+  cache_write_tokens bigint not null default 0,
+  errors integer not null default 0,
+  quota_errors integer not null default 0,
+  updated_at timestamptz not null default now()
+);
+alter table assistant_usage enable row level security
+`,
+  },
 ]

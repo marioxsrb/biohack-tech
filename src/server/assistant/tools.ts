@@ -79,7 +79,7 @@ export function assistantTools(ctx: ToolContext) {
       inputSchema: z.object({ productId, variantId, quantity: z.number().int().min(1).max(MAX_QTY).default(1) }),
       execute: async ({ productId, variantId, quantity }) => {
         const p = getProduct(productId, ctx.locale)!
-        if (ctx.locked) return { status: 'locked' as const, productId, name: p.name }
+        if (ctx.locked) return { status: 'locked' as const, productId, name: p.name, message: 'Pe această pagină coșul se deschide după formularul „Vezi prețul și oferta”. Vizitatorul vede acum butonul formularului (nu un buton de coș).' }
         if (p.soldOut) return { status: 'sold_out' as const, productId, name: p.name }
         if (p.variants?.length && !variantId) return { status: 'choose_variant' as const, productId, name: p.name, quantity, variants: p.variants.map((v) => ({ id: v.id, label: variantLabel(p, v), price: formatLei(unitPrice(p, v) ?? 0) })) }
         const r = resolveLine(productId, variantId, ctx.locale)
@@ -136,7 +136,7 @@ export function assistantTools(ctx: ToolContext) {
       show_price_form: tool({
         description: 'Afișează butonul care deschide formularul „Vezi prețul și oferta” (doar pe pagina cu prețuri ascunse).',
         inputSchema: z.object({ productId: productId.optional() }),
-        execute: async ({ productId }) => ({ locked: ctx.locked, productId }),
+        execute: async ({ productId }) => ({ locked: ctx.locked, productId, message: ctx.locked ? 'Butonul „Vezi prețul și oferta” este afișat vizitatorului în chat; formularul se deschide când apasă pe el.' : 'Prețurile sunt deja vizibile pe această pagină.' }),
       }),
     }),
 
@@ -215,7 +215,7 @@ export function assistantTools(ctx: ToolContext) {
         const summary = x.orderNumber && !o ? `${x.summary} (comanda menționată, neverificată: ${normalizeOrderNumber(x.orderNumber)})` : x.summary
         const r = await supportRequests.create(ctx.db, { category: x.category, summary, orderId: o?.id ?? null, email, name: x.name ?? null, phone: x.phone ?? null, urgent: x.urgent }, true)
         if (r.created) ctx.onQueued()
-        return { created: true as const, alreadyOpen: !r.created, ref: r.request.ref }
+        return { created: true as const, alreadyOpen: !r.created, reference: r.request.ref }
       },
     }),
   }

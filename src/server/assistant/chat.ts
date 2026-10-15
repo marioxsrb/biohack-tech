@@ -1,8 +1,9 @@
 /**
  * One turn of the website assistant: the conversation the browser sent (validated, trimmed, stripped of anything
  * that is not plain text or our own tool results), the store's context (locked prices on acces.<domain>, the cart,
- * the orders proved with the email code), and a streamed answer from a small, fast model through the AI Gateway
- * (ASSISTANT_MODEL, e.g. anthropic/claude-haiku-5.5). Nothing of the conversation is stored on the server.
+ * the orders proved with the email code), and a streamed answer from a small, fast Claude model through the
+ * Anthropic API (ANTHROPIC_API_KEY, server only; ASSISTANT_MODEL, default claude-haiku-5-5). Nothing of the
+ * conversation is stored on the server; only the day's counts (usage.ts).
  */
 import 'server-only'
 import { convertToModelMessages, createUIMessageStreamResponse, isStepCount, streamText, toUIMessageStream, type LanguageModel, type StreamTextTransform, type ToolSet, type UIMessage } from 'ai'
@@ -11,16 +12,26 @@ import type { Queryable } from '@/server/db'
 import { log, errText } from '@/server/log'
 import { orders } from '@/server/orders/repository'
 import { readToken } from './orders'
-import { assistantInstructions, maskAmounts, type AssistantContext } from './prompt'
+import { assistantSystem, maskAmounts, type AssistantContext } from './prompt'
+import { assistantUsage, isQuotaError } from './usage'
 import { assistantTools, type CartInput } from './tools'
 
-export const DEFAULT_MODEL = 'anthropic/claude-haiku-5.5'
-/** The configured model (a gateway "provider/model" id); "mock" is the scripted stand-in, outside production only. */
+export const DEFAULT_MODEL = 'claude-haiku-5-5'
+/** Output per step and steps per turn: short answers, a few tool calls at most. */
+export const MAX_OUTPUT_TOKENS = 700
+export const MAX_STEPS = 5
+
+/** The configured Claude model; "mock" is the scripted stand-in, outside production only. */
 export async function assistantModel(): Promise<LanguageModel> {
-  const id = process.env.ASSISTANT_MODEL || DEFAULT_MODEL
+  const id = (process.env.ASSISTANT_MODEL || DEFAULT_MODEL).replace(/^anthropic\//, '')
   if (id === 'mock' && process.env.APP_ENV !== 'production' && process.env.VERCEL_ENV !== 'production') return (await import('./mock-model')).scriptedModel()
-  return id === 'mock' ? DEFAULT_MODEL : id
+  const { createAnthropic } = await import('@ai-sdk/anthropic')
+  return createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY })(id === 'mock' ? DEFAULT_MODEL : id)
 }
+
+/** A model can answer: the scripted one (outside production), or Claude with a key on the server. */
+export const assistantConfigured = () =>
+  (process.env.ASSISTANT_MODEL === 'mock' && process.env.APP_ENV !== 'production' && process.env.VERCEL_ENV !== 'production') || !!process.env.ANTHROPIC_API_KEY
 
 export const MAX_MESSAGES = 24
 export const MAX_USER_CHARS = 1500
@@ -89,7 +100,7 @@ function withoutSecrets(messages: UIMessage[]): UIMessage[] {
 
 /**
  * On a locked page, amounts in the model's text are blanked before they leave the server. Text is held back until
- * a word boundary (and the last two words are kept) so "6.380" and "lei" in separate chunks are still caught.
+ * a word boundary (and the last eight words are kept) so "6.380" and "lei" in separate chunks are still caught.
  */
 export function lockedTextGuard<T extends ToolSet>(): StreamTextTransform<T> {
   return () => {
@@ -103,8 +114,8 @@ export function lockedTextGuard<T extends ToolSet>(): StreamTextTransform<T> {
         buffer = ''
         return
       }
-      // Keep the last two words back: an amount may still be completing.
-      const m = /(\S+\s+\S*\s*)$/.exec(masked)
+      // Keep the last words back: an amount may still be completing ("o mie opt sute de lei" is six words).
+      const m = /((?:\S+\s+){0,8}\S*)$/.exec(masked)
       const cut = m ? masked.length - m[1].length : 0
       if (cut > 0) {
         controller.enqueue({ type: 'text-delta', id, text: masked.slice(0, cut) } as never)
@@ -141,32 +152,60 @@ export type TurnInput = {
   onQueued?: () => void
 }
 
+const UNAVAILABLE = {
+  ro: `Asistentul nu este disponibil chiar acum. Ne poți scrie la ${'contact@biohack-tech.ro'} sau din pagina Contact; îți răspundem în cel mult 24 de ore.`,
+  en: 'The assistant is not available right now. Please write to contact@biohack-tech.ro or use the Contact page; we reply within 24 hours.',
+}
+const RETRY = { ro: 'Nu pot răspunde chiar acum. Te rog încearcă din nou peste câteva momente.', en: 'Sorry, I cannot answer right now. Please try again in a moment.' }
+
+/** A short answer without calling the model (daily cap reached, nothing configured). */
+export function cannedResponse(text: string): Response {
+  const id = crypto.randomUUID()
+  const chunks = [{ type: 'start' }, { type: 'start-step' }, { type: 'text-start', id }, { type: 'text-delta', id, delta: text }, { type: 'text-end', id }, { type: 'finish-step' }, { type: 'finish' }]
+  return createUIMessageStreamResponse({ stream: new ReadableStream({ start: (c) => (chunks.forEach((x) => c.enqueue(x as never)), c.close()) }) })
+}
+
 export async function assistantTurn(x: TurnInput): Promise<Response> {
+  const lang = x.context.locale
+  // Daily cap: counted before the model is called, so a burst cannot run past it.
+  if (!(await assistantUsage.take(x.db))) {
+    log.warn('assistant.daily_cap')
+    return cannedResponse(UNAVAILABLE[lang])
+  }
   const verified = await verifiedOrders(x.db, x.messages)
-  const tools = assistantTools({ db: x.db, config: x.config, locked: x.context.locked, gated: x.context.gated, locale: x.context.locale, cart: x.cart, verified, onQueued: x.onQueued ?? (() => {}) })
+  const tools = assistantTools({ db: x.db, config: x.config, locked: x.context.locked, gated: x.context.gated, locale: lang, cart: x.cart, verified, onQueued: x.onQueued ?? (() => {}) })
+  let quota = false
   const result = streamText({
     model: x.model ?? (await assistantModel()),
-    instructions: assistantInstructions(x.context),
+    instructions: assistantSystem(x.context),
     messages: await convertToModelMessages(withoutSecrets(x.messages), { tools }),
     tools,
-    stopWhen: isStepCount(5),
-    maxOutputTokens: 700,
+    stopWhen: isStepCount(MAX_STEPS),
+    maxOutputTokens: MAX_OUTPUT_TOKENS,
     temperature: 0.3,
+    maxRetries: 1,
+    timeout: { totalMs: 45_000, firstChunkMs: 20_000, toolMs: 15_000 },
     ...(x.context.locked && { experimental_transform: lockedTextGuard<typeof tools>() }),
-    onError: ({ error }) => log.error('assistant.model_error', { error: errText(error) }),
+    onError: ({ error }) => {
+      quota = isQuotaError(error)
+      log.error(quota ? 'assistant.quota' : 'assistant.model_error', { error: errText(error) })
+      void assistantUsage.error(x.db, quota)
+    },
+    onEnd: ({ totalUsage: u }) =>
+      assistantUsage.record(x.db, { input: u.inputTokens ?? 0, output: u.outputTokens ?? 0, cacheRead: u.inputTokenDetails?.cacheReadTokens ?? 0, cacheWrite: u.inputTokenDetails?.cacheWriteTokens ?? 0 }),
   })
   return createUIMessageStreamResponse({
     stream: toUIMessageStream({
       stream: result.stream,
       tools,
-      onError: () => (x.context.locale === 'en' ? 'Sorry, I cannot answer right now. Please try again in a moment.' : 'Nu pot răspunde chiar acum. Te rog încearcă din nou peste câteva momente.'),
+      onError: (error) => (quota || isQuotaError(error) ? UNAVAILABLE[lang] : RETRY[lang]),
     }),
   })
 }
 
 /** On unless switched off in /admin/setari (or ASSISTANT_ENABLED=false as an emergency stop). */
 export async function assistantEnabled() {
-  if (process.env.ASSISTANT_ENABLED === 'false') return false
+  if (process.env.ASSISTANT_ENABLED === 'false' || !assistantConfigured()) return false
   const { ensureStoreSettings } = await import('@/server/store-settings')
   return (await ensureStoreSettings()).assistant
 }

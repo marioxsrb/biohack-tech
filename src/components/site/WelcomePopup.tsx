@@ -109,8 +109,8 @@ export function WelcomePopup() {
         return Date.now()
       }
     }
-    // Never on top of the cookie choice or the price form: waits until both are out of the way.
-    const show = () => (document.querySelector('.consent-in') || !unlocked() ? (timer = setTimeout(show, 3000)) : setOpen(true))
+    // Never on top of the cookie choice, the price form or an open chat: waits until they are out of the way.
+    const show = () => (document.querySelector('.consent-in, .assistant-panel') || !unlocked() ? (timer = setTimeout(show, 3000)) : setOpen(true))
     // Still locked: check every few seconds; the 40 seconds start at the unlock.
     const wait = () => {
       if (!unlocked()) {
