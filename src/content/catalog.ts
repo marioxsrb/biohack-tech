@@ -120,14 +120,15 @@ export type Product = {
   chooseLabel?: string
   /** Includes an onboarding consultation with a specialist (stated on the source site). */
   guidance: boolean
+  /** Out of stock (set in /admin/setari): shown, never sold. */
+  soldOut?: boolean
 }
 
 const cut = (src: StaticImageData, alt: string, bleed?: 'bottom'): ProductImage => ({ src, alt, kind: 'cutout', bleed })
 const photo = (src: StaticImageData, alt: string): ProductImage => ({ src, alt, kind: 'photo' })
 
-/** Applies config/prices.ts to a product: one price, or one per variant plus the lowest as "de la". */
-function priced(p: Omit<Product, 'price'>): Product {
-  const entry: PriceEntry | undefined = PRICES_RON[p.id]
+/** Applies a price entry (config/prices.ts, or the admin's override) to a product: one price, or one per variant plus the lowest as "de la". */
+function priced(p: Omit<Product, 'price'>, entry: PriceEntry | undefined = PRICES_RON[p.id as ProductId]): Product {
   if (entry === null || entry === undefined || typeof entry === 'number') return { ...p, price: entry ?? null }
   const variants = p.variants?.map((v) => ({ ...v, price: entry[v.id] ?? null }))
   const known = (variants ?? []).map((v) => v.price).filter((x): x is number => typeof x === 'number')
@@ -269,7 +270,7 @@ export const DISCONTINUED_PRODUCTS: Record<string, { name: string }> = { 'brain-
 export const isDiscontinued = (id: string) => id in DISCONTINUED_PRODUCTS
 
 /** Romanian: the source of truth, and what orders, invoices and the CRM store. */
-export const products: Product[] = catalog.map(priced)
+export const products: Product[] = catalog.map((p) => priced(p))
 
 const enImage = (i: ProductImage): ProductImage => ({ ...i, alt: altEn(i.alt) })
 
@@ -285,6 +286,37 @@ const productsEn: Product[] = products.map((p) => ({
 }))
 
 /** Every product, in the visitor's language (Romanian by default). */
+/**
+ * The admin's store settings (server/store-settings.ts): prices and stock that replace config/prices.ts while
+ * set. Applied in place on both lists, on the server (from Supabase) and in the browser (from the page, see
+ * STORE_SCRIPT), so every price on the site, in the cart and in the order comes from the same numbers.
+ */
+export type CatalogOverrides = { prices?: Partial<Record<string, PriceEntry>>; soldOut?: string[]; welcomePopup?: boolean }
+
+export function applyCatalogOverrides(o: CatalogOverrides) {
+  for (const list of [products, productsEn]) {
+    for (const p of list) {
+      const base = catalog.find((c) => c.id === p.id)!
+      const entry = o.prices && p.id in o.prices ? o.prices[p.id] : PRICES_RON[p.id as ProductId]
+      const next = priced({ ...base, variants: p.variants?.map((v) => ({ ...v })) } as Omit<Product, 'price'>, entry)
+      p.price = next.price
+      p.variablePrice = next.variablePrice
+      p.variants?.forEach((v, i) => {
+        v.price = next.variants?.[i]?.price
+      })
+      p.soldOut = !!o.soldOut?.includes(p.id)
+    }
+  }
+}
+
+/** The settings the page carries for the browser (set before any script by the root layout). */
+declare global {
+  interface Window {
+    __BT_STORE__?: CatalogOverrides
+  }
+}
+if (typeof window !== 'undefined' && window.__BT_STORE__) applyCatalogOverrides(window.__BT_STORE__)
+
 export function productsIn(locale: Locale = 'ro'): Product[] {
   return locale === 'en' ? productsEn : products
 }
@@ -303,7 +335,7 @@ export function productHref(p: Product): string {
 
 /** Has at least one approved price. A single line is priced with `unitPrice()`. */
 export function isPurchasable(p: Product): p is Product & { price: number } {
-  return p.price !== null
+  return p.price !== null && !p.soldOut
 }
 
 /** What one unit of this product (and variant) costs, in bani. null = not for sale. */
@@ -331,11 +363,13 @@ export function variantLabel(p: Product, v: Variant): string {
 export function resolveLine(productId: string, variantId?: string, locale: Locale = 'ro'): { product: Product; variant?: Variant; unit: number | null } | null {
   const product = getProduct(productId, locale)
   if (!product) return null
+  // Out of stock: like a product without a price, it cannot be bought (the server refuses the line).
+  const price = (v?: Variant) => (product.soldOut ? null : unitPrice(product, v))
   if (product.variants?.length) {
     const variant = getVariant(product, variantId)
-    return variant ? { product, variant, unit: unitPrice(product, variant) } : null
+    return variant ? { product, variant, unit: price(variant) } : null
   }
-  return variantId ? null : { product, variant: undefined, unit: unitPrice(product) }
+  return variantId ? null : { product, variant: undefined, unit: price() }
 }
 
 /** Internal reference for a line: product id, plus the variant id when there is one. No supplier SKU is known. */

@@ -89,7 +89,8 @@ function coreFacts() {
   ].join('\n')
 }
 
-export const AGENT_INSTRUCTIONS = `# Rolul tău
+/** The instructions with the catalog's prices as they are now (see agent-sync.ts after an admin price change). */
+export const agentInstructions = () => `# Rolul tău
 Ești asistentul cu inteligență artificială al magazinului Biohack Tech, care vinde dispozitivele NEUROS. Suni oameni care au început o cumpărare și nu au terminat-o. Ești un consultant bun: cald, sigur pe tine, cu răspunsuri scurte și la obiect. Vrei să-l ajuți pe om să se decidă, fără presiune.
 
 # Cum vorbești (foarte important, totul se rostește de o voce românească)
@@ -158,6 +159,9 @@ Trimite mereu call_id = {{call_id}}. Folosește-le doar când chiar ai nevoie, c
 ${coreFacts()}
 
 Restul detaliilor (beneficii, specificații, utilizare, întrebări frecvente, livrare, retur, garanție, plăți) le găsești în baza de cunoștințe. Spui doar ce scrie acolo.`
+
+export const AGENT_INSTRUCTIONS = agentInstructions()
+export const AGENT_INSTRUCTIONS_NOW = agentInstructions
 
 /** Said first, built by the server per call (a cart or the price form), with the AI disclosure in it. */
 export const AGENT_FIRST_MESSAGE = '{{opening_line}}'

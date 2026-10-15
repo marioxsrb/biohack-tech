@@ -10,6 +10,7 @@ import { CART_INTEREST, captureLead, leads, recordGatedCart, sanitizeCart } from
 import { errText, log } from '@/server/log'
 import { clientIp, rateLimit } from '@/server/rate-limit'
 import { deviceKey } from '@/server/device'
+import { ensureStoreSettings } from '@/server/store-settings'
 
 export const runtime = 'nodejs'
 
@@ -25,6 +26,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * (visitor, funnel, product): refreshing or submitting twice changes one row.
  */
 export async function POST(req: NextRequest) {
+  // Prices and stock as the admin set them (server/store-settings.ts), before anything is priced.
+  await ensureStoreSettings()
   const c = getConfig()
   const host = req.headers.get('host')
   const funnel = funnelForHost(host)

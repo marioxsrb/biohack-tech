@@ -14,6 +14,7 @@ import { customerName } from '@/server/orders/model'
 import { attachPaymentIntent, placeOrder, PromoError, setStripeCustomer } from '@/server/orders/service'
 import { normalizeCode, promoMessage } from '@/server/promo'
 import { clientIp, rateLimit } from '@/server/rate-limit'
+import { ensureStoreSettings } from '@/server/store-settings'
 
 export const runtime = 'nodejs'
 
@@ -64,6 +65,8 @@ const localeFrom = (req: NextRequest, body?: Record<string, unknown>): Locale =>
  * The same attempt submitted twice returns the same order.
  */
 export async function POST(req: NextRequest) {
+  // Prices and stock as the admin set them (server/store-settings.ts), before anything is priced.
+  await ensureStoreSettings()
   if (!rateLimit(`checkout:${clientIp(req.headers)}`, 12, 10 * 60_000)) {
     return fail(429, 'RATE_LIMIT', MESSAGES[localeFrom(req)].RATE_LIMIT)
   }

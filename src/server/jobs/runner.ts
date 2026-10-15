@@ -22,6 +22,8 @@ import { callConsent } from '@/server/calling/consent'
 import { hasCart, leadItems, recoveryLink, renderRecoveryOffer } from '@/server/calling/offer'
 import { promoCodes } from '@/server/promo'
 import { renderWelcome } from '@/server/welcome'
+import { syncAgentPrices } from '@/server/calling/agent-sync'
+import { ensureStoreSettings } from '@/server/store-settings'
 import { WELCOME_CODE } from '@/config/promotions'
 import { calls, leadProduct, renderCallFollowUp, renderCallLink, runCallAttempt, runCallCheck, type StepResult } from '@/server/calling/calls'
 import { companyLine } from '@/config/company'
@@ -267,6 +269,14 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const base = lead.funnel === 'gated_price' ? gatedOrigin(c.siteUrl) : c.siteUrl
     const mail = renderCallLink({ firstName: lead.name?.split(' ')[0] ?? null, productName: product.name, link: `${base}/api/lead/resume?t=${lead.recoveryToken}`, company: companyLine() || null })
     return deliver(c, { ...mail, to: lead.email, name: `call-link-${call.id}` })
+  },
+
+  // The AI agent learns the prices and stock set in /admin/setari (instructions and knowledge rebuilt).
+  'agent.sync': async () => {
+    const c = getConfig()
+    if (!c.elevenlabs) throw new Skip('ElevenLabs not configured')
+    await ensureStoreSettings(0)
+    return `knowledge ${await syncAgentPrices(c.elevenlabs, c.siteUrl)}`
   },
 
   // The website popup's code (LONGEVITY10), once per address; still only with the marketing consent in force.

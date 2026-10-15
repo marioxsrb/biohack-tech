@@ -451,4 +451,37 @@ create table if not exists welcome_signups (
 alter table welcome_signups enable row level security
 `,
   },
+  {
+    // The admin's store settings (prices, stock, switches), what each admin change did, and the API keys.
+    id: '014_admin_settings',
+    sql: `
+create table if not exists store_settings (
+  key text primary key,
+  value jsonb not null,
+  updated_at timestamptz not null default now(),
+  updated_by text
+);
+alter table store_settings enable row level security;
+create table if not exists admin_audit (
+  id bigserial primary key,
+  at timestamptz not null default now(),
+  actor text not null,
+  action text not null,
+  details jsonb not null default '{}'::jsonb
+);
+create index if not exists admin_audit_at_idx on admin_audit (at desc);
+alter table admin_audit enable row level security;
+create table if not exists admin_api_keys (
+  id uuid primary key,
+  name text not null,
+  prefix text not null,
+  key_hash text not null unique,
+  scope text not null check (scope in ('read', 'full')),
+  created_at timestamptz not null default now(),
+  last_used_at timestamptz,
+  revoked_at timestamptz
+);
+alter table admin_api_keys enable row level security
+`,
+  },
 ]

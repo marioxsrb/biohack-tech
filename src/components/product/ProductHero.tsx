@@ -168,7 +168,7 @@ export function ProductHero({ productId, intro, highlights }: Props) {
             <>
               {/* Availability on the left, quantity on the right: both decide what the buttons below order. */}
               <div className="mt-6 flex items-center justify-between gap-4">
-                <Availability className="min-w-0" />
+                <Availability className="min-w-0" productId={product.id} />
                 <QuantityStepper value={quantity} onChange={setQuantity} label={t.quantity} size="sm" />
               </div>
 

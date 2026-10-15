@@ -5,6 +5,7 @@ import { Arrow } from '@/components/ui/icons'
 import type { CartLine } from '@/components/cart/cart-store'
 import { recoveryCart } from '@/server/marketing/recovery'
 import { RestoreCart } from './RestoreCart'
+import { settingsForRender } from '@/server/store-settings'
 
 export const metadata: Metadata = { title: 'Reia comanda', robots: { index: false, follow: false } }
 
@@ -14,6 +15,7 @@ export const metadata: Metadata = { title: 'Reia comanda', robots: { index: fals
  * anything. The customer fills in the checkout again, as a new order.
  */
 export default async function ResumePage({ params }: PageProps<'/[lang]/reluare/[token]'>) {
+  await settingsForRender()
   await connection()
   const { token } = await params
   let lines: CartLine[] | null = null

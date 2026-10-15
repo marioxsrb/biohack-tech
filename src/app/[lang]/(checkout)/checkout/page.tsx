@@ -5,6 +5,7 @@ import { Suspense } from 'react'
 import { getLocale } from '@/i18n/server'
 import { getConfig, paymentMethods } from '@/server/config'
 import { CheckoutView } from './CheckoutView'
+import { settingsForRender } from '@/server/store-settings'
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -14,6 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function CheckoutPage() {
+  await settingsForRender()
   // Payment methods depend on runtime configuration (keys, bank details, database), not on the build.
   await connection()
   const c = getConfig()

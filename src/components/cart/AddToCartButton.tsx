@@ -38,6 +38,12 @@ export function AddToCartButton({ productId, variantId, quantity = 1, className 
     return () => clearTimeout(t)
   }, [added])
 
+  if (product.soldOut)
+    return (
+      <button type="button" disabled className={`btn-secondary ${size === 'sm' ? 'sm' : ''} cursor-not-allowed opacity-60 ${className}`}>
+        {locale === 'en' ? 'Out of stock' : 'Stoc epuizat'}
+      </button>
+    )
   if (!isPurchasable(product)) {
     return (
       <a href={`mailto:${site.email}?subject=${encodeURIComponent(`${locale === 'en' ? 'Price' : 'Preț'} ${product.name}`)}`} className={`btn-secondary ${size === 'sm' ? 'sm' : ''} ${className}`}>

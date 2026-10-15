@@ -3,6 +3,7 @@ import type { Metadata } from 'next'
 import { Lineup } from '@/components/site/Lineup'
 import { getLocale } from '@/i18n/server'
 import { pageMetadata } from '@/lib/seo'
+import { settingsForRender } from '@/server/store-settings'
 
 const COPY = {
   ro: {
@@ -26,6 +27,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ProductsPage() {
+  await settingsForRender()
   const t = COPY[await getLocale()]
   return (
     <div className="bg-mist pt-[var(--nav-h)]">

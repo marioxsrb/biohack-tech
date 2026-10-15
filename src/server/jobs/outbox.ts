@@ -25,6 +25,7 @@ export type JobKind =
   | 'call.link'
   | 'call.notify'
   | 'email.welcome'
+  | 'agent.sync'
   | 'ghl.call'
 export type JobStatus = 'pending' | 'running' | 'retry' | 'done' | 'failed' | 'skipped'
 

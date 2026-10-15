@@ -12,6 +12,7 @@ import { site } from '@/config/site'
 import { getLocale } from '@/i18n/server'
 import { pageMetadata } from '@/lib/seo'
 import og from '@/assets/img/balance-wave/lifestyle-canapea.webp'
+import { settingsForRender } from '@/server/store-settings'
 
 const META = {
   ro: {
@@ -48,7 +49,8 @@ export async function generateMetadata(): Promise<Metadata> {
  * Hero, the four products (once), why buy here, real reviews under the customer count, the same day with and without the products, the offers
  * (to close a decision, not to open it), questions, a person to write to.
  */
-export default function Home() {
+export default async function Home() {
+  await settingsForRender()
   return (
     <>
       <VisitBeacon page="home" />

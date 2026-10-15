@@ -8,6 +8,8 @@ import { jobs } from '@/server/jobs/outbox'
 import { runDueJobs } from '@/server/jobs/runner'
 import { log } from '@/server/log'
 import { courier } from '@/server/fulfillment/courier'
+import { adminKeys } from '@/server/admin-keys'
+import { audit, readStoreSettings, saveStoreSettings, type StoreSettings } from '@/server/store-settings'
 import { enquiries, type EnquiryStatus } from '@/server/enquiries'
 import { cancelScheduledCalls, disableCalling, retryCall } from '@/server/calling/admin'
 import { getConfig } from '@/server/config'
@@ -211,3 +213,63 @@ export async function togglePromoAction(f: FormData) {
   revalidatePath('/admin/coduri')
 }
 
+
+// ─── store settings and API keys (/admin/setari) ─────────────────────────────
+
+export type SettingsFormState = { error?: string; problems?: string[]; saved?: boolean }
+
+const adminActor = () => `admin:${process.env.ADMIN_USER || 'admin'}`
+
+/**
+ * Prices (lei, per product; empty = the code's price), stock, the website popup and the AI calls pause. A price
+ * change needs the ticked confirmation; every change is validated and kept in the admin log.
+ */
+export async function saveSettingsAction(_: SettingsFormState, f: FormData): Promise<SettingsFormState> {
+  await guard()
+  const db = await getDb()
+  const now = await readStoreSettings(db)
+  const prices: StoreSettings['prices'] = {}
+  for (const p of products) {
+    const raw = text(f, `price:${p.id}`, 20).replace(/\s/g, '')
+    if (!raw) continue
+    const value = Number(raw.replace(/\./g, '').replace(',', '.'))
+    if (!Number.isFinite(value)) return { error: `${p.name}: prețul nu este un număr.` }
+    prices[p.id] = Math.round(value * 100)
+  }
+  const next: StoreSettings = {
+    prices,
+    soldOut: products.filter((p) => f.get(`soldOut:${p.id}`) === 'da').map((p) => p.id),
+    welcomePopup: f.get('welcomePopup') === 'da',
+    callsPaused: f.get('callsPaused') === 'da',
+  }
+  if (JSON.stringify(next.prices) !== JSON.stringify(now.prices) && f.get('confirmPrices') !== 'da')
+    return { error: 'Ai schimbat un preț: bifează confirmarea de sub prețuri ca să salvezi.' }
+  const r = await saveStoreSettings(db, next, adminActor())
+  if (!r.ok) return { problems: r.problems.map((x) => x.message) }
+  log.info('admin.settings_saved', { prices: Object.keys(next.prices).length, soldOut: next.soldOut.length })
+  revalidatePath('/', 'layout')
+  await runDueJobs()
+  return { saved: true }
+}
+
+export type KeyFormState = { error?: string; token?: string; name?: string }
+
+export async function createKeyAction(_: KeyFormState, f: FormData): Promise<KeyFormState> {
+  await guard()
+  const name = text(f, 'name', 60)
+  if (name.length < 2) return { error: 'Dă-i cheii un nume (de exemplu „Grok”).' }
+  const scope = f.get('scope') === 'full' ? 'full' : 'read'
+  const db = await getDb()
+  const k = await adminKeys.create(db, name, scope)
+  await audit(db, adminActor(), 'api_key.create', { id: k.id, name, scope, prefix: k.prefix })
+  revalidatePath('/admin/setari')
+  return { token: k.token, name }
+}
+
+export async function revokeKeyAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id', 40)
+  const db = await getDb()
+  if (await adminKeys.revoke(db, id)) await audit(db, adminActor(), 'api_key.revoke', { id })
+  revalidatePath('/admin/setari')
+}

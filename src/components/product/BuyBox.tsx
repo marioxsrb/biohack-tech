@@ -35,6 +35,7 @@ const COPY = {
     pieces: (n: number) => (n === 1 ? '1 bucată' : `${n} bucăți`),
     pairs: (n: number) => (n === 1 ? '1 pereche' : `${n} perechi`),
     inStock: 'În stoc',
+    soldOut: 'Stoc epuizat momentan',
     ships: `Expediem în ${terms.processingDays}`,
     contact: 'Comandă direct, cu ajutorul nostru',
     order: 'Comandă',
@@ -60,6 +61,7 @@ const COPY = {
     pieces: (n: number) => (n === 1 ? '1 piece' : `${n} pieces`),
     pairs: (n: number) => (n === 1 ? '1 pair' : `${n} pairs`),
     inStock: 'In stock',
+    soldOut: 'Temporarily out of stock',
     ships: `Ships in ${terms.processingDays.replace('zile', 'days')}`,
     contact: 'Order directly, with our help',
     order: 'Order',
@@ -217,8 +219,15 @@ export function BundleOffer({
 }
 
 /** Availability. The store sells what has a price; it ships in the stated processing time. */
-export function Availability({ className = '' }: { className?: string }) {
+export function Availability({ className = '', productId }: { className?: string; productId?: ProductId }) {
   const t = COPY[useLocale()]
+  if (productId && getProduct(productId)?.soldOut)
+    return (
+      <p className={`flex items-center gap-2.5 text-[14.5px] leading-snug text-text ${className}`}>
+        <span aria-hidden className="h-2.5 w-2.5 flex-none rounded-full bg-red-deep" />
+        <strong className="font-semibold text-ink">{t.soldOut}</strong>
+      </p>
+    )
   return (
     <p className={`flex items-center gap-2.5 text-[14.5px] leading-snug text-text ${className}`}>
       <span aria-hidden className="relative flex h-2.5 w-2.5 flex-none">

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { AddedPopup } from '@/components/cart/AddedPopup'
 import { WelcomePopup } from '@/components/site/WelcomePopup'
+import { settingsForRender, storeScript } from '@/server/store-settings'
 import { CartProvider } from '@/components/cart/CartProvider'
 import { OfferSheetsProvider } from '@/components/offers/OfferSheets'
 import { ConsentManager } from '@/components/consent/ConsentManager'
@@ -47,11 +48,14 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: LayoutProps<'/[lang]'>) {
   const locale = await lang()
   if (!isLocale(locale)) notFound()
+  // The admin's prices and stock, for this render and (through the script) for the browser.
+  const settings = await settingsForRender()
   return (
     <html lang={locale} data-scroll-behavior="smooth" className={`${geist.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <head>
         {/* acces.<domain> only: marks prices as locked before the first paint (components/gate). */}
         <script dangerouslySetInnerHTML={{ __html: GATE_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: storeScript(settings) }} />
       </head>
       <body>
         {/* Site chrome (header, footer) lives in (site)/layout; advertising landings in (landing) have their own. */}

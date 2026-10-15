@@ -20,6 +20,7 @@ const GROUPS: { title: string; items: { href: string; label: string }[] }[] = [
       { href: '/admin/coduri', label: 'Coduri promoționale' },
     ],
   },
+  { title: 'Magazin', items: [{ href: '/admin/setari', label: 'Setări, prețuri și API' }] },
 ]
 
 /** The side menu; the current page is marked (an order's page belongs to "Comenzi"). */

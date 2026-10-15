@@ -5,6 +5,7 @@ import { getDb } from '@/server/db'
 import { errText, log } from '@/server/log'
 import { promoCodes, promoMessage, ruleOf } from '@/server/promo'
 import { clientIp, rateLimit } from '@/server/rate-limit'
+import { ensureStoreSettings } from '@/server/store-settings'
 
 export const runtime = 'nodejs'
 
@@ -14,6 +15,8 @@ export const runtime = 'nodejs'
  * the code again when it is placed. Answers in the checkout's language.
  */
 export async function POST(req: NextRequest) {
+  // Prices and stock as the admin set them (server/store-settings.ts), before anything is priced.
+  await ensureStoreSettings()
   let body: Record<string, unknown>
   try {
     body = await req.json()

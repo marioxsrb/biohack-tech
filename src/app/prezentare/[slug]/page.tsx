@@ -5,6 +5,7 @@ import { getProduct } from '@/content/catalog'
 import { getLanding, landings } from '@/content/landings'
 import { getProductContent } from '@/content/product-content'
 import { landingHost } from '@/lib/landing-hosts'
+import { settingsForRender } from '@/server/store-settings'
 
 export function generateStaticParams() {
   return landings.map((l) => ({ slug: l.slug }))
@@ -32,6 +33,7 @@ export async function generateMetadata({ params }: PageProps<'/prezentare/[slug]
 }
 
 export default async function PresentationRoute({ params }: PageProps<'/prezentare/[slug]'>) {
+  await settingsForRender()
   const landing = getLanding((await params).slug)
   if (!landing) notFound()
   return <PresentationPage landing={landing} />

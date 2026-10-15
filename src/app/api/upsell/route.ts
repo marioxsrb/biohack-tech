@@ -6,6 +6,7 @@ import { orders } from '@/server/orders/repository'
 import { acceptUpsell, upsellStatus } from '@/server/orders/upsell'
 import { getDb } from '@/server/db'
 import { clientIp, rateLimit } from '@/server/rate-limit'
+import { ensureStoreSettings } from '@/server/store-settings'
 
 export const runtime = 'nodejs'
 
@@ -15,6 +16,8 @@ export const runtime = 'nodejs'
  * and the card are decided here and by Stripe.
  */
 export async function POST(req: NextRequest) {
+  // Prices and stock as the admin set them (server/store-settings.ts), before anything is priced.
+  await ensureStoreSettings()
   if (!rateLimit(`upsell:${clientIp(req.headers)}`, 20, 10 * 60_000)) return NextResponse.json({ state: 'closed', message: 'Prea multe încercări.' }, { status: 429 })
   let body: Record<string, unknown>
   try {

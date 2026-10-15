@@ -18,6 +18,7 @@ import { ElevenLabsError, elevenlabs, type Conversation } from '@/server/integra
 import { jobs } from '@/server/jobs/outbox'
 import { CART_INTEREST, leads, type Lead } from '@/server/leads'
 import { withdrawAllMarketing } from '@/server/marketing/unsubscribe'
+import { ensureStoreSettings } from '@/server/store-settings'
 import { log } from '@/server/log'
 import { marketing } from '@/server/marketing/consent'
 import { callConsent } from './consent'
@@ -274,6 +275,11 @@ export function productUrlFor(lead: Lead, c: Pick<Config, 'siteUrl'>, gatedOrigi
 export async function runCallAttempt(q: Queryable, c: Config, payload: { leadId: string; attempt: number }, dedupeKey: string): Promise<StepResult> {
   const lead = await leads.byId(q, payload.leadId)
   if (!lead) return { skip: 'lead gone' }
+  // Calls paused in /admin/setari: the attempt waits (checked again in 30 minutes), nothing is lost.
+  if ((await ensureStoreSettings()).callsPaused) {
+    await jobs.enqueue(q, { kind: 'call.attempt', dedupeKey: `${dedupeKey}:paused:${Math.floor(Date.now() / 1_800_000)}`, payload, runAt: new Date(Date.now() + 30 * 60_000) })
+    return { skip: 'calls paused in admin' }
+  }
   const attempt = Math.max(1, Math.floor(payload.attempt))
   const now = new Date()
   const d = callDecision(lead, { attempt, now, calling: c.calling, ...(await callFacts(q, lead, c.calling)) })

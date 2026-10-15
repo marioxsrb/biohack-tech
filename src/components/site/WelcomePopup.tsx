@@ -72,7 +72,7 @@ export function WelcomePopup() {
 
   useEffect(() => {
     // acces.<domain>: prices are behind the form there (same test as the gate's pre-paint script).
-    if (hiddenHere || /^acces\./.test(location.hostname)) return
+    if (hiddenHere || /^acces\./.test(location.hostname) || window.__BT_STORE__?.welcomePopup === false) return
     const s = read(STATE_KEY)
     if (s === 'sent' || (s && Number(s) > Date.now())) return
     let start = 0

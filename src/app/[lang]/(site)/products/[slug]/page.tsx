@@ -10,6 +10,7 @@ import { getProductContent } from '@/content/product-content'
 import { getLocale } from '@/i18n/server'
 import { localePath } from '@/i18n/locales'
 import { absolute, breadcrumbJsonLd, JsonLd, pageMetadata, productJsonLd } from '@/lib/seo'
+import { settingsForRender } from '@/server/store-settings'
 
 const COPY = {
   ro: { home: 'Acasă', products: 'Produse', note: (name: string) => `${name} este un produs de wellness. Pentru o afecțiune, cere întâi sfatul medicului. Rezultatele diferă de la o persoană la alta.` },
@@ -39,6 +40,7 @@ export async function generateMetadata({ params }: PageProps<'/[lang]/products/[
 }
 
 export default async function ProductPage({ params }: PageProps<'/[lang]/products/[slug]'>) {
+  await settingsForRender()
   const { slug } = await params
   const locale = await getLocale()
   const t = COPY[locale]
