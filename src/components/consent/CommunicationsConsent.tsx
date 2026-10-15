@@ -4,6 +4,8 @@ import {
   COMMUNICATIONS_LINK_TEXT,
   COMMUNICATIONS_LINK_TEXT_EN,
   COMMUNICATIONS_TERMS_HREF,
+  EMAIL_ONLY_CONSENT_TEXT,
+  EMAIL_ONLY_CONSENT_TEXT_EN,
 } from '@/lib/consent/communications'
 
 /**
@@ -11,9 +13,10 @@ import {
  * default, its words open the conditions in the terms, and "(opțional)" stays discreet. Ticking it is one
  * decision that the server records as two consents (email and AI calls), because the text names both.
  */
-export function CommunicationsConsent({ checked, onChange, locale = 'ro', className = '' }: { checked: boolean; onChange: (v: boolean) => void; locale?: 'ro' | 'en'; className?: string }) {
+export function CommunicationsConsent({ checked, onChange, locale = 'ro', emailOnly = false, className = '' }: { checked: boolean; onChange: (v: boolean) => void; locale?: 'ro' | 'en'; emailOnly?: boolean; className?: string }) {
   const en = locale === 'en'
-  const text = en ? COMMUNICATIONS_CONSENT_TEXT_EN : COMMUNICATIONS_CONSENT_TEXT
+  // The international site has no AI calls: its box names email only.
+  const text = emailOnly ? (en ? EMAIL_ONLY_CONSENT_TEXT_EN : EMAIL_ONLY_CONSENT_TEXT) : en ? COMMUNICATIONS_CONSENT_TEXT_EN : COMMUNICATIONS_CONSENT_TEXT
   const link = en ? COMMUNICATIONS_LINK_TEXT_EN : COMMUNICATIONS_LINK_TEXT
   const [before, after] = text.split(link)
   return (

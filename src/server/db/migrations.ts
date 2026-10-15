@@ -594,4 +594,15 @@ create table if not exists assistant_usage (
 alter table assistant_usage enable row level security
 `,
   },
+  {
+    // International orders (biohack-tech.net, English pages): the currency's rate at the time (lei per unit, 1 for
+    // lei), the customer's language and the site; the language of leads, for their emails.
+    id: '020_international',
+    sql: `
+alter table orders add column if not exists fx_rate numeric(12, 6) not null default 1;
+alter table orders add column if not exists locale text not null default 'ro';
+alter table orders add column if not exists site text not null default 'ro';
+alter table leads add column if not exists locale text not null default 'ro'
+`,
+  },
 ]

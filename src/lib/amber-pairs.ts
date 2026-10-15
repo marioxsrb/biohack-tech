@@ -6,6 +6,7 @@
 import { getProduct, unitPrice, variantLabel, type ProductId } from '@/content/catalog'
 import type { Locale } from '@/i18n/locales'
 import { priceLines } from './promotions'
+import { convertUnit, type Currency } from './currency'
 
 export const AMBER_ID: ProductId = 'ochelari-biohack'
 
@@ -50,10 +51,10 @@ export function pairsToLines(picks: (string | null)[]): { productId: ProductId; 
  * Totals the customer will have for NEUROS Amber after adding these pairs to what is already in the
  * cart, from the promotion engine (the same one the cart, checkout and server use).
  */
-export function amberTotals(existing: { variantId?: string; quantity: number }[], picks: (string | null)[]) {
+export function amberTotals(existing: { variantId?: string; quantity: number }[], picks: (string | null)[], currency: Currency = 'RON') {
   const p = getProduct(AMBER_ID)!
   const lines = [...existing, ...picks.filter((v): v is string => !!v).map((variantId) => ({ variantId, quantity: 1 }))]
-  const priced = lines.map((l, i) => ({ key: `${l.variantId}:${i}`, productId: AMBER_ID as string, quantity: l.quantity, unitAmount: unitPrice(p, p.variants?.find((v) => v.id === l.variantId)) ?? p.price ?? 0 }))
+  const priced = lines.map((l, i) => ({ key: `${l.variantId}:${i}`, productId: AMBER_ID as string, quantity: l.quantity, unitAmount: convertUnit(unitPrice(p, p.variants?.find((v) => v.id === l.variantId)) ?? p.price ?? 0, currency) }))
   const r = priceLines(priced)
   return { subtotalMinor: r.subtotalMinor, discountMinor: r.discountMinor, totalMinor: r.totalMinor, units: lines.reduce((n, l) => n + l.quantity, 0) }
 }

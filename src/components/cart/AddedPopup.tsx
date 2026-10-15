@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useRef, useState } from 'react'
 import { Arrow, Check, Close } from '@/components/ui/icons'
 import { useLocale, useUi } from '@/i18n/LocaleProvider'
-import { formatLei } from '@/lib/money'
+import { useMoney } from '@/i18n/currency'
 import { useCart } from './CartProvider'
 import { LineBundle } from './LineBundle'
 
@@ -19,6 +19,7 @@ const VISIBLE_MS = 15000
  */
 export function AddedPopup() {
   const { confirmation, dismissConfirmation, lines } = useCart()
+  const { fmt } = useMoney()
   const line = confirmation ? lines.find((l) => l.key === confirmation.key) : undefined
   const [hold, setHold] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -84,7 +85,7 @@ export function AddedPopup() {
             {!line.variantLabel && line.quantity === 1 ? line.product.purpose : null}
           </span>
         </span>
-        <span data-price className="text-[15px] font-medium text-ink tabular-nums">{formatLei(line.unit * line.quantity)}</span>
+        <span data-price className="text-[15px] font-medium text-ink tabular-nums">{fmt(line.unit * line.quantity)}</span>
       </div>
 
       {/* The product page's bundle choices: 2 or 3 at a lower price, picked right here. */}

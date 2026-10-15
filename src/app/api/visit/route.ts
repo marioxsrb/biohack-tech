@@ -1,3 +1,4 @@
+import { isIntlHost } from '@/lib/sites'
 import { NextResponse, type NextRequest } from 'next/server'
 import { funnelForHost, isGatedHost } from '@/lib/lead'
 import { landingForHost } from '@/lib/landing-hosts'
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
   try {
     const host = req.headers.get('host')
     // Which site: a landing's own hostname (calm., focus., amber.), acces, or the main store.
-    const site = landingForHost(host) ?? (isGatedHost(host) ? 'acces' : 'main')
+    const site = landingForHost(host) ?? (isGatedHost(host) ? 'acces' : isIntlHost(host) ? 'net' : 'main')
     await countVisit(await getDb(), funnelForHost(host), page, { session: body.session === true, source: slug(body.source), campaign: slug(body.campaign), site })
   } catch {}
   return new NextResponse(null, { status: 204 })

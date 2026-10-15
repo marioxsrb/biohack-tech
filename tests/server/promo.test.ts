@@ -194,6 +194,8 @@ describe('checkout errors in the visitor language', () => {
     const ro = await (await checkout(req('https://biohack-tech.ro/api/checkout', bad))).json()
     expect(ro.message).toBe('Verifică câmpurile marcate în formular.')
     expect((await (await checkout(req('https://biohack-tech.ro/api/checkout', { lines: [] }, 'https://biohack-tech.ro/en/checkout'))).json()).message).toBe('Your cart is empty.')
-    expect((await buy([FOCUS(1)], 'NUEXISTA', { locale: 'en' })).data.message).toMatch(/does not exist/)
+    // English pages pay in euro or dollars, by card only.
+    expect((await buy([FOCUS(1)], 'NUEXISTA', { locale: 'en', method: 'card' })).data.message).toMatch(/does not exist/)
+    expect((await buy([FOCUS(1)], undefined, { locale: 'en', method: 'cod' })).data.fields.paymentMethod).toBeTruthy()
   })
 })

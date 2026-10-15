@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { cookieFrom, GATE_COOKIE, isGatedHost } from '@/lib/lead'
+import { isIntlHost } from '@/lib/sites'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { assistantEnabled, assistantTurn, cleanMessages } from '@/server/assistant/chat'
@@ -17,7 +18,8 @@ const BUSY = { error: 'RATE_LIMIT', message: 'Ai trimis multe mesaje într-un ti
 
 /** The website assistant (components/assistant): one streamed answer per visitor message. */
 export async function POST(req: NextRequest) {
-  if (!(await assistantEnabled())) return NextResponse.json({ error: 'UNAVAILABLE' }, { status: 404 })
+  // No chat on the international site (biohack-tech.net).
+  if (!(await assistantEnabled()) || isIntlHost(req.headers.get('host'))) return NextResponse.json({ error: 'UNAVAILABLE' }, { status: 404 })
   const ip = clientIp(req.headers)
   if (!rateLimit(`assistant:${ip}`, 20, 5 * 60_000) || !rateLimit(`assistant-day:${ip}`, 200, 24 * 3600_000)) return NextResponse.json(BUSY, { status: 429 })
   const raw = await req.text()

@@ -1,7 +1,7 @@
 'use client'
 
 import { useLocale } from '@/i18n/LocaleProvider'
-import { formatLei } from '@/lib/money'
+import { useMoney } from '@/i18n/currency'
 import { MAX_QTY } from '@/lib/purchase'
 import { priceLines } from '@/lib/promotions'
 import { useCart, type ResolvedLine } from './CartProvider'
@@ -13,6 +13,7 @@ import { useCart, type ResolvedLine } from './CartProvider'
  */
 export function LineOffer({ line, className = '' }: { line: ResolvedLine; className?: string }) {
   const { lines, progress, setQuantity } = useCart()
+  const { fmt } = useMoney()
   const locale = useLocale()
   const en = locale === 'en'
   const p = progress.find((x) => x.products.includes(line.product.id))
@@ -30,11 +31,11 @@ export function LineOffer({ line, className = '' }: { line: ResolvedLine; classN
   const all = p.units + 1
   const text = amber
     ? en
-      ? `Add one more pair, it's free (−${formatLei(gain)})`
-      : `Adaugă încă o pereche, o primești gratuit (−${formatLei(gain)})`
+      ? `Add one more pair, it's free (−${fmt(gain)})`
+      : `Adaugă încă o pereche, o primești gratuit (−${fmt(gain)})`
     : en
-      ? `Add one more: ${p.nextPercent}% off ${all === 2 ? 'both' : `all ${all}`} (−${formatLei(gain)})`
-      : `Adaugă încă unul: ${p.nextPercent}% la ${all === 2 ? 'ambele' : all === 3 ? 'toate trei' : `toate ${all}`} (−${formatLei(gain)})`
+      ? `Add one more: ${p.nextPercent}% off ${all === 2 ? 'both' : `all ${all}`} (−${fmt(gain)})`
+      : `Adaugă încă unul: ${p.nextPercent}% la ${all === 2 ? 'ambele' : all === 3 ? 'toate trei' : `toate ${all}`} (−${fmt(gain)})`
 
   return (
     <button

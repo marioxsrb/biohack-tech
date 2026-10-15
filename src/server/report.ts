@@ -20,11 +20,12 @@ export const SITES = [
   { site: 'calm', label: 'calm.biohack-tech.ro' },
   { site: 'focus', label: 'focus.biohack-tech.ro' },
   { site: 'amber', label: 'amber.biohack-tech.ro' },
+  { site: 'net', label: 'biohack-tech.net' },
 ] as const
 /** A lead's site, from the host it was captured on. */
-const LEAD_SITE = `case when funnel = 'gated_price' then 'acces' when split_part(coalesce(landing_host,''), '.', 1) in ('calm','focus','amber') then split_part(landing_host, '.', 1) else 'main' end`
+const LEAD_SITE = `case when funnel = 'gated_price' then 'acces' when coalesce(landing_host,'') like '%biohack-tech.net' or coalesce(landing_host,'') like 'net.localhost%' then 'net' when split_part(coalesce(landing_host,''), '.', 1) in ('calm','focus','amber') then split_part(landing_host, '.', 1) else 'main' end`
 /** An order's site: the landing it came through, acces, or the main store. */
-const ORDER_SITE = `case when o.attribution->>'landing' in ('calm','focus','amber') then o.attribution->>'landing' when coalesce(o.attribution->>'funnel','') = 'gated_price' then 'acces' else 'main' end`
+const ORDER_SITE = `case when o.site = 'net' then 'net' when o.attribution->>'landing' in ('calm','focus','amber') then o.attribution->>'landing' when coalesce(o.attribution->>'funnel','') = 'gated_price' then 'acces' else 'main' end`
 /** An order that stands (counted in sales). */
 const STANDS = `o.kind = 'checkout' and o.status not in ('cancelled', 'abandoned') and (o.payment_method <> 'card' or o.payment_status in ('paid', 'partially_refunded', 'refunded'))`
 
@@ -103,7 +104,7 @@ async function totals(q: Queryable, p: Pick<Period, 'from' | 'to'>) {
       [p.from, p.to],
     ),
     q.query(`select count(*)::int as leads, count(distinct email)::int as people from leads where created_at >= $1 and created_at < $2`, [p.from, p.to]),
-    q.query(`select count(*)::int as orders, coalesce(sum(o.total_minor - o.refunded_minor),0)::bigint as revenue from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2`, [p.from, p.to]),
+    q.query(`select count(*)::int as orders, coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate),0)::bigint as revenue from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2`, [p.from, p.to]),
   ])
   const sessions = n(visits.rows[0]?.sessions)
   const orderCount = n(orders.rows[0]?.orders)
@@ -148,16 +149,16 @@ export async function buildReport(q: Queryable, p: Period) {
       range,
     ),
     q.query(
-      `select o.id, o.order_number, o.created_at, o.total_minor, o.status, o.payment_method, o.payment_status, o.promo_code,
+      `select o.id, o.order_number, o.created_at, round(o.total_minor * o.fx_rate)::bigint as total_minor, o.currency, o.total_minor as total_in_currency, o.status, o.payment_method, o.payment_status, o.promo_code,
               o.customer->>'firstName' as first_name, coalesce(o.shipping_address->>'city', o.billing_address->>'city', '') as city,
               coalesce(o.attribution->>'funnel','visible_price') as funnel, coalesce(o.attribution->'utm'->>'utm_source','') as source,
               (select string_agg(i.quantity || ' × ' || i.product_name || coalesce(' (' || i.variant_name || ')', ''), ', ' order by i.position) from order_items i where i.order_id = o.id) as items
        from orders o where o.kind = 'checkout' and o.created_at >= $1 and o.created_at < $2 order by o.created_at desc limit 100`,
       range,
     ),
-    q.query(`select o.payment_method as method, count(*)::int as orders, coalesce(sum(o.total_minor),0)::bigint as value from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1`, range),
+    q.query(`select o.payment_method as method, count(*)::int as orders, coalesce(sum(o.total_minor * o.fx_rate),0)::bigint as value from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1`, range),
     q.query(
-      `select i.product_name as product, sum(i.quantity)::int as units, coalesce(sum(i.line_total_minor),0)::bigint as value
+      `select i.product_name as product, sum(i.quantity)::int as units, coalesce(sum(i.line_total_minor * o.fx_rate),0)::bigint as value
        from order_items i join orders o on o.id = i.order_id where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1 order by units desc`,
       range,
     ),
@@ -171,7 +172,7 @@ export async function buildReport(q: Queryable, p: Period) {
     q.query(`select coalesce(outcome, status) as outcome, count(*)::int as n from calls where created_at >= $1 and created_at < $2 and status <> 'dry_run' group by 1 order by n desc`, range),
     q.query(`select count(*) filter (where last_recovery_at >= $1 and last_recovery_at < $2)::int as recovery from leads`, range),
     q.query(
-      `select r.code, count(*)::int as uses, coalesce(sum(r.discount_minor),0)::bigint as discount from promo_redemptions r join orders o on o.id = r.order_id
+      `select r.code, count(*)::int as uses, coalesce(sum(r.discount_minor * o.fx_rate),0)::bigint as discount from promo_redemptions r join orders o on o.id = r.order_id
        where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1 order by uses desc`,
       range,
     ),
@@ -183,7 +184,7 @@ export async function buildReport(q: Queryable, p: Period) {
               coalesce((select sum(sessions) from visit_stats v where v.day = d.day),0)::int as sessions,
               (select count(*) from leads l where (l.created_at at time zone '${TZ}')::date = d.day)::int as leads,
               (select count(*) from orders o where ${STANDS} and (o.created_at at time zone '${TZ}')::date = d.day)::int as orders,
-              coalesce((select sum(o.total_minor - o.refunded_minor) from orders o where ${STANDS} and (o.created_at at time zone '${TZ}')::date = d.day),0)::bigint as revenue
+              coalesce((select sum((o.total_minor - o.refunded_minor) * o.fx_rate) from orders o where ${STANDS} and (o.created_at at time zone '${TZ}')::date = d.day),0)::bigint as revenue
        from d order by d.day`,
       [p.days > 1 ? p.from : new Date(p.to.getTime() - 14 * 86_400_000), p.to],
     ),
@@ -193,7 +194,7 @@ export async function buildReport(q: Queryable, p: Period) {
       range,
     ),
     q.query(`select ${LEAD_SITE} as site, count(*)::int as leads from leads where created_at >= $1 and created_at < $2 group by 1`, range),
-    q.query(`select ${ORDER_SITE} as site, count(*)::int as orders, coalesce(sum(o.total_minor - o.refunded_minor),0)::bigint as revenue from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1`, range),
+    q.query(`select ${ORDER_SITE} as site, count(*)::int as orders, coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate),0)::bigint as revenue from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1`, range),
   ])
 
   const funnels = ['visible_price', 'gated_price'].map((f) => {

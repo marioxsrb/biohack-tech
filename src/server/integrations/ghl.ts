@@ -257,13 +257,14 @@ export function contactPayload(c: GhlConfig, o: Order, lifetime: { orders: numbe
     city: o.billingAddress.city,
     state: o.billingAddress.county,
     postalCode: o.billingAddress.postalCode,
-    country: 'RO',
-    source: 'biohack-tech.ro',
+    country: o.billingAddress.country || 'RO',
+    source: o.site === 'net' ? 'biohack-tech.net' : 'biohack-tech.ro',
     customFields: [
       [CONTACT_FIELDS.customerType, o.customer.buyerType === 'pj' ? 'Persoană juridică' : 'Persoană fizică'],
       [CONTACT_FIELDS.lastOrderNumber, o.orderNumber],
       [CONTACT_FIELDS.lastOrderDate, o.createdAt.toISOString().slice(0, 10)],
-      [CONTACT_FIELDS.lastOrderValue, (o.totalMinor / 100).toFixed(2)],
+      // In lei (an order in euro or dollars at its own rate), like every value in the CRM.
+      [CONTACT_FIELDS.lastOrderValue, ((o.totalMinor * o.fxRate) / 100).toFixed(2)],
       [CONTACT_FIELDS.lastOrderProducts, products],
       [CONTACT_FIELDS.lastPaymentMethod, PAYMENT_METHOD_LABEL[o.paymentMethod]],
       [CONTACT_FIELDS.lastPaymentStatus, PAYMENT_STATUS_RO[o.paymentStatus]],
@@ -403,7 +404,7 @@ export const ghl = {
       name: `${o.orderNumber} · ${customerName(o.customer)}${parentOrderNumber ? ` · adăugată la ${parentOrderNumber}` : ''}`,
       pipelineStageId: stageId,
       status,
-      monetaryValue: Number(((o.totalMinor - o.refundedMinor) / 100).toFixed(2)),
+      monetaryValue: Number((((o.totalMinor - o.refundedMinor) * o.fxRate) / 100).toFixed(2)),
     }
     let id = knownId
     if (!id) {

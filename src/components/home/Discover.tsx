@@ -28,7 +28,7 @@ const COPY = {
   },
   en: {
     title: 'NEUROS products',
-    intro: 'Free delivery in Romania. Up to 20% off when you buy more than one.',
+    intro: 'Free worldwide delivery. Up to 20% off when you buy more than one.',
     view: (name: string) => `${name}: view the product`,
   },
 }

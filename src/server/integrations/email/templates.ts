@@ -1,14 +1,17 @@
 /**
  * Transactional emails, rendered by us from the canonical order and delivered by the
  * configured transport (our own SMTP mailbox in production). One data contract, one template per message.
- * Plain Romanian, one idea per sentence, no marketing blocks. Every email also has a
- * plain-text version.
+ * Plain language, one idea per sentence, no marketing blocks. Every email also has a plain-text version.
+ * In the order's language (Romanian, or English for orders placed in English), amounts in the order's currency,
+ * links to the site the order was placed on.
  */
 import { site, terms } from '@/config/site'
 import type { BankConfig } from '@/server/config'
 import { customerName, formatAddress, PAYMENT_METHOD_LABEL, type Order } from '@/server/orders/model'
 import { awaitsCollection } from '@/server/orders/state'
-import { formatLei } from '@/lib/money'
+import { formatMoney } from '@/lib/currency'
+import { promoText } from '@/config/promotions'
+import { siteOrigin } from '@/lib/sites'
 import { emailShell } from './shell'
 
 export type EmailTemplate =
@@ -24,6 +27,24 @@ export type EmailTemplate =
   | 'return_received'
   | 'transfer_reminder'
   | 'delivery_followup'
+
+const SUBJECT_EN: Record<EmailTemplate, (o: Order) => string> = {
+  order_confirmed: (o) => `Your Biohack Tech order #${o.orderNumber}`,
+  cod_confirmed: (o) => `Your Biohack Tech order #${o.orderNumber}: pay on delivery`,
+  transfer_instructions: (o) => `Order #${o.orderNumber}: bank transfer details`,
+  payment_received: (o) => `We received the payment for order #${o.orderNumber}`,
+  invoice_issued: (o) => `Invoice for order #${o.orderNumber}`,
+  order_shipped: (o) => `Order #${o.orderNumber} has shipped`,
+  order_cancelled: (o) => `Order #${o.orderNumber} has been cancelled`,
+  refund_issued: (o) => `Refund for order #${o.orderNumber}`,
+  withdrawal_received: (o) => `We received your withdrawal for order #${o.orderNumber}`,
+  return_received: (o) => `We received the returned products from order #${o.orderNumber}`,
+  transfer_reminder: (o) => `Reminder: order ${o.orderNumber} is waiting for payment`,
+  delivery_followup: (o) => `Order ${o.orderNumber} has arrived. We're here to help you get started`,
+}
+
+/** The subject in the order's language. */
+export const subjectFor = (t: EmailTemplate, o: Order) => (o.locale === 'en' ? SUBJECT_EN[t](o) : EMAIL_TEMPLATES[t].subject(o))
 
 export const EMAIL_TEMPLATES: Record<EmailTemplate, { subject: (o: Order) => string; kind: 'transactional' }> = {
   order_confirmed: { subject: (o) => `Comanda ta Biohack Tech #${o.orderNumber}`, kind: 'transactional' },
@@ -58,6 +79,13 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 const dateTimeRo = (d: Date) =>
   d.toLocaleString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bucharest' })
 const dateRo = (d: Date) => d.toLocaleDateString('ro-RO', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Bucharest' })
+const dateEn = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Bucharest' })
+const dateTimeEn = (d: Date) => d.toLocaleString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Bucharest' })
+/** An amount in the order's currency. */
+const fm = (o: Order, minor: number) => formatMoney(minor, o.currency)
+const en = (o: Order) => o.locale === 'en'
+const METHOD_EN: Record<Order['paymentMethod'], string> = { card: 'Card', bank_transfer: 'Bank transfer', cash_on_delivery: 'Cash on delivery' }
+const methodLabel = (o: Order) => (en(o) ? METHOD_EN[o.paymentMethod] : PAYMENT_METHOD_LABEL[o.paymentMethod])
 
 type Block = { html: string; text: string }
 const p = (s: string): Block => ({ html: `<p style="margin:0 0 14px;font-size:16px;line-height:1.55;color:#27343a">${esc(s)}</p>`, text: s })
@@ -73,31 +101,33 @@ function itemsBlock(o: Order): Block {
   const lines = o.items.map((i) => ({ name: i.productName, variant: i.variantName, qty: i.quantity, unit: i.unitPriceMinor, total: i.lineTotalMinor }))
   const html = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse">${lines
     .map(
-      (l) => `<tr><td style="padding:10px 0;border-top:1px solid #e8edef;font-size:15px;color:#0b1316">${esc(`${l.qty} x ${l.name}`)}${l.variant ? `<br><span style="color:#5a6870;font-size:14px">${esc(l.variant)}</span>` : ''}${l.qty > 1 ? `<br><span style="color:#5a6870;font-size:13px">${esc(formatLei(l.unit))} / buc.</span>` : ''}</td><td align="right" style="padding:10px 0;border-top:1px solid #e8edef;font-size:15px;color:#0b1316;white-space:nowrap;vertical-align:top">${esc(formatLei(l.total))}</td></tr>`,
+      (l) => `<tr><td style="padding:10px 0;border-top:1px solid #e8edef;font-size:15px;color:#0b1316">${esc(`${l.qty} x ${l.name}`)}${l.variant ? `<br><span style="color:#5a6870;font-size:14px">${esc(l.variant)}</span>` : ''}${l.qty > 1 ? `<br><span style="color:#5a6870;font-size:13px">${esc(fm(o, l.unit))} / ${en(o) ? 'each' : 'buc.'}</span>` : ''}</td><td align="right" style="padding:10px 0;border-top:1px solid #e8edef;font-size:15px;color:#0b1316;white-space:nowrap;vertical-align:top">${esc(fm(o, l.total))}</td></tr>`,
     )
     .join('')}
-    <tr><td style="padding:8px 0;border-top:1px solid #e8edef;font-size:14px;color:#5a6870">Subtotal</td><td align="right" style="padding:8px 0;border-top:1px solid #e8edef;font-size:14px;color:#0b1316">${esc(formatLei(o.subtotalMinor))}</td></tr>
+    <tr><td style="padding:8px 0;border-top:1px solid #e8edef;font-size:14px;color:#5a6870">Subtotal</td><td align="right" style="padding:8px 0;border-top:1px solid #e8edef;font-size:14px;color:#0b1316">${esc(fm(o, o.subtotalMinor))}</td></tr>
     ${o.promotions
       .map(
         (pr) =>
-          `<tr><td style="padding:4px 0;font-size:14px;color:#0e7490">${esc(pr.label)}</td><td align="right" style="padding:4px 0;font-size:14px;color:#0e7490;white-space:nowrap">${esc(`-${formatLei(pr.amountMinor)}`)}</td></tr>`,
+          `<tr><td style="padding:4px 0;font-size:14px;color:#0e7490">${esc(promoText(pr.label, o.locale))}</td><td align="right" style="padding:4px 0;font-size:14px;color:#0e7490;white-space:nowrap">${esc(`-${fm(o, pr.amountMinor)}`)}</td></tr>`,
       )
       .join('')}
-    <tr><td style="padding:4px 0;font-size:14px;color:#5a6870">Livrare</td><td align="right" style="padding:4px 0;font-size:14px;color:#0b1316">${o.shippingMinor ? esc(formatLei(o.shippingMinor)) : 'Gratuită'}</td></tr>
-    <tr><td style="padding:10px 0;border-top:1px solid #e8edef;font-size:16px;font-weight:700;color:#0b1316">Total</td><td align="right" style="padding:10px 0;border-top:1px solid #e8edef;font-size:17px;font-weight:700;color:#0b1316">${esc(formatLei(o.totalMinor))}</td></tr>
-  </table><p style="margin:4px 0 0;font-size:12px;color:#5a6870;text-align:right">${esc(terms.vat)}</p>`
+    <tr><td style="padding:4px 0;font-size:14px;color:#5a6870">${en(o) ? 'Delivery' : 'Livrare'}</td><td align="right" style="padding:4px 0;font-size:14px;color:#0b1316">${o.shippingMinor ? esc(fm(o, o.shippingMinor)) : en(o) ? 'Free' : 'Gratuită'}</td></tr>
+    <tr><td style="padding:10px 0;border-top:1px solid #e8edef;font-size:16px;font-weight:700;color:#0b1316">Total</td><td align="right" style="padding:10px 0;border-top:1px solid #e8edef;font-size:17px;font-weight:700;color:#0b1316">${esc(fm(o, o.totalMinor))}</td></tr>
+  </table><p style="margin:4px 0 0;font-size:12px;color:#5a6870;text-align:right">${esc(en(o) ? 'VAT included' : terms.vat)}</p>`
   const text = [
-    ...lines.map((l) => `${l.qty} x ${l.name}${l.variant ? ` (${l.variant})` : ''}: ${formatLei(l.total)}`),
-    `Subtotal: ${formatLei(o.subtotalMinor)}`,
-    ...o.promotions.map((pr) => `${pr.label}: -${formatLei(pr.amountMinor)}`),
-    `Livrare: ${o.shippingMinor ? formatLei(o.shippingMinor) : 'Gratuită'}`,
-    `Total: ${formatLei(o.totalMinor)} (${terms.vat})`,
+    ...lines.map((l) => `${l.qty} x ${l.name}${l.variant ? ` (${l.variant})` : ''}: ${fm(o, l.total)}`),
+    `Subtotal: ${fm(o, o.subtotalMinor)}`,
+    ...o.promotions.map((pr) => `${promoText(pr.label, o.locale)}: -${fm(o, pr.amountMinor)}`),
+    `${en(o) ? 'Delivery' : 'Livrare'}: ${o.shippingMinor ? fm(o, o.shippingMinor) : en(o) ? 'Free' : 'Gratuită'}`,
+    `Total: ${fm(o, o.totalMinor)} (${en(o) ? 'VAT included' : terms.vat})`,
   ].join('\n')
   return { html, text }
 }
 
 function addressBlock(o: Order): Block[] {
-  const billing = o.customer.buyerType === 'pj' ? `${o.customer.company}, CUI ${o.customer.cui}, ${formatAddress(o.billingAddress)}` : formatAddress(o.billingAddress)
+  const L = o.locale
+  const billing = o.customer.buyerType === 'pj' ? `${o.customer.company}, ${o.billingAddress.country === 'RO' ? 'CUI' : en(o) ? 'VAT' : 'TVA'} ${o.customer.cui}, ${formatAddress(o.billingAddress, L)}` : formatAddress(o.billingAddress, L)
+  if (en(o)) return [h('Delivery and billing'), rows([['Deliver to', `${customerName(o.customer)}, ${formatAddress(o.shippingAddress, L)}`], ['Billing', billing], ['Phone', o.phone]])]
   return [h('Livrare și facturare'), rows([['Livrare la', `${customerName(o.customer)}, ${formatAddress(o.shippingAddress)}`], ['Facturare', billing], ['Telefon', o.phone]])]
 }
 
@@ -109,7 +139,7 @@ function bankBlock(o: Order, bank: BankConfig | null): Block[] {
       ['IBAN', bank.iban],
       ['Banca', bank.bank],
       ...(bank.swift ? ([['SWIFT', bank.swift]] as [string, string][]) : []),
-      ['Suma', formatLei(o.totalMinor)],
+      ['Suma', fm(o, o.totalMinor)],
       ['Detalii plată', `Comanda ${o.orderNumber}`],
     ]),
     p(`Scrie ${o.orderNumber} la detaliile plății. Așa potrivim transferul cu comanda ta.`),
@@ -120,10 +150,14 @@ function bankBlock(o: Order, bank: BankConfig | null): Block[] {
 const refundWay = (o: Order) =>
   o.paymentMethod === 'cash_on_delivery' ? 'prin transfer bancar, în contul pe care ni-l indici' : 'pe aceeași cale prin care ai plătit'
 
+/** The order's page on the site it was placed on, in its language. */
+export const orderPageUrl = (o: Order, siteUrl: string) => `${siteOrigin(o.site, siteUrl)}${en(o) ? '/en' : ''}/comanda/${o.publicToken}`
+
 function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; blocks: Block[]; cta?: { label: string; url: string } } {
-  const orderUrl = `${ctx.siteUrl}/comanda/${o.publicToken}`
+  if (en(o)) return bodyEn(t, o, ctx)
+  const orderUrl = orderPageUrl(o, ctx.siteUrl)
   const first = o.customer.firstName
-  const summary = [h(`Comanda #${o.orderNumber}`), rows([['Data', dateRo(o.createdAt)], ['Plată', PAYMENT_METHOD_LABEL[o.paymentMethod]]]), itemsBlock(o)]
+  const summary = [h(`Comanda #${o.orderNumber}`), rows([['Data', dateRo(o.createdAt)], ['Plată', methodLabel(o)]]), itemsBlock(o)]
   switch (t) {
     case 'order_confirmed':
       return {
@@ -135,7 +169,7 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
       return {
         lead: `Mulțumim, ${first}. Comanda ta este confirmată.`,
         blocks: [
-          rows([['De plătit la livrare', formatLei(o.codAmountMinor ?? o.totalMinor)]]),
+          rows([['De plătit la livrare', fm(o, o.codAmountMinor ?? o.totalMinor)]]),
           p('Plătești curierului când primești coletul. Nu plătești nimic acum.'),
           p(`Pregătim coletul în ${terms.processingDays}. Primești un email cu numărul AWB când îl predăm curierului.`),
           ...summary,
@@ -161,7 +195,7 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
         blocks: [
           rows([
             ['Factura', `${o.fgoInvoiceSeries ?? ''} ${o.fgoInvoiceNumber ?? ''}`.trim()],
-            ['Total', formatLei(o.totalMinor)],
+            ['Total', fm(o, o.totalMinor)],
           ]),
           p('Păstreaz-o pentru garanție și retur.'),
         ],
@@ -174,9 +208,9 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
           rows([
             ['Curier', o.courier ?? ''],
             ['Număr AWB', o.trackingNumber ?? ''],
-            ...(awaitsCollection(o) ? ([['De plătit curierului', formatLei(o.codAmountMinor ?? o.totalMinor)]] as [string, string][]) : []),
+            ...(awaitsCollection(o) ? ([['De plătit curierului', fm(o, o.codAmountMinor ?? o.totalMinor)]] as [string, string][]) : []),
           ]),
-          p(`Livrarea durează de obicei ${terms.transitDays}.`),
+          ...(o.shippingAddress.country && o.shippingAddress.country !== 'RO' ? [] : [p(`Livrarea durează de obicei ${terms.transitDays}.`)]),
           ...addressBlock(o).slice(0, 2),
         ],
         cta: o.trackingUrl ? { label: 'Urmărește coletul', url: o.trackingUrl } : { label: 'Vezi comanda', url: orderUrl },
@@ -229,7 +263,7 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
       return {
         lead: `Bună, ${first}. Comanda ${o.orderNumber} este înregistrată și așteaptă plata prin transfer bancar.`,
         blocks: [
-          rows([['Suma', formatLei(o.totalMinor)]]),
+          rows([['Suma', fm(o, o.totalMinor)]]),
           p('Datele pentru transfer sunt pe pagina comenzii.'),
           p(`Scrie ${o.orderNumber} la detaliile plății. Așa potrivim transferul cu comanda.`),
           p('Ai plătit deja? Ignoră acest mesaj. Îți scriem când primim suma.'),
@@ -245,7 +279,7 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
       }
     case 'refund_issued':
       return {
-        lead: `Am procesat o rambursare de ${formatLei(o.refundedMinor)} pentru comanda #${o.orderNumber}.`,
+        lead: `Am procesat o rambursare de ${fm(o, o.refundedMinor)} pentru comanda #${o.orderNumber}.`,
         blocks: [
           p(
             o.paymentMethod === 'card'
@@ -259,15 +293,142 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
   }
 }
 
+/** The same messages in English (orders placed on the English pages; the international site pays by card). */
+function bodyEn(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; blocks: Block[]; cta?: { label: string; url: string } } {
+  const orderUrl = orderPageUrl(o, ctx.siteUrl)
+  const first = o.customer.firstName
+  const abroad = o.shippingAddress.country && o.shippingAddress.country !== 'RO'
+  const packing = abroad ? 'We pack your order within 1-3 days and email you the tracking number when it ships.' : 'We pack your order within 1-3 days. You get an email with the tracking number when it ships.'
+  const view = { label: 'View your order', url: orderUrl }
+  const summary = [h(`Order #${o.orderNumber}`), rows([['Date', dateEn(o.createdAt)], ['Payment', methodLabel(o)]]), itemsBlock(o)]
+  const refundWayEn = o.paymentMethod === 'cash_on_delivery' ? 'by bank transfer, to the account you give us' : 'the same way you paid'
+  switch (t) {
+    case 'order_confirmed':
+      return { lead: `Thank you, ${first}. Your payment is confirmed and your order is placed.`, blocks: [p(packing), ...summary, ...addressBlock(o)], cta: view }
+    case 'cod_confirmed':
+      return {
+        lead: `Thank you, ${first}. Your order is confirmed.`,
+        blocks: [rows([['To pay on delivery', fm(o, o.codAmountMinor ?? o.totalMinor)]]), p('You pay the courier when the parcel arrives. Nothing to pay now.'), p(packing), ...summary, ...addressBlock(o)],
+        cta: view,
+      }
+    case 'transfer_instructions': {
+      const bank = ctx.bank
+      const details = bank
+        ? [
+            rows([
+              ['Beneficiary', bank.beneficiary],
+              ['IBAN', bank.iban],
+              ['Bank', bank.bank],
+              ...(bank.swift ? ([['SWIFT', bank.swift]] as [string, string][]) : []),
+              ['Amount', fm(o, o.totalMinor)],
+              ['Payment reference', `Order ${o.orderNumber}`],
+            ]),
+            p(`Write ${o.orderNumber} as the payment reference, so we can match the transfer to your order.`),
+          ]
+        : [p(`Our team sends you the transfer details separately. Write to ${site.email} if you need them now.`)]
+      return { lead: `Thank you, ${first}. Your order is placed and waiting for payment.`, blocks: [h('Bank transfer details'), ...details, p('We pack your order as soon as the payment arrives and let you know.'), ...summary, ...addressBlock(o)], cta: view }
+    }
+    case 'payment_received':
+      return { lead: `We received the payment for order #${o.orderNumber}. Thank you, ${first}.`, blocks: [p(packing), ...summary], cta: view }
+    case 'invoice_issued':
+      return {
+        lead: `The invoice for order #${o.orderNumber} is ready.`,
+        blocks: [rows([['Invoice', `${o.fgoInvoiceSeries ?? ''} ${o.fgoInvoiceNumber ?? ''}`.trim()], ['Total', fm(o, o.totalMinor)]]), p('Keep it for the warranty and any return.')],
+        cta: o.fgoInvoiceLink ? { label: 'Download the invoice', url: o.fgoInvoiceLink } : view,
+      }
+    case 'order_shipped':
+      return {
+        lead: `Your order #${o.orderNumber} is with the courier.`,
+        blocks: [
+          rows([
+            ['Courier', o.courier ?? ''],
+            ['Tracking number', o.trackingNumber ?? ''],
+            ...(awaitsCollection(o) ? ([['To pay the courier', fm(o, o.codAmountMinor ?? o.totalMinor)]] as [string, string][]) : []),
+          ]),
+          ...(abroad ? [] : [p('Delivery usually takes 2-5 days.')]),
+          ...addressBlock(o).slice(0, 2),
+        ],
+        cta: o.trackingUrl ? { label: 'Track your parcel', url: o.trackingUrl } : view,
+      }
+    case 'order_cancelled':
+      return {
+        lead: `Order #${o.orderNumber} has been cancelled.`,
+        blocks: [
+          p(
+            o.paymentStatus === 'refunded'
+              ? 'The amount you paid has been returned the same way you paid.'
+              : o.paymentStatus === 'paid' || o.paymentStatus === 'partially_refunded'
+                ? 'The amount you paid will be returned the same way you paid. We will email you when the refund is processed.'
+                : 'You have nothing to pay for this order.',
+          ),
+        ],
+      }
+    case 'withdrawal_received': {
+      const w = ctx.withdrawal
+      return {
+        lead: `We received your withdrawal from the contract for order #${o.orderNumber}.`,
+        blocks: [
+          p('This confirms your statement, with its content and the date and time we received it.'),
+          rows([
+            ['Reference', w?.reference ?? ''],
+            ['Received on', w ? dateTimeEn(w.createdAt) : ''],
+            ['Name', w?.name ?? customerName(o.customer)],
+            ['Order', o.orderNumber],
+            ['Products', w?.items ?? ''],
+            ...(w?.message ? ([['Your message', w.message]] as [string, string][]) : []),
+          ]),
+          h('What happens next'),
+          p('Send the products back within 14 days of this statement. We will email you the return address and the steps.'),
+          p(`We refund you within 14 days of the date above, ${refundWayEn}. We may wait for the products, or proof that you sent them, before refunding.`),
+        ],
+      }
+    }
+    case 'return_received':
+      return {
+        lead: `We received the returned products from order #${o.orderNumber}.`,
+        blocks: [p(o.paymentStatus === 'refunded' ? 'The refund has already been processed. Nothing else to do.' : `We refund you ${refundWayEn}, within 14 days of your withdrawal. We will email you when the refund is processed.`)],
+      }
+    case 'transfer_reminder':
+      return {
+        lead: `Hello ${first}. Order ${o.orderNumber} is placed and waiting for your bank transfer.`,
+        blocks: [
+          rows([['Amount', fm(o, o.totalMinor)]]),
+          p('The transfer details are on the order page.'),
+          p(`Write ${o.orderNumber} as the payment reference, so we can match the transfer to your order.`),
+          p('Already paid? Please ignore this message. We will email you when the payment arrives.'),
+          p('Changed your mind? Reply to this email and we will cancel the order.'),
+        ],
+        cta: { label: 'See the payment details', url: orderUrl },
+      }
+    case 'delivery_followup':
+      return { lead: `Hello ${first}. We hope your products arrived safely.`, blocks: [p('A question about using them, or something not working as expected? We will help you get started.')] }
+    case 'refund_issued':
+      return {
+        lead: `We processed a refund of ${fm(o, o.refundedMinor)} for order #${o.orderNumber}.`,
+        blocks: [
+          p(
+            o.paymentMethod === 'card'
+              ? 'The amount reaches your card within a few working days, depending on your bank.'
+              : o.paymentMethod === 'cash_on_delivery'
+                ? 'The amount reaches you by bank transfer, to the account you gave us.'
+                : 'The amount reaches the account you paid from.',
+          ),
+        ],
+      }
+  }
+}
+
 export function renderEmail(t: EmailTemplate, o: Order, ctx: EmailContext) {
-  const subject = EMAIL_TEMPLATES[t].subject(o)
+  const subject = subjectFor(t, o)
   const { lead, blocks, cta } = body(t, o, ctx)
-  const support: Block = p(`Ai o întrebare? Răspunde la acest email, scrie la ${site.email} sau sună la ${site.phone}. Menționează numărul comenzii: ${o.orderNumber}.`)
+  const support: Block = en(o)
+    ? p(`Any questions? Reply to this email, write to ${site.email} or call ${site.phone}. Please mention your order number: ${o.orderNumber}.`)
+    : p(`Ai o întrebare? Răspunde la acest email, scrie la ${site.email} sau sună la ${site.phone}. Menționează numărul comenzii: ${o.orderNumber}.`)
   const all = [...blocks, { html: '<div style="height:12px"></div>', text: '' }, support]
   const content = `<h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:#0b1316">${esc(lead)}</h1>
 ${all.map((b) => b.html).join('\n')}
 ${cta ? `<p style="margin:22px 0 0"><a href="${esc(cta.url)}" style="display:inline-block;background:#d23b3b;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:13px 22px;border-radius:12px">${esc(cta.label)}</a></p>` : ''}`
-  const html = emailShell({ subject, content, siteUrl: ctx.siteUrl })
+  const html = emailShell({ subject, content, siteUrl: siteOrigin(o.site, ctx.siteUrl), locale: o.locale })
   const text = [lead, '', ...all.map((b) => b.text).filter(Boolean), ...(cta ? ['', `${cta.label}: ${cta.url}`] : []), '', `${site.name} · ${site.email} · ${site.phone}`].join('\n')
   return { subject, html, text }
 }

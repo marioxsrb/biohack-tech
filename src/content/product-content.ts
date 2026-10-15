@@ -242,7 +242,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
   'balance-wave': {
     seo: {
       title: 'NEUROS Calm, red light device for the neck and vagus nerve',
-      description: 'NEUROS Calm is worn around the neck and shines red and infrared light over the vagus nerve area. A few minutes of relaxation at home. Free delivery in Romania.',
+      description: 'NEUROS Calm is worn around the neck and shines red and infrared light over the vagus nerve area. A few minutes of relaxation at home. Free worldwide delivery.',
     },
     intro: 'The stress of the day builds up in the body. NEUROS Calm shines light on your neck. On the left side, 6 diodes at 810 nm light the vagus nerve area. A session lasts a few minutes.',
     highlights: [
@@ -301,7 +301,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
   'brainlink-pro': {
     seo: {
       title: 'NEUROS Focus, EEG headband for focus and neurofeedback',
-      description: 'NEUROS Focus is a light EEG headband with over 10 tablet games you control with your attention. Train your focus at home. Free delivery in Romania.',
+      description: 'NEUROS Focus is a light EEG headband with over 10 tablet games you control with your attention. Train your focus at home. Free worldwide delivery.',
     },
     intro: 'Attention slips away easily between notifications. Put on the headband and open the Neuros Game app on your tablet. The games respond to how focused you are.',
     highlights: [
@@ -368,7 +368,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
   'ochelari-biohack': {
     seo: {
       title: 'NEUROS Amber, blue light glasses with amber lenses',
-      description: 'NEUROS Amber glasses have amber lenses that filter the blue light of screens. Cat eye or unisex square, in three colours. Free delivery in Romania.',
+      description: 'NEUROS Amber glasses have amber lenses that filter the blue light of screens. Cat eye or unisex square, in three colours. Free worldwide delivery.',
     },
     intro: 'Your eyes spend hours in the light of screens. The amber lenses filter blue light from monitors, phones and LED bulbs. The frame is light enough for all day.',
     highlights: [

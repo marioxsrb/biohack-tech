@@ -24,7 +24,7 @@ const META = {
   en: {
     title: `Devices for relaxation and focus | ${site.name}`,
     description:
-      'NEUROS devices for stress, focus and screen-tired eyes: Calm with red light, the Focus EEG headband and Amber glasses. Free delivery in Romania.',
+      'NEUROS devices for stress, focus and screen-tired eyes: Calm with red light, the Focus EEG headband and Amber glasses. Free worldwide delivery.',
     alt: 'Relaxed woman on a sofa, wearing NEUROS Calm',
   },
 }

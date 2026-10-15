@@ -5,6 +5,7 @@ import { kickJobs } from '@/server/jobs/runner'
 import { errText, log } from '@/server/log'
 import { clientIp, rateLimit } from '@/server/rate-limit'
 import { welcomeSignup } from '@/server/welcome'
+import { siteForHost } from '@/lib/sites'
 
 export const runtime = 'nodejs'
 
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
   if (validateContact({ name: '', email, phone: '' }, ['email']).email) return NextResponse.json({ error: 'INVALID', message: 'Verifică adresa de email.' }, { status: 422 })
   try {
     const db = await getDb()
-    const r = await db.tx((t) => welcomeSignup(t, email, typeof body.page === 'string' ? body.page : null))
+    const r = await db.tx((t) => welcomeSignup(t, email, typeof body.page === 'string' ? body.page : null, body.locale === 'en' ? 'en' : 'ro', siteForHost(req.headers.get('host'))))
     kickJobs()
     log.info('welcome.signup', { created: r.created })
     // An address that already got the code: told so, nothing is sent again.

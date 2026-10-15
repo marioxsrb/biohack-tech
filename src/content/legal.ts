@@ -306,19 +306,31 @@ export const legalPages: LegalPage[] = [
     slug: 'politica-livrare',
     title: 'Politica de livrare',
     shortTitle: 'Livrare',
-    description: 'Livrare gratuită în România prin curier: procesare în 1-3 zile, transport în 2-5 zile, număr AWB pe email.',
+    description: 'Livrare gratuită prin curier, în România și în străinătate: procesare în 1-3 zile, număr AWB pe email.',
     updated: UPDATED,
     sections: [
-      { heading: 'Unde livrăm', body: ['Livrăm în toată România, prin curier, la adresa din comandă.'] },
+      {
+        heading: 'Unde livrăm',
+        body: [
+          'Livrăm în toată România și în străinătate, prin curier, la adresa din comandă.',
+          'Comenzile cu livrare în afara României și cele plătite în euro sau dolari se plătesc cu cardul. Plata la livrare (ramburs) și transferul bancar sunt disponibile pentru comenzile în lei, cu livrare în România.',
+        ],
+      },
       {
         heading: 'Termene',
         body: [
-          `Pregătim comanda în ${terms.processingDays} de la confirmarea plății. Transportul durează de obicei ${terms.transitDays}.`,
+          `Pregătim comanda în ${terms.processingDays} de la confirmarea plății. În România, transportul durează de obicei ${terms.transitDays}; în străinătate, termenul depinde de țară și de curier.`,
           'Când predăm coletul curierului, primești pe email numele firmei de curierat și numărul AWB.',
           'Dacă apare o întârziere, te anunțăm.',
         ],
       },
-      { heading: 'Cost', body: [`${terms.shipping}. Prețurile includ TVA 21%.`] },
+      {
+        heading: 'Cost',
+        body: [
+          'Livrarea este gratuită, în România și în străinătate. Prețurile includ TVA 21%.',
+          'Pentru livrările în afara Uniunii Europene pot apărea taxe vamale sau de import în țara de destinație.',
+        ],
+      },
       {
         heading: 'La primire',
         body: ['Verifică coletul în fața curierului. Dacă este deteriorat, notează asta în documentul curierului și scrie-ne.'],

@@ -18,6 +18,7 @@ import type { Queryable, Row } from '@/server/db'
 import { jobs, type NewJob } from '@/server/jobs/outbox'
 import { marketing } from '@/server/marketing/consent'
 import { callConsent, firstCallJob } from '@/server/calling/consent'
+import { consentVersionFor } from '@/lib/consent/marketing'
 import { romanianE164 } from '@/lib/consent/calling'
 import type { Order } from '@/server/orders/model'
 
@@ -37,6 +38,8 @@ export type Lead = {
   cart: CartSnapshot | null
   attribution: Attribution | null
   landingHost: string | null
+  /** The language the visitor used: recovery emails follow it. */
+  locale: 'ro' | 'en'
   fbclid: string | null
   privacyVersion: string | null
   marketingConsent: boolean
@@ -84,6 +87,7 @@ const toLead = (r: Row): Lead => ({
   cart: (r.cart as CartSnapshot) ?? null,
   attribution: (r.attribution as Attribution) ?? null,
   landingHost: (r.landing_host as string) ?? null,
+  locale: r.locale === 'en' ? 'en' : 'ro',
   fbclid: (r.fbclid as string) ?? null,
   privacyVersion: (r.privacy_version as string) ?? null,
   marketingConsent: !!r.marketing_consent,
@@ -145,6 +149,9 @@ export type CaptureInput = {
   termsAccepted?: boolean
   /** See server/device.ts: lets this device see prices again without the form. */
   deviceKey?: string | null
+  /** The visitor's language and site: emails follow the language; the international site never calls. */
+  locale?: 'ro' | 'en'
+  site?: 'ro' | 'net'
 }
 
 /**
@@ -158,8 +165,8 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
   const { rows } = await t.query(
     `insert into leads (id, visitor_id, funnel, product_id, variant_id, name, email, phone, stage, cart, attribution, landing_host, fbclid,
        privacy_version, marketing_consent, recovery_token, price_revealed_at, checkout_started_at, last_activity_at, created_at, updated_at, call_consent,
-       terms_accepted_at, device_key)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$19,$19,$20,$21,$22)
+       terms_accepted_at, device_key, locale)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$19,$19,$20,$21,$22,$23)
      on conflict (visitor_id, funnel, product_id) do update set
        variant_id = coalesce(excluded.variant_id, leads.variant_id),
        name = coalesce(nullif(excluded.name, ''), leads.name),
@@ -173,6 +180,7 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
        call_consent = leads.call_consent or excluded.call_consent,
        terms_accepted_at = coalesce(leads.terms_accepted_at, excluded.terms_accepted_at),
        device_key = coalesce(excluded.device_key, leads.device_key),
+       locale = excluded.locale,
        checkout_started_at = coalesce(leads.checkout_started_at, excluded.checkout_started_at),
        last_activity_at = excluded.last_activity_at,
        updated_at = excluded.updated_at
@@ -197,9 +205,10 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
       input.funnel === 'gated_price' && input.productId !== CART_INTEREST ? now : null,
       input.stage === 'checkout_started' ? now : null,
       now,
-      !!input.callConsent,
+      !!input.callConsent && input.site !== 'net',
       input.termsAccepted ? now : null,
       input.deviceKey ?? null,
+      input.locale ?? 'ro',
     ],
   )
   const r = rows[0]
@@ -211,7 +220,7 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
   if (input.marketingConsent) {
     const state = await marketing.state(t, lead.email)
     if (!state?.granted) {
-      const id = await marketing.grant(t, { email: lead.email, source: 'lead_form', page: input.page ?? (input.funnel === 'gated_price' ? 'acces' : '/checkout') })
+      const id = await marketing.grant(t, { email: lead.email, source: 'lead_form', page: input.page ?? (input.funnel === 'gated_price' ? 'acces' : '/checkout'), version: consentVersionFor(input.site ?? 'ro', input.locale ?? 'ro') })
       // The consent reaches the CRM like an unsubscribe does: the marketing fields only, on its own job.
       // A minute later, so the lead's own contact sync (ghl.lead) has stored the contact id it updates: GHL's
       // search does not see a brand-new contact for a while, and a second lookup would create a duplicate.
@@ -222,7 +231,7 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
   if (stageChanged || created) for (const j of leadJobs(lead, c)) await jobs.enqueue(t, j)
   // AI calling: only with the separate box ticked here and a Romanian number. Recorded by phone number.
   const phone = romanianE164(lead.phone)
-  if (input.callConsent && phone) {
+  if (input.callConsent && phone && input.site !== 'net') {
     const state = await callConsent.state(t, phone)
     if (!state?.granted) {
       const id = await callConsent.grant(t, { phone, email: lead.email, source: input.funnel === 'gated_price' ? 'lead_form' : 'checkout', page: input.page, leadId: lead.id })
@@ -230,7 +239,7 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
       if (c.ghl && !synced) await jobs.enqueue(t, { kind: 'marketing.sync', dedupeKey: `marketing.sync:call:${id}`, payload: { email: lead.email }, runAt: new Date(Date.now() + 60_000) })
     }
   }
-  if (lead.callConsent && phone && c.calling.enabled) await jobs.enqueue(t, firstCallJob(lead, c, phone))
+  if (lead.callConsent && phone && c.calling.enabled && input.site !== 'net') await jobs.enqueue(t, firstCallJob(lead, c, phone))
   return { lead, created, stageChanged }
 }
 
@@ -364,6 +373,10 @@ export async function ensureOrderLead(t: Queryable, o: Order) {
     cart: o.items.map((i) => ({ productId: i.productId, ...(i.variantId && { variantId: i.variantId }), quantity: i.quantity })),
     attribution: o.attribution,
     page: '/checkout',
+    locale: o.locale,
+    site: o.site,
+    // The international site's leads are recognised by their host (no AI call, emails from biohack-tech.net).
+    landingHost: o.site === 'net' ? 'www.biohack-tech.net' : null,
   })
   await t.query('update leads set order_id = $2 where id = $1', [r.lead.id, o.id])
   await t.query('update orders set lead_id = coalesce(lead_id, $2) where id = $1', [o.id, r.lead.id])

@@ -20,7 +20,7 @@ export type BillingDetails = {
   name: string
   email: string
   phone: string
-  address: { line1: string; city: string; state: string; postal_code: string; country: 'RO' }
+  address: { line1: string; city: string; state: string; postal_code: string; country: string }
 }
 
 const COPY = {
@@ -55,17 +55,19 @@ const stripeFor = (key: string, locale: Locale) => {
  * secure frame and go straight to Stripe; our server only ever sees the PaymentIntent id.
  * The PaymentIntent is created after the order ("deferred intent"), for the order's total.
  */
-export function CardPayment({ publishableKey, amount, apiRef }: { publishableKey: string; amount: number; apiRef: RefObject<CardApi | null> }) {
+export function CardPayment({ publishableKey, amount, currency = 'RON', apiRef }: { publishableKey: string; amount: number; currency?: string; apiRef: RefObject<CardApi | null> }) {
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
   const locale = useLocale()
   const t = COPY[locale]
   return (
     <Elements
+      // A new currency needs a new payment form (Stripe fixes it when the form is created).
+      key={currency}
       stripe={stripeFor(publishableKey, locale)}
       options={{
         mode: 'payment',
         amount,
-        currency: 'ron',
+        currency: currency.toLowerCase(),
         // Must match the server's PaymentIntent exactly (api/checkout: a Stripe customer and
         // setup_future_usage=on_session, so the card can be offered again right after payment).
         // Without it Stripe refuses every confirmation from this form.

@@ -9,7 +9,7 @@
  */
 import 'server-only'
 import { ORDER_LABEL, PAYMENT_LABEL } from '@/app/[lang]/(admin)/admin/labels'
-import { formatLei } from '@/lib/money'
+import { formatMoney } from '@/lib/currency'
 import { PAYMENT_METHOD_LABEL, type Order } from '@/server/orders/model'
 
 export type NotifyEvent =
@@ -41,7 +41,7 @@ export const NOTIFICATIONS: Record<NotifyEvent, { title: string; action: (o: Ord
   },
   new_transfer: {
     title: 'comandă nouă, așteaptă transferul',
-    action: (o) => `Verifică extrasul. Când suma de ${formatLei(o.totalMinor)} apare cu referința ${o.orderNumber}, apasă „Plata a fost primită” în /admin.`,
+    action: (o) => `Verifică extrasul. Când suma de ${formatMoney(o.totalMinor, o.currency)} apare cu referința ${o.orderNumber}, apasă „Plata a fost primită” în /admin.`,
     stillTrue: (o) => o.paymentStatus === 'awaiting_transfer' && o.status !== 'cancelled',
   },
   transfer_paid: {
@@ -51,7 +51,7 @@ export const NOTIFICATIONS: Record<NotifyEvent, { title: string; action: (o: Ord
   },
   new_cod: {
     title: 'comandă nouă cu plata la livrare',
-    action: (o) => `Pregătește coletul. Curierul încasează ${formatLei(o.codAmountMinor ?? o.totalMinor)}. Marchează „expediată” cu AWB în /admin.`,
+    action: (o) => `Pregătește coletul. Curierul încasează ${formatMoney(o.codAmountMinor ?? o.totalMinor, o.currency)}. Marchează „expediată” cu AWB în /admin.`,
     stillTrue: (o) => o.status !== 'cancelled',
   },
   upsell_paid: {
@@ -77,7 +77,7 @@ export const NOTIFICATIONS: Record<NotifyEvent, { title: string; action: (o: Ord
   cod_uncollected: {
     title: 'livrată ramburs de 10 zile, banii neîncasați',
     action: (o) =>
-      `Verifică decontul curierului${o.courier ? ` (${o.courier})` : ''} pentru AWB ${o.trackingNumber ?? ''} și ${formatLei(o.codAmountMinor ?? o.totalMinor)}. Când banii au intrat, apasă „Rambursul a fost încasat” în /admin.`,
+      `Verifică decontul curierului${o.courier ? ` (${o.courier})` : ''} pentru AWB ${o.trackingNumber ?? ''} și ${formatMoney(o.codAmountMinor ?? o.totalMinor, o.currency)}. Când banii au intrat, apasă „Rambursul a fost încasat” în /admin.`,
     stillTrue: (o) => o.status === 'delivered' && o.paymentMethod === 'cash_on_delivery' && o.paymentStatus === 'awaiting_collection',
   },
   refund_after_cancel: {
@@ -134,7 +134,7 @@ export function renderNotification(event: NotifyEvent, o: Order, x: NotifyContex
     ...(x.parentNumber ? ([['Comanda principală', x.parentNumber]] as [string, string][]) : []),
     ['Stare comandă', ORDER_LABEL[o.status]],
     ['Plată', `${PAYMENT_METHOD_LABEL[o.paymentMethod]} · ${PAYMENT_LABEL[o.paymentStatus]}`],
-    ['Total', formatLei(o.totalMinor)],
+    ['Total', formatMoney(o.totalMinor, o.currency)],
     ['Produse', o.items.map((i) => `${i.quantity} x ${i.productName}${i.variantName ? ` (${i.variantName})` : ''}`).join('; ')],
     ...(x.job ? ([['Eroare', x.job.lastError ?? '–']] as [string, string][]) : []),
   ]

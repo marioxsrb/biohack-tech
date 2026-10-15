@@ -28,6 +28,7 @@ export type JobKind =
   | 'agent.sync'
   | 'ghl.call'
   | 'support.notify'
+  | 'fx.refresh'
 export type JobStatus = 'pending' | 'running' | 'retry' | 'done' | 'failed' | 'skipped'
 
 export type Job = {

@@ -47,8 +47,8 @@ const LABELS: Record<string, Record<string, string>> = {
   payment: { cash_on_delivery: 'ramburs', card: 'card', bank_transfer: 'transfer' },
 }
 
-const LEAD_SITE = `case when funnel = 'gated_price' then 'acces' when split_part(coalesce(landing_host,''), '.', 1) in ('calm','focus','amber') then split_part(landing_host, '.', 1) else 'main' end`
-const ORDER_SITE = `case when o.attribution->>'landing' in ('calm','focus','amber') then o.attribution->>'landing' when coalesce(o.attribution->>'funnel','') = 'gated_price' then 'acces' else 'main' end`
+const LEAD_SITE = `case when funnel = 'gated_price' then 'acces' when coalesce(landing_host,'') like '%biohack-tech.net' or coalesce(landing_host,'') like 'net.localhost%' then 'net' when split_part(coalesce(landing_host,''), '.', 1) in ('calm','focus','amber') then split_part(landing_host, '.', 1) else 'main' end`
+const ORDER_SITE = `case when o.site = 'net' then 'net' when o.attribution->>'landing' in ('calm','focus','amber') then o.attribution->>'landing' when coalesce(o.attribution->>'funnel','') = 'gated_price' then 'acces' else 'main' end`
 
 /** The validated query (unknown values fall back to safe defaults) . */
 export function parseSeriesQuery(raw: Record<string, unknown>): SeriesQuery {
@@ -82,9 +82,9 @@ function sqlFor(q: SeriesQuery): string {
       const key =
         q.by === 'site' ? ORDER_SITE : q.by === 'funnel' ? `coalesce(o.attribution->>'funnel','visible_price')` : q.by === 'payment' ? 'o.payment_method' : q.by === 'code' ? `coalesce(o.promo_code,'')` : `coalesce(nullif(o.attribution->'utm'->>'utm_source',''),'(direct)')`
       if (q.metric === 'revenue' && q.by === 'product')
-        return `select ${b(localTs('o.created_at'))} as bucket, i.product_name as key, sum(i.line_total_minor)::float / 100 as value from order_items i join orders o on o.id = i.order_id
+        return `select ${b(localTs('o.created_at'))} as bucket, i.product_name as key, sum(i.line_total_minor * o.fx_rate)::float / 100 as value from order_items i join orders o on o.id = i.order_id
                 where ${STANDS} and ${localTs('o.created_at')}::date between $1::date and $2::date group by 1, 2`
-      const value = q.metric === 'orders' || q.metric === 'codes' ? 'count(*)::float' : q.metric === 'revenue' ? 'sum(o.total_minor - o.refunded_minor)::float / 100' : 'avg(o.total_minor - o.refunded_minor)::float / 100'
+      const value = q.metric === 'orders' || q.metric === 'codes' ? 'count(*)::float' : q.metric === 'revenue' ? 'sum((o.total_minor - o.refunded_minor) * o.fx_rate)::float / 100' : 'avg((o.total_minor - o.refunded_minor) * o.fx_rate)::float / 100'
       const extra = q.metric === 'codes' ? `and o.promo_code is not null` : ''
       return `select ${b(localTs('o.created_at'))} as bucket, ${k(key)} as key, ${value} as value from orders o where ${STANDS} ${extra} and ${localTs('o.created_at')}::date between $1::date and $2::date group by 1, 2`
     }

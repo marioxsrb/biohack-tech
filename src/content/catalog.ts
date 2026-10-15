@@ -15,6 +15,7 @@
 import type { StaticImageData } from 'next/image'
 import { PRICES_RON, type PriceEntry } from '@/config/prices'
 import type { Locale } from '@/i18n/locales'
+import { setRates, type Rates } from '@/lib/currency'
 import { altEn, optionLabelEn, productTextEn } from './catalog-en'
 
 import glCatNegru1 from '@/assets/img/glasses/cat-eye-negru-1.webp'
@@ -286,9 +287,10 @@ const productsEn: Product[] = products.map((p) => ({
  * set. Applied in place on both lists, on the server (from Supabase) and in the browser (from the page, see
  * STORE_SCRIPT), so every price on the site, in the cart and in the order comes from the same numbers.
  */
-export type CatalogOverrides = { prices?: Partial<Record<string, PriceEntry>>; soldOut?: string[]; welcomePopup?: boolean; assistant?: boolean }
+export type CatalogOverrides = { prices?: Partial<Record<string, PriceEntry>>; soldOut?: string[]; welcomePopup?: boolean; assistant?: boolean; fx?: Partial<Rates> | null }
 
 export function applyCatalogOverrides(o: CatalogOverrides) {
+  setRates(o.fx)
   for (const list of [products, productsEn]) {
     for (const p of list) {
       const base = catalog.find((c) => c.id === p.id)!

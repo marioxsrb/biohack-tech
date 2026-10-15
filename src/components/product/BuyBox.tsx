@@ -17,7 +17,7 @@ import { socialProof } from '@/config/social-proof'
 import { site, terms } from '@/config/site'
 import { getProduct, getVariant, unitPrice, variantLabel, type ProductId } from '@/content/catalog'
 import { useLocale, useUi } from '@/i18n/LocaleProvider'
-import { formatLei } from '@/lib/money'
+import { useMoney } from '@/i18n/currency'
 import { priceLines, promotionFor } from '@/lib/promotions'
 import { customersLine } from '@/lib/social-proof'
 
@@ -154,10 +154,12 @@ export function BundleOffer({
   const locale = useLocale()
   const t = COPY[locale]
   const { openAmber } = useOfferSheets()
+  const money = useMoney()
   const p = promotionFor(productId)
   const product = getProduct(productId, locale)!
-  const unit = unitPrice(product, getVariant(product, variantId))
-  if (!p || unit === null) return null
+  const base = unitPrice(product, getVariant(product, variantId))
+  if (!p || base === null) return null
+  const unit = money.unit(base)
 
   const amber = p.kind === 'buy_x_get_y'
   const steps = amber ? [1, p.group] : [1, ...p.tiers.map((x) => x.minUnits)]
@@ -201,8 +203,8 @@ export function BundleOffer({
                 {deal && !compact && <span className="mt-0.5 block text-[13px] text-text">{amber ? t.amberLine : t.bundleLine(n, tier!.percent)}</span>}
               </span>
               <span className="flex-none text-right leading-snug">
-                <span data-price className="block text-[15.5px] font-semibold text-ink tabular-nums">{formatLei(r.totalMinor)}</span>
-                {r.discountMinor > 0 && <span data-price className="block text-[12.5px] font-medium text-red-deep tabular-nums">{t.save(formatLei(r.discountMinor))}</span>}
+                <span data-price className="block text-[15.5px] font-semibold text-ink tabular-nums">{money.fmt(r.totalMinor)}</span>
+                {r.discountMinor > 0 && <span data-price className="block text-[12.5px] font-medium text-red-deep tabular-nums">{t.save(money.fmt(r.discountMinor))}</span>}
               </span>
             </button>
           )
@@ -296,10 +298,12 @@ type Icon = ComponentType<SVGProps<SVGSVGElement>>
 
 /** The four store promises, from the stated terms. One line icon each, the label under it. */
 export function TrustRow({ className = '' }: { className?: string }) {
-  const t = COPY[useLocale()]
+  const locale = useLocale()
+  const t = COPY[locale]
   const ui = useUi()
   const items: [Icon, string][] = [
-    cashOnDelivery.enabled ? [Wallet, t.payOnDelivery] : [Lock, t.securePay],
+    // English pages pay in euro or dollars, by card only.
+    cashOnDelivery.enabled && locale === 'ro' ? [Wallet, t.payOnDelivery] : [Lock, t.securePay],
     [Truck, ui.freeDelivery],
     [Return, ui.returns],
     [ShieldCheck, ui.warranty],

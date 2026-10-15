@@ -130,7 +130,7 @@ async function continueUpsell(child: Order, parent?: Order): Promise<UpsellResul
       const locked = (await orders.byId(t, child.id, true))!
       if (locked.stripePaymentIntentId) return stripe.retrievePaymentIntent(c.stripe!, locked.stripePaymentIntentId)
       try {
-        const created = await stripe.createUpsellPaymentIntent(c.stripe!, { id: child.id, orderNumber: child.orderNumber, totalMinor: child.totalMinor, parentId: p.id }, p.stripeCustomerId!, p.stripePaymentMethodId!)
+        const created = await stripe.createUpsellPaymentIntent(c.stripe!, { id: child.id, orderNumber: child.orderNumber, totalMinor: child.totalMinor, parentId: p.id, currency: child.currency }, p.stripeCustomerId!, p.stripePaymentMethodId!)
         await orders.update(t, child.id, { stripe_payment_intent_id: created.id })
         return created
       } catch (e) {
@@ -140,7 +140,7 @@ async function continueUpsell(child: Order, parent?: Order): Promise<UpsellResul
         return stripe.retrievePaymentIntent(c.stripe!, e.paymentIntentId)
       }
     })
-    if (pi.amount !== child.totalMinor || pi.currency !== 'ron' || pi.metadata?.order_id !== child.id) throw new Error('upsell payment intent does not match the order')
+    if (pi.amount !== child.totalMinor || pi.currency !== child.currency.toLowerCase() || pi.metadata?.order_id !== child.id) throw new Error('upsell payment intent does not match the order')
     return await settle(child, pi)
   } catch (e) {
     // A declined card comes back from Stripe as an error on the confirming request.

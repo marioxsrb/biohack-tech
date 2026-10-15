@@ -155,7 +155,7 @@ export function WelcomePopup() {
       const res = await fetch('/api/welcome', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email: value, page: pathname, website: (e.currentTarget.elements.namedItem('website') as HTMLInputElement | null)?.value ?? '' }),
+        body: JSON.stringify({ email: value, page: pathname, locale, website: (e.currentTarget.elements.namedItem('website') as HTMLInputElement | null)?.value ?? '' }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.message ?? t.failed)

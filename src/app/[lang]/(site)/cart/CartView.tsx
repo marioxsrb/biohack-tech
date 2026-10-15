@@ -14,7 +14,7 @@ import { Arrow, Lock } from '@/components/ui/icons'
 import { productHref, productsIn } from '@/content/catalog'
 import { useLocale, useUi } from '@/i18n/LocaleProvider'
 import { track } from '@/lib/analytics'
-import { formatLei } from '@/lib/money'
+import { useMoney } from '@/i18n/currency'
 
 const COPY = {
   ro: {
@@ -52,6 +52,7 @@ const useHydrated = () =>
 export function CartView() {
   const hydrated = useHydrated()
   const { lines, count, pricing, setQuantity, remove } = useCart()
+  const { fmt } = useMoney()
   const locale = useLocale()
   const t = COPY[locale]
   const ui = useUi()
@@ -109,9 +110,9 @@ export function CartView() {
                       {l.product.name}
                     </Link>
                     <p className="text-[15px] text-muted">{l.variantLabel ?? l.product.purpose}</p>
-                    <p data-price className="mt-0.5 text-[14px] text-muted tabular-nums">{formatLei(l.unit)} {t.each}</p>
+                    <p data-price className="mt-0.5 text-[14px] text-muted tabular-nums">{fmt(l.unit)} {t.each}</p>
                   </div>
-                  <p data-price className="flex-none text-[17px] font-medium text-ink tabular-nums">{formatLei(l.unit * l.quantity)}</p>
+                  <p data-price className="flex-none text-[17px] font-medium text-ink tabular-nums">{fmt(l.unit * l.quantity)}</p>
                 </div>
                 <div className="mt-4 flex items-center justify-between gap-3 max-sm:mt-2.5">
                   <QuantityStepper size="sm" value={l.quantity} onChange={(q) => setQuantity(l.key, q)} label={t.quantity(l.product.name)} />

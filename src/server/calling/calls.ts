@@ -9,6 +9,7 @@
  * provider ids.
  */
 import 'server-only'
+import { isIntlHost } from '@/lib/sites'
 import { randomUUID } from 'node:crypto'
 import { getProduct } from '@/content/catalog'
 import { romanianE164 } from '@/lib/consent/calling'
@@ -281,6 +282,8 @@ export function productUrlFor(lead: Lead, c: Pick<Config, 'siteUrl'>, gatedOrigi
 export async function runCallAttempt(q: Queryable, c: Config, payload: { leadId: string; attempt: number }, dedupeKey: string): Promise<StepResult> {
   const lead = await leads.byId(q, payload.leadId)
   if (!lead) return { skip: 'lead gone' }
+  // The international site never calls (its abandoned carts get an email), whatever was queued.
+  if (isIntlHost(lead.landingHost)) return { skip: 'international site: no AI calls' }
   // Calls paused in /admin/setari: the attempt waits (checked again in 30 minutes), nothing is lost.
   if ((await ensureStoreSettings()).callsPaused) {
     await jobs.enqueue(q, { kind: 'call.attempt', dedupeKey: `${dedupeKey}:paused:${Math.floor(Date.now() / 1_800_000)}`, payload, runAt: new Date(Date.now() + 30 * 60_000) })

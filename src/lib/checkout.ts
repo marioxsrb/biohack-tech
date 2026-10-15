@@ -2,6 +2,7 @@
  * Checkout model and validation, shared by the form (client) and the API route (server).
  * The server always re-runs normalizeOrder + validateOrder; the browser's checks are a courtesy.
  */
+import { isCountry } from './countries'
 
 export const COUNTIES = [
   'Alba', 'Arad', 'Argeș', 'Bacău', 'Bihor', 'Bistrița-Năsăud', 'Botoșani', 'Brașov', 'Brăila', 'București',
@@ -29,13 +30,17 @@ export type OrderFields = {
   /** Billing address: home address for individuals, registered office for companies. */
   address: string
   city: string
+  /** Romanian county (a list), or the region/state abroad (free text, optional). */
   county: string
   postalCode: string
+  /** ISO 3166-1 alpha-2; Romania by default. */
+  country: string
   /** Delivery address, used only when it differs from billing. */
   shipAddress: string
   shipCity: string
   shipCounty: string
   shipPostalCode: string
+  shipCountry: string
   notes: string
 }
 
@@ -57,12 +62,17 @@ export type CheckoutPayload = {
   acceptedTerms: boolean
   /** One id per checkout attempt, so a double submit can't create two orders. */
   attemptId: string
+  /** The currency the visitor sees (lei on Romanian pages; euro or dollar on English ones). */
+  currency?: 'RON' | 'EUR' | 'USD'
 }
 
 /** The unfinished checkout form, in sessionStorage only (gone when the tab closes). */
 export const DRAFT_KEY = 'biohack-checkout-draft'
 
 export type FieldName = keyof OrderFields | 'acceptedTerms' | 'paymentMethod'
+
+/** The country the parcel goes to (delivery address when it differs). */
+export const deliveryCountry = (o: Pick<OrderForm, 'sameAddress' | 'country' | 'shipCountry'>) => (o.sameAddress ? o.country : o.shipCountry)
 export type FieldErrors = Partial<Record<FieldName, string>>
 
 export const emptyOrder: OrderForm = {
@@ -79,11 +89,13 @@ export const emptyOrder: OrderForm = {
   city: '',
   county: '',
   postalCode: '',
+  country: 'RO',
   sameAddress: true,
   shipAddress: '',
   shipCity: '',
   shipCounty: '',
   shipPostalCode: '',
+  shipCountry: 'RO',
   notes: '',
   paymentMethod: 'card',
 }
@@ -99,11 +111,13 @@ const LIMITS: Record<keyof OrderFields, number> = {
   address: 200,
   city: 80,
   county: 40,
-  postalCode: 10,
+  postalCode: 12,
+  country: 2,
   shipAddress: 200,
   shipCity: 80,
   shipCounty: 40,
-  shipPostalCode: 10,
+  shipPostalCode: 12,
+  shipCountry: 2,
   notes: 400,
 }
 
@@ -116,6 +130,8 @@ export function normalizeOrder(raw: unknown): OrderForm {
   for (const k of Object.keys(LIMITS) as (keyof OrderFields)[]) out[k] = clean(r[k], LIMITS[k])
   out.email = out.email.toLowerCase()
   out.cui = out.cui.toUpperCase().replace(/\s/g, '')
+  out.country = isCountry(out.country.toUpperCase()) ? out.country.toUpperCase() : 'RO'
+  out.shipCountry = isCountry(out.shipCountry.toUpperCase()) ? out.shipCountry.toUpperCase() : out.country
   out.buyerType = r.buyerType === 'pj' ? 'pj' : 'pf'
   out.sameAddress = r.sameAddress !== false
   out.paymentMethod = r.paymentMethod === 'transfer' || r.paymentMethod === 'cod' ? r.paymentMethod : 'card'
@@ -158,6 +174,9 @@ const MSG = {
     city: 'Completează localitatea.',
     county: 'Alege județul.',
     postalCode: 'Codul poștal are 6 cifre.',
+    postalCodeAbroad: 'Verifică codul poștal.',
+    country: 'Alege țara.',
+    vatId: 'Completează codul de TVA sau de înregistrare al firmei.',
     shipAddress: 'Completează adresa de livrare: strada și numărul.',
     paymentMethod: 'Această metodă de plată nu este disponibilă încă. Alege alta.',
     acceptedTerms: 'Bifează acordul cu termenii ca să plasezi comanda.',
@@ -176,7 +195,10 @@ const MSG = {
     address: 'Enter your address: street and number.',
     city: 'Enter the town or city.',
     county: 'Choose the county.',
-    postalCode: 'The postcode has 6 digits.',
+    postalCode: 'The Romanian postcode has 6 digits.',
+    postalCodeAbroad: 'Check the postcode.',
+    country: 'Choose the country.',
+    vatId: 'Enter the company VAT or registration number.',
     shipAddress: 'Enter the delivery address: street and number.',
     paymentMethod: 'This payment method is coming soon. Please choose another one.',
     acceptedTerms: 'Tick the box to accept the terms and place your order.',
@@ -196,21 +218,32 @@ export function validateOrder(o: OrderForm, acceptedTerms: boolean, available?: 
 
   if (o.buyerType === 'pj') {
     if (o.company.length < 2) e.company = m.company
-    if (!o.cui) e.cui = m.cuiEmpty
-    else if (!isValidCui(o.cui)) e.cui = m.cui
+    // A Romanian company: a valid CUI. A company abroad: its VAT or registration number, as given.
+    if (o.country === 'RO') {
+      if (!o.cui) e.cui = m.cuiEmpty
+      else if (!isValidCui(o.cui)) e.cui = m.cui
+    } else if (o.cui.length < 4) e.cui = m.vatId
   }
 
   const office = o.buyerType === 'pj'
   if (o.address.length < 5) e.address = office ? m.office : m.address
   if (o.city.length < 2) e.city = m.city
-  if (!isCounty(o.county)) e.county = m.county
-  if (!/^\d{6}$/.test(o.postalCode)) e.postalCode = m.postalCode
+  if (!isCountry(o.country)) e.country = m.country
+  // Romania: a county from the list and a 6-digit postcode. Abroad: the region is optional and the postcode is
+  // checked for shape only (some countries have none).
+  const place = (country: string, county: string, postal: string, keys: { county: FieldName; postalCode: FieldName }) => {
+    if (country === 'RO') {
+      if (!isCounty(county)) e[keys.county] = m.county
+      if (!/^\d{6}$/.test(postal)) e[keys.postalCode] = m.postalCode
+    } else if (postal && !/^[A-Za-z0-9][A-Za-z0-9 -]{1,10}$/.test(postal)) e[keys.postalCode] = m.postalCodeAbroad
+  }
+  place(o.country, o.county, o.postalCode, { county: 'county', postalCode: 'postalCode' })
 
   if (!o.sameAddress) {
     if (o.shipAddress.length < 5) e.shipAddress = m.shipAddress
     if (o.shipCity.length < 2) e.shipCity = m.city
-    if (!isCounty(o.shipCounty)) e.shipCounty = m.county
-    if (!/^\d{6}$/.test(o.shipPostalCode)) e.shipPostalCode = m.postalCode
+    if (!isCountry(o.shipCountry)) e.shipCountry = m.country
+    place(o.shipCountry, o.shipCounty, o.shipPostalCode, { county: 'shipCounty', postalCode: 'shipPostalCode' })
   }
 
   if (available && !available[o.paymentMethod]) e.paymentMethod = m.paymentMethod

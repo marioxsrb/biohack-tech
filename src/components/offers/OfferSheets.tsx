@@ -11,7 +11,7 @@ import type { Locale } from '@/i18n/locales'
 import { AMBER_ID, amberLabel, amberModels, amberTotals, pairsToLines } from '@/lib/amber-pairs'
 import { BUNDLE, bundleToLines, bundleTotals, unitsInCart, type BundlePick } from '@/lib/bundle-picks'
 import { trackUi, type UiPlacement } from '@/lib/analytics'
-import { formatLei } from '@/lib/money'
+import { useMoney } from '@/i18n/currency'
 import type { EntrySource } from '@/lib/purchase'
 import { Sheet } from './Sheet'
 
@@ -154,6 +154,7 @@ function AmberPairs({ slots, placement, onClose }: { slots: number; placement: U
   const locale = useLocale()
   const t = COPY[locale]
   const ui = useUi()
+  const { fmt, unit: inCurrency, currency } = useMoney()
   const models = useMemo(() => amberModels(locale), [locale])
   const [picks, setPicks] = useState<(string | null)[]>(() => Array.from({ length: slots }, () => null))
   const [done, setDone] = useState(false)
@@ -161,13 +162,13 @@ function AmberPairs({ slots, placement, onClose }: { slots: number; placement: U
   const [modelDraft, setModelDraft] = useState<Record<number, string>>({})
   const existing = lines.filter((l) => l.product.id === AMBER_ID).map((l) => ({ variantId: l.variant?.id, quantity: l.quantity }))
   const inCart = existing.reduce((n, l) => n + l.quantity, 0)
-  const totals = amberTotals(existing, picks)
+  const totals = amberTotals(existing, picks, currency)
   const ready = pairsToLines(picks)
   const firstEmpty = picks.findIndex((p) => !p)
   // Pairs are numbered after the ones already in the cart when completing a 2+1.
   const slotNo = (i: number) => (slots === 3 ? i + 1 : inCart + i + 1)
   const p = getProduct(AMBER_ID, locale)!
-  const unit = p.price ?? 0
+  const unit = inCurrency(p.price ?? 0)
 
   const title = t.amberTitle(slots)
   const cta = t.amberCta(slots)
@@ -237,11 +238,11 @@ function AmberPairs({ slots, placement, onClose }: { slots: number; placement: U
               </>
             )}
             <dt className="text-muted">{t.amberSubtotal}</dt>
-            <dd data-price className="text-right tabular-nums">{formatLei(totals.subtotalMinor)}</dd>
+            <dd data-price className="text-right tabular-nums">{fmt(totals.subtotalMinor)}</dd>
             <dt className="font-medium text-ink">{t.amberShort}</dt>
-            <dd data-price className="text-right font-medium text-ink tabular-nums">{totals.discountMinor ? `−${formatLei(totals.discountMinor)}` : '0 lei'}</dd>
+            <dd data-price className="text-right font-medium text-ink tabular-nums">{totals.discountMinor ? `−${fmt(totals.discountMinor)}` : fmt(0)}</dd>
             <dt className="pt-1 text-[16px] font-semibold text-ink">Total</dt>
-            <dd data-price className="pt-1 text-right text-[20px] font-medium tracking-[-0.02em] text-ink tabular-nums">{formatLei(totals.totalMinor)}</dd>
+            <dd data-price className="pt-1 text-right text-[20px] font-medium tracking-[-0.02em] text-ink tabular-nums">{fmt(totals.totalMinor)}</dd>
           </dl>
           <button type="button" data-buy data-product="ochelari-biohack" onClick={add} disabled={!ready} className="cta w-full">
             <Lock /> {cta}
@@ -252,7 +253,7 @@ function AmberPairs({ slots, placement, onClose }: { slots: number; placement: U
         </div>
       }
     >
-      <p data-price className="text-[15px] text-text">{t.amberIntro(formatLei(unit))}</p>
+      <p data-price className="text-[15px] text-text">{t.amberIntro(fmt(unit))}</p>
       <ol className="mt-4 space-y-3">
         {picks.map((pick, i) => {
           const activeModel = models.find((m) => m.id === (modelDraft[i] ?? modelOf(pick)?.id))
@@ -327,6 +328,7 @@ function VariantPicker({ productId, placement, onClose }: { productId: ProductId
   const locale = useLocale()
   const t = COPY[locale]
   const ui = useUi()
+  const { fmt, unit } = useMoney()
   const p = getProduct(productId, locale)!
   const [variantId, setVariantId] = useState<string | null>(null)
   const v = p.variants?.find((x) => x.id === variantId)
@@ -358,7 +360,7 @@ function VariantPicker({ productId, placement, onClose }: { productId: ProductId
         >
           {v ? (
             <>
-              {ui.addToCart} · <span data-price>{formatLei(price ?? 0)}</span>
+              {ui.addToCart} · <span data-price>{fmt(unit(price ?? 0))}</span>
             </>
           ) : (
             t.chooseVariant
@@ -380,7 +382,7 @@ function VariantPicker({ productId, placement, onClose }: { productId: ProductId
               className={`flex flex-col items-start rounded-[16px] bg-paper p-4 text-left transition-shadow ${on ? 'shadow-[inset_0_0_0_2px_var(--color-ink)]' : 'shadow-[inset_0_0_0_1px_var(--color-line)]'}`}
             >
               <span className="text-[17px] font-semibold text-ink">{variantLabel(p, x)}</span>
-              <span data-price className="mt-2 text-[18px] font-medium tabular-nums">{xp !== null ? formatLei(xp) : ''}</span>
+              <span data-price className="mt-2 text-[18px] font-medium tabular-nums">{xp !== null ? fmt(unit(xp)) : ''}</span>
             </button>
           )
         })}
@@ -401,13 +403,14 @@ function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose:
   const locale = useLocale()
   const t = COPY[locale]
   const ui = useUi()
+  const { fmt, unit, currency } = useMoney()
   const cart = lines.map((l) => ({ productId: l.product.id, variantId: l.variant?.id, quantity: l.quantity }))
   const [pick, setPick] = useState<BundlePick>({ productId: null, variantId: null, quantity: 0 })
   const [done, setDone] = useState<number | null>(null)
   const have = unitsInCart(cart, pick.productId)
   // How many to add: enough for 2 in all (10%) and for 3 in all (20%); one more once 20% already applies.
   const options = have >= 3 ? [1] : [2 - have, 3 - have].filter((n) => n > 0)
-  const totals = bundleTotals(cart, pick)
+  const totals = bundleTotals(cart, pick, currency)
   const ready = bundleToLines(pick)
   const product = pick.productId ? getProduct(pick.productId, locale) : undefined
   const choose = (productId: ProductId) => {
@@ -464,7 +467,7 @@ function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose:
             {ready && (
               <>
                 <dt className="truncate text-text">{pickLabel(pick, locale)} × {pick.quantity}</dt>
-                <dd data-price className="text-right tabular-nums">{formatLei((unitPrice(getProduct(pick.productId!)!, getProduct(pick.productId!)!.variants?.find((v) => v.id === pick.variantId)) ?? 0) * pick.quantity)}</dd>
+                <dd data-price className="text-right tabular-nums">{fmt(unit(unitPrice(getProduct(pick.productId!)!, getProduct(pick.productId!)!.variants?.find((v) => v.id === pick.variantId)) ?? 0) * pick.quantity)}</dd>
               </>
             )}
             {have > 0 && (
@@ -474,11 +477,11 @@ function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose:
               </>
             )}
             <dt className="text-muted">Subtotal</dt>
-            <dd data-price className="text-right tabular-nums">{formatLei(totals.subtotalMinor)}</dd>
+            <dd data-price className="text-right tabular-nums">{fmt(totals.subtotalMinor)}</dd>
             <dt className="font-medium text-ink">{t.discount(totals.percent)}</dt>
-            <dd data-price className="text-right font-medium text-ink tabular-nums">{totals.discountMinor ? `−${formatLei(totals.discountMinor)}` : '0 lei'}</dd>
+            <dd data-price className="text-right font-medium text-ink tabular-nums">{totals.discountMinor ? `−${fmt(totals.discountMinor)}` : fmt(0)}</dd>
             <dt className="pt-1 text-[16px] font-semibold text-ink">{t.totalAfter}</dt>
-            <dd data-price className="pt-1 text-right text-[20px] font-medium tracking-[-0.02em] text-ink tabular-nums">{formatLei(totals.totalMinor)}</dd>
+            <dd data-price className="pt-1 text-right text-[20px] font-medium tracking-[-0.02em] text-ink tabular-nums">{fmt(totals.totalMinor)}</dd>
           </dl>
           <button type="button" data-buy onClick={add} disabled={!ready} className="cta w-full">
             <Lock /> {t.addSelection}
@@ -509,7 +512,7 @@ function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose:
               <span className="mt-1.5 text-[13.5px] leading-tight font-semibold text-ink">{p.name.replace('NEUROS ', '')}</span>
               <span data-price className="text-[12.5px] text-muted tabular-nums">
                 {p.variablePrice ? ui.from : ''}
-                {formatLei(p.price ?? 0)}
+                {fmt(unit(p.price ?? 0))}
               </span>
             </button>
           )
@@ -529,7 +532,7 @@ function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose:
                 className={`flex min-h-14 flex-col items-center justify-center rounded-[12px] px-1 py-2 text-center transition-colors ${on ? 'bg-ink text-white' : 'bg-paper text-ink shadow-[inset_0_0_0_1px_var(--color-line)] hover:shadow-[inset_0_0_0_1px_var(--color-ink)]'}`}
               >
                 <span className="text-[14.5px] font-semibold">{variantLabel(product, v)}</span>
-                <span data-price className={`text-[12.5px] tabular-nums ${on ? 'text-white/80' : 'text-muted'}`}>{formatLei(unitPrice(product, v) ?? 0)}</span>
+                <span data-price className={`text-[12.5px] tabular-nums ${on ? 'text-white/80' : 'text-muted'}`}>{fmt(unit(unitPrice(product, v) ?? 0))}</span>
               </button>
             )
           })}

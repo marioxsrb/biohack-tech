@@ -7,6 +7,7 @@
 import { PROMOTIONS, type BundlePercent } from '@/config/promotions'
 import { getProduct, unitPrice, type ProductId } from '@/content/catalog'
 import { groupId, priceLines, tierFor } from './promotions'
+import { convertUnit, type Currency } from './currency'
 
 export const BUNDLE = PROMOTIONS.find((p): p is BundlePercent => p.kind === 'bundle_percent')!
 
@@ -33,18 +34,18 @@ export function bundleToLines(p: BundlePick) {
   return [{ productId: p.productId!, ...(p.variantId && { variantId: p.variantId }), quantity: p.quantity }]
 }
 
-const priceOf = (productId: string, variantId?: string | null) => {
+const priceOf = (productId: string, variantId: string | null | undefined, currency: Currency) => {
   const p = getProduct(productId)
-  return p ? (unitPrice(p, p.variants?.find((v) => v.id === variantId)) ?? 0) : 0
+  return p ? convertUnit(unitPrice(p, p.variants?.find((v) => v.id === variantId)) ?? 0, currency) : 0
 }
 
 /** Totals for the chosen product after adding the pick to what the cart already has of it (promotion engine). */
-export function bundleTotals(cart: { productId: string; variantId?: string; quantity: number }[], pick: BundlePick) {
+export function bundleTotals(cart: { productId: string; variantId?: string; quantity: number }[], pick: BundlePick, currency: Currency = 'RON') {
   const lines = [
     ...cart.filter((l) => l.productId === pick.productId).map((l) => ({ productId: l.productId, variantId: l.variantId ?? null, quantity: l.quantity })),
     ...(pickComplete(pick) ? [{ productId: pick.productId!, variantId: pick.variantId, quantity: pick.quantity }] : []),
   ]
-  const r = priceLines(lines.map((l, i) => ({ key: `${l.productId}:${l.variantId ?? ''}:${i}`, productId: l.productId, quantity: l.quantity, unitAmount: priceOf(l.productId, l.variantId) })))
+  const r = priceLines(lines.map((l, i) => ({ key: `${l.productId}:${l.variantId ?? ''}:${i}`, productId: l.productId, quantity: l.quantity, unitAmount: priceOf(l.productId, l.variantId, currency) })))
   const units = lines.reduce((n, l) => n + l.quantity, 0)
   const discountMinor = pick.productId ? (r.promotions.find((a) => a.id === groupId(BUNDLE.id, pick.productId!))?.amountMinor ?? 0) : 0
   return { subtotalMinor: r.subtotalMinor, discountMinor, totalMinor: r.subtotalMinor - discountMinor, units, percent: tierFor(BUNDLE, units)?.percent ?? 0 }

@@ -4,6 +4,10 @@ import { connection } from 'next/server'
 import { isDiscontinued } from '@/content/catalog'
 import { attributionSummary } from '@/lib/attribution'
 import { formatLei } from '@/lib/money'
+import { formatMoney } from '@/lib/currency'
+
+/** An amount of this order, in its currency (lei, or euro/dollar on the international site). */
+const money = (o: { currency: Parameters<typeof formatMoney>[1] }, minor: number) => formatMoney(minor, o.currency)
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { jobs, type Job } from '@/server/jobs/outbox'
@@ -109,11 +113,14 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
         </span>
       </div>
       <p className="mt-1 text-[14.5px] text-muted">
-        {dt(o.createdAt)} · {PAYMENT_METHOD_LABEL[o.paymentMethod]} · {formatLei(o.totalMinor)}
+        {dt(o.createdAt)} · {PAYMENT_METHOD_LABEL[o.paymentMethod]} · {money(o, o.totalMinor)}
+        {o.currency !== 'RON' && ` (≈ ${formatLei(Math.round(o.totalMinor * o.fxRate))}, curs ${o.fxRate})`}
+        {o.site === 'net' && ' · biohack-tech.net'}
+        {o.locale === 'en' && ' · engleză'}
       </p>
       {cod && o.status !== 'cancelled' && (
         <p className="mt-4 rounded-[14px] bg-[#fdf3f3] px-5 py-3 text-[15px] text-ink shadow-[inset_0_0_0_1px_#f3d6d6]">
-          Ramburs: curierul încasează <strong className="tabular-nums">{formatLei(ship.cashOnDeliveryMinor)}</strong> la livrare. Comanda rămâne neplătită până înregistrezi decontul curierului.
+          Ramburs: curierul încasează <strong className="tabular-nums">{money(o, ship.cashOnDeliveryMinor)}</strong> la livrare. Comanda rămâne neplătită până înregistrezi decontul curierului.
         </p>
       )}
 
@@ -134,7 +141,7 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
               <Link href={`/admin/orders/${child.id}`} className="font-medium underline underline-offset-4">
                 ↳ {child.orderNumber}
               </Link>{' '}
-              · {child.items.map((i) => `${i.quantity} × ${i.productName}${i.variantName ? ` (${i.variantName})` : ''}`).join(', ')} · {formatLei(child.totalMinor)} · {PAYMENT_LABEL[child.paymentStatus]}. Se pot expedia împreună.
+              · {child.items.map((i) => `${i.quantity} × ${i.productName}${i.variantName ? ` (${i.variantName})` : ''}`).join(', ')} · {money(o, child.totalMinor)} · {PAYMENT_LABEL[child.paymentStatus]}. Se pot expedia împreună.
             </p>
           )}
           {!child && o.upsellStatus && <p>Oferta după plată: {UPSELL[o.upsellStatus] ?? o.upsellStatus}.</p>}
@@ -160,14 +167,14 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                       )}
                       <span className="mt-1 block text-[13px] text-muted">
                         Produs {i.productId}
-                        {i.variantId && ` · variantă ${i.variantId}`} · ref. {i.sku} · {formatLei(i.unitPriceMinor)} / buc.
+                        {i.variantId && ` · variantă ${i.variantId}`} · ref. {i.sku} · {money(o, i.unitPriceMinor)} / buc.
                       </span>
                     </span>
                     <span className="text-right whitespace-nowrap tabular-nums">
-                      {formatLei(i.lineTotalMinor)}
+                      {money(o, i.lineTotalMinor)}
                       {i.discountMinor > 0 && (
                         <span className="block text-[13px] text-cyan-700">
-                          −{formatLei(i.discountMinor)} = {formatLei(i.lineTotalMinor - i.discountMinor)}
+                          −{money(o, i.discountMinor)} = {money(o, i.lineTotalMinor - i.discountMinor)}
                         </span>
                       )}
                     </span>
@@ -178,28 +185,28 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
             <dl className="mt-2 space-y-1 border-t border-mist-2 pt-2">
               <div className="flex justify-between">
                 <dt className="text-muted">Subtotal</dt>
-                <dd className="tabular-nums">{formatLei(o.subtotalMinor)}</dd>
+                <dd className="tabular-nums">{money(o, o.subtotalMinor)}</dd>
               </div>
               {o.promotions.map((p) => (
                 <div key={p.id} className="flex justify-between text-cyan-700">
                   <dt>
                     Promoție: {p.label} <span className="text-muted">({p.id})</span>
                   </dt>
-                  <dd className="tabular-nums">−{formatLei(p.amountMinor)}</dd>
+                  <dd className="tabular-nums">−{money(o, p.amountMinor)}</dd>
                 </div>
               ))}
               {o.discountMinor > 0 && (
                 <div className="flex justify-between">
                   <dt className="text-muted">Reducere totală</dt>
-                  <dd className="tabular-nums">−{formatLei(o.discountMinor)}</dd>
+                  <dd className="tabular-nums">−{money(o, o.discountMinor)}</dd>
                 </div>
               )}
             </dl>
             <p className="mt-2 flex justify-between border-t border-mist-2 pt-2 font-semibold">
-              <span>Total (livrare {o.shippingMinor ? formatLei(o.shippingMinor) : 'gratuită'})</span>
-              <span className="tabular-nums">{formatLei(o.totalMinor)}</span>
+              <span>Total (livrare {o.shippingMinor ? money(o, o.shippingMinor) : 'gratuită'})</span>
+              <span className="tabular-nums">{money(o, o.totalMinor)}</span>
             </p>
-            {o.refundedMinor > 0 && <p className="mt-1 text-right text-[14px] text-red-deep">Rambursat: {formatLei(o.refundedMinor)}</p>}
+            {o.refundedMinor > 0 && <p className="mt-1 text-right text-[14px] text-red-deep">Rambursat: {money(o, o.refundedMinor)}</p>}
           </Panel>
 
           <Panel title="Client și livrare">
@@ -274,9 +281,9 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                 <form action={markPaidAction} className="rounded-[12px] bg-mist p-4">
                   <input type="hidden" name="id" value={o.id} />
                   <p className="text-[14px] text-text">
-                    Confirmă doar după ce vezi în extras <strong>{formatLei(o.totalMinor)}</strong> cu referința <strong>{o.orderNumber}</strong>.
+                    Confirmă doar după ce vezi în extras <strong>{money(o, o.totalMinor)}</strong> cu referința <strong>{o.orderNumber}</strong>.
                   </p>
-                  <Confirm text={`Am văzut ${formatLei(o.totalMinor)} în extras, cu referința ${o.orderNumber}.`} />
+                  <Confirm text={`Am văzut ${money(o, o.totalMinor)} în extras, cu referința ${o.orderNumber}.`} />
                   <button className="cta sm mt-3">Plata a fost primită</button>
                 </form>
               )}
@@ -284,7 +291,7 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                 <form action={codCollectedAction} className="space-y-2 rounded-[12px] bg-mist p-4">
                   <input type="hidden" name="id" value={o.id} />
                   <p className="text-[14px] text-text">
-                    Confirmă încasarea doar după ce curierul a decontat <strong>{formatLei(ship.cashOnDeliveryMinor)}</strong> pentru AWB <strong>{o.trackingNumber}</strong>. Livrarea singură nu înseamnă încasare.
+                    Confirmă încasarea doar după ce curierul a decontat <strong>{money(o, ship.cashOnDeliveryMinor)}</strong> pentru AWB <strong>{o.trackingNumber}</strong>. Livrarea singură nu înseamnă încasare.
                   </p>
                   <input name="amount" inputMode="decimal" required placeholder={`Suma decontată, ex. ${(ship.cashOnDeliveryMinor / 100).toFixed(2)}`} className="field !min-h-11 !py-2" aria-label="Suma decontată în lei" />
                   <input name="reference" required minLength={3} placeholder="Referința decontului (borderou / OP)" className="field !min-h-11 !py-2" aria-label="Referința decontului" />
@@ -307,8 +314,8 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                     <div><dt className="inline text-muted">Destinatar: </dt><dd className="inline">{ship.recipient}, {ship.phone}</dd></div>
                     <div><dt className="inline text-muted">Adresă: </dt><dd className="inline">{formatAddress(ship.address)}</dd></div>
                     <div><dt className="inline text-muted">Conținut: </dt><dd className="inline">{ship.contents}</dd></div>
-                    <div><dt className="inline text-muted">Valoare declarată: </dt><dd className="inline tabular-nums">{formatLei(ship.declaredValueMinor)}</dd></div>
-                    <div className="font-semibold"><dt className="inline">Ramburs de încasat: </dt><dd className="inline tabular-nums">{ship.cashOnDeliveryMinor ? formatLei(ship.cashOnDeliveryMinor) : 'nu (plătită)'}</dd></div>
+                    <div><dt className="inline text-muted">Valoare declarată: </dt><dd className="inline tabular-nums">{money(o, ship.declaredValueMinor)}</dd></div>
+                    <div className="font-semibold"><dt className="inline">Ramburs de încasat: </dt><dd className="inline tabular-nums">{ship.cashOnDeliveryMinor ? money(o, ship.cashOnDeliveryMinor) : 'nu (plătită)'}</dd></div>
                   </dl>
                   <p className="text-[12.5px] text-muted">Rezervi AWB-ul în portalul curierului cu aceste date{ship.cashOnDeliveryMinor ? ', cu serviciul ramburs pe suma de mai sus' : ''}, apoi completezi mai jos.</p>
                   <input name="courier" required placeholder="Curier (ex. Fan Courier)" className="field !min-h-11 !py-2" aria-label="Curier" />
@@ -373,7 +380,7 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                 ['Plătită la', dt(o.paidAt)],
                 ...(o.paymentMethod === 'cash_on_delivery'
                   ? ([
-                      ['Ramburs', o.codAmountMinor ? formatLei(o.codAmountMinor) : '–'],
+                      ['Ramburs', o.codAmountMinor ? money(o, o.codAmountMinor) : '–'],
                       ['Decont curier', o.codReference ?? '–'],
                     ] as [string, string][])
                   : []),

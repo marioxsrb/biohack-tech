@@ -89,7 +89,7 @@ export async function funnelStats(q: Queryable, f: StatsFilter): Promise<FunnelS
     `select coalesce(o.attribution->>'funnel', 'visible_price') as funnel,
             count(*) filter (where o.payment_method <> 'card' or o.payment_status in ${PAID} or o.payment_status = 'refunded')::int as orders,
             count(*) filter (where o.payment_status in ${PAID})::int as paid_orders,
-            coalesce(sum(o.total_minor - o.refunded_minor) filter (where o.payment_status in ${PAID}), 0)::int as revenue,
+            coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate) filter (where o.payment_status in ${PAID}), 0)::int as revenue,
             count(*) filter (where (o.payment_method <> 'card' or o.payment_status in ${PAID})
               and (o.attribution->>'entry' = 'recovery' or exists (select 1 from leads r where r.id = o.lead_id and r.recovery_sent > 0 and o.created_at > r.last_recovery_at)))::int as recovered
      from orders o where o.kind = 'checkout' and ${o.sql} group by 1`,

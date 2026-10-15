@@ -245,6 +245,7 @@ export async function saveSettingsAction(_: SettingsFormState, f: FormData): Pro
     welcomePopup: f.get('welcomePopup') === 'da',
     callsPaused: f.get('callsPaused') === 'da',
     assistant: f.get('assistant') === 'da',
+    fx: now.fx,
   }
   if (JSON.stringify(next.prices) !== JSON.stringify(now.prices) && f.get('confirmPrices') !== 'da')
     return { error: 'Ai schimbat un preț: bifează confirmarea de sub prețuri ca să salvezi.' }

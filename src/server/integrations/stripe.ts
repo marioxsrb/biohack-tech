@@ -100,12 +100,13 @@ export const stripe = {
    * card on that customer for on-session use only (the customer present on our page), which is what the
    * post-purchase offer needs; it is detached again when the offer ends.
    */
-  createPaymentIntent(c: StripeConfig, o: { id: string; orderNumber: string; totalMinor: number }, customerId?: string) {
+  createPaymentIntent(c: StripeConfig, o: { id: string; orderNumber: string; totalMinor: number; currency?: string }, customerId?: string) {
     return call<PaymentIntent>(c, '/payment_intents', {
       idempotencyKey: `pi-create-${o.id}`,
       body: {
         amount: o.totalMinor,
-        currency: 'ron',
+        // The order's own currency (lei, or euro/dollar on the international site).
+        currency: (o.currency ?? 'RON').toLowerCase(),
         // Card only (Apple Pay / Google Pay count as cards). Bank transfer is handled by us, not Stripe.
         payment_method_types: ['card'],
         description: `Biohack Tech ${o.orderNumber}`,
@@ -119,12 +120,12 @@ export const stripe = {
    * The post-purchase charge: the saved card, confirmed on the server while the customer is on the page
    * (not off-session). Stripe decides whether the bank wants authentication (status requires_action).
    */
-  createUpsellPaymentIntent(c: StripeConfig, o: { id: string; orderNumber: string; totalMinor: number; parentId: string }, customerId: string, paymentMethodId: string) {
+  createUpsellPaymentIntent(c: StripeConfig, o: { id: string; orderNumber: string; totalMinor: number; parentId: string; currency?: string }, customerId: string, paymentMethodId: string) {
     return call<PaymentIntent>(c, '/payment_intents', {
       idempotencyKey: `pi-upsell-${o.id}`,
       body: {
         amount: o.totalMinor,
-        currency: 'ron',
+        currency: (o.currency ?? 'RON').toLowerCase(),
         payment_method_types: ['card'],
         customer: customerId,
         payment_method: paymentMethodId,

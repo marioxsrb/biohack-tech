@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { connection } from 'next/server'
 import { formatLei } from '@/lib/money'
+import { formatMoney } from '@/lib/currency'
 import { loadConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { jobs } from '@/server/jobs/outbox'
@@ -198,8 +199,8 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
                 </td>
                 <td className="px-4 py-3 text-[13px]">{o.items.map((i) => `${i.quantity} × ${i.productName.replace('NEUROS ', '')}${i.variantName ? ` (${i.variantName})` : ''}`).join(', ')}</td>
                 <td className="px-4 py-3 whitespace-nowrap tabular-nums">
-                  {formatLei(o.totalMinor)}
-                  {o.discountMinor > 0 && <span className="block text-[12.5px] text-cyan-700">reducere {formatLei(o.discountMinor)}</span>}
+                  {formatMoney(o.totalMinor, o.currency)}
+                  {o.discountMinor > 0 && <span className="block text-[12.5px] text-cyan-700">reducere {formatMoney(o.discountMinor, o.currency)}</span>}
                 </td>
                 <td className="px-4 py-3">{o.paymentMethod === 'card' ? 'Card' : o.paymentMethod === 'cash_on_delivery' ? 'Ramburs' : 'Transfer'}</td>
                 <td className="px-4 py-3">

@@ -4,6 +4,7 @@ import { connection } from 'next/server'
 import { companyLine } from '@/config/company'
 import { site } from '@/config/site'
 import { formatLei } from '@/lib/money'
+import { formatMoney } from '@/lib/currency'
 import { getDb } from '@/server/db'
 import { shipmentFor } from '@/server/fulfillment/courier'
 import { customerName, formatAddress, PAYMENT_METHOD_LABEL, type Order } from '@/server/orders/model'
@@ -127,7 +128,7 @@ export default async function PrintPage({ searchParams }: PageProps<'/[lang]/adm
                         <td className="py-[2mm]">{i.variantName ?? '–'}</td>
                         <td className="py-[2mm] text-[9pt]">{i.sku}</td>
                         <td className="py-[2mm] text-right text-[13pt] font-bold">{i.quantity}</td>
-                        {doc === 'detalii' && <td className="py-[2mm] text-right">{formatLei(i.lineTotalMinor - i.discountMinor)}</td>}
+                        {doc === 'detalii' && <td className="py-[2mm] text-right">{formatMoney(i.lineTotalMinor - i.discountMinor, o.currency)}</td>}
                       </tr>
                     ))}
                   </tbody>
@@ -194,10 +195,10 @@ export default async function PrintPage({ searchParams }: PageProps<'/[lang]/adm
                   </div>
                   <div>
                     <p className="font-semibold">Total</p>
-                    <p>Subtotal {formatLei(o.subtotalMinor)}</p>
-                    {o.discountMinor > 0 && <p>Reduceri −{formatLei(o.discountMinor)}</p>}
-                    <p className="text-[13pt] font-bold">Total {formatLei(o.totalMinor)}</p>
-                    {o.refundedMinor > 0 && <p>Rambursat {formatLei(o.refundedMinor)}</p>}
+                    <p>Subtotal {formatMoney(o.subtotalMinor, o.currency)}</p>
+                    {o.discountMinor > 0 && <p>Reduceri −{formatMoney(o.discountMinor, o.currency)}</p>}
+                    <p className="text-[13pt] font-bold">Total {formatMoney(o.totalMinor, o.currency)}</p>
+                    {o.refundedMinor > 0 && <p>Rambursat {formatMoney(o.refundedMinor, o.currency)}</p>}
                     <p>Plătită: {dt(o.paidAt)}</p>
                   </div>
                 </div>

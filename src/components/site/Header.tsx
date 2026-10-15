@@ -10,7 +10,7 @@ import { productHref, productsIn } from '@/content/catalog'
 import { Price } from '@/components/cart/Price'
 import { useLocale, useUi } from '@/i18n/LocaleProvider'
 import { splitLocale } from '@/i18n/locales'
-import { LanguageSwitch } from './LanguageSwitch'
+import { CurrencySwitch, LanguageSwitch } from './LanguageSwitch'
 import { useOffMainHost } from './MainHostOnly'
 import { Wordmark } from './Wordmark'
 
@@ -114,6 +114,7 @@ export function Header() {
           </ul>
 
           <div className={`ml-auto flex items-center gap-1 ${offMain ? '' : 'md:ml-0'}`}>
+            {!offMain && <CurrencySwitch dark={dark} className="mr-1.5 max-sm:hidden" />}
             {!offMain && <LanguageSwitch dark={dark} className="mr-2 max-md:mr-1" />}
             <Link
               href="/cart"
@@ -193,6 +194,7 @@ export function Header() {
                 </li>
               ))}
             </ul>
+            <CurrencySwitch dark className="mt-10 w-fit sm:hidden" />
             <ul className="mt-12 space-y-1 text-[18px]">
               <li>
                 <Link href="/about-us" onClick={closeSheet} className="block py-2 text-white/85">

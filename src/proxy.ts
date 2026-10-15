@@ -4,6 +4,7 @@ import { ADMIN_COOKIE, checkAdminRequest } from '@/lib/admin-auth'
 import { DISCONTINUED_PATH, isGatedHostname, isLandingSlug, landingForHost, presentationPath, retiredLandingRedirect, routeGated, routeLanding, wwwRedirect } from '@/lib/landing-hosts'
 import { GATE_COOKIE } from '@/lib/lead'
 import { defaultLocale, splitLocale } from '@/i18n/locales'
+import { isIntlHost } from '@/lib/sites'
 
 /**
  * Two jobs, before anything renders:
@@ -27,6 +28,9 @@ import { defaultLocale, splitLocale } from '@/i18n/locales'
  *    app/[lang], so a plain path is rewritten to /ro/<path>; /en/<path> passes as it is; a typed /ro/<path>
  *    redirects to the plain URL, so each page has exactly one public address per language. API routes and
  *    files are outside the matcher's page logic and stay where they are.
+ *
+ * 1d. The international site (biohack-tech.net): the same storefront, English by default. A plain (Romanian) URL
+ *    is sent to its /en address unless the visitor picked Romanian in the language switch (cookie bt_lang=ro).
  *
  * 2. /admin is behind the login page (a signed session cookie; HTTP Basic Auth still works for scripts),
  *    with ADMIN_USER / ADMIN_PASSWORD. Without a password configured,
@@ -112,6 +116,10 @@ async function storefront(req: NextRequest, pathname: string, search: string) {
 
   const { locale, path } = splitLocale(pathname)
   if (locale === defaultLocale && pathname !== path) return NextResponse.redirect(new URL(`${path}${search}`, req.url), 308)
+  // biohack-tech.net opens in English: Romanian only when chosen in the language switch.
+  if (locale === defaultLocale && isIntlHost(req.headers.get('host')) && req.cookies.get('bt_lang')?.value !== 'ro' && !path.startsWith('/admin')) {
+    return NextResponse.redirect(new URL(`/en${path === '/' ? '' : path}${search}`, req.url), 307)
+  }
 
   if (path === '/admin' || path.startsWith('/admin/')) {
     const auth = await checkAdminRequest(req.cookies.get(ADMIN_COOKIE)?.value, req.headers.get('authorization'))

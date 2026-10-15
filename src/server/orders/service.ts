@@ -5,6 +5,8 @@
  * the order already moved and does nothing.
  */
 import 'server-only'
+import { convertUnit, rateFor, rates, ruleIn, type Currency } from '@/lib/currency'
+import { consentVersionFor } from '@/lib/consent/marketing'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { getConfig } from '@/server/config'
 import { getDb, type Queryable } from '@/server/db'
@@ -24,7 +26,7 @@ import { UPSELL_WINDOW_MINUTES } from '@/config/upsell'
 import type { OrderLine } from '@/lib/orders/resolve'
 import { awaitsCollection, canCancel, canFulfil, canMoveOrder, canMovePayment, isPaid, isPurchased } from './state'
 import { formatOrderNumber, orderDay } from './number'
-import type { Address, Order, OrderStatus, PaymentMethod } from './model'
+import type { Address, Order, OrderSite, OrderStatus, PaymentMethod } from './model'
 import { orders } from './repository'
 import { ensureOrderLead, markLeadsPurchased } from '@/server/leads'
 
@@ -44,6 +46,11 @@ type PlaceInput = {
   attribution?: Attribution | null
   /** A promo code typed in the checkout (checked again here, inside the order's transaction). */
   promoCode?: string
+  /** What the customer pays in (default lei): the lines' lei prices are converted here, per unit (lib/currency). */
+  currency?: Currency
+  /** The checkout's language and site (emails and pages follow them). */
+  locale?: 'ro' | 'en'
+  site?: OrderSite
 }
 
 /** The promo code cannot be used for this order (the checkout shows why, next to the code field). */
@@ -58,14 +65,14 @@ export class PromoError extends Error {
 
 /** Same attempt + same content = same order. A changed cart or form is a new order. */
 export function idempotencyKey(input: PlaceInput) {
-  const canonical = JSON.stringify({ a: input.attemptId, l: input.lines.map((l) => [l.key, l.quantity]), f: input.form, ...(input.promoCode && { c: normalizeCode(input.promoCode) }) })
+  const canonical = JSON.stringify({ a: input.attemptId, l: input.lines.map((l) => [l.key, l.quantity]), f: input.form, ...(input.promoCode && { c: normalizeCode(input.promoCode) }), ...(input.currency && input.currency !== 'RON' && { cur: input.currency }) })
   return createHash('sha256').update(canonical).digest('hex')
 }
 
 const addressOf = (f: OrderForm, ship: boolean): Address =>
   ship && !f.sameAddress
-    ? { address: f.shipAddress, city: f.shipCity, county: f.shipCounty, postalCode: f.shipPostalCode, country: 'RO' }
-    : { address: f.address, city: f.city, county: f.county, postalCode: f.postalCode, country: 'RO' }
+    ? { address: f.shipAddress, city: f.shipCity, county: f.shipCounty, postalCode: f.shipPostalCode, country: f.shipCountry || 'RO' }
+    : { address: f.address, city: f.city, county: f.county, postalCode: f.postalCode, country: f.country || 'RO' }
 
 export async function placeOrder(input: PlaceInput): Promise<{ order: Order; created: boolean }> {
   const db = await getDb()
@@ -74,6 +81,10 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
   if (existing) return { order: existing, created: false }
 
   const f = input.form
+  const currency: Currency = input.currency ?? 'RON'
+  const fxRate = rateFor(currency)
+  // Unit prices in the order's currency (whole euro or dollar per unit); promotions are computed on them.
+  const lines = input.lines.map((l) => ({ ...l, unitAmount: convertUnit(l.unitAmount, currency) }))
   const method: PaymentMethod = f.paymentMethod === 'transfer' ? 'bank_transfer' : f.paymentMethod === 'cod' ? 'cash_on_delivery' : 'card'
   const cod = method === 'cash_on_delivery'
   const shipping = shippingFor()
@@ -86,9 +97,9 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
       if (input.promoCode) {
         const checked = await promoCodes.check(t, input.promoCode, { email: f.email, lock: true })
         if (!checked.ok) throw new PromoError(checked.problem)
-        rule = ruleOf(checked.code)
+        rule = ruleIn(ruleOf(checked.code), currency)
       }
-      const pricing = priceLines(input.lines, undefined, rule)
+      const pricing = priceLines(lines, undefined, rule)
       if (pricing.code?.problem) throw new PromoError(pricing.code.problem, rule)
       const subtotal = pricing.subtotalMinor
       const discount = pricing.discountMinor
@@ -106,7 +117,10 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
           paymentStatus: method === 'card' ? 'pending' : cod ? 'awaiting_collection' : 'awaiting_transfer',
           paymentMethod: method,
           invoiceStatus: 'none',
-          currency: 'RON',
+          currency,
+          fxRate,
+          locale: input.locale ?? 'ro',
+          site: input.site ?? 'ro',
           subtotalMinor: subtotal,
           discountMinor: discount,
           promotions: pricing.promotions,
@@ -126,7 +140,7 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
           notes: f.notes,
           marketingConsent: f.marketingConsent,
           attribution: input.attribution ?? null,
-          items: input.lines.map((l, i) => ({
+          items: lines.map((l, i) => ({
             position: i + 1,
             productId: l.productId,
             variantId: l.variantId ?? null,
@@ -156,10 +170,11 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
       })
       if (rule && pricing.code?.amountMinor) await promoCodes.redeem(t, { orderId: id, code: rule.code, email: f.email, discountMinor: pricing.code.amountMinor })
       // Proof of the ticked box: exact wording, version, time, order. An unticked box records nothing.
-      if (f.marketingConsent) await marketing.grant(t, { email: f.email, source: 'checkout', orderId: id, page: '/checkout' })
+      if (f.marketingConsent) await marketing.grant(t, { email: f.email, source: 'checkout', orderId: id, page: '/checkout', version: consentVersionFor(input.site ?? 'ro', input.locale ?? 'ro') })
       // The same box names the AI calls: their consent is recorded separately, by phone number (no call follows
       // a purchase; it is kept as the person's choice). The CRM tag follows on marketing.sync.
-      const phone = f.marketingConsent ? romanianE164(f.phone) : null
+      // The international site's box names email only: no call consent from it.
+      const phone = f.marketingConsent && input.site !== 'net' ? romanianE164(f.phone) : null
       if (phone && !(await callConsent.state(t, phone))?.granted) {
         const callId = await callConsent.grant(t, { phone, email: f.email, source: 'checkout', page: '/checkout' })
         if (getConfig().ghl) await jobs.enqueue(t, { kind: 'marketing.sync', dedupeKey: `marketing.sync:call:${callId}`, payload: { email: f.email.trim().toLowerCase() }, runAt: new Date(Date.now() + 60_000) })
@@ -252,7 +267,7 @@ export function confirmPayment(
     }
     if (!canMovePayment(o.paymentStatus, 'paid')) return { skip: `payment_${o.paymentStatus}` }
     if (reported) {
-      if (reported.currency.toUpperCase() !== 'RON' || reported.amountMinor !== o.totalMinor) {
+      if (reported.currency.toUpperCase() !== o.currency || reported.amountMinor !== o.totalMinor) {
         log.error('order.amount_mismatch', { orderId: o.id, orderNumber: o.orderNumber, expected: o.totalMinor, got: reported.amountMinor, currency: reported.currency })
         return { skip: 'amount_mismatch' }
       }
@@ -274,7 +289,8 @@ export function confirmPayment(
     // A paid card checkout order with a card Stripe kept for on-session use gets the optional
     // post-purchase offer for a limited time. Only ids are stored, never card data.
     const offer =
-      o.kind === 'checkout' && o.paymentMethod === 'card' && o.stripeCustomerId && reported?.paymentMethodId && upsellsFor(o.items.map((i) => i.productId)).length
+      // (Romanian, lei orders only: the offer's page and prices are in Romanian lei.)
+      o.kind === 'checkout' && o.paymentMethod === 'card' && o.currency === 'RON' && o.locale === 'ro' && o.stripeCustomerId && reported?.paymentMethodId && upsellsFor(o.items.map((i) => i.productId)).length
         ? { stripe_payment_method_id: reported.paymentMethodId, upsell_status: 'offered', upsell_expires_at: new Date(Date.now() + UPSELL_WINDOW_MINUTES * 60_000) }
         : {}
     return {
@@ -294,6 +310,9 @@ export async function placeUpsellOrder(parent: Order, line: OrderLine): Promise<
   const db = await getDb()
   const existing = await orders.childOf(db, parent.id)
   if (existing) return { order: existing, created: false }
+  // In the parent's currency, at the parent's rate.
+  const at = parent.currency === 'RON' ? rates() : { ...rates(), [parent.currency]: parent.fxRate }
+  line = { ...line, unitAmount: convertUnit(line.unitAmount, parent.currency, at) }
   const pricing = priceLines([line])
   try {
     const order = await db.tx(async (t) => {
@@ -313,7 +332,10 @@ export async function placeUpsellOrder(parent: Order, line: OrderLine): Promise<
           paymentStatus: 'pending',
           paymentMethod: 'card',
           invoiceStatus: 'none',
-          currency: 'RON',
+          currency: parent.currency,
+          fxRate: parent.fxRate,
+          locale: parent.locale,
+          site: parent.site,
           subtotalMinor: pricing.subtotalMinor,
           discountMinor: pricing.discountMinor,
           promotions: pricing.promotions,

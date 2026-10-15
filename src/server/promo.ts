@@ -156,7 +156,7 @@ export const promoCodes = {
     const { rows } = await q.query(
       `select c.*, coalesce(u.uses, 0)::int as uses, coalesce(u.discount, 0)::int as discount, coalesce(u.revenue, 0)::int as revenue
        from promo_codes c left join (
-         select r.code, count(*) as uses, sum(r.discount_minor) as discount, sum(o.total_minor) as revenue
+         select r.code, count(*) as uses, sum(r.discount_minor * o.fx_rate) as discount, sum(o.total_minor * o.fx_rate) as revenue
          from promo_redemptions r join orders o on o.id = r.order_id where ${STANDING} group by r.code
        ) u on u.code = c.code where c.lead_id is null and c.restricted_email is null order by c.active desc, c.created_at desc`,
     )

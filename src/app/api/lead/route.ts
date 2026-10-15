@@ -4,6 +4,7 @@ import { getProduct } from '@/content/catalog'
 import { sanitizeAttribution } from '@/lib/attribution'
 import { cookieFrom, funnelForHost, GATE_COOKIE, GATE_DAYS, normalizeContact, validateContact, VISITOR_COOKIE } from '@/lib/lead'
 import { getConfig } from '@/server/config'
+import { siteForHost } from '@/lib/sites'
 import { getDb } from '@/server/db'
 import { kickJobs } from '@/server/jobs/runner'
 import { CART_INTEREST, captureLead, leads, recordGatedCart, sanitizeCart } from '@/server/leads'
@@ -126,7 +127,7 @@ export async function POST(req: NextRequest) {
       const cart = sanitizeCart(body.cart)
       if (!cart.length) return NextResponse.json({ ok: true, skipped: 'empty cart' })
       const r = await db.tx((t) =>
-        captureLead(t, { visitorId, funnel, stage: 'checkout_started', productId: CART_INTEREST, contact, marketingConsent: body.marketingConsent === true, callConsent: body.callConsent === true, cart, attribution, landingHost: host, page: '/checkout' }),
+        captureLead(t, { visitorId, funnel, stage: 'checkout_started', productId: CART_INTEREST, contact, marketingConsent: body.marketingConsent === true, callConsent: body.callConsent === true, cart, attribution, landingHost: host, page: '/checkout', locale: body.locale === 'en' ? 'en' : 'ro', site: siteForHost(host) }),
       )
       kickJobs()
       return withCookies(NextResponse.json({ ok: true, leadId: r.lead.id }), visitorId, undefined, c.siteUrl.startsWith('https://'))

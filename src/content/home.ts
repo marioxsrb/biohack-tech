@@ -146,7 +146,7 @@ const whyEn: typeof whyRo = {
   points: [
     { title: 'A few minutes a day', text: 'A NEUROS Calm session takes a few minutes. You wear NEUROS Amber like any other glasses.' },
     { title: 'We answer any question', text: 'Write or call us and we answer about the products, your order and delivery.' },
-    { title: `Free delivery and ${terms.returnDays}-day returns`, text: `Delivery is free in Romania. You have ${terms.returnDays} days to change your mind. You get a ${terms.warrantyYears}-year warranty.` },
+    { title: `Free delivery and ${terms.returnDays}-day returns`, text: `Delivery is free, worldwide. You have ${terms.returnDays} days to change your mind. You get a ${terms.warrantyYears}-year warranty.` },
   ],
 }
 
@@ -182,7 +182,7 @@ const homeFaqEn: FaqItem[] = [
   },
   {
     q: 'How long does delivery take, and how do I return a product?',
-    a: `Delivery is free in Romania. We prepare your order within ${terms.processingDays.replace(' zile', ' days')} of payment, and shipping usually takes ${terms.transitDays.replace(' zile', ' days')}. Once you receive the product, you have ${terms.returnDays} days to change your mind.`,
+    a: `Delivery is free, worldwide. We prepare your order within ${terms.processingDays.replace(' zile', ' days')} of payment, and shipping within Romania usually takes ${terms.transitDays.replace(' zile', ' days')}. Once you receive the product, you have ${terms.returnDays} days to change your mind.`,
   },
   {
     q: 'What kind of products are these?',
@@ -232,7 +232,7 @@ const faqEn: FaqGroup[] = [
       { q: 'Do prices include VAT?', a: `Yes. All prices are in lei, with ${terms.vat.replace('TVA ', '').replace(' inclus', '')} VAT included.` },
       {
         q: 'How much does delivery cost, and how long does it take?',
-        a: `Delivery is free in Romania. We prepare your order within ${terms.processingDays.replace(' zile', ' days')} of payment, and shipping usually takes ${terms.transitDays.replace(' zile', ' days')}.`,
+        a: `Delivery is free, worldwide. We prepare your order within ${terms.processingDays.replace(' zile', ' days')} of payment, and shipping within Romania usually takes ${terms.transitDays.replace(' zile', ' days')}.`,
       },
       { q: 'Can I order as a company?', a: 'Yes. At checkout, choose “Company” and fill in the company details. The invoice is issued to the company.' },
     ],

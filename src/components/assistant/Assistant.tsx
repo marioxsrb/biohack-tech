@@ -12,6 +12,7 @@ import { useGate } from '@/components/gate/Gate'
 import { Arrow, Check, Close } from '@/components/ui/icons'
 import { getProduct, type ProductId } from '@/content/catalog'
 import { useLocale } from '@/i18n/LocaleProvider'
+import { onIntlSite } from '@/lib/sites'
 
 /**
  * The website assistant: a bubble at the bottom right that opens a chat (full screen on phones). Answers stream
@@ -133,8 +134,9 @@ export function Assistant() {
   const [initial, setInitial] = useState<Saved | null>(null)
 
   useEffect(() => {
+    // Never on the international site (biohack-tech.net).
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setEnabled(window.__BT_STORE__?.assistant !== false)
+    setEnabled(window.__BT_STORE__?.assistant !== false && !onIntlSite())
     setInitial(load())
   }, [])
 

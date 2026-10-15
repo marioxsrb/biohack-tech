@@ -15,6 +15,7 @@ import type { Queryable } from '@/server/db'
 import { getDb } from '@/server/db'
 import { errText, log } from '@/server/log'
 import { jobs } from '@/server/jobs/outbox'
+import type { Rates } from '@/lib/currency'
 
 export type StoreSettings = {
   /** Bani per product (or per variant id for per-frame prices); a product left out keeps config/prices.ts. */
@@ -24,9 +25,11 @@ export type StoreSettings = {
   callsPaused: boolean
   /** The chat assistant (bottom-right bubble) on every site. */
   assistant: boolean
+  /** BNR exchange rates for the euro and dollar prices (refreshed by the fx.refresh job), with when they were read. */
+  fx: (Rates & { fetchedAt: string }) | null
 }
 
-export const DEFAULT_SETTINGS: StoreSettings = { prices: {}, soldOut: [], welcomePopup: true, callsPaused: false, assistant: true }
+export const DEFAULT_SETTINGS: StoreSettings = { prices: {}, soldOut: [], welcomePopup: true, callsPaused: false, assistant: true, fx: null }
 
 /** Prices outside this range are refused (a typo of one zero too many or too few). */
 export const PRICE_MIN = 100 // 1 leu
@@ -38,7 +41,7 @@ let loading: Promise<StoreSettings> | null = null
 
 export const storeSettings = () => current
 
-const toOverrides = (s: StoreSettings): CatalogOverrides => ({ prices: s.prices, soldOut: s.soldOut })
+const toOverrides = (s: StoreSettings): CatalogOverrides => ({ prices: s.prices, soldOut: s.soldOut, fx: s.fx })
 
 function normalize(raw: unknown): StoreSettings {
   const v = (raw ?? {}) as Partial<StoreSettings>
@@ -48,6 +51,7 @@ function normalize(raw: unknown): StoreSettings {
     welcomePopup: v.welcomePopup !== false,
     callsPaused: v.callsPaused === true,
     assistant: v.assistant !== false,
+    fx: v.fx && typeof v.fx === 'object' && typeof v.fx.EUR === 'number' && typeof v.fx.USD === 'number' ? v.fx : null,
   }
 }
 
@@ -64,8 +68,12 @@ export async function ensureStoreSettings(maxAgeMs = 15_000): Promise<StoreSetti
   if (Date.now() - loadedAt < maxAgeMs) return current
   loading ??= (async () => {
     try {
-      current = await readStoreSettings(await getDb())
+      const db = await getDb()
+      current = await readStoreSettings(db)
       applyCatalogOverrides(toOverrides(current))
+      // Euro and dollar prices need today's rate: a refresh is queued when the last one is 6 hours old.
+      if (!current.fx || Date.now() - Date.parse(current.fx.fetchedAt) > 6 * 3_600_000)
+        await jobs.enqueue(db, { kind: 'fx.refresh', dedupeKey: `fx.refresh:${Math.floor(Date.now() / (6 * 3_600_000))}` }).catch(() => {})
     } catch (e) {
       log.warn('store_settings.load_failed', { error: errText(e) })
     } finally {
@@ -151,3 +159,23 @@ export function priceTable() {
  * this before reading a price, so the HTML and the browser script always carry the same numbers).
  */
 export const settingsForRender = cache(() => ensureStoreSettings(0))
+
+/**
+ * Saves new exchange rates (only the fx field; prices and switches are untouched), applies them here at once and
+ * records the change. Returns whether anything changed.
+ */
+export async function saveFx(q: Queryable, fx: Rates) {
+  const before = await readStoreSettings(q)
+  const next: StoreSettings = { ...before, fx: { ...fx, fetchedAt: new Date().toISOString() } }
+  await q.query(
+    `insert into store_settings (key, value, updated_at, updated_by) values ('store', $1, now(), 'system:fx')
+     on conflict (key) do update set value = excluded.value, updated_at = now(), updated_by = excluded.updated_by`,
+    [JSON.stringify(next)],
+  )
+  const changed = before.fx?.EUR !== fx.EUR || before.fx?.USD !== fx.USD
+  if (changed) await audit(q, 'system:fx', 'fx.update', { before: before.fx, after: fx })
+  current = next
+  loadedAt = Date.now()
+  applyCatalogOverrides(toOverrides(next))
+  return changed
+}

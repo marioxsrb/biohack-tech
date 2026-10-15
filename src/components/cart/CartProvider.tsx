@@ -5,6 +5,7 @@ import { resolveLine, variantLabel, type Product, type ProductId, type Variant }
 import { useLocale } from '@/i18n/LocaleProvider'
 import { itemOf, track } from '@/lib/analytics'
 import { priceLines, promotionHints, promotionProgress } from '@/lib/promotions'
+import { useMoney } from '@/i18n/currency'
 import { sourceForPath, type EntrySource } from '@/lib/purchase'
 import { cartStore, lineKey } from './cart-store'
 
@@ -87,6 +88,8 @@ export function useCart() {
   const stored = useSyncExternalStore(cartStore.subscribe, cartStore.getSnapshot, cartStore.getServerSnapshot)
   // Names and variant labels in the visitor's language; the stored cart and the order hold ids only.
   const locale = useLocale()
+  // Unit prices in the visitor's currency: the whole cart (promotions, totals) is then computed in it.
+  const money = useMoney()
 
   const lines = useMemo<ResolvedLine[]>(
     () =>
@@ -100,12 +103,12 @@ export function useCart() {
             variant: r.variant,
             variantLabel: r.variant ? variantLabel(r.product, r.variant) : undefined,
             quantity: l.quantity,
-            unit: r.unit,
+            unit: money.unit(r.unit),
             source: l.source,
           },
         ]
       }),
-    [stored, locale],
+    [stored, locale, money],
   )
 
   const count = lines.reduce((n, l) => n + l.quantity, 0)
@@ -118,6 +121,7 @@ export function useCart() {
     ...ui,
     lines,
     count,
+    currency: money.currency,
     /** Total to pay (after promotions; shipping is free). */
     total: pricing.totalMinor,
     pricing,

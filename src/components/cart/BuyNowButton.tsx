@@ -27,8 +27,9 @@ const COPY = {
     cod: 'Order with cash on delivery',
     codSub: 'Pay the courier when the parcel arrives',
     online: 'Order now',
-    onlineSub: 'By card or bank transfer',
-    onlineSubCod: 'Cash on delivery, card or transfer',
+    // English pages pay in euro or dollars, by card only.
+    onlineSub: 'Secure payment by card',
+    onlineSubCod: 'Secure payment by card',
     secondary: 'Card / transfer',
     short: 'Order',
     opening: 'Opening your order…',

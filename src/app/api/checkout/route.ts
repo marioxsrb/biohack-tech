@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { site } from '@/config/site'
 import { sanitizeAttribution } from '@/lib/attribution'
-import { normalizeOrder, validateOrder } from '@/lib/checkout'
+import { deliveryCountry, normalizeOrder, validateOrder } from '@/lib/checkout'
+import { cardOnly, type Currency } from '@/lib/currency'
+import { siteForHost } from '@/lib/sites'
 import { resolveOrderLines } from '@/lib/orders/resolve'
 import { getConfig, paymentMethods } from '@/server/config'
 import { StripeError, stripe } from '@/server/integrations/stripe'
@@ -86,10 +88,13 @@ export async function POST(req: NextRequest) {
       : fail(409, 'BAD_LINE', m.BAD_LINE)
   }
 
-  const available = paymentMethods()
-  if (!available.card && !available.transfer && !available.cod) return fail(503, 'UNAVAILABLE', m.UNAVAILABLE)
-
   const form = normalizeOrder(body.order)
+  // Romanian pages pay in lei; English pages in euro (default) or dollar. Outside Romania or in euro/dollar the
+  // card is the only method (cash on delivery and bank transfer are for lei orders delivered in Romania).
+  const currency: Currency = locale === 'ro' ? 'RON' : body.currency === 'USD' ? 'USD' : 'EUR'
+  const configured = paymentMethods()
+  const available = cardOnly(currency, deliveryCountry(form)) ? { card: configured.card, transfer: false, cod: false } : configured
+  if (!available.card && !available.transfer && !available.cod) return fail(503, 'UNAVAILABLE', m.UNAVAILABLE)
   const errors = validateOrder(form, body.acceptedTerms === true, available, locale)
   if (Object.keys(errors).length) return fail(422, 'INVALID', m.INVALID, { fields: errors })
   const promoCode = normalizeCode(body.promoCode) || undefined
@@ -103,7 +108,7 @@ export async function POST(req: NextRequest) {
     const funnel = funnelForHost(req.headers.get('host'))
     const attribution = { ...(sanitizeAttribution(body.attribution, new URL(site.url).host) ?? {}), funnel }
     let created: boolean
-    ;({ order, created } = await placeOrder({ lines: resolved.lines, form, attemptId, attribution, promoCode }))
+    ;({ order, created } = await placeOrder({ lines: resolved.lines, form, attemptId, attribution, promoCode, currency, locale, site: siteForHost(req.headers.get('host')) }))
     // This browser's leads now point to the order (its checkout step and, on acces, its product interests).
     const visitor = cookieFrom(req.headers.get('cookie'), VISITOR_COOKIE)
     if (created && visitor && /^[0-9a-f-]{36}$/.test(visitor)) {
@@ -148,7 +153,7 @@ export async function POST(req: NextRequest) {
       : await stripe.createPaymentIntent(c.stripe!, order, customerId ?? undefined)
     if (!order.stripePaymentIntentId) await attachPaymentIntent(order.id, pi.id)
     // Never hand out a PaymentIntent that does not belong to this order exactly.
-    if (pi.amount !== order.totalMinor || pi.currency !== 'ron' || pi.metadata?.order_id !== order.id) throw new Error('payment intent does not match the order')
+    if (pi.amount !== order.totalMinor || pi.currency !== order.currency.toLowerCase() || pi.metadata?.order_id !== order.id) throw new Error('payment intent does not match the order')
     // Already paid, or being processed: show the order instead of offering a second payment.
     if (pi.status === 'succeeded' || pi.status === 'processing' || pi.status === 'requires_capture') {
       return NextResponse.json({ method: 'card', submitted: true, orderNumber: order.orderNumber, token: order.publicToken })

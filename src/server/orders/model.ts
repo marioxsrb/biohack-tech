@@ -7,6 +7,8 @@
  *   PaymentStatus what we know about the money
  */
 import type { Attribution } from '@/lib/attribution'
+import type { Currency } from '@/lib/currency'
+import { countryName } from '@/lib/countries'
 import type { AppliedPromotion } from '@/lib/promotions'
 
 export const ORDER_STATUS = {
@@ -55,7 +57,8 @@ export type InvoiceStatus = (typeof INVOICE_STATUS)[keyof typeof INVOICE_STATUS]
 
 export type ReturnStatus = 'requested' | 'received'
 
-export type Address = { address: string; city: string; county: string; postalCode: string; country: 'RO' }
+/** `county`: the Romanian county, or the region/state abroad (may be empty). `country`: ISO 3166-1 alpha-2. */
+export type Address = { address: string; city: string; county: string; postalCode: string; country: string }
 
 export type Customer = {
   buyerType: 'pf' | 'pj'
@@ -98,7 +101,14 @@ export type Order = {
   paymentStatus: PaymentStatus
   paymentMethod: PaymentMethod
   invoiceStatus: InvoiceStatus
-  currency: 'RON'
+  /** What the customer pays in: lei, or euro/dollar (the lei prices converted at the BNR rate, see lib/currency). */
+  currency: Currency
+  /** Lei for one unit of the order's currency when it was placed (1 for lei): reports and the invoice use it. */
+  fxRate: number
+  /** The language the customer ordered in: their emails and pages follow it. */
+  locale: 'ro' | 'en'
+  /** The site it was placed on: biohack-tech.ro, or the international biohack-tech.net. */
+  site: OrderSite
   /** Sum of line totals before promotions. total = subtotal − discount + shipping. */
   subtotalMinor: number
   discountMinor: number
@@ -164,4 +174,10 @@ export type RecoveryStatus = 'eligible' | 'ineligible'
 export const customerName = (c: Customer) => `${c.firstName} ${c.lastName}`.trim()
 /** Name on the invoice: the company for PJ, the person for PF. */
 export const billingName = (c: Customer) => (c.buyerType === 'pj' && c.company ? c.company : customerName(c))
-export const formatAddress = (a: Address) => `${a.address}, ${a.city}, jud. ${a.county}, ${a.postalCode}`
+export type OrderSite = 'ro' | 'net'
+
+/** One line: Romanian addresses as couriers expect them; abroad with the region (if any) and the country's name. */
+export const formatAddress = (a: Address, locale: 'ro' | 'en' = 'ro') =>
+  !a.country || a.country === 'RO'
+    ? `${a.address}, ${a.city}, ${locale === 'en' ? '' : 'jud. '}${a.county}${locale === 'en' ? ' County' : ''}, ${a.postalCode}${locale === 'en' ? ', Romania' : ''}`
+    : [a.address, a.city, a.county, a.postalCode, countryName(a.country, locale)].filter(Boolean).join(', ')

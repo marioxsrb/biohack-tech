@@ -27,6 +27,7 @@ import { priceLines, type PromoCodeRule } from '@/lib/promotions'
 import {
   COUNTIES,
   DRAFT_KEY,
+  deliveryCountry,
   emptyOrder,
   normalizeOrder,
   validateOrder,
@@ -35,7 +36,11 @@ import {
   type OrderForm,
   type PaymentMethod,
 } from '@/lib/checkout'
-import { formatLei } from '@/lib/money'
+import { useMoney } from '@/i18n/currency'
+import { cardOnly } from '@/lib/currency'
+import { countryOptions, isCountry } from '@/lib/countries'
+import { localePath } from '@/i18n/locales'
+import { onIntlSite } from '@/lib/sites'
 import { isLandingSlug } from '@/lib/landing-hosts'
 import { parseItems } from '@/lib/purchase'
 import { CardPayment, type CardApi } from './CardPayment'
@@ -82,16 +87,20 @@ const COPY = {
     companyName: 'Denumirea firmei',
     cui: 'Cod fiscal (CUI)',
     cuiHint: 'Cu sau fără RO.',
+    vatId: 'Cod TVA / nr. înregistrare',
+    vatHint: 'Pentru firmele din afara României.',
+    countryLabel: 'Țara',
+    region: 'Regiune / stat',
+    cardOnlyNote: 'Doar în România, în lei',
     regCom: 'Nr. Registrul Comerțului',
     office: 'Adresa sediului',
     address: 'Adresa',
     addressHint: 'Stradă, număr, bloc, scară, apartament.',
-    country: 'Țara: România',
     delivery: 'Livrare',
     sameAddress: 'Adresa de livrare este aceeași cu adresa de facturare',
     shipAddress: 'Adresa de livrare',
     notes: 'Observații pentru curier',
-    freeDelivery: 'Livrare gratuită prin curier, oriunde în România.',
+    freeDelivery: 'Livrare gratuită prin curier, oriunde în lume.',
     payment: 'Plată',
     method: 'Metoda de plată',
     card: 'Card bancar',
@@ -163,16 +172,20 @@ const COPY = {
     companyName: 'Company name',
     cui: 'Tax code (CUI)',
     cuiHint: 'With or without RO.',
+    vatId: 'VAT / registration number',
+    vatHint: 'For companies outside Romania.',
+    countryLabel: 'Country',
+    region: 'Region / state',
+    cardOnlyNote: 'Romania only, in lei',
     regCom: 'Trade Register number',
     office: 'Registered office address',
     address: 'Address',
     addressHint: 'Street, number, building, entrance, flat.',
-    country: 'Country: Romania',
     delivery: 'Delivery',
     sameAddress: 'Deliver to my billing address',
     shipAddress: 'Delivery address',
     notes: 'Notes for the courier',
-    freeDelivery: 'Free courier delivery anywhere in Romania.',
+    freeDelivery: 'Free courier delivery, worldwide.',
     payment: 'Payment',
     method: 'Payment method',
     card: 'Card',
@@ -294,11 +307,19 @@ function EmptyCheckout() {
 
 const PREFERRED: Record<string, PaymentMethod | undefined> = { ramburs: 'cod', card: 'card', transfer: 'transfer' }
 
-function readDraft(methods: Methods, preferred?: PaymentMethod): OrderForm {
+function readDraft(methods: Methods, preferred?: PaymentMethod, locale: Locale = 'ro'): OrderForm {
   let draft = emptyOrder
+  let stored = false
   try {
-    draft = normalizeOrder(JSON.parse(sessionStorage.getItem(DRAFT_KEY) ?? '{}'))
+    const raw = sessionStorage.getItem(DRAFT_KEY)
+    stored = !!raw
+    draft = normalizeOrder(JSON.parse(raw ?? '{}'))
   } catch {}
+  // A first visit in English: the country of the browser's language region (de-DE → Germany), else Romania.
+  if (!stored && locale === 'en') {
+    const region = (navigator.language.split('-')[1] ?? '').toUpperCase()
+    if (isCountry(region)) draft = { ...draft, country: region, shipCountry: region }
+  }
   if (preferred && methods[preferred]) draft = { ...draft, paymentMethod: preferred }
   if (!methods[draft.paymentMethod]) draft = { ...draft, paymentMethod: methods.card ? 'card' : methods.cod ? 'cod' : 'transfer' }
   return draft
@@ -308,7 +329,10 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
   const router = useRouter()
   const locale: Locale = useLocale()
   const t = COPY[locale]
-  const { pricing: cartPricing } = useCart()
+  const { pricing: cartPricing, currency } = useCart()
+  const money = useMoney()
+  // The international site has no AI calls: its communications box names email only.
+  const [intl] = useState(onIntlSite)
   // A promo code checked by the server (/api/promo): its rule prices the cart here exactly as the order will.
   // A code brought by a recovery link (cookie set by /api/lead/resume) is shown in the field; the customer applies it.
   const [promo, setPromo] = useState<{ input: string; rule: PromoCodeRule | null; error: string | null; busy: boolean; open: boolean }>(() => {
@@ -317,7 +341,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
     return { input: code, rule: null, error: null, busy: false, open: !!code }
   })
   const priced = useMemo(() => lines.map((l) => ({ key: l.key, productId: l.product.id, quantity: l.quantity, unitAmount: l.unit })), [lines])
-  const withCode = useMemo(() => (promo.rule ? priceLines(priced, undefined, promo.rule) : null), [priced, promo.rule])
+  const withCode = useMemo(() => (promo.rule ? priceLines(priced, undefined, money.rule(promo.rule)) : null), [priced, promo.rule, money])
   // A cart change can make an applied code stop fitting (minimum, products): the totals fall back, and the order says why.
   const pricing = withCode && !withCode.code?.problem ? withCode : cartPricing
   const total = pricing.totalMinor
@@ -325,13 +349,20 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
   // (consents, the pay button) is never out of reach.
   const summaryRef = useRef<HTMLDivElement>(null)
   const summaryFits = useFitsWindow(summaryRef)
-  const methods: Methods = offered
-  const anyMethod = methods.card || methods.transfer || methods.cod
-
-  const [form, setForm] = useState<OrderForm>(() => readDraft(methods, preferred))
+  const [form, setForm] = useState<OrderForm>(() => readDraft(offered, preferred, locale))
+  // Euro, dollar or a parcel abroad: the card only (cash on delivery and bank transfer are for lei in Romania).
+  const cardOnlyHere = cardOnly(currency, deliveryCountry(form))
+  const methods: Methods = useMemo(() => (cardOnlyHere ? { card: offered.card, transfer: false, cod: false } : offered), [cardOnlyHere, offered])
+  // The form stays as long as something can be paid here at all (a country change can bring the other methods back).
+  const anyMethod = offered.card || offered.transfer || offered.cod
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!methods[form.paymentMethod] && methods.card) setForm((o) => ({ ...o, paymentMethod: 'card' }))
+  }, [methods, form.paymentMethod])
   const [accepted, setAccepted] = useState(false)
-  // The one communications box (form.marketingConsent) names email and AI calls: the checkout lead records both.
-  const callConsent = form.marketingConsent
+  // The one communications box (form.marketingConsent) names email and AI calls on biohack-tech.ro (the checkout
+  // lead records both); on the international site it names email only.
+  const callConsent = form.marketingConsent && !intl
   const [touched, setTouched] = useState<Partial<Record<FieldName, boolean>>>({})
   const [submitted, setSubmitted] = useState(false)
   const [sending, setSending] = useState(false)
@@ -371,6 +402,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
         keepalive: true,
         body: JSON.stringify({
           action: 'checkout',
+          locale,
           ...contact,
           marketingConsent: form.marketingConsent,
           callConsent,
@@ -427,6 +459,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
           order: form,
           acceptedTerms: accepted,
           locale,
+          currency,
           ...(promo.rule && { promoCode: promo.rule.code }),
           attemptId,
           // Landing and UTM parameters from the URL, if any, and where the first product was added.
@@ -448,7 +481,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
       // The server answers in the checkout's language (it gets `locale`).
       if (!res.ok) throw new Error(data.message ?? t.failed)
 
-      const orderUrl = `/comanda/${data.token}`
+      const orderUrl = localePath(locale, `/comanda/${data.token}`)
       if (data.method === 'transfer' || data.method === 'cod' || data.paid || data.submitted) {
         router.push(orderUrl)
         return
@@ -458,7 +491,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
         name: `${form.firstName} ${form.lastName}`.trim(),
         email: form.email,
         phone: form.phone,
-        address: { line1: form.address, city: form.city, state: form.county, postal_code: form.postalCode, country: 'RO' },
+        address: { line1: form.address, city: form.city, state: form.county, postal_code: form.postalCode, country: form.country },
       })
       if (failure) throw new Error(failure)
     } catch (err) {
@@ -483,7 +516,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
             {t.yourOrder} <span className="font-normal text-muted">({count})</span>
           </span>
           <span className="flex items-center gap-2 text-[16px] font-medium text-ink tabular-nums">
-            {formatLei(total)} <Arrow className="h-4 w-4 rotate-90 transition-transform group-open:-rotate-90" />
+            {money.fmt(total)} <Arrow className="h-4 w-4 rotate-90 transition-transform group-open:-rotate-90" />
           </span>
         </summary>
         <div className="faq-body">
@@ -562,7 +595,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
                     <input autoComplete="organization" {...bind('company')} />
                   </Field>
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <Field name="cui" label={t.cui} hint={t.cuiHint} error={show('cui')}>
+                    <Field name="cui" label={form.country === 'RO' ? t.cui : t.vatId} hint={form.country === 'RO' ? t.cuiHint : t.vatHint} error={show('cui')}>
                       <input autoCapitalize="characters" spellCheck={false} {...bind('cui')} />
                     </Field>
                     <Field name="regCom" label={t.regCom} optional>
@@ -575,8 +608,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
               <Field name="address" label={pj ? t.office : t.address} hint={t.addressHint} error={show('address')}>
                 <input autoComplete={pj ? 'off' : 'billing street-address'} {...bind('address')} />
               </Field>
-              <AddressLine prefix="" bind={bind} show={show} autoComplete={!pj} t={t} />
-              <p className="text-[14px] text-muted">{t.country}</p>
+              <AddressLine prefix="" bind={bind} show={show} autoComplete={!pj} t={t} country={form.country} locale={locale} />
             </Group>
 
             <Group n={3} title={t.delivery}>
@@ -589,7 +621,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
                   <Field name="shipAddress" label={t.shipAddress} hint={t.addressHint} error={show('shipAddress')}>
                     <input autoComplete="shipping street-address" {...bind('shipAddress')} />
                   </Field>
-                  <AddressLine prefix="ship" bind={bind} show={show} autoComplete t={t} />
+                  <AddressLine prefix="ship" bind={bind} show={show} autoComplete t={t} country={form.shipCountry} locale={locale} />
                 </>
               )}
               <Field name="notes" label={t.notes} optional>
@@ -600,7 +632,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
 
             <Group n={4} title={t.payment}>
               <div role="radiogroup" aria-label={t.method} className="grid gap-2">
-                {(offered.cod || cashOnDelivery.enabled) && (
+                {!cardOnlyHere && (offered.cod || cashOnDelivery.enabled) && (
                   <PayOption
                     id="cod"
                     icon={<Truck className="h-6 w-6" />}
@@ -622,13 +654,14 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
                 >
                   {methods.card && stripeKey && (
                     <div className={form.paymentMethod === 'card' ? 'mt-4' : 'hidden'}>
-                      <CardPayment publishableKey={stripeKey} amount={total} apiRef={card} />
+                      <CardPayment publishableKey={stripeKey} amount={total} currency={currency} apiRef={card} />
                       <p className="mt-3 text-[13px] leading-relaxed text-muted">
                         {t.cardNote}
                       </p>
                     </div>
                   )}
                 </PayOption>
+                {!cardOnlyHere && (
                 <PayOption
                   id="transfer"
                   icon={<Bank className="h-6 w-6" />}
@@ -638,6 +671,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
                   checked={form.paymentMethod === 'transfer'}
                   onSelect={() => patch({ paymentMethod: 'transfer' })}
                 />
+                )}
               </div>
               {show('paymentMethod') && <p className="text-[14px] text-red-deep">{errors.paymentMethod}</p>}
             </Group>
@@ -696,7 +730,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
                       {errors.acceptedTerms}
                     </p>
                   )}
-                  <CommunicationsConsent checked={form.marketingConsent} onChange={(v) => patch({ marketingConsent: v })} locale={locale} className="text-[15px]" />
+                  <CommunicationsConsent checked={form.marketingConsent} onChange={(v) => patch({ marketingConsent: v })} locale={locale} emailOnly={intl} className="text-[15px]" />
                   <p className="text-[13.5px] leading-snug text-muted">
                     {t.dataUse}{' '}
                     <Link href="/privacy-policy" target="_blank" className="underline underline-offset-4 hover:text-ink">
@@ -724,7 +758,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
                     </>
                   ) : form.paymentMethod === 'card' ? (
                     <>
-                      <Lock /> {t.pay(formatLei(total))}
+                      <Lock /> {t.pay(money.fmt(total))}
                     </>
                   ) : (
                     <>{t.placeOrder}</>
@@ -734,7 +768,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
                   {form.paymentMethod === 'card'
                     ? t.cardAfter
                     : form.paymentMethod === 'cod'
-                      ? t.codAfter(formatLei(total))
+                      ? t.codAfter(money.fmt(total))
                       : t.transferAfter}
                 </p>
                 <p className="mt-2 text-center text-[13.5px] leading-snug text-muted">
@@ -761,32 +795,56 @@ function AddressLine({
   show,
   autoComplete,
   t,
+  country,
+  locale,
 }: {
   t: Copy
   prefix: '' | 'ship'
   bind: (f: keyof OrderFields) => Record<string, unknown>
   show: (f: FieldName) => string | undefined
   autoComplete: boolean
+  country: string
+  locale: Locale
 }) {
-  const k = (f: 'city' | 'county' | 'postalCode') => (prefix ? (`ship${f[0].toUpperCase()}${f.slice(1)}` as keyof OrderFields) : f)
+  const k = (f: 'city' | 'county' | 'postalCode' | 'country') => (prefix ? (`ship${f[0].toUpperCase()}${f.slice(1)}` as keyof OrderFields) : f)
   const ac = (v: string) => (autoComplete ? `${prefix ? 'shipping' : 'billing'} ${v}` : 'off')
+  const options = useMemo(() => countryOptions(locale), [locale])
+  const ro = country === 'RO'
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1.3fr_1fr_0.8fr] sm:gap-4">
-      <Field name={k('city')} label={t.city} error={show(k('city'))} className="col-span-2 sm:col-span-1">
-        <input autoComplete={ac('address-level2')} {...bind(k('city'))} />
-      </Field>
-      <Field name={k('county')} label={t.county} error={show(k('county'))}>
-        <select autoComplete={ac('address-level1')} {...bind(k('county'))}>
-          <option value="">{t.choose}</option>
-          {COUNTIES.map((c) => (
-            <option key={c}>{c}</option>
+    <>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-[1.3fr_1fr_0.8fr] sm:gap-4">
+        <Field name={k('city')} label={t.city} error={show(k('city'))} className="col-span-2 sm:col-span-1">
+          <input autoComplete={ac('address-level2')} {...bind(k('city'))} />
+        </Field>
+        {ro ? (
+          <Field name={k('county')} label={t.county} error={show(k('county'))}>
+            <select autoComplete={ac('address-level1')} {...bind(k('county'))}>
+              <option value="">{t.choose}</option>
+              {COUNTIES.map((c) => (
+                <option key={c}>{c}</option>
+              ))}
+            </select>
+          </Field>
+        ) : (
+          <Field name={k('county')} label={t.region} optional error={show(k('county'))}>
+            <input autoComplete={ac('address-level1')} maxLength={40} {...bind(k('county'))} />
+          </Field>
+        )}
+        <Field name={k('postalCode')} label={t.postalCode} error={show(k('postalCode'))}>
+          <input inputMode={ro ? 'numeric' : 'text'} autoComplete={ac('postal-code')} maxLength={ro ? 6 : 12} {...bind(k('postalCode'))} />
+        </Field>
+      </div>
+      <Field name={k('country')} label={t.countryLabel} error={show(k('country'))}>
+        <select autoComplete={ac('country')} {...bind(k('country'))}>
+          {!isCountry(country) && <option value="">{t.choose}</option>}
+          {options.map((c) => (
+            <option key={c.code} value={c.code}>
+              {c.name}
+            </option>
           ))}
         </select>
       </Field>
-      <Field name={k('postalCode')} label={t.postalCode} error={show(k('postalCode'))}>
-        <input inputMode="numeric" autoComplete={ac('postal-code')} maxLength={6} {...bind(k('postalCode'))} />
-      </Field>
-    </div>
+    </>
   )
 }
 
@@ -840,6 +898,7 @@ function PayOption({
 /** A product in the order: quantity and removal right here (no detour through the cart), and its bundle offer. */
 function SummaryLine({ line: l }: { line: ResolvedLine }) {
   const t = useCopy()
+  const money = useMoney()
   const { setQuantity, remove } = useCart()
   return (
     <li className="grid grid-cols-[72px_1fr_auto] items-start gap-x-3.5 py-3.5">
@@ -852,7 +911,7 @@ function SummaryLine({ line: l }: { line: ResolvedLine }) {
       <span className="min-w-0 text-[14.5px] leading-snug">
         <span className="block font-medium text-ink">{l.product.name}</span>
         <span className="block text-muted">{l.variantLabel ?? l.product.purpose}</span>
-        {l.quantity > 1 && <span className="block text-[13px] text-muted">{formatLei(l.unit)} / {t.perUnit}</span>}
+        {l.quantity > 1 && <span className="block text-[13px] text-muted">{money.fmt(l.unit)} / {t.perUnit}</span>}
         <span className="mt-2 flex items-center gap-2">
           <QuantityStepper size="sm" value={l.quantity} onChange={(q) => setQuantity(l.key, q)} label={t.quantityOf(l.product.name)} />
           <button
@@ -865,7 +924,7 @@ function SummaryLine({ line: l }: { line: ResolvedLine }) {
           </button>
         </span>
       </span>
-      <span className="text-[15px] font-medium text-ink tabular-nums">{formatLei(l.unit * l.quantity)}</span>
+      <span className="text-[15px] font-medium text-ink tabular-nums">{money.fmt(l.unit * l.quantity)}</span>
       <LineBundle line={l} placement="checkout" className="col-span-3 mt-3" />
     </li>
   )

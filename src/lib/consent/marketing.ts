@@ -1,4 +1,4 @@
-import { COMMUNICATIONS_CONSENT_TEXT, COMMUNICATIONS_CONSENT_TEXT_EN } from './communications'
+import { COMMUNICATIONS_CONSENT_TEXT, COMMUNICATIONS_CONSENT_TEXT_EN, EMAIL_ONLY_CONSENT_TEXT, EMAIL_ONLY_CONSENT_TEXT_EN } from './communications'
 
 /** What the website popup says under the email field: sending the address is the consent (shown before it). */
 export const WELCOME_CONSENT_TEXT = 'Primești pe email codul de 10% și, ocazional, oferte și noutăți Biohack Tech. Te poți dezabona oricând, din orice email.'
@@ -17,6 +17,10 @@ export const MARKETING_CONSENT_TEXTS = {
   'comms-2026-10-14': COMMUNICATIONS_CONSENT_TEXT,
   // Since 15.10.2026: the website's 10% popup (email only; AI calls are never implied by it).
   'welcome-2026-10-15': WELCOME_CONSENT_TEXT,
+  // Since 16.10.2026: the international site's box (email only, no AI calls), in the language the visitor read.
+  'email-2026-10-16': EMAIL_ONLY_CONSENT_TEXT,
+  'email-en-2026-10-16': EMAIL_ONLY_CONSENT_TEXT_EN,
+  'welcome-en-2026-10-16': WELCOME_CONSENT_TEXT_EN,
 } as const
 
 export type MarketingConsentVersion = keyof typeof MARKETING_CONSENT_TEXTS
@@ -29,3 +33,7 @@ export const MARKETING_CONSENT_TEXT = MARKETING_CONSENT_TEXTS[MARKETING_CONSENT_
  * which stays the recorded proof: the consent and its version are the same in both languages.
  */
 export const MARKETING_CONSENT_TEXT_EN = COMMUNICATIONS_CONSENT_TEXT_EN
+
+/** The version a ticked box is recorded under: the international site's email-only box, or the usual one. */
+export const consentVersionFor = (site: 'ro' | 'net', locale: 'ro' | 'en'): MarketingConsentVersion =>
+  site === 'net' ? (locale === 'en' ? 'email-en-2026-10-16' : 'email-2026-10-16') : MARKETING_CONSENT_VERSION

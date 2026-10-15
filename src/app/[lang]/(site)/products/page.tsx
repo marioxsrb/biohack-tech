@@ -15,7 +15,7 @@ const COPY = {
   en: {
     title: 'Devices for relaxation, focus and screens',
     description:
-      'NEUROS Calm with red light for relaxation, the NEUROS Focus EEG headband, and NEUROS Amber blue light glasses. Free delivery in Romania.',
+      'NEUROS Calm with red light for relaxation, the NEUROS Focus EEG headband, and NEUROS Amber blue light glasses. Free worldwide delivery.',
     heading: 'Products',
   },
 }

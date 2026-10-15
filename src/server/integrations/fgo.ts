@@ -22,6 +22,8 @@ export const fgoHash = (codUnic: string, privateKey: string, tail: string) =>
 export const fgoCounty = (county: string) => county.normalize('NFD').replace(/[̀-ͯ]/g, '')
 
 const lei = (minor: number) => Number((minor / 100).toFixed(2))
+/** The currency's word on an invoice line: lei, EUR, USD. */
+const unitOf = (o: Order) => (o.currency === 'RON' ? 'lei' : o.currency)
 
 function lineName(i: Order['items'][number], o: Order) {
   const base = i.variantName ? `${i.productName} (${i.variantName})` : i.productName
@@ -32,10 +34,10 @@ function lineName(i: Order['items'][number], o: Order) {
     const label = o.promotions.find((p) => p.id === i.promotionId)?.label ?? 'reducere'
     // A per-product discount names its product ("20% la 3 bucăți NEUROS Calm"); the line already does.
     const promo = label.endsWith(` ${i.productName}`) ? label.slice(0, -i.productName.length - 1) : label
-    parts.push(`${promo}: -${(auto / 100).toFixed(2)} lei`)
+    parts.push(`${promo}: -${(auto / 100).toFixed(2)} ${unitOf(o)}`)
   }
   // A promo code applies after the automatic promotion: its share is named on its own ("cod VARA10").
-  if (i.codeDiscountMinor) parts.push(`cod ${o.promoCode ?? ''}: -${(i.codeDiscountMinor / 100).toFixed(2)} lei`.replace('cod :', 'cod:'))
+  if (i.codeDiscountMinor) parts.push(`cod ${o.promoCode ?? ''}: -${(i.codeDiscountMinor / 100).toFixed(2)} ${unitOf(o)}`.replace('cod :', 'cod:'))
   return `${base}, ${parts.join(', ')}`
 }
 
@@ -47,20 +49,23 @@ export function invoicePayload(c: FgoConfig, o: Order) {
     CodUnic: c.codUnic,
     Hash: fgoHash(c.codUnic, c.privateKey, client),
     Serie: c.serie,
-    Valuta: 'RON',
+    // The order's currency; an order in euro or dollars carries the BNR rate it was priced at.
+    Valuta: o.currency,
+    ...(o.currency !== 'RON' && { Curs: o.fxRate }),
     TipFactura: 'Factura',
     IdExtern: o.orderNumber,
     VerificareDuplicat: true,
     // The invoice records how it is paid; it is never registered as collected here (no receipt is sent to FGO).
-    Text: o.paymentMethod === 'cash_on_delivery' ? `Comanda ${o.orderNumber}. Plata ramburs, la livrare.` : `Comanda ${o.orderNumber}`,
+    Text: o.paymentMethod === 'cash_on_delivery' ? `Comanda ${o.orderNumber}. Plata ramburs, la livrare.` : `Comanda ${o.orderNumber}${o.currency !== 'RON' ? `. Curs BNR ${o.currency}: ${o.fxRate} lei` : ''}`,
     Client: {
       Denumire: client,
       Tip: pj ? 'PJ' : 'PF',
       ...(pj && { CodUnic: o.customer.cui, NrRegCom: o.customer.regCom }),
       Email: o.email,
       Telefon: o.phone,
-      Tara: 'RO',
-      Judet: fgoCounty(o.billingAddress.county),
+      Tara: o.billingAddress.country || 'RO',
+      // A Romanian county by FGO's names; abroad, the region as given (may be empty).
+      Judet: o.billingAddress.country && o.billingAddress.country !== 'RO' ? o.billingAddress.county : fgoCounty(o.billingAddress.county),
       Localitate: o.billingAddress.city,
       Adresa: o.billingAddress.address,
     },

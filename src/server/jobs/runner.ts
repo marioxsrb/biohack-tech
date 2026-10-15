@@ -16,6 +16,7 @@ import { NOTIFICATIONS, renderNotification, type NotifyEvent } from '@/server/no
 import { CART_INTEREST, interestOf, leads, recoveryDecision, recoveryFacts } from '@/server/leads'
 import { renderLeadRecovery } from '@/server/leads-email'
 import { gatedOrigin } from '@/lib/lead'
+import { isIntlHost, siteOrigin } from '@/lib/sites'
 import { marketing } from '@/server/marketing/consent'
 import { CALL_TAGS, INTEREST_TAG, LEAD_TAGS, attributionTags, callOutcomeTag } from '@/server/integrations/ghl'
 import { callConsent } from '@/server/calling/consent'
@@ -23,7 +24,9 @@ import { hasCart, leadItems, recoveryLink, renderRecoveryOffer } from '@/server/
 import { promoCodes } from '@/server/promo'
 import { renderWelcome } from '@/server/welcome'
 import { syncAgentPrices } from '@/server/calling/agent-sync'
-import { ensureStoreSettings } from '@/server/store-settings'
+import { ensureStoreSettings, saveFx } from '@/server/store-settings'
+import { fetchRates } from '@/server/fx'
+import { revalidatePath } from 'next/cache'
 import { WELCOME_CODE } from '@/config/promotions'
 import { calls, leadProduct, renderCallFollowUp, renderCallLink, runCallAttempt, runCallCheck, type StepResult } from '@/server/calling/calls'
 import { companyLine } from '@/config/company'
@@ -222,14 +225,18 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
       throw new Skip(d.reason)
     }
     const token = await marketing.unsubscribeToken(db, lead.email)
-    const base = lead.funnel === 'gated_price' ? gatedOrigin(c.siteUrl) : c.siteUrl
+    // The site the visitor used: acces.<domain>, the international biohack-tech.net, or the main site.
+    const intl = isIntlHost(lead.landingHost)
+    const base = lead.funnel === 'gated_price' ? gatedOrigin(c.siteUrl) : intl ? siteOrigin('net', c.siteUrl) : c.siteUrl
     const mail = renderLeadRecovery({
+      locale: lead.locale,
+      siteUrl: intl ? siteOrigin('net', c.siteUrl) : c.siteUrl,
       step,
       firstName: lead.name?.split(' ')[0] ?? null,
       products: interestOf(lead),
       abandonment: d.abandonment,
       link: `${base}/api/lead/resume?t=${lead.recoveryToken}`,
-      unsubscribeUrl: `${c.siteUrl}/dezabonare/${token}`,
+      unsubscribeUrl: `${intl ? siteOrigin('net', c.siteUrl) : c.siteUrl}${lead.locale === 'en' ? '/en' : ''}/dezabonare/${token}`,
     })
     const ref = await deliver(c, { ...mail, to: lead.email, name: `lead-recovery-${lead.id}-${step}` })
     await leads.update(db, lead.id, { abandonment: lead.abandonment ?? d.abandonment, recovery_status: 'sent', recovery_reason: `step ${step}`, recovery_sent: step, last_recovery_at: now })
@@ -290,7 +297,9 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const code = await promoCodes.get(db, WELCOME_CODE)
     if (!code?.active) throw new Skip('code switched off')
     const token = await marketing.unsubscribeToken(db, email)
-    const mail = renderWelcome({ siteUrl: c.siteUrl, unsubscribeUrl: `${c.siteUrl}/dezabonare/${token}`, code: code.code })
+    const origin = siteOrigin(j.payload.site === 'net' ? 'net' : 'ro', c.siteUrl)
+    const en = j.payload.locale === 'en'
+    const mail = renderWelcome({ siteUrl: origin, unsubscribeUrl: `${origin}${en ? '/en' : ''}/dezabonare/${token}`, code: code.code, locale: en ? 'en' : 'ro' })
     return deliver(c, { ...mail, to: email, name: `welcome-${email.replace(/[^\w.-]+/g, '-')}` })
   },
 
@@ -317,6 +326,18 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     if (!r) throw new Skip('request gone')
     const mail = renderSupportNotice(r, `${c.siteUrl}/admin/suport/${r.id}`)
     return deliver(c, { ...mail, to: c.email.notifyTo!, name: `support-${r.id}` })
+  },
+
+  // Today's BNR rates for the euro and dollar prices; pages are refreshed so they show the new prices.
+  'fx.refresh': async () => {
+    const r = await fetchRates()
+    const changed = await saveFx(await getDb(), { EUR: r.EUR, USD: r.USD, date: r.date })
+    if (changed) {
+      try {
+        revalidatePath('/', 'layout')
+      } catch {}
+    }
+    return `${r.source} ${r.date} EUR ${r.EUR} USD ${r.USD}${changed ? '' : ' (unchanged)'}`
   },
 
   'ghl.call': async (j) => {

@@ -140,13 +140,15 @@ Returnăm banii pe aceeași cale prin care ai plătit: pe card sau în contul di
 
 ## Livrare
 Unde livrăm:
-Livrăm în toată România, prin curier, la adresa din comandă.
+Livrăm în toată România și în străinătate, prin curier, la adresa din comandă.
+Comenzile cu livrare în afara României și cele plătite în euro sau dolari se plătesc cu cardul. Plata la livrare (ramburs) și transferul bancar sunt disponibile pentru comenzile în lei, cu livrare în România.
 Termene:
-Pregătim comanda în 1-3 zile de la confirmarea plății. Transportul durează de obicei 2-5 zile.
+Pregătim comanda în 1-3 zile de la confirmarea plății. În România, transportul durează de obicei 2-5 zile; în străinătate, termenul depinde de țară și de curier.
 Când predăm coletul curierului, primești pe email numele firmei de curierat și numărul AWB.
 Dacă apare o întârziere, te anunțăm.
 Cost:
-Livrare gratuită în România. Prețurile includ TVA 21%.
+Livrarea este gratuită, în România și în străinătate. Prețurile includ TVA 21%.
+Pentru livrările în afara Uniunii Europene pot apărea taxe vamale sau de import în țara de destinație.
 La primire:
 Verifică coletul în fața curierului. Dacă este deteriorat, notează asta în documentul curierului și scrie-ne.
 

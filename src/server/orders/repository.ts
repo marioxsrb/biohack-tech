@@ -17,7 +17,10 @@ function toOrder(r: Row, items: OrderItem[]): Order {
     paymentStatus: r.payment_status as Order['paymentStatus'],
     paymentMethod: r.payment_method as Order['paymentMethod'],
     invoiceStatus: r.invoice_status as Order['invoiceStatus'],
-    currency: 'RON',
+    currency: ((r.currency as string) || 'RON') as Order['currency'],
+    fxRate: r.fx_rate == null ? 1 : Number(r.fx_rate),
+    locale: r.locale === 'en' ? 'en' : 'ro',
+    site: r.site === 'net' ? 'net' : 'ro',
     subtotalMinor: Number(r.subtotal_minor),
     discountMinor: Number(r.discount_minor ?? 0),
     promotions: (r.promotions as Order['promotions']) ?? [],
@@ -205,8 +208,8 @@ export const orders = {
     await q.query(
       `insert into orders (id, order_number, public_token, idempotency_key, status, payment_status, payment_method, invoice_status,
         currency, subtotal_minor, shipping_minor, total_minor, email, phone, customer, billing_address, shipping_address, notes,
-        marketing_consent, terms_accepted_at, attribution, discount_minor, promotions, kind, parent_order_id, promo_code)
-       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26)`,
+        marketing_consent, terms_accepted_at, attribution, discount_minor, promotions, kind, parent_order_id, promo_code, fx_rate, locale, site)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29)`,
       [
         o.id, o.orderNumber, o.publicToken, idempotencyKey, o.status, o.paymentStatus, o.paymentMethod, o.invoiceStatus,
         o.currency, o.subtotalMinor, o.shippingMinor, o.totalMinor, o.email, o.phone, JSON.stringify(o.customer),
@@ -217,6 +220,9 @@ export const orders = {
         o.kind,
         o.parentOrderId,
         o.promoCode,
+        o.fxRate,
+        o.locale,
+        o.site,
       ],
     )
     for (const i of o.items) {
@@ -276,7 +282,7 @@ export const orders = {
   /** Lifetime numbers for the CRM: paid orders and their value, by email. */
   async lifetime(q: Queryable, email: string) {
     const { rows } = await q.query<{ n: string; v: string | null }>(
-      "select count(*) as n, sum(total_minor - refunded_minor) as v from orders where email = $1 and payment_status in ('paid','partially_refunded')",
+      "select count(*) as n, round(sum((total_minor - refunded_minor) * fx_rate)) as v from orders where email = $1 and payment_status in ('paid','partially_refunded')",
       [email],
     )
     return { orders: Number(rows[0].n), valueMinor: Number(rows[0].v ?? 0) }

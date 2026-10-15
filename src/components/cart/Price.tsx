@@ -2,10 +2,10 @@
 
 import { getProduct, getVariant, unitPrice, type ProductId } from '@/content/catalog'
 import { useUi } from '@/i18n/LocaleProvider'
-import { formatLei } from '@/lib/money'
+import { useMoney } from '@/i18n/currency'
 
 /**
- * The price of a product, as the customer sees it. Products without an approved price
+ * The price of a product, as the customer sees it (lei, or the English page's euro or dollar price). Products without an approved price
  * in lei show "Preț în curând" (see config/prices.ts). A client component only to read the language.
  * When configurations cost differently,
  * a chosen variant shows its own price; without one, "de la" the lowest.
@@ -22,6 +22,7 @@ export function Price({
   pendingClassName?: string
 }) {
   const ui = useUi()
+  const { unit, fmt } = useMoney()
   const p = getProduct(productId)!
   const variant = getVariant(p, variantId)
   const amount = variant ? unitPrice(p, variant) : p.price
@@ -29,7 +30,7 @@ export function Price({
   return (
     <span data-price className={`tabular-nums ${className}`}>
       {p.variablePrice && !variant && ui.from}
-      {formatLei(amount)}
+      {fmt(unit(amount))}
     </span>
   )
 }

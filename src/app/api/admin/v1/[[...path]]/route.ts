@@ -284,6 +284,7 @@ function mergePatch(now: StoreSettings, body: Record<string, unknown>): StoreSet
     welcomePopup: typeof body.welcomePopup === 'boolean' ? body.welcomePopup : now.welcomePopup,
     callsPaused: typeof body.callsPaused === 'boolean' ? body.callsPaused : now.callsPaused,
     assistant: typeof body.assistant === 'boolean' ? body.assistant : now.assistant,
+    fx: now.fx,
   }
 }
 
