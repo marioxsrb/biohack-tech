@@ -273,8 +273,8 @@ export function agentDefinition() {
         },
         dynamic_variables: { dynamic_variable_placeholders: SAMPLE_VARIABLES },
       },
-      // The flash model at normal speed: brisk without rushing (1.2 was too fast with it, 15.10.2026).
-      tts: { model_id: 'eleven_flash_v2_5', voice_id: AGENT_VOICE_ID, optimize_streaming_latency: 4, stability: 0.45, similarity_boost: 0.75, speed: 1.0 },
+      // The flash model a little faster than normal (1.0 sounded slow, 1.2 too fast; 15.10.2026).
+      tts: { model_id: 'eleven_flash_v2_5', voice_id: AGENT_VOICE_ID, optimize_streaming_latency: 4, stability: 0.45, similarity_boost: 0.75, speed: 1.1 },
       asr: { quality: 'high', user_input_audio_format: 'pcm_16000' },
       // Natural turn-taking: the agent waits a moment, lets itself be interrupted, and ends a call left silent.
       turn: { turn_timeout: 7, silence_end_call_timeout: 25, turn_eagerness: 'normal' },
