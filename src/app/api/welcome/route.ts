@@ -29,7 +29,8 @@ export async function POST(req: NextRequest) {
     const r = await db.tx((t) => welcomeSignup(t, email, typeof body.page === 'string' ? body.page : null))
     kickJobs()
     log.info('welcome.signup', { created: r.created })
-    return NextResponse.json({ ok: true })
+    // An address that already got the code: told so, nothing is sent again.
+    return NextResponse.json({ ok: true, already: !r.created })
   } catch (e) {
     log.error('welcome.failed', { error: errText(e) })
     return NextResponse.json({ error: 'SERVER', message: 'Nu am putut trimite codul. Încearcă din nou.' }, { status: 500 })

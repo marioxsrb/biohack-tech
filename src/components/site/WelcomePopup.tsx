@@ -7,11 +7,12 @@ import { Close } from '@/components/ui/icons'
 import { useLocale } from '@/i18n/LocaleProvider'
 import { WELCOME_CONSENT_TEXT, WELCOME_CONSENT_TEXT_EN } from '@/lib/consent/marketing'
 
-/** One minute on the site (across pages of the same visit) before the offer shows. */
-const AFTER_MS = 60_000
+/** 40 seconds on the site (anywhere, across pages of the same visit) before the offer shows. */
+const AFTER_MS = 40_000
 /** Closed without an address: not again for a week. Sent: never again on this browser. */
 const SNOOZE_MS = 7 * 86_400_000
-const STATE_KEY = 'bt-welcome'
+// Renamed on 15.10.2026: every browser may see the offer again once.
+const STATE_KEY = 'bt-welcome2'
 const START_KEY = 'bt-welcome-start'
 const HIDDEN = /\/(checkout|cart|admin|dezabonare|reluare|retragere)(\/|$)/
 
@@ -23,6 +24,7 @@ const COPY = {
     send: 'Trimite-mi codul',
     sending: 'Se trimite…',
     done: 'Gata! Verifică emailul: codul de 10% e pe drum.',
+    already: 'Pe această adresă am trimis deja codul de 10%. Caută emailul de la Biohack Tech (și în Promoții sau Spam).',
     privacy: 'Confidențialitate',
     close: 'Închide',
     invalid: 'Verifică adresa de email.',
@@ -35,6 +37,7 @@ const COPY = {
     send: 'Send me the code',
     sending: 'Sending…',
     done: 'Done! Check your email: your 10% code is on its way.',
+    already: 'We already sent the 10% code to this address. Look for the Biohack Tech email (also in Promotions or Spam).',
     privacy: 'Privacy',
     close: 'Close',
     invalid: 'Check the email address.',
@@ -66,7 +69,7 @@ export function WelcomePopup() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
-  const [state, setState] = useState<'idle' | 'busy' | 'done' | 'error'>('idle')
+  const [state, setState] = useState<'idle' | 'busy' | 'done' | 'already' | 'error'>('idle')
   const [error, setError] = useState('')
   const hiddenHere = HIDDEN.test(pathname)
 
@@ -93,7 +96,7 @@ export function WelcomePopup() {
 
   const close = () => {
     setOpen(false)
-    if (state !== 'done') write(STATE_KEY, String(Date.now() + SNOOZE_MS))
+    if (state !== 'done' && state !== 'already') write(STATE_KEY, String(Date.now() + SNOOZE_MS))
   }
 
   async function submit(e: React.FormEvent<HTMLFormElement>) {
@@ -114,7 +117,7 @@ export function WelcomePopup() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.message ?? t.failed)
-      setState('done')
+      setState(data.already ? 'already' : 'done')
       write(STATE_KEY, 'sent')
     } catch (err) {
       setState('error')
@@ -137,9 +140,9 @@ export function WelcomePopup() {
           <Close className="h-4 w-4" />
         </button>
       </div>
-      {state === 'done' ? (
+      {state === 'done' || state === 'already' ? (
         <p className="mt-2 text-[15px] leading-snug text-text" role="status">
-          {t.done}
+          {state === 'already' ? t.already : t.done}
         </p>
       ) : (
         <form onSubmit={submit} noValidate className="mt-1.5">

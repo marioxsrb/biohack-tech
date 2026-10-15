@@ -18,7 +18,7 @@ export { WELCOME_CONSENT_TEXT }
 export async function welcomeSignup(t: Queryable, email: string, page: string | null) {
   const addr = email.trim().toLowerCase()
   const { rows } = await t.query('insert into welcome_signups (email, page) values ($1, $2) on conflict (email) do nothing returning email', [addr, page?.slice(0, 80) ?? null])
-  if (!rows.length) return { created: false }
+  if (!rows.length) return { created: false, already: true }
   const state = await marketing.state(t, addr)
   // An address that unsubscribed before chose so: signing up again here is a new, explicit consent.
   if (!state?.granted) await marketing.grant(t, { email: addr, source: 'popup', page: page ?? undefined, version: 'welcome-2026-10-15' })

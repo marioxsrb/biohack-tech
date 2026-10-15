@@ -66,7 +66,7 @@ export function SettingsForm({ rows, welcomePopup, callsPaused }: { rows: Row[];
         <label className="mt-3 flex items-start gap-2.5 text-[14.5px] text-text">
           <input type="checkbox" name="welcomePopup" value="da" defaultChecked={welcomePopup} className="mt-0.5 h-5 w-5 accent-[var(--color-ink)]" />
           <span>
-            <b className="text-ink">Popup 10% (LONGEVITY10)</b> pe site și landinguri, după un minut.
+            <b className="text-ink">Popup 10% (LONGEVITY10)</b> pe site și landinguri, după 40 de secunde.
           </span>
         </label>
         <label className="mt-3 flex items-start gap-2.5 text-[14.5px] text-text">
