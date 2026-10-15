@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { getProduct } from '@/content/catalog'
-import { GATE_COOKIE, GATE_DAYS, isGatedHost } from '@/lib/lead'
+import { GATE_COOKIE, GATE_DAYS, isGatedHost, PROMO_COOKIE } from '@/lib/lead'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { leads } from '@/server/leads'
@@ -29,6 +29,9 @@ export async function GET(req: NextRequest) {
   if (lead && lead.funnel === 'gated_price' && gatedHost) {
     res.cookies.set(GATE_COOKIE, lead.id, { path: '/', sameSite: 'lax', secure: getConfig().siteUrl.startsWith('https://'), maxAge: GATE_DAYS * 86_400 })
   }
+  // The AI call's personal code: kept for a day so the checkout fills it in (the server still checks it there).
+  const code = (req.nextUrl.searchParams.get('cod') ?? '').toUpperCase()
+  if (lead && /^[A-Z0-9]{4,32}$/.test(code)) res.cookies.set(PROMO_COOKIE, code, { path: '/', sameSite: 'lax', secure: getConfig().siteUrl.startsWith('https://'), maxAge: 86_400 })
   res.headers.set('X-Robots-Tag', 'noindex, nofollow')
   return res
 }

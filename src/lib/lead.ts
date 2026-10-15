@@ -74,3 +74,6 @@ export function cookieFrom(header: string | null | undefined, name: string): str
   }
   return undefined
 }
+
+/** A promo code brought by a recovery link (the AI call's personal code), filled into the checkout. */
+export const PROMO_COOKIE = 'bt_promo'

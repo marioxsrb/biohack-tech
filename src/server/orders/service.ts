@@ -49,7 +49,7 @@ type PlaceInput = {
 /** The promo code cannot be used for this order (the checkout shows why, next to the code field). */
 export class PromoError extends Error {
   constructor(
-    public problem: PromoProblem | 'invalid' | 'min_order' | 'no_products',
+    public problem: PromoProblem | 'invalid' | 'min_order' | 'no_products' | 'not_better',
     public rule?: PromoCodeRule,
   ) {
     super(`promo code: ${problem}`)

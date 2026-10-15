@@ -230,7 +230,7 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
       if (c.ghl && !synced) await jobs.enqueue(t, { kind: 'marketing.sync', dedupeKey: `marketing.sync:call:${id}`, payload: { email: lead.email }, runAt: new Date(Date.now() + 60_000) })
     }
   }
-  if (lead.callConsent && phone && c.calling.enabled) await jobs.enqueue(t, firstCallJob(lead, c))
+  if (lead.callConsent && phone && c.calling.enabled) await jobs.enqueue(t, firstCallJob(lead, c, phone))
   return { lead, created, stageChanged }
 }
 

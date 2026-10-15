@@ -12,7 +12,7 @@ import { randomBytes } from 'node:crypto'
 import type { Queryable } from '@/server/db'
 import { MARKETING_CONSENT_TEXTS, MARKETING_CONSENT_VERSION, type MarketingConsentVersion } from '@/lib/consent/marketing'
 
-export type ConsentSource = 'checkout' | 'lead_form' | 'unsubscribe_link' | 'ghl' | 'admin'
+export type ConsentSource = 'checkout' | 'lead_form' | 'unsubscribe_link' | 'ghl' | 'admin' | 'call'
 export type ConsentState = { granted: boolean; at: Date; version: string; source: ConsentSource }
 
 const norm = (email: string) => email.trim().toLowerCase()

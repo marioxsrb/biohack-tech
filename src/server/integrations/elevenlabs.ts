@@ -54,15 +54,17 @@ export type Conversation = {
 }
 
 export const elevenlabs = {
-  /** Places the call. No recording: neither ElevenLabs' Twilio recording nor audio is requested. */
-  outboundCall(c: ElevenLabsConfig, to: string, dynamicVariables: Record<string, string | number | boolean>) {
-    return call<OutboundResult>(c, 'POST', '/v1/convai/twilio/outbound-call', {
-      agent_id: c.agentId,
-      agent_phone_number_id: c.phoneNumberId,
-      to_number: to,
-      call_recording_enabled: false,
-      conversation_initiation_client_data: { dynamic_variables: dynamicVariables },
-    })
+  /**
+   * Places the call from the agent's number (a Twilio number or a SIP trunk, as imported in ElevenLabs). No
+   * recording: neither the provider's recording nor audio is requested.
+   */
+  async outboundCall(c: ElevenLabsConfig, to: string, dynamicVariables: Record<string, string | number | boolean>): Promise<OutboundResult> {
+    const body = { agent_id: c.agentId, agent_phone_number_id: c.phoneNumberId, to_number: to, conversation_initiation_client_data: { dynamic_variables: dynamicVariables } }
+    if (c.phoneProvider === 'sip_trunk') {
+      const r = await call<{ success: boolean; message: string; conversation_id: string | null; sip_call_id?: string | null }>(c, 'POST', '/v1/convai/sip-trunk/outbound-call', body)
+      return { success: r.success, message: r.message, conversation_id: r.conversation_id, callSid: r.sip_call_id ?? null }
+    }
+    return call<OutboundResult>(c, 'POST', '/v1/convai/twilio/outbound-call', { ...body, call_recording_enabled: false })
   },
 
   conversation(c: ElevenLabsConfig, conversationId: string) {

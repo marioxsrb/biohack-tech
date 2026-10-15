@@ -1,0 +1,156 @@
+[
+  {
+    "type": "webhook",
+    "name": "get_recovery_context",
+    "description": "Citește contextul aprobat al apelului: prenumele, produsele, cantitățile, totalul coșului, reducerea și starea emailului.",
+    "response_timeout_secs": 10,
+    "api_schema": {
+      "url": "https://biohack-tech.ro/api/calling/tools/get_recovery_context",
+      "method": "POST",
+      "request_body_schema": {
+        "type": "object",
+        "description": "Datele apelului",
+        "properties": {
+          "call_id": {
+            "type": "string",
+            "description": "Identificatorul apelului",
+            "dynamic_variable": "call_id"
+          }
+        },
+        "required": [
+          "call_id"
+        ]
+      }
+    }
+  },
+  {
+    "type": "webhook",
+    "name": "check_discount",
+    "description": "Verifică dacă reducerea de recuperare mai este valabilă (procent, cod, expirare). Codul nu se cumulează cu promoțiile.",
+    "response_timeout_secs": 10,
+    "api_schema": {
+      "url": "https://biohack-tech.ro/api/calling/tools/check_discount",
+      "method": "POST",
+      "request_body_schema": {
+        "type": "object",
+        "description": "Datele apelului",
+        "properties": {
+          "call_id": {
+            "type": "string",
+            "description": "Identificatorul apelului",
+            "dynamic_variable": "call_id"
+          }
+        },
+        "required": [
+          "call_id"
+        ]
+      }
+    }
+  },
+  {
+    "type": "webhook",
+    "name": "recovery_email_status",
+    "description": "Verifică dacă emailul cu codul de reducere a fost acceptat pentru livrare. Folosește-l înainte să spui că persoana găsește codul pe email.",
+    "response_timeout_secs": 10,
+    "api_schema": {
+      "url": "https://biohack-tech.ro/api/calling/tools/recovery_email_status",
+      "method": "POST",
+      "request_body_schema": {
+        "type": "object",
+        "description": "Datele apelului",
+        "properties": {
+          "call_id": {
+            "type": "string",
+            "description": "Identificatorul apelului",
+            "dynamic_variable": "call_id"
+          }
+        },
+        "required": [
+          "call_id"
+        ]
+      }
+    }
+  },
+  {
+    "type": "webhook",
+    "name": "record_outcome",
+    "description": "Înregistrează rezultatul conversației.",
+    "response_timeout_secs": 10,
+    "api_schema": {
+      "url": "https://biohack-tech.ro/api/calling/tools/record_outcome",
+      "method": "POST",
+      "request_body_schema": {
+        "type": "object",
+        "description": "Datele apelului",
+        "properties": {
+          "call_id": {
+            "type": "string",
+            "description": "Identificatorul apelului",
+            "dynamic_variable": "call_id"
+          },
+          "outcome": {
+            "type": "string",
+            "description": "Una dintre: interested, more_info, human_follow_up, not_interested, opted_out"
+          }
+        },
+        "required": [
+          "call_id",
+          "outcome"
+        ]
+      }
+    }
+  },
+  {
+    "type": "webhook",
+    "name": "request_human_follow_up",
+    "description": "Cere ca un coleg să contacteze persoana.",
+    "response_timeout_secs": 10,
+    "api_schema": {
+      "url": "https://biohack-tech.ro/api/calling/tools/request_human_follow_up",
+      "method": "POST",
+      "request_body_schema": {
+        "type": "object",
+        "description": "Datele apelului",
+        "properties": {
+          "call_id": {
+            "type": "string",
+            "description": "Identificatorul apelului",
+            "dynamic_variable": "call_id"
+          },
+          "reason": {
+            "type": "string",
+            "description": "Pe scurt, de ce (fără date sensibile)"
+          }
+        },
+        "required": [
+          "call_id",
+          "reason"
+        ]
+      }
+    }
+  },
+  {
+    "type": "webhook",
+    "name": "record_opt_out",
+    "description": "Înregistrează imediat că persoana nu mai vrea să fie contactată (apeluri și emailuri comerciale).",
+    "response_timeout_secs": 10,
+    "api_schema": {
+      "url": "https://biohack-tech.ro/api/calling/tools/record_opt_out",
+      "method": "POST",
+      "request_body_schema": {
+        "type": "object",
+        "description": "Datele apelului",
+        "properties": {
+          "call_id": {
+            "type": "string",
+            "description": "Identificatorul apelului",
+            "dynamic_variable": "call_id"
+          }
+        },
+        "required": [
+          "call_id"
+        ]
+      }
+    }
+  }
+]

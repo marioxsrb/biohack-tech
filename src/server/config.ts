@@ -96,8 +96,17 @@ export type CallingConfig = {
   dryRun: boolean
   provider: 'elevenlabs'
   maxAttempts: number
-  /** Minutes of quiet after the lead's last activity before the first call. */
-  firstDelayMinutes: number
+  /**
+   * Minutes of quiet after the lead's last activity before the first call: `cart` = a checkout with a cart
+   * (AI_CALL_DELAY_VISIBLE_MINUTES, default 20), `price_reveal` = the price form (AI_CALL_DELAY_GATED_MINUTES, 30).
+   */
+  delays: { cart: number; price_reveal: number }
+  /**
+   * Controlled testing (AI_CALLING_TEST_MODE=true): only `testNumbers` can be called, and only they get the short
+   * `testDelayMinutes` (2). Test mode without a list calls nobody.
+   */
+  testMode: boolean
+  testDelayMinutes: number
   /** Hours between a missed attempt and the next one. */
   retryHours: number
   /** Allowed local calling window [startHour, endHour) on allowed weekdays (1 = Monday ... 7 = Sunday), in `timezone`. */
@@ -108,7 +117,17 @@ export type CallingConfig = {
   testNumbers: string[] | null
 }
 
-export type ElevenLabsConfig = { apiKey: string; agentId: string; phoneNumberId: string; webhookSecret: string | null; apiBase: string }
+export type ElevenLabsConfig = {
+  apiKey: string
+  agentId: string
+  phoneNumberId: string
+  /** How the number is connected in ElevenLabs: a Twilio number or a SIP trunk (ELEVENLABS_PHONE_PROVIDER). */
+  phoneProvider: 'twilio' | 'sip_trunk'
+  webhookSecret: string | null
+  /** The shared secret the agent's server tools send (ELEVENLABS_TOOL_SECRET); tools answer 404 without it. */
+  toolSecret: string | null
+  apiBase: string
+}
 
 /** ISO 13616 mod-97 check, so a mistyped IBAN is caught before a customer sees it. */
 export function isValidIban(raw: string): boolean {
@@ -220,7 +239,9 @@ function readCalling(issues: ConfigIssue[], isolated: boolean): { calling: Calli
     dryRun: str('AI_CALLING_DRY_RUN') !== 'false',
     provider: 'elevenlabs',
     maxAttempts: Math.min(positiveInt(str('AI_CALLING_MAX_ATTEMPTS')) ?? 2, 3),
-    firstDelayMinutes: positiveInt(str('AI_CALLING_FIRST_DELAY_MINUTES')) ?? 60,
+    delays: { cart: positiveInt(str('AI_CALL_DELAY_VISIBLE_MINUTES')) ?? 20, price_reveal: positiveInt(str('AI_CALL_DELAY_GATED_MINUTES')) ?? 30 },
+    testMode: flag('AI_CALLING_TEST_MODE'),
+    testDelayMinutes: Math.min(positiveInt(str('AI_CALLING_TEST_DELAY_MINUTES')) ?? 2, 10),
     retryHours: positiveInt(str('AI_CALLING_RETRY_HOURS')) ?? 24,
     hours: hourRange(str('AI_CALLING_HOURS'), { start: 10, end: 19 }),
     days: days && Number(days[1]) <= Number(days[2]) ? Array.from({ length: Number(days[2]) - Number(days[1]) + 1 }, (_, i) => Number(days[1]) + i) : [1, 2, 3, 4, 5],
@@ -230,7 +251,20 @@ function readCalling(issues: ConfigIssue[], isolated: boolean): { calling: Calli
   const apiKey = isolated ? undefined : str('ELEVENLABS_API_KEY')
   const agentId = str('ELEVENLABS_AGENT_ID')
   const phoneNumberId = str('ELEVENLABS_PHONE_NUMBER_ID')
-  const elevenlabs = apiKey && agentId && phoneNumberId ? { apiKey, agentId, phoneNumberId, webhookSecret: str('ELEVENLABS_WEBHOOK_SECRET') ?? null, apiBase: (str('ELEVENLABS_API_BASE') ?? 'https://api.elevenlabs.io').replace(/\/$/, '') } : null
+  const elevenlabs: ElevenLabsConfig | null =
+    apiKey && agentId && phoneNumberId
+      ? {
+          apiKey,
+          agentId,
+          phoneNumberId,
+          phoneProvider: str('ELEVENLABS_PHONE_PROVIDER') === 'sip_trunk' ? 'sip_trunk' : 'twilio',
+          webhookSecret: str('ELEVENLABS_WEBHOOK_SECRET') ?? null,
+          toolSecret: str('ELEVENLABS_TOOL_SECRET') ?? null,
+          apiBase: (str('ELEVENLABS_API_BASE') ?? 'https://api.elevenlabs.io').replace(/\/$/, ''),
+        }
+      : null
+  if (calling.enabled && calling.testMode && !calling.testNumbers)
+    issues.push({ area: 'calling', level: 'warn', message: 'AI_CALLING_TEST_MODE fără AI_CALLING_TEST_NUMBERS: nu se sună nimeni.' })
   if (calling.enabled && !calling.dryRun && !elevenlabs)
     issues.push({ area: 'calling', level: 'warn', message: 'AI_CALLING_ENABLED fără AI_CALLING_DRY_RUN: lipsesc ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID sau ELEVENLABS_PHONE_NUMBER_ID; nu se sună nimeni.' })
   if (calling.enabled && elevenlabs && !elevenlabs.webhookSecret)

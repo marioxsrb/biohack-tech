@@ -158,7 +158,7 @@ export const LEAD_TAGS = {
  * AI call results on the contact (tags only: no opportunity, no workflow trigger the app relies on). One tag
  * per outcome, e.g. bt-apel-ai-interested; follow-up and refusal have their own, so the team can filter.
  */
-export const CALL_TAGS = { called: 'bt-apel-ai', followUp: 'bt-apel-ai-urmarire', optedOut: 'bt-apel-ai-refuz' }
+export const CALL_TAGS = { called: 'bt-apel-ai', followUp: 'bt-apel-ai-urmarire', optedOut: 'bt-apel-ai-refuz', discount: 'bt-apel-ai-cod-10', offerEmail: 'bt-apel-ai-email-cod' }
 export const callOutcomeTag = (outcome: string) => `bt-apel-ai-${outcome.replace(/_/g, '-')}`
 
 /** Campaign tags for a lead: bt-sursa-facebook, bt-campanie-toamna (lowercase slugs, short; anything else is dropped). */

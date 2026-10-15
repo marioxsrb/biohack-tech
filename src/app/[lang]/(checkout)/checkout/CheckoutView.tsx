@@ -17,7 +17,7 @@ import { useLocale } from '@/i18n/LocaleProvider'
 import { ui } from '@/i18n/ui'
 import type { Locale } from '@/i18n/locales'
 import { attributionParams } from '@/lib/attribution'
-import { normalizeContact, validateContact } from '@/lib/lead'
+import { cookieFrom, normalizeContact, PROMO_COOKIE, validateContact } from '@/lib/lead'
 import { cashOnDelivery } from '@/config/payments'
 import { site, terms } from '@/config/site'
 import { itemOf, track } from '@/lib/analytics'
@@ -303,7 +303,12 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
   const t = COPY[locale]
   const { pricing: cartPricing } = useCart()
   // A promo code checked by the server (/api/promo): its rule prices the cart here exactly as the order will.
-  const [promo, setPromo] = useState<{ input: string; rule: PromoCodeRule | null; error: string | null; busy: boolean; open: boolean }>({ input: '', rule: null, error: null, busy: false, open: false })
+  // A code brought by a recovery link (cookie set by /api/lead/resume) is shown in the field; the customer applies it.
+  const [promo, setPromo] = useState<{ input: string; rule: PromoCodeRule | null; error: string | null; busy: boolean; open: boolean }>(() => {
+    const brought = typeof document === 'undefined' ? undefined : cookieFrom(document.cookie, PROMO_COOKIE)
+    const code = brought && /^[A-Z0-9]{4,32}$/.test(brought) ? brought : ''
+    return { input: code, rule: null, error: null, busy: false, open: !!code }
+  })
   const priced = useMemo(() => lines.map((l) => ({ key: l.key, productId: l.product.id, quantity: l.quantity, unitAmount: l.unit })), [lines])
   const withCode = useMemo(() => (promo.rule ? priceLines(priced, undefined, promo.rule) : null), [priced, promo.rule])
   // A cart change can make an applied code stop fitting (minimum, products): the totals fall back, and the order says why.

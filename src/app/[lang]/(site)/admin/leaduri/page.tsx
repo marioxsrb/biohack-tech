@@ -40,11 +40,19 @@ const OUTCOME: Record<string, string> = {
   more_info: 'vrea informații',
   human_follow_up: 'cere un om',
   not_interested: 'nu e interesat',
-  opted_out: 'a refuzat apelurile',
+  opted_out: 'a refuzat contactul',
   no_answer: 'nu a răspuns',
   busy: 'ocupat',
   invalid_number: 'număr greșit',
   technical_failure: 'eroare tehnică',
+}
+const EMAIL_STATUS: Record<string, string> = {
+  sent: 'trimis',
+  sent_on_request: 'trimis la cerere',
+  no_consent: 'netrimis (fără acord de email)',
+  failed: 'eșuat',
+  not_sent: 'netrimis',
+  dry_run: 'simulat',
 }
 const VIEWS = { '': 'Toate', abandoned: 'Abandonate', converted: 'Convertite' } as const
 
@@ -94,7 +102,8 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
         Funnel cu preț după formular: {c.features.priceGate ? 'activ' : 'oprit'} · captare în checkout: {c.features.abandonedCheckout ? 'activă' : 'oprită'} · emailuri de recuperare:{' '}
         {c.features.recoveryEmail ? `active (${c.recovery.firstMinutes} min, ${c.recovery.secondHours} h)` : 'oprite'}. Recuperarea pleacă doar cu acord de marketing și se oprește la comandă,
         dezabonare sau retragerea acordului. Apeluri AI: {c.calling.enabled ? (c.calling.dryRun ? 'active în dry run (nu se sună nimeni)' : 'ACTIVE') : 'oprite'}
-        {c.calling.testNumbers ? ` · doar numerele de test (${c.calling.testNumbers.length})` : ''} · ElevenLabs {c.elevenlabs ? 'configurat' : 'neconfigurat'}. Se sună doar cu acordul separat pentru
+        {c.calling.testMode ? ` · MOD TEST (${c.calling.testDelayMinutes} min)` : ''}
+        {c.calling.testNumbers ? ` · doar numerele de test (${c.calling.testNumbers.length})` : ''} · întârziere coș {c.calling.delays.cart} min, ofertă {c.calling.delays.price_reveal} min · ElevenLabs {c.elevenlabs ? 'configurat' : 'neconfigurat'}. Se sună doar cu acordul separat pentru
         apeluri, {c.calling.hours.start}:00–{c.calling.hours.end}:00, maximum {c.calling.maxAttempts} încercări.
       </p>
 
@@ -191,7 +200,13 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
                     <span className="text-muted">
                       Ultimul apel: {dt(call.createdAt)} · {call.status}
                       {call.durationSecs != null && ` · ${call.durationSecs}s`}
-                      {call.followUp && ' · necesită urmărire'}
+                      {call.scenario && ` · ${call.scenario === 'cart' ? 'coș nefinalizat' : 'ofertă cerută'}`}
+                      {call.productInterest && ` · ${call.productInterest}`}
+                      {call.outcome ? ` · ${OUTCOME[call.outcome] ?? call.outcome}` : call.agentOutcome ? ` · notat de agent: ${OUTCOME[call.agentOutcome] ?? call.agentOutcome}` : ''}
+                      {call.discountCode && ` · cod ${call.discountCode}`}
+                      {call.emailStatus && ` · email cod: ${EMAIL_STATUS[call.emailStatus] ?? call.emailStatus}`}
+                      {call.followUp && ` · necesită urmărire${call.followUpReason ? ` (${call.followUpReason})` : ''}`}
+                      {call.optedOut && ' · a refuzat orice contact'}
                       {call.error && ` · eroare: ${call.error}`}
                     </span>
                   )}

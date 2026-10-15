@@ -26,7 +26,7 @@ const { retryCall, disableCalling, cancelScheduledCalls } = await import('@/serv
 const { marketing } = await import('@/server/marketing/consent')
 const { signWebhook, verifyWebhookSignature } = await import('@/server/integrations/elevenlabs')
 const { romanianE164, CALL_CONSENT_VERSION } = await import('@/lib/consent/calling')
-const { agentDefinition, agentKnowledge } = await import('@/server/calling/agent')
+const { agentDefinition, agentKnowledge, agentTools } = await import('@/server/calling/agent')
 const svc = await import('@/server/orders/service')
 const { runDueJobs } = await import('@/server/jobs/runner')
 const { getConfig } = await import('@/server/config')
@@ -149,7 +149,7 @@ describe('consent', () => {
     expect(await callConsent.state(db, PHONE)).toMatchObject({ granted: true, version: CALL_CONSENT_VERSION, source: 'lead_form' })
     const job = (await db.query<{ run_at: string }>(`select run_at from jobs where kind = 'call.attempt' and payload->>'leadId' = $1`, [leadId])).rows
     expect(job).toHaveLength(1)
-    expect(Math.round((new Date(job[0].run_at).getTime() - Date.now()) / 60_000)).toBe(60)
+    expect(Math.round((new Date(job[0].run_at).getTime() - Date.now()) / 60_000)).toBe(30) // price form: 30 minutes
     // Email marketing consent is not implied either way.
     expect(await marketing.state(db, ana.email)).toBeNull()
   })
@@ -187,7 +187,7 @@ describe('placing calls', () => {
     expect((await leads.byId(db, leadId))!).toMatchObject({ callStatus: 'dry_run', callAttempts: 1 })
   })
 
-  it('a successful conversation: dialed once with first name and product only; the result is stored once; CRM tags; the link by email', async () => {
+  it('a successful conversation: dialed once with first name, product and the server-made offer only; the result is stored once; CRM tags; the code by email on request', async () => {
     const { leadId } = await reveal({ callConsent: true })
     await runDueJobs()
     await later()
@@ -198,10 +198,23 @@ describe('placing calls', () => {
     const req = dials()[0].json!
     expect(req).toMatchObject({ agent_id: 'agent_test', agent_phone_number_id: 'phnum_test', to_number: PHONE, call_recording_enabled: false })
     const vars = (req.conversation_initiation_client_data as { dynamic_variables: Record<string, string> }).dynamic_variables
-    expect(vars).toMatchObject({ customer_first_name: 'Ana', product_name: 'NEUROS Calm', product_id: 'balance-wave', product_url: 'https://acces.biohack-tech.ro/products/calm', funnel: 'gated_price' })
+    expect(vars).toMatchObject({
+      customer_first_name: 'Ana',
+      funnel_type: 'gated_price',
+      abandonment_type: 'oferta_solicitata',
+      product_names: 'NEUROS Calm',
+      product_quantities: '',
+      cart_total: '',
+      recovery_discount_percent: 10,
+      recovery_code: expect.stringMatching(/^BT[A-Z2-9]{6}$/),
+      recovery_email_sent: 'nu', // no email marketing consent: nothing was sent before the call
+    })
+    expect(vars.opening_line).toBe('Bună ziua, Ana! Sunt asistentul virtual Biohack Tech, un asistent AI. Ați solicitat recent oferta pentru NEUROS Calm și voiam să vă întreb dacă vă pot ajuta cu vreo informație. Aveți un minut?')
+    expect(vars.checkout_recovery_url).toMatch(/^https:\/\/acces\.biohack-tech\.ro\/api\/lead\/resume\?t=[\w-]+&cod=BT/)
     expect(JSON.stringify(vars)).not.toMatch(/@|0722|Popescu/)
+    expect(sent).toEqual([])
     const [call] = await callsOf(leadId)
-    expect(call).toMatchObject({ status: 'dialing', attempt: 1, phone: PHONE, productId: 'balance-wave' })
+    expect(call).toMatchObject({ status: 'dialing', attempt: 1, phone: PHONE, productId: 'balance-wave', funnel: 'gated_price', scenario: 'price_reveal', productInterest: 'NEUROS Calm', discountCode: vars.recovery_code, emailStatus: 'no_consent' })
 
     const res = await transcription(call.providerCallId!, { outcome: 'more_info', follow_up_required: false, opted_out: false, wants_link: true })
     expect(await res.json()).toMatchObject({ ok: true, applied: true })
@@ -212,14 +225,17 @@ describe('placing calls', () => {
     expect((await leads.byId(db, leadId))!).toMatchObject({ callStatus: 'completed', callOutcome: 'more_info' })
     expect(ghl.filter((c) => c.url.endsWith('/tags')).flatMap((c) => c.json?.tags as string[])).toEqual(expect.arrayContaining(['bt-apel-ai', 'bt-apel-ai-more-info', 'bt-interes-calm']))
     expect(ghl.some((c) => c.url.includes('/opportunities'))).toBe(false)
-    const link = sent.find((m) => m.subject === 'Linkul pentru NEUROS Calm')!
+    // Asked for during the call: the code and the link, once (a requested message, not marketing).
+    const link = sent.find((m) => m.subject === 'Codul tău de 10% pentru NEUROS Calm')!
     expect(link.to).toBe('ana@exemplu.ro')
-    expect(link.text).toMatch(/https:\/\/acces\.biohack-tech\.ro\/api\/lead\/resume\?t=[\w-]+/)
+    expect(link.text).toContain(vars.recovery_code)
+    expect(link.text).toMatch(/https:\/\/acces\.biohack-tech\.ro\/api\/lead\/resume\?t=[\w-]+&cod=BT/)
+    expect((await callsOf(leadId))[0].emailStatus).toBe('sent_on_request')
     // The same webhook again (ElevenLabs retries): nothing changes, nothing is sent twice.
     expect(await (await transcription(call.providerCallId!, { outcome: 'not_interested' })).json()).toMatchObject({ duplicate: true })
     await later()
     expect((await callsOf(leadId))[0].outcome).toBe('more_info')
-    expect(sent.filter((m) => m.subject === 'Linkul pentru NEUROS Calm')).toHaveLength(1)
+    expect(sent.filter((m) => m.subject === 'Codul tău de 10% pentru NEUROS Calm')).toHaveLength(1)
     expect(dials()).toHaveLength(1)
   })
 
@@ -431,7 +447,7 @@ describe('calling window and decision', () => {
   it('the decision, in order', () => {
     const lead = { stage: 'lead', callDisabled: false, orderId: null, callAttempts: 0, productId: 'balance-wave', cart: null, lastActivityAt: new Date(Date.now() - 3 * 3_600_000) } as never
     const calling = { ...getConfig().calling, enabled: true, hours: { start: 0, end: 24 }, days: [1, 2, 3, 4, 5, 6, 7], testNumbers: null }
-    const ok = { attempt: 1, now: new Date(), calling, phone: PHONE, consentGranted: true, unsubscribed: false, converted: false, superseded: false, otherCall: false }
+    const ok = { attempt: 1, now: new Date(), calling, phone: PHONE, consentGranted: true, unsubscribed: false, converted: false, superseded: false, otherCall: false, talkedBefore: false }
     expect(callDecision(lead, ok)).toEqual({ call: true, phone: PHONE })
     expect(callDecision(lead, { ...ok, calling: { ...calling, enabled: false } })).toMatchObject({ call: false, reason: 'calling off' })
     expect(callDecision(lead, { ...ok, consentGranted: null })).toMatchObject({ call: false, reason: 'no call consent', status: 'stopped' })
@@ -440,6 +456,7 @@ describe('calling window and decision', () => {
     expect(callDecision(lead, { ...ok, converted: true })).toMatchObject({ call: false, reason: 'converted' })
     expect(callDecision(lead, { ...ok, attempt: 3 })).toMatchObject({ call: false, reason: 'maximum attempts reached' })
     expect(callDecision(lead, { ...ok, otherCall: true })).toMatchObject({ call: false, reason: 'another call for this person' })
+    expect(callDecision(lead, { ...ok, talkedBefore: true })).toMatchObject({ call: false, reason: 'already talked to the agent', status: 'stopped' })
     expect(callDecision({ ...(lead as object), lastActivityAt: new Date() } as never, ok)).toMatchObject({ call: false, reason: 'still active', later: expect.any(Date) })
   })
 })
@@ -464,10 +481,19 @@ describe('agent', () => {
     const file = 'docs/ai-calling/agent.json'
     if (process.env.UPDATE_AGENT_JSON === '1' || !existsSync(file)) writeFileSync(file, json)
     expect(readFileSync(file, 'utf8')).toBe(json)
+    const tools = `${JSON.stringify(agentTools('https://biohack-tech.ro'), null, 2)}\n`
+    const toolsFile = 'docs/ai-calling/tools.json'
+    if (process.env.UPDATE_AGENT_JSON === '1' || !existsSync(toolsFile)) writeFileSync(toolsFile, tools)
+    expect(readFileSync(toolsFile, 'utf8')).toBe(tools)
     const def = JSON.parse(json)
+    expect(def.name).toBe('BiohackTech — Recuperare Comenzi')
     expect(def.conversation_config.agent.language).toBe('ro')
-    expect(def.conversation_config.agent.first_message).toMatch(/asistent AI/)
+    expect(def.conversation_config.agent.first_message).toBe('{{opening_line}}')
+    expect(def.conversation_config.agent.dynamic_variables.dynamic_variable_placeholders.opening_line).toMatch(/asistent AI/)
     expect(def.platform_settings.privacy.record_voice).toBe(false)
-    expect(Object.keys(def.platform_settings.data_collection).sort()).toEqual(['follow_up_required', 'opted_out', 'outcome', 'wants_link'])
+    expect(Object.keys(def.platform_settings.data_collection).sort()).toEqual(['discount_offered', 'follow_up_required', 'opted_out', 'outcome', 'wants_link'])
+    // The tools carry no secret: the setup script adds the header from an ElevenLabs workspace secret.
+    expect(tools).not.toMatch(/secret_id|x-biohack-tool-secret/)
+    expect(JSON.parse(tools).map((t: { name: string }) => t.name)).toEqual(['get_recovery_context', 'check_discount', 'recovery_email_status', 'record_outcome', 'request_human_follow_up', 'record_opt_out'])
   })
 })

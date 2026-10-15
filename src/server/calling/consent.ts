@@ -10,6 +10,7 @@ import type { Config } from '@/server/config'
 import type { Queryable } from '@/server/db'
 import type { NewJob } from '@/server/jobs/outbox'
 import type { Lead } from '@/server/leads'
+import { firstCallDelay } from './delay'
 
 export type CallConsentSource = 'lead_form' | 'checkout' | 'call' | 'admin' | 'unsubscribe_link' | 'ghl'
 export type CallConsentState = { granted: boolean; at: Date; version: string | null; source: CallConsentSource }
@@ -71,6 +72,6 @@ export const callConsent = {
 }
 
 /** The first call for a lead: after the configured quiet time; the job itself checks everything again. */
-export function firstCallJob(lead: Pick<Lead, 'id' | 'lastActivityAt'>, c: Pick<Config, 'calling'>): NewJob {
-  return { kind: 'call.attempt', dedupeKey: `call.attempt:${lead.id}:1`, payload: { leadId: lead.id, attempt: 1 }, runAt: new Date(lead.lastActivityAt.getTime() + c.calling.firstDelayMinutes * 60_000) }
+export function firstCallJob(lead: Pick<Lead, 'id' | 'lastActivityAt' | 'productId'>, c: Pick<Config, 'calling'>, phone: string | null): NewJob {
+  return { kind: 'call.attempt', dedupeKey: `call.attempt:${lead.id}:1`, payload: { leadId: lead.id, attempt: 1 }, runAt: new Date(lead.lastActivityAt.getTime() + firstCallDelay(lead, c.calling, phone) * 60_000) }
 }

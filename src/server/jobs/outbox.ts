@@ -23,6 +23,7 @@ export type JobKind =
   | 'call.attempt'
   | 'call.check'
   | 'call.link'
+  | 'call.notify'
   | 'ghl.call'
 export type JobStatus = 'pending' | 'running' | 'retry' | 'done' | 'failed' | 'skipped'
 

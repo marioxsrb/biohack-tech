@@ -19,7 +19,9 @@ import { gatedOrigin } from '@/lib/lead'
 import { marketing } from '@/server/marketing/consent'
 import { CALL_TAGS, INTEREST_TAG, LEAD_TAGS, attributionTags, callOutcomeTag } from '@/server/integrations/ghl'
 import { callConsent } from '@/server/calling/consent'
-import { calls, leadProduct, renderCallLink, runCallAttempt, runCallCheck, type StepResult } from '@/server/calling/calls'
+import { leadItems, recoveryLink, renderRecoveryOffer } from '@/server/calling/offer'
+import { promoCodes } from '@/server/promo'
+import { calls, leadProduct, renderCallFollowUp, renderCallLink, runCallAttempt, runCallCheck, type StepResult } from '@/server/calling/calls'
 import { companyLine } from '@/config/company'
 import { errText, log } from '@/server/log'
 import { marketingStatus } from '@/server/marketing/sync'
@@ -189,6 +191,18 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const lead = await leads.byId(db, String(j.payload.leadId ?? ''))
     if (!lead) throw new Skip('lead gone')
     const step = Number(j.payload.step) === 2 ? 2 : 1
+    // An AI call for this lead is about to happen: its email (with the personal code) is the first recovery
+    // email, so the regular first email waits until after it (and is skipped when the call's email went out).
+    if (step === 1) {
+      const { rows } = await db.query(
+        `select 1 from jobs where kind = 'call.attempt' and payload->>'leadId' = $1 and status in ('pending', 'retry', 'running') and run_at <= now() + interval '15 minutes' limit 1`,
+        [lead.id],
+      )
+      if (rows.length && lead.recoverySent === 0) {
+        await jobs.enqueue(db, { kind: 'lead.recovery', dedupeKey: `${j.dedupeKey}:after-call:${Date.now()}`, payload: j.payload, runAt: new Date(Date.now() + 20 * 60_000) })
+        throw new Skip('waiting for the AI call')
+      }
+    }
     const own = c.email.transport === 'smtp' || c.email.transport === 'file'
     const facts = await recoveryFacts(db, lead)
     const now = new Date()
@@ -219,7 +233,7 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
 
   // AI calling: one attempt, decided now (consent, purchase, refusal, hours, limits). Never retried by the
   // queue after the provider was asked to dial: an uncertain request is left for a person, not redialed.
-  'call.attempt': async (j) => step(await runCallAttempt(await getDb(), getConfig(), { leadId: String(j.payload.leadId ?? ''), attempt: Number(j.payload.attempt ?? 1) }, gatedOrigin(getConfig().siteUrl), j.dedupeKey)),
+  'call.attempt': async (j) => step(await runCallAttempt(await getDb(), getConfig(), { leadId: String(j.payload.leadId ?? ''), attempt: Number(j.payload.attempt ?? 1) }, j.dedupeKey)),
 
   // A call whose result did not arrive by webhook: read it back from ElevenLabs.
   'call.check': async (j) => step(await runCallCheck(await getDb(), getConfig(), { callId: String(j.payload.callId ?? ''), round: Number(j.payload.round ?? 1) })),
@@ -235,10 +249,35 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     if (!lead || !product || !lead.recoveryToken) throw new Skip('lead gone')
     const own = c.email.transport === 'smtp' || c.email.transport === 'file'
     if (!own) throw new Skip('no own email transport')
+    if (call.optedOut) throw new Skip('opted out')
+    // Asked for during the call: the code and the link (once; already sent before the call → nothing more).
+    if (call.discountCode) {
+      if (call.emailStatus === 'sent' || call.emailStatus === 'sent_on_request') throw new Skip('offer already emailed')
+      const code = await promoCodes.get(db, call.discountCode)
+      if (!code?.endsAt) throw new Skip('code gone')
+      const token = await marketing.unsubscribeToken(db, lead.email)
+      const mail = renderRecoveryOffer({ firstName: lead.name?.split(' ')[0] ?? null, items: leadItems(lead), cart: lead.productId === CART_INTEREST, code: code.code, expires: code.endsAt, link: recoveryLink(lead, code.code, c), unsubscribeUrl: `${c.siteUrl}/dezabonare/${token}` })
+      const ref = await deliver(c, { ...mail, to: lead.email, name: `call-offer-request-${call.id}` })
+      await calls.update(db, call.id, { email_status: 'sent_on_request' })
+      return ref
+    }
     // The recovery link restores the context (an unlocked price on acces, or the cart of a checkout).
     const base = lead.funnel === 'gated_price' ? gatedOrigin(c.siteUrl) : c.siteUrl
     const mail = renderCallLink({ firstName: lead.name?.split(' ')[0] ?? null, productName: product.name, link: `${base}/api/lead/resume?t=${lead.recoveryToken}`, company: companyLine() || null })
     return deliver(c, { ...mail, to: lead.email, name: `call-link-${call.id}` })
+  },
+
+  // The team hears about a call that needs a person (asked for a human, or a question the agent could not answer).
+  'call.notify': async (j) => {
+    const c = getConfig()
+    if (!notificationsOn()) throw new Skip('notifications off')
+    const db = await getDb()
+    const call = await calls.byId(db, String(j.payload.callId ?? ''))
+    if (!call) throw new Skip('call gone')
+    const lead = await leads.byId(db, call.leadId)
+    if (!lead) throw new Skip('lead gone')
+    const mail = renderCallFollowUp({ call, lead, adminUrl: `${c.siteUrl}/admin/leaduri` })
+    return deliver(c, { ...mail, to: c.email.notifyTo!, name: `call-follow-up-${call.id}` })
   },
 
   // A call's result in the CRM: contact upsert (no duplicate: by email) and outcome tags. Retried on its own.
@@ -258,6 +297,8 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
       ...(call.outcome ? [callOutcomeTag(call.outcome)] : []),
       ...(call.followUp ? [CALL_TAGS.followUp] : []),
       ...(call.optedOut ? [CALL_TAGS.optedOut] : []),
+      ...(call.discountCode ? [CALL_TAGS.discount] : []),
+      ...(call.emailStatus === 'sent' ? [CALL_TAGS.offerEmail] : []),
       ...(INTEREST_TAG[call.productId] ? [INTEREST_TAG[call.productId]] : []),
     ])
     return contactId

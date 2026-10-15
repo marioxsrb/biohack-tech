@@ -24,13 +24,18 @@ export type PromoCode = {
   oncePerEmail: boolean
   active: boolean
   note: string | null
+  /** Not combined with the automatic promotions (see PromoCodeRule). */
+  exclusive: boolean
+  /** The lead an AI call recovery code was made for; only its address may use it. */
+  leadId: string | null
+  restrictedEmail: string | null
   createdAt: Date
 }
 
-export type PromoProblem = 'unknown' | 'inactive' | 'not_started' | 'expired' | 'used_up' | 'already_used'
+export type PromoProblem = 'unknown' | 'inactive' | 'not_started' | 'expired' | 'used_up' | 'already_used' | 'other_email'
 
 /** What the customer reads, per language. */
-export const PROMO_MESSAGES: Record<'ro' | 'en', Record<PromoProblem | 'min_order' | 'no_products' | 'invalid', string>> = {
+export const PROMO_MESSAGES: Record<'ro' | 'en', Record<PromoProblem | 'min_order' | 'no_products' | 'not_better' | 'invalid', string>> = {
   ro: {
     invalid: 'Scrie codul promoțional.',
     unknown: 'Codul nu există. Verifică literele și cifrele.',
@@ -41,6 +46,8 @@ export const PROMO_MESSAGES: Record<'ro' | 'en', Record<PromoProblem | 'min_orde
     already_used: 'Ai folosit deja acest cod.',
     min_order: 'Codul se aplică doar comenzilor de cel puțin {min}.',
     no_products: 'Codul nu se aplică produselor din coș{products}.',
+    not_better: 'Codul nu se cumulează cu promoția din coș, iar promoția îți dă deja o reducere mai mare. Ai prețul cel mai bun.',
+    other_email: 'Codul este personal: folosește adresa de email pe care ai primit codul.',
   },
   en: {
     invalid: 'Enter the promo code.',
@@ -52,6 +59,8 @@ export const PROMO_MESSAGES: Record<'ro' | 'en', Record<PromoProblem | 'min_orde
     already_used: 'You have already used this code.',
     min_order: 'This code applies to orders of at least {min}.',
     no_products: 'This code does not apply to the products in your cart{products}.',
+    not_better: 'This code cannot be combined with the promotion in your cart, which already saves you more. You have the best price.',
+    other_email: 'This code is personal: use the email address it was sent to.',
   },
 }
 
@@ -79,10 +88,13 @@ const toCode = (r: Row): PromoCode => ({
   oncePerEmail: !!r.once_per_email,
   active: !!r.active,
   note: (r.note as string) ?? null,
+  exclusive: !!r.exclusive,
+  leadId: (r.lead_id as string) ?? null,
+  restrictedEmail: (r.restricted_email as string) ?? null,
   createdAt: new Date(r.created_at as string),
 })
 
-export const ruleOf = (c: PromoCode): PromoCodeRule => ({ code: c.code, kind: c.kind, value: c.value, products: c.products, minOrderMinor: c.minOrderMinor })
+export const ruleOf = (c: PromoCode): PromoCodeRule => ({ code: c.code, kind: c.kind, value: c.value, products: c.products, minOrderMinor: c.minOrderMinor, ...(c.exclusive && { exclusive: true }) })
 
 /** Uses that count: the order still stands (not cancelled, not an unpaid or failed card attempt). */
 const STANDING = `o.status not in ('cancelled','abandoned') and o.payment_status not in ('failed','cancelled')`
@@ -116,6 +128,18 @@ export const promoCodes = {
     if (!c.active) return { ok: false, problem: 'inactive' }
     if (c.startsAt && now < c.startsAt) return { ok: false, problem: 'not_started' }
     if (c.endsAt && now >= c.endsAt) return { ok: false, problem: 'expired' }
+    if (c.restrictedEmail) {
+      // A personal code: only its own address (checked again in the order, where the address is known), and
+      // never after that address bought anything since the code was made.
+      const email = (opts.email ?? '').trim().toLowerCase()
+      if (email && email !== c.restrictedEmail) return { ok: false, problem: 'other_email' }
+      const bought = await q.query(`select 1 from orders o where o.email = $1 and o.created_at > $2 and ${STANDING} and not exists (select 1 from promo_redemptions r where r.order_id = o.id and r.code = $3) limit 1`, [
+        c.restrictedEmail,
+        c.createdAt,
+        c.code,
+      ])
+      if (bought.rows.length) return { ok: false, problem: 'inactive' }
+    }
     if (c.maxUses != null || (c.oncePerEmail && opts.email)) {
       const u = await promoCodes.uses(q, c.code, opts.email)
       if (c.maxUses != null && u.total >= c.maxUses) return { ok: false, problem: 'used_up' }
@@ -134,12 +158,12 @@ export const promoCodes = {
        from promo_codes c left join (
          select r.code, count(*) as uses, sum(r.discount_minor) as discount, sum(o.total_minor) as revenue
          from promo_redemptions r join orders o on o.id = r.order_id where ${STANDING} group by r.code
-       ) u on u.code = c.code order by c.active desc, c.created_at desc`,
+       ) u on u.code = c.code where c.lead_id is null and c.restricted_email is null order by c.active desc, c.created_at desc`,
     )
     return rows.map((r) => ({ ...toCode(r), uses: Number(r.uses), discountMinor: Number(r.discount), revenueMinor: Number(r.revenue) }))
   },
 
-  async create(q: Queryable, c: Omit<PromoCode, 'createdAt' | 'active'>) {
+  async create(q: Queryable, c: Omit<PromoCode, 'createdAt' | 'active' | 'exclusive' | 'leadId' | 'restrictedEmail'>) {
     const { rows } = await q.query(
       `insert into promo_codes (code, kind, value, products, min_order_minor, starts_at, ends_at, max_uses, once_per_email, note)
        values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) on conflict (code) do nothing returning code`,

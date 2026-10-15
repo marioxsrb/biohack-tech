@@ -17,14 +17,19 @@ import type { Queryable, Row } from '@/server/db'
 import { ElevenLabsError, elevenlabs, type Conversation } from '@/server/integrations/elevenlabs'
 import { jobs } from '@/server/jobs/outbox'
 import { CART_INTEREST, leads, type Lead } from '@/server/leads'
+import { withdrawAllMarketing } from '@/server/marketing/unsubscribe'
 import { log } from '@/server/log'
 import { marketing } from '@/server/marketing/consent'
 import { callConsent } from './consent'
+import { callScenario, firstCallDelay, type CallScenario } from './delay'
+import { cartTotal, describeItems, lei, openingLine, prepareOffer, RECOVERY_PERCENT, formatExpiry, type OfferEmailStatus } from './offer'
 
 /** What a call ended with. The first four come from the conversation, the rest from the line. */
 export const CALL_OUTCOMES = ['interested', 'more_info', 'human_follow_up', 'not_interested', 'opted_out', 'no_answer', 'busy', 'invalid_number', 'technical_failure'] as const
 export type CallOutcome = (typeof CALL_OUTCOMES)[number]
 
+/** Outcomes of a real conversation: the person is never called again for another lead. */
+const TALKED: CallOutcome[] = ['interested', 'more_info', 'human_follow_up', 'not_interested', 'opted_out']
 /** Outcomes after which another attempt makes sense (nobody really talked). */
 const RETRYABLE: CallOutcome[] = ['no_answer', 'busy', 'technical_failure']
 /** One sequence per person in this window. */
@@ -46,8 +51,20 @@ export type Call = {
   startedAt: Date | null
   endedAt: Date | null
   durationSecs: number | null
+  funnel: string | null
+  scenario: CallScenario | null
+  /** What the call was about, in words ("2 × NEUROS Calm"), as told to the agent. */
+  productInterest: string | null
+  /** The personal recovery code offered (made by the server, never by the agent). */
+  discountCode: string | null
+  emailStatus: OfferEmailStatus | null
+  /** What the agent recorded during the call (tool), before the post-call report. */
+  agentOutcome: string | null
+  followUpReason: string | null
   createdAt: Date
 }
+
+export { callScenario, firstCallDelay, type CallScenario } from './delay'
 
 const dt = (v: unknown) => (v ? new Date(v as string) : null)
 const toCall = (r: Row): Call => ({
@@ -66,6 +83,13 @@ const toCall = (r: Row): Call => ({
   startedAt: dt(r.started_at),
   endedAt: dt(r.ended_at),
   durationSecs: r.duration_secs == null ? null : Number(r.duration_secs),
+  funnel: (r.funnel as string) ?? null,
+  scenario: (r.scenario as CallScenario) ?? null,
+  productInterest: (r.product_interest as string) ?? null,
+  discountCode: (r.discount_code as string) ?? null,
+  emailStatus: (r.email_status as OfferEmailStatus) ?? null,
+  agentOutcome: (r.agent_outcome as string) ?? null,
+  followUpReason: (r.follow_up_reason as string) ?? null,
   createdAt: new Date(r.created_at as string),
 })
 
@@ -134,6 +158,8 @@ export type CallFacts = {
   superseded: boolean
   /** Another lead of the same person was called recently, or an older one still has its call to come. */
   otherCall: boolean
+  /** This number or address already had a real conversation with the agent (any lead, any time). */
+  talkedBefore: boolean
 }
 
 export type CallCheck = { call: true; phone: string } | { call: false; reason: string; status?: 'stopped' | 'disabled'; later?: Date }
@@ -154,8 +180,10 @@ export function callDecision(lead: Lead, ctx: { attempt: number; now: Date; call
   if (!leadProduct(lead)) return { call: false, reason: 'no product to talk about', status: 'stopped' }
   if (ctx.superseded) return { call: false, reason: 'went on to the checkout' }
   if (ctx.otherCall) return { call: false, reason: 'another call for this person', status: 'stopped' }
+  if (ctx.talkedBefore) return { call: false, reason: 'already talked to the agent', status: 'stopped' }
+  if (c.testMode && !c.testNumbers) return { call: false, reason: 'test mode without test numbers', status: 'disabled' }
   if (c.testNumbers && !c.testNumbers.includes(ctx.phone)) return { call: false, reason: 'calling in test mode', status: 'disabled' }
-  const quietUntil = lead.lastActivityAt.getTime() + c.firstDelayMinutes * 60_000
+  const quietUntil = lead.lastActivityAt.getTime() + firstCallDelay(lead, c, ctx.phone) * 60_000
   if (ctx.attempt === 1 && ctx.now.getTime() < quietUntil) return { call: false, reason: 'still active', later: nextCallingWindow(new Date(quietUntil), c) }
   if (!inCallingWindow(ctx.now, c)) return { call: false, reason: 'outside calling hours', later: nextCallingWindow(ctx.now, c) }
   return { call: true, phone: ctx.phone }
@@ -163,7 +191,7 @@ export function callDecision(lead: Lead, ctx: { attempt: number; now: Date; call
 
 export async function callFacts(q: Queryable, lead: Lead): Promise<CallFacts> {
   const phone = romanianE164(lead.phone)
-  const [consent, mkt, conv, sup, other] = await Promise.all([
+  const [consent, mkt, conv, sup, other, talked] = await Promise.all([
     phone ? callConsent.state(q, phone) : null,
     marketing.state(q, lead.email),
     q.query(
@@ -182,6 +210,10 @@ export async function callFacts(q: Queryable, lead: Lead): Promise<CallFacts> {
        limit 1`,
       [phone ?? '', lead.id, new Date(Date.now() - CALL_PERSON_DAYS * 86_400_000), lead.email, lead.createdAt],
     ),
+    q.query(
+      `select 1 from calls c join leads l on l.id = c.lead_id where (c.phone = $1 or l.email = $2) and c.status = 'completed' and c.outcome = any($3::text[]) limit 1`,
+      [phone ?? '', lead.email, TALKED],
+    ),
   ])
   return {
     phone,
@@ -190,6 +222,7 @@ export async function callFacts(q: Queryable, lead: Lead): Promise<CallFacts> {
     converted: conv.rows.length > 0,
     superseded: sup.rows.length > 0,
     otherCall: other.rows.length > 0,
+    talkedBefore: talked.rows.length > 0,
   }
 }
 
@@ -197,16 +230,28 @@ export async function callFacts(q: Queryable, lead: Lead): Promise<CallFacts> {
 
 export type StepResult = { skip: string } | { note: string }
 
-/** What the agent is told about this lead (first name and product only: no email, no address). */
-export function callVariables(lead: Lead, callId: string, productUrl: string) {
-  const p = leadProduct(lead)!
+/**
+ * What the agent is told about this lead: first name, the products (and, for a checkout, quantities and total at
+ * today's prices), the offer the server made and whether its email went out. No email address, no street address.
+ */
+export function callVariables(lead: Lead, callId: string, offer: { code: string; expires: Date; emailStatus: OfferEmailStatus; link: string } | null) {
+  const items = describeItems(lead)
+  const scenario = callScenario(lead)
+  const firstName = lead.name?.split(' ')[0]?.slice(0, 40) ?? ''
   return {
     call_id: callId,
-    customer_first_name: lead.name?.split(' ')[0]?.slice(0, 40) ?? '',
-    product_name: p.name,
-    product_id: p.id,
-    product_url: productUrl,
-    funnel: lead.funnel,
+    opening_line: openingLine({ firstName, cart: scenario === 'cart', productNames: items.names }),
+    customer_first_name: firstName,
+    funnel_type: lead.funnel,
+    abandonment_type: scenario === 'cart' ? 'cos_nefinalizat' : 'oferta_solicitata',
+    product_names: items.names,
+    product_quantities: scenario === 'cart' ? items.quantities : '',
+    cart_total: lei(cartTotal(lead)),
+    recovery_discount_percent: offer ? RECOVERY_PERCENT : 0,
+    recovery_code: offer?.code ?? '',
+    recovery_expiration: offer ? formatExpiry(offer.expires) : '',
+    checkout_recovery_url: offer?.link ?? '',
+    recovery_email_sent: offer?.emailStatus === 'sent' ? 'da' : 'nu',
   }
 }
 
@@ -216,7 +261,7 @@ export function productUrlFor(lead: Lead, c: Pick<Config, 'siteUrl'>, gatedOrigi
 }
 
 /** One `call.attempt` job: decide, record the attempt, place the call (or pretend to, in dry run). */
-export async function runCallAttempt(q: Queryable, c: Config, payload: { leadId: string; attempt: number }, gatedOrigin: string, dedupeKey: string): Promise<StepResult> {
+export async function runCallAttempt(q: Queryable, c: Config, payload: { leadId: string; attempt: number }, dedupeKey: string): Promise<StepResult> {
   const lead = await leads.byId(q, payload.leadId)
   if (!lead) return { skip: 'lead gone' }
   const attempt = Math.max(1, Math.floor(payload.attempt))
@@ -231,13 +276,19 @@ export async function runCallAttempt(q: Queryable, c: Config, payload: { leadId:
   }
   const id = randomUUID()
   const product = leadProduct(lead)!
+  const items = describeItems(lead)
   const { rows } = await q.query(
-    `insert into calls (id, lead_id, phone, product_id, attempt, status, provider) values ($1, $2, $3, $4, $5, 'scheduled', $6)
+    `insert into calls (id, lead_id, phone, product_id, attempt, status, provider, funnel, scenario, product_interest) values ($1, $2, $3, $4, $5, 'scheduled', $6, $7, $8, $9)
      on conflict (lead_id, attempt) do nothing returning id`,
-    [id, lead.id, d.phone, product.id, attempt, c.calling.provider],
+    [id, lead.id, d.phone, product.id, attempt, c.calling.provider, lead.funnel, callScenario(lead), ((callScenario(lead) === 'cart' && items.quantities) || items.names).slice(0, 300)],
   )
   if (!rows.length) return { skip: `attempt ${attempt} already recorded` }
   await leads.update(q, lead.id, { call_attempts: attempt, last_call_at: now })
+  // The offer exists before the phone rings: the agent only repeats what the server made and sent.
+  const prepared = await prepareOffer(q, c, lead, { dryRun: c.calling.dryRun })
+  // A later attempt after the code's 24 hours: no offer at all (the agent offers no discount without a code).
+  const offer = prepared.code.endsAt && prepared.code.endsAt.getTime() > now.getTime() + 30 * 60_000 ? prepared : null
+  await calls.update(q, id, { discount_code: offer?.code.code ?? null, email_status: offer?.emailStatus ?? 'not_sent' })
 
   if (c.calling.dryRun) {
     await calls.update(q, id, { status: 'dry_run', started_at: now })
@@ -252,7 +303,7 @@ export async function runCallAttempt(q: Queryable, c: Config, payload: { leadId:
   }
   await calls.update(q, id, { status: 'dialing', started_at: now })
   try {
-    const r = await elevenlabs.outboundCall(c.elevenlabs, d.phone, callVariables(lead, id, productUrlFor(lead, c, gatedOrigin)))
+    const r = await elevenlabs.outboundCall(c.elevenlabs, d.phone, callVariables(lead, id, offer && { code: offer.code.code, expires: offer.code.endsAt!, emailStatus: offer.emailStatus, link: offer.link }))
     if (!r.success || !r.conversation_id) throw new ElevenLabsError(`ElevenLabs refused the call: ${r.message}`.slice(0, 300), 200)
     await calls.update(q, id, { provider_call_id: r.conversation_id, provider_call_sid: r.callSid })
     await leads.update(q, lead.id, { call_status: 'dialing' })
@@ -287,6 +338,8 @@ export type CallResultInput = {
   startedAt?: Date | null
   durationSecs?: number | null
   error?: string | null
+  /** The outcome was inferred (the agent recorded none in its report). */
+  outcomeGuessed?: boolean
 }
 
 /**
@@ -296,12 +349,15 @@ export type CallResultInput = {
  */
 export async function applyCallResult(q: Queryable, c: Config, call: Call, r: CallResultInput): Promise<boolean> {
   if (call.status === 'completed' || (call.status === 'failed' && call.outcome)) return false
-  const optedOut = !!r.optedOut || r.outcome === 'opted_out'
+  // What the agent recorded during the call (tools) counts too, when the post-call report says less.
+  const outcome: CallOutcome = r.status === 'completed' && r.outcomeGuessed && call.agentOutcome && (CALL_OUTCOMES as readonly string[]).includes(call.agentOutcome) ? (call.agentOutcome as CallOutcome) : r.outcome
+  r = { ...r, outcome }
+  const optedOut = !!r.optedOut || r.outcome === 'opted_out' || call.optedOut
   const ended = r.startedAt && r.durationSecs != null ? new Date(r.startedAt.getTime() + r.durationSecs * 1000) : new Date()
   await calls.update(q, call.id, {
     status: r.status,
     outcome: r.outcome,
-    follow_up: !!r.followUp || r.outcome === 'human_follow_up',
+    follow_up: !!r.followUp || r.outcome === 'human_follow_up' || call.followUp,
     opted_out: optedOut,
     wants_link: !!r.wantsLink,
     error: r.error?.slice(0, 300) ?? null,
@@ -311,8 +367,8 @@ export async function applyCallResult(q: Queryable, c: Config, call: Call, r: Ca
   })
   const lead = await leads.byId(q, call.leadId)
   if (!lead) return true
-  if (optedOut && (await callConsent.withdraw(q, { phone: call.phone, email: lead.email, source: 'call', leadId: lead.id })) && c.ghl)
-    await jobs.enqueue(q, { kind: 'marketing.sync', dedupeKey: `marketing.sync:call-withdrawn:${call.id}`, payload: { email: lead.email } })
+  // A refusal of further contact stops every commercial contact: calls (this number) and marketing email.
+  if (optedOut) await optOut(q, c, call, lead)
   let status = 'completed'
   if (optedOut || r.outcome === 'not_interested' || r.outcome === 'invalid_number') status = 'stopped'
   else if (RETRYABLE.includes(r.outcome)) {
@@ -324,6 +380,7 @@ export async function applyCallResult(q: Queryable, c: Config, call: Call, r: Ca
   }
   await leads.update(q, lead.id, { call_status: status, call_outcome: r.outcome })
   if (c.ghl) await jobs.enqueue(q, { kind: 'ghl.call', dedupeKey: `ghl.call:${call.id}`, payload: { callId: call.id } })
+  if (r.followUp || r.outcome === 'human_follow_up') await jobs.enqueue(q, { kind: 'call.notify', dedupeKey: `call.notify:${call.id}`, payload: { callId: call.id } })
   if (r.wantsLink && !optedOut) await jobs.enqueue(q, { kind: 'call.link', dedupeKey: `call.link:${call.id}`, payload: { callId: call.id } })
   return true
 }
@@ -339,6 +396,7 @@ export function resultFromConversation(conv: Pick<Conversation, 'metadata' | 'an
   return {
     status: 'completed',
     outcome,
+    outcomeGuessed: !(CALL_OUTCOMES as readonly string[]).includes(raw) && !map[raw],
     followUp: asBool(dc.follow_up_required?.value),
     optedOut: asBool(dc.opted_out?.value),
     wantsLink: asBool(dc.wants_link?.value),
@@ -377,4 +435,48 @@ export function renderCallLink(x: { firstName: string | null; productName: strin
     .map((l) => (l === x.link ? `<p><a href="${esc(l)}" style="color:#0b1316;font-weight:600">${esc(x.productName)}</a></p>` : `<p style="font-size:16px;line-height:1.5">${esc(l)}</p>`))
     .join('')}${x.company ? `<p style="font-size:12px;color:#5a6870">${esc(x.company)}</p>` : ''}</div></body></html>`
   return { subject, text, html }
+}
+
+/** The person refused further contact: the number's call consent and the address's email marketing are withdrawn. */
+export async function optOut(q: Queryable, c: Config, call: Pick<Call, 'id' | 'phone'>, lead: Pick<Lead, 'id' | 'email'>) {
+  const calls1 = await callConsent.withdraw(q, { phone: call.phone, email: lead.email, source: 'call', leadId: lead.id })
+  const changed = await withdrawAllMarketing(q, lead.email, 'call')
+  await q.query("update leads set recovery_status = 'stopped', recovery_reason = 'opted out by phone', updated_at = now() where email = $1 and recovery_status <> 'stopped'", [lead.email])
+  if ((calls1 || changed) && c.ghl) await jobs.enqueue(q, { kind: 'marketing.sync', dedupeKey: `marketing.sync:call-withdrawn:${call.id}`, payload: { email: lead.email } })
+  return calls1 || changed
+}
+
+const OUTCOME_RO: Record<string, string> = {
+  interested: 'interesat',
+  more_info: 'vrea informații',
+  human_follow_up: 'a cerut un om',
+  not_interested: 'nu e interesat',
+  opted_out: 'a refuzat contactul',
+  no_answer: 'nu a răspuns',
+  busy: 'ocupat',
+  invalid_number: 'număr greșit',
+  technical_failure: 'eroare tehnică',
+}
+export const outcomeLabel = (o: string | null) => (o ? (OUTCOME_RO[o] ?? o) : '')
+
+/** For orders@: a call that needs a person. Plain text, the same facts /admin shows (no transcript). */
+export function renderCallFollowUp(x: { call: Call; lead: Lead; adminUrl: string }) {
+  const name = x.lead.name ?? x.lead.email
+  const subject = `Apel AI: ${name} așteaptă un coleg`
+  const lines = [
+    `${name} a vorbit cu asistentul AI și trebuie contactat de un om.`,
+    '',
+    `Telefon: ${x.call.phone}`,
+    `Email: ${x.lead.email}`,
+    `Interes: ${x.call.productInterest ?? ''}`,
+    `Funnel: ${x.call.funnel === 'gated_price' ? 'acces (preț ascuns)' : 'site (preț vizibil)'}`,
+    `Rezultat: ${outcomeLabel(x.call.outcome ?? x.call.agentOutcome)}`,
+    ...(x.call.followUpReason ? [`Motiv: ${x.call.followUpReason}`] : []),
+    ...(x.call.discountCode ? [`Cod oferit: ${x.call.discountCode} (email: ${x.call.emailStatus ?? '-'})`] : []),
+    '',
+    `Detalii: ${x.adminUrl}`,
+  ]
+  const text = lines.join('\n')
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  return { subject, text, html: `<pre style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;font-size:14px;white-space:pre-wrap">${esc(text)}</pre>` }
 }

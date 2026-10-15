@@ -24,7 +24,18 @@ export type AppliedPromotion = { id: string; label: string; amountMinor: number 
  *   percent: `value` percent (1–90) of the eligible full price; fixed: `value` bani. Never more than what is left.
  *   products: the eligible products (null: all). minOrderMinor: the cart after automatic promotions must reach it.
  */
-export type PromoCodeRule = { code: string; kind: 'percent' | 'fixed'; value: number; products: string[] | null; minOrderMinor: number }
+export type PromoCodeRule = {
+  code: string
+  kind: 'percent' | 'fixed'
+  value: number
+  products: string[] | null
+  minOrderMinor: number
+  /**
+   * Not combined with the automatic promotions (the AI call recovery codes): the cart gets either the
+   * promotions or the code on the full price, whichever saves more; a code that saves no more is refused.
+   */
+  exclusive?: boolean
+}
 
 /** The applied id of a promo code (`cod:VARA10`), and whether an applied id is one. */
 export const codeId = (code: string) => `cod:${code}`
@@ -43,7 +54,7 @@ export type Pricing = {
   /** Line key → the promo code's share of the line's discount (already included in `lineDiscounts`). */
   lineCodeDiscounts: Record<string, number>
   /** The code applied, or why it did not lower anything ('min_order' | 'no_products'). */
-  code?: { code: string; amountMinor: number; problem?: 'min_order' | 'no_products' }
+  code?: { code: string; amountMinor: number; problem?: 'min_order' | 'no_products' | 'not_better' }
 }
 
 /**
@@ -120,6 +131,13 @@ function applyOne(p: Promotion, lines: PricedLine[]): Applied[] {
 }
 
 export function priceLines(lines: PricedLine[], promotions: Promotion[] = PROMOTIONS, promo?: PromoCodeRule | null): Pricing {
+  if (promo?.exclusive) {
+    // The better of the two, never both: the promotions alone, or the code alone on the full price.
+    const auto = priceLines(lines, promotions)
+    const alone = priceLines(lines, [], { ...promo, exclusive: false })
+    if (alone.code?.problem) return { ...auto, code: alone.code }
+    return alone.discountMinor > auto.discountMinor ? alone : { ...auto, code: { code: promo.code, amountMinor: 0, problem: 'not_better' } }
+  }
   const subtotalMinor = lines.reduce((s, l) => s + l.unitAmount * l.quantity, 0)
   const applied: AppliedPromotion[] = []
   const lineDiscounts: Record<string, number> = {}

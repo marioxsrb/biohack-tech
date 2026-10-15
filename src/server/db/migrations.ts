@@ -416,4 +416,22 @@ alter table orders add column if not exists promo_code text;
 alter table order_items add column if not exists code_discount_minor integer not null default 0
 `,
   },
+  {
+    // AI call recovery: a unique, single-use 10% code per called lead (not combined with the automatic
+    // promotions), and what each call offered, sent and heard (no transcript).
+    id: '012_call_recovery',
+    sql: `
+alter table promo_codes add column if not exists exclusive boolean not null default false;
+alter table promo_codes add column if not exists lead_id uuid references leads(id) on delete set null;
+alter table promo_codes add column if not exists restricted_email text;
+create unique index if not exists promo_codes_lead_idx on promo_codes (lead_id) where lead_id is not null;
+alter table calls add column if not exists funnel text;
+alter table calls add column if not exists scenario text;
+alter table calls add column if not exists product_interest text;
+alter table calls add column if not exists discount_code text;
+alter table calls add column if not exists email_status text;
+alter table calls add column if not exists agent_outcome text;
+alter table calls add column if not exists follow_up_reason text
+`,
+  },
 ]
