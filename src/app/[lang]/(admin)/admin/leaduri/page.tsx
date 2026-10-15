@@ -44,7 +44,7 @@ const OUTCOME: Record<string, string> = {
   not_interested: 'nu e interesat',
   opted_out: 'a refuzat contactul',
   no_answer: 'nu a răspuns',
-  busy: 'ocupat',
+  busy: 'respins sau ocupat',
   invalid_number: 'număr greșit',
   technical_failure: 'eroare tehnică',
 }

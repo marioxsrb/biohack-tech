@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { isGatedHost, normalizeContact, validateContact } from '@/lib/lead'
+import { normalizeContact, validateContact } from '@/lib/lead'
 import { getDb } from '@/server/db'
 import { kickJobs } from '@/server/jobs/runner'
 import { errText, log } from '@/server/log'
@@ -8,9 +8,8 @@ import { welcomeSignup } from '@/server/welcome'
 
 export const runtime = 'nodejs'
 
-/** The website's 10% popup: the address gets the code by email (server/welcome.ts). Not on acces. */
+/** The website's 10% popup (main site, landings, and acces once the price is unlocked): the code by email. */
 export async function POST(req: NextRequest) {
-  if (isGatedHost(req.headers.get('host'))) return NextResponse.json({ error: 'UNAVAILABLE' }, { status: 404 })
   if (!rateLimit(`welcome:${clientIp(req.headers)}`, 10, 60 * 60_000)) return NextResponse.json({ error: 'RATE_LIMIT', message: 'Prea multe încercări. Încearcă mai târziu.' }, { status: 429 })
   const raw = await req.text()
   if (raw.length > 2_000) return NextResponse.json({ error: 'TOO_LARGE' }, { status: 413 })

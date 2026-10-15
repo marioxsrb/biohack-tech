@@ -160,11 +160,10 @@ export function describeItems(lead: Pick<Lead, 'productId' | 'variantId' | 'cart
 export const lei = (minor: number | null) => (minor === null ? '' : formatLei(minor))
 
 /** The agent's first sentence, per call: the AI disclosure, the reason for the call, and the question. */
-export function openingLine(x: { firstName: string; cart: boolean; productNames: string }) {
-  const hello = x.firstName ? `Bună ziua, ${x.firstName}!` : 'Bună ziua!'
-  const why = x.cart
-    ? 'Vă contactez în legătură cu o comandă începută pe site-ul nostru, care a rămas nefinalizată.'
-    : `Ați solicitat recent oferta pentru ${x.productNames || 'produsele noastre'} și voiam să vă întreb dacă vă pot ajuta cu vreo informație.`
-  // The company name spelled the Romanian way, so the Romanian voice does not switch to an English accent.
-  return `${hello} Sunt asistentul cu inteligență artificială al Baiohec Tec. ${why} Aveți un minut?`
+export function openingLine(x: { firstName: string; cart: boolean; productNames: string; at?: Date }) {
+  // "Bună ziua" until 18:00, "Bună seara" after, in Bucharest time. The company name spelled the Romanian way,
+  // so the Romanian voice does not switch to an English accent. The AI disclosure stays (EU AI Act, art. 50).
+  const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Bucharest', hour: '2-digit', hourCycle: 'h23' }).format(x.at ?? new Date()))
+  const hello = hour >= 18 || hour < 5 ? 'Bună seara!' : 'Bună ziua!'
+  return `${hello} Numele meu este Maria, sunt asistentul virtual al Baiohec Tec. Aveți un minut la dispoziție?`
 }
