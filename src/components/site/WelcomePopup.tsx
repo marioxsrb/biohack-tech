@@ -1,11 +1,13 @@
 'use client'
 
+import Image from 'next/image'
 import Link from '@/components/ui/Link'
 import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Close } from '@/components/ui/icons'
 import { useLocale } from '@/i18n/LocaleProvider'
 import { WELCOME_CONSENT_TEXT, WELCOME_CONSENT_TEXT_EN } from '@/lib/consent/marketing'
+import { getProduct } from '@/content/catalog'
 
 /** 40 seconds on the site (anywhere, across pages of the same visit) before the offer shows. */
 const AFTER_MS = 40_000
@@ -18,8 +20,12 @@ const HIDDEN = /\/(checkout|cart|admin|dezabonare|reluare|retragere)(\/|$)/
 
 const COPY = {
   ro: {
-    title: '10% reducere la comanda ta',
-    lead: 'Lasă-ne adresa de email și îți trimitem imediat codul.',
+    badge: '−10%',
+    kicker: 'Doar pentru tine',
+    title: '10% reducere la prima comandă',
+    lead: 'Lasă-ne adresa de email și îți trimitem imediat codul. Se adaugă peste ofertele din coș.',
+    noThanks: 'Nu, mulțumesc',
+    continue: 'Continuă pe site',
     placeholder: 'Adresa ta de email',
     send: 'Trimite-mi codul',
     sending: 'Se trimite…',
@@ -31,8 +37,12 @@ const COPY = {
     failed: 'Nu am putut trimite codul. Încearcă din nou.',
   },
   en: {
-    title: '10% off your order',
-    lead: 'Leave us your email address and we will send you the code right away.',
+    badge: '−10%',
+    kicker: 'Just for you',
+    title: '10% off your first order',
+    lead: 'Leave us your email address and we will send you the code right away. It adds to the offers in your cart.',
+    noThanks: 'No, thanks',
+    continue: 'Back to the site',
     placeholder: 'Your email address',
     send: 'Send me the code',
     sending: 'Sending…',
@@ -59,9 +69,10 @@ const write = (k: string, v: string) => {
 }
 
 /**
- * The website's 10% offer: a small card (bottom left on desktop, bottom on phones) after a minute on the main site
- * or a landing, never on acces (prices behind the form) and never in the cart, checkout or admin. It never takes
- * focus or blocks the page. The address gets LONGEVITY10 by email (/api/welcome).
+ * The website's 10% offer: a centred window over the dimmed page (a large card at the bottom on phones), with a
+ * product photo, after 40 seconds anywhere on the main site or a landing; never on acces (prices behind the form),
+ * in the cart, checkout or admin, nor over the cookie choice. Escape, a click outside or "Nu, mulțumesc" close it
+ * for a week. The address gets LONGEVITY10 by email (/api/welcome).
  */
 export function WelcomePopup() {
   const locale = useLocale()
@@ -72,6 +83,7 @@ export function WelcomePopup() {
   const [state, setState] = useState<'idle' | 'busy' | 'done' | 'already' | 'error'>('idle')
   const [error, setError] = useState('')
   const hiddenHere = HIDDEN.test(pathname)
+  const photo = getProduct('brainlink-pro', locale)!.lifestyle
 
   useEffect(() => {
     // acces.<domain>: prices are behind the form there (same test as the gate's pre-paint script).
@@ -91,6 +103,17 @@ export function WelcomePopup() {
     timer = setTimeout(show, Math.max(0, start + AFTER_MS - Date.now()))
     return () => clearTimeout(timer)
   }, [hiddenHere])
+
+  // While the window is open the page behind does not scroll.
+  useEffect(() => {
+    if (!open || hiddenHere) return
+    const html = document.documentElement
+    const before = html.style.overflow
+    html.style.overflow = 'hidden'
+    return () => {
+      html.style.overflow = before
+    }
+  }, [open, hiddenHere])
 
   if (!open || hiddenHere) return null
 
@@ -126,59 +149,77 @@ export function WelcomePopup() {
   }
 
   return (
-    <div
-      role="dialog"
-      aria-modal="false"
-      aria-labelledby="welcome-title"
-      className="added-popup fixed z-[250] w-[min(360px,calc(100vw-2*var(--gut)))] rounded-[20px] bg-paper p-5 shadow-[0_24px_60px_-20px_rgba(8,17,19,.35),0_0_0_1px_rgba(8,17,19,.06)] md:bottom-6 md:left-6 max-md:inset-x-[var(--gut)] max-md:bottom-[max(12px,env(safe-area-inset-bottom))] max-md:w-auto"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <p id="welcome-title" className="text-[18px] leading-snug font-semibold tracking-[-0.01em] text-ink">
-          {t.title}
-        </p>
-        <button type="button" onClick={close} aria-label={t.close} className="-mt-1.5 -mr-2 flex h-10 w-10 flex-none items-center justify-center rounded-full text-muted transition-colors hover:bg-mist hover:text-ink">
-          <Close className="h-4 w-4" />
-        </button>
-      </div>
-      {state === 'done' || state === 'already' ? (
-        <p className="mt-2 text-[15px] leading-snug text-text" role="status">
-          {state === 'already' ? t.already : t.done}
-        </p>
-      ) : (
-        <form onSubmit={submit} noValidate className="mt-1.5">
-          <p className="text-[14.5px] leading-snug text-text">{t.lead}</p>
-          <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
-          <label className="sr-only" htmlFor="welcome-email">
-            {t.placeholder}
-          </label>
-          <input
-            id="welcome-email"
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder={t.placeholder}
-            aria-invalid={state === 'error'}
-            aria-describedby={state === 'error' ? 'welcome-error' : undefined}
-            className="mt-3 h-12 w-full rounded-[12px] bg-paper px-3.5 text-[16px] text-ink shadow-[inset_0_0_0_1px_var(--color-line)] outline-none focus:shadow-[inset_0_0_0_2px_var(--color-ink)]"
-          />
-          {state === 'error' && (
-            <p id="welcome-error" className="mt-1.5 text-[13.5px] text-red-deep">
-              {error}
-            </p>
-          )}
-          <button type="submit" disabled={state === 'busy'} className="cta mt-2.5 w-full">
-            {state === 'busy' ? t.sending : t.send}
+    <div className="welcome-in fixed inset-0 z-[280] flex items-center justify-center p-4 max-sm:items-end max-sm:p-3" onKeyDown={(e) => e.key === 'Escape' && close()}>
+      {/* The page behind, dimmed: a click outside closes the offer. */}
+      <button type="button" aria-label={t.close} tabIndex={-1} onClick={close} className="absolute inset-0 cursor-default bg-[rgb(8_17_19/0.7)] backdrop-blur-[3px]" />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="welcome-title"
+        className="relative grid w-full max-w-[880px] overflow-hidden rounded-[24px] bg-paper shadow-[0_40px_100px_-30px_rgba(0,0,0,.6)] sm:grid-cols-[1fr_1.1fr]"
+      >
+        <div className="relative min-h-[440px] bg-ink max-sm:min-h-[170px]">
+          <Image src={photo.src} alt="" fill sizes="(max-width: 640px) 100vw, 360px" className="object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-t from-[rgb(8_17_19/0.75)] via-transparent to-transparent sm:bg-gradient-to-r sm:from-transparent sm:to-[rgb(8_17_19/0.15)]" />
+          <span className="absolute bottom-4 left-4 rounded-full bg-red-dark px-4 py-2 text-[18px] font-extrabold tracking-[0.04em] text-white uppercase sm:top-4 sm:bottom-auto">
+            {t.badge}
+          </span>
+        </div>
+        <div className="flex flex-col justify-center p-9 max-sm:p-5">
+          <button type="button" onClick={close} aria-label={t.close} className="absolute top-3 right-3 flex h-10 w-10 items-center justify-center rounded-full bg-paper/90 text-ink shadow-[0_0_0_1px_rgba(8,17,19,.08)] transition-colors hover:bg-mist">
+            <Close className="h-4 w-4" />
           </button>
-          <p className="mt-2.5 text-[12px] leading-snug text-muted">
-            {locale === 'en' ? WELCOME_CONSENT_TEXT_EN : WELCOME_CONSENT_TEXT}{' '}
-            <Link href="/privacy-policy" target="_blank" className="underline underline-offset-2 hover:text-ink">
-              {t.privacy}
-            </Link>
+          <p className="text-[13px] font-semibold tracking-[0.12em] text-cyan-700 uppercase">{t.kicker}</p>
+          <p id="welcome-title" className="mt-2 text-[42px] leading-[1.02] font-semibold tracking-[-0.035em] text-ink max-sm:text-[30px]">
+            {t.title}
           </p>
-        </form>
-      )}
+          {state === 'done' || state === 'already' ? (
+            <div role="status" className="mt-4">
+              <p className="text-[16px] leading-snug text-text">{state === 'already' ? t.already : t.done}</p>
+              <button type="button" onClick={close} className="cta mt-5 w-full">
+                {t.continue}
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={submit} noValidate className="mt-3">
+              <p className="text-[16px] leading-snug text-text">{t.lead}</p>
+              <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
+              <label className="sr-only" htmlFor="welcome-email">
+                {t.placeholder}
+              </label>
+              <input
+                id="welcome-email"
+                type="email"
+                inputMode="email"
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t.placeholder}
+                aria-invalid={state === 'error'}
+                aria-describedby={state === 'error' ? 'welcome-error' : undefined}
+                className="mt-4 h-[52px] w-full rounded-[14px] bg-paper px-4 text-[16px] text-ink shadow-[inset_0_0_0_1.5px_var(--color-line)] outline-none focus:shadow-[inset_0_0_0_2px_var(--color-ink)]"
+              />
+              {state === 'error' && (
+                <p id="welcome-error" className="mt-1.5 text-[13.5px] text-red-deep">
+                  {error}
+                </p>
+              )}
+              <button type="submit" disabled={state === 'busy'} className="cta mt-3 w-full">
+                {state === 'busy' ? t.sending : t.send}
+              </button>
+              <button type="button" onClick={close} className="mt-2 w-full py-2 text-[14px] text-muted underline underline-offset-4 hover:text-ink">
+                {t.noThanks}
+              </button>
+              <p className="mt-2 text-[11.5px] leading-snug text-faint">
+                {locale === 'en' ? WELCOME_CONSENT_TEXT_EN : WELCOME_CONSENT_TEXT}{' '}
+                <Link href="/privacy-policy" target="_blank" className="underline underline-offset-2 hover:text-ink">
+                  {t.privacy}
+                </Link>
+              </p>
+            </form>
+          )}
+        </div>
+      </div>
     </div>
   )
 }

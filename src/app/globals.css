@@ -620,3 +620,10 @@ textarea.field { resize: vertical; }
   html, body { background: #fff !important; }
   .print-root ~ *, [data-nextjs-toast] { display: none !important; }
 }
+
+/* The website's 10% window: fades in, the card rises slightly (none with reduced motion). */
+.welcome-in { animation: welcome-fade 0.25s ease-out both; }
+.welcome-in [role='dialog'] { animation: welcome-rise 0.3s cubic-bezier(.2,.8,.2,1) both; }
+@keyframes welcome-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes welcome-rise { from { transform: translateY(14px) scale(.98); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .welcome-in, .welcome-in [role='dialog'] { animation: none; } }
