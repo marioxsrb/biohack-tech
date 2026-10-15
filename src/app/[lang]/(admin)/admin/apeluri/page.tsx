@@ -13,7 +13,15 @@ import { TestCallForm } from './TestCallForm'
 export const metadata: Metadata = { title: 'Apeluri AI' }
 
 const dt = (d: Date) => d.toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-const STATUS: Record<string, string> = { dialing: 'în curs', completed: 'încheiat', failed: 'eșuat' }
+const STATUS: Record<string, string> = { dialing: 'în curs', completed: 'încheiat', failed: 'nu s-a vorbit' }
+/** What the line reported, in words: Twilio says "busy" for a declined call too. */
+const LINE: Record<string, string> = {
+  busy: 'respins sau ocupat (persoana a închis, a respins apelul sau vorbea)',
+  'no-answer': 'nu a răspuns',
+  no_answer: 'nu a răspuns',
+  failed: 'apelul nu a putut fi inițiat',
+}
+const explain = (v: string | null) => (v ? (LINE[v] ?? LINE[v.replace('initiation failed: ', '')] ?? v) : null)
 
 /** The AI agent: numbers never to call, and test calls with an imaginary order. */
 export default async function CallsPage() {
@@ -62,9 +70,9 @@ export default async function CallsPage() {
                       {String(t.vars.product_quantities || t.vars.product_names)}
                       <span className="block text-[12.5px] text-muted">{t.scenario === 'cart' ? `coș · ${t.vars.cart_total}` : 'a cerut prețul'}</span>
                     </td>
-                    <td className="py-2">{STATUS[t.status] ?? t.status}{t.error && <span className="block text-[12.5px] text-red-deep">{t.error}</span>}</td>
+                    <td className="py-2">{STATUS[t.status] ?? t.status}</td>
                     <td className="py-2">
-                      {t.outcome ?? '–'}
+                      {explain(t.outcome) ?? explain(t.error) ?? '–'}
                       {t.agentOutcome && <span className="block text-[12.5px] text-muted">notat de agent: {t.agentOutcome}</span>}
                     </td>
                     <td className="py-2 text-right tabular-nums">{t.durationSecs != null ? `${t.durationSecs}s` : '–'}</td>

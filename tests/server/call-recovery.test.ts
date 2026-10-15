@@ -385,8 +385,11 @@ describe('the website popup: 10% by email (LONGEVITY10)', () => {
     expect(sent).toHaveLength(1)
   })
 
-  it('not on acces; a bad address is refused; a bot (hidden field) records nothing', async () => {
-    expect((await join('a@exemplu.ro', GATED)).status).toBe(404)
+  it('also from acces; a bad address is refused; a bot (hidden field) records nothing', async () => {
+    expect((await join('acces@exemplu.ro', GATED)).status).toBe(200)
+    await later()
+    expect(sent.map((m) => m.to)).toEqual(['acces@exemplu.ro'])
+    sent = []
     expect((await join('nu-e-email')).status).toBe(422)
     expect((await join('bot@exemplu.ro', MAIN, { website: 'spam' })).status).toBe(200)
     await later()

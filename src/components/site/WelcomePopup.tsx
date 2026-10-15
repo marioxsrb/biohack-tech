@@ -8,6 +8,7 @@ import { Close } from '@/components/ui/icons'
 import { useLocale } from '@/i18n/LocaleProvider'
 import { WELCOME_CONSENT_TEXT, WELCOME_CONSENT_TEXT_EN } from '@/lib/consent/marketing'
 import { getProduct } from '@/content/catalog'
+import { GATE_COOKIE } from '@/lib/lead'
 
 /** 40 seconds on the site (anywhere, across pages of the same visit) before the offer shows. */
 const AFTER_MS = 40_000
@@ -72,8 +73,8 @@ const write = (k: string, v: string) => {
 
 /**
  * The website's 10% offer: a centred window over the dimmed page (a large card at the bottom on phones), with a
- * product photo, after 40 seconds anywhere on the main site or a landing; never on acces (prices behind the form),
- * in the cart, checkout or admin, nor over the cookie choice. Escape, a click outside or "Nu, mulțumesc" close it
+ * product photo, after 40 seconds anywhere on the main site or a landing, and on acces 40 seconds after the price
+ * is unlocked (never over the price form); never in the cart, checkout or admin, nor over the cookie choice. Escape, a click outside or "Nu, mulțumesc" close it
  * for a week. The address gets LONGEVITY10 by email (/api/welcome).
  */
 export function WelcomePopup() {
@@ -88,21 +89,37 @@ export function WelcomePopup() {
   const photo = getProduct('brainlink-pro', locale)!.lifestyle
 
   useEffect(() => {
-    // acces.<domain>: prices are behind the form there (same test as the gate's pre-paint script).
-    if (hiddenHere || /^acces\./.test(location.hostname) || window.__BT_STORE__?.welcomePopup === false) return
+    if (hiddenHere || window.__BT_STORE__?.welcomePopup === false) return
     const s = read(STATE_KEY)
     if (s === 'sent' || (s && Number(s) > Date.now())) return
-    let start = 0
-    try {
-      start = Number(sessionStorage.getItem(START_KEY) ?? 0)
-      if (!start) sessionStorage.setItem(START_KEY, String((start = Date.now())))
-    } catch {
-      start = Date.now()
-    }
-    // Never on top of the cookie choice: waits until that banner is answered.
+    // acces.<domain>: only once the price is unlocked (the gate cookie), 40 seconds after that; the main site and
+    // the landings: 40 seconds after the visit's first page.
+    const gated = /^acces\./.test(location.hostname)
+    const key = gated ? `${START_KEY}-acces` : START_KEY
+    const unlocked = () => !gated || new RegExp(`(?:^|; )${GATE_COOKIE}=`).test(document.cookie)
     let timer: ReturnType<typeof setTimeout>
-    const show = () => (document.querySelector('.consent-in') ? (timer = setTimeout(show, 3000)) : setOpen(true))
-    timer = setTimeout(show, Math.max(0, start + AFTER_MS - Date.now()))
+    const startedAt = () => {
+      try {
+        const saved = Number(sessionStorage.getItem(key) ?? 0)
+        if (saved) return saved
+        const now = Date.now()
+        sessionStorage.setItem(key, String(now))
+        return now
+      } catch {
+        return Date.now()
+      }
+    }
+    // Never on top of the cookie choice or the price form: waits until both are out of the way.
+    const show = () => (document.querySelector('.consent-in') || !unlocked() ? (timer = setTimeout(show, 3000)) : setOpen(true))
+    // Still locked: check every few seconds; the 40 seconds start at the unlock.
+    const wait = () => {
+      if (!unlocked()) {
+        timer = setTimeout(wait, 2000)
+        return
+      }
+      timer = setTimeout(show, Math.max(0, startedAt() + AFTER_MS - Date.now()))
+    }
+    wait()
     return () => clearTimeout(timer)
   }, [hiddenHere])
 
