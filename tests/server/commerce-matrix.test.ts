@@ -64,8 +64,8 @@ function agreeEverywhere(o: Awaited<ReturnType<typeof buy>>, method: 'card' | 't
 const LEI = (n: number) => n * 100
 
 describe('configured prices', () => {
-  it('only Calm 6.380, Focus 790 and Amber 315 lei; NEUROS Flow has no price', () => {
-    expect(PRICES_RON).toEqual({ 'balance-wave': LEI(6380), 'brainlink-pro': LEI(790), 'ochelari-biohack': LEI(315) })
+  it('only Calm 6.380, Focus 1.800 and Amber 315 lei; NEUROS Flow has no price', () => {
+    expect(PRICES_RON).toEqual({ 'balance-wave': LEI(6380), 'brainlink-pro': LEI(1800), 'ochelari-biohack': LEI(315) })
   })
 })
 
@@ -95,7 +95,7 @@ describe('NEUROS Amber 2+1: quantities 1, 2, 3, 4, 5, 6, 8, 9', () => {
 describe('Calm, Focus: 10% for 2, 20% for 3+ of the SAME product', () => {
   const cases: [string, L, Record<number, number>][] = [
     ['Calm', { productId: 'balance-wave', quantity: 0 }, { 1: 6380, 2: 11484, 3: 15312, 4: 20416 }],
-    ['Focus', { productId: 'brainlink-pro', quantity: 0 }, { 1: 790, 2: 1422, 3: 1896, 4: 2528 }],
+    ['Focus', { productId: 'brainlink-pro', quantity: 0 }, { 1: 1800, 2: 3240, 3: 4320, 4: 5760 }],
   ]
   for (const [name, line, totals] of cases)
     for (const [q, lei] of Object.entries(totals))
@@ -107,7 +107,7 @@ describe('Calm, Focus: 10% for 2, 20% for 3+ of the SAME product', () => {
 
   it('different products never add up: 1 Calm + 1 Focus + 1 Amber = full price', async () => {
     const o = await buy([{ productId: 'balance-wave', quantity: 1 }, { productId: 'brainlink-pro', quantity: 1 }, { productId: 'ochelari-biohack', variantId: 'patrat-maro', quantity: 1 }])
-    expect([o.discountMinor, o.totalMinor]).toEqual([0, LEI(6380 + 790 + 315)])
+    expect([o.discountMinor, o.totalMinor]).toEqual([0, LEI(6380 + 1800 + 315)])
   })
 
   it('NEUROS Flow cannot be bought: every configuration, alone or next to a valid product, by any method, is refused', async () => {
@@ -123,7 +123,7 @@ describe('Calm, Focus: 10% for 2, 20% for 3+ of the SAME product', () => {
 
   it('both offers on one order, never on the same unit: 2 Calm + 3 Focus + 3 Amber', async () => {
     const o = await buy([{ productId: 'balance-wave', quantity: 2 }, { productId: 'brainlink-pro', quantity: 3 }, { productId: 'ochelari-biohack', variantId: 'patrat-negru', quantity: 3 }])
-    expect(o.totalMinor).toBe(LEI(11484 + 1896 + 630))
+    expect(o.totalMinor).toBe(LEI(11484 + 4320 + 630))
     expect(o.promotions.map((p) => p.id)).toEqual(['trei-produse-20:balance-wave', 'trei-produse-20:brainlink-pro', 'amber-2-plus-1'])
     agreeEverywhere(o, 'card')
   })
@@ -148,6 +148,6 @@ describe('the same totals for every payment method and buyer type', () => {
   it('VAT 21% is sent per line to FGO on VAT-inclusive totals', async () => {
     const o = await buy([{ productId: 'brainlink-pro', quantity: 2 }], 'transfer')
     const [line] = invoicePayload(getConfig().fgo!, o).Continut
-    expect([line.CotaTVA, line.NrProduse, line.PretTotal]).toEqual([21, 2, 1422])
+    expect([line.CotaTVA, line.NrProduse, line.PretTotal]).toEqual([21, 2, 3240])
   })
 })

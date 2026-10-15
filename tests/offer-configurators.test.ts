@@ -48,7 +48,7 @@ describe('NEUROS Amber 2+1 at any quantity', () => {
 })
 
 describe('quantity discount, per product', () => {
-  const P = { calm: 638000, focus: 79000 }
+  const P = { calm: 638000, focus: 180000 }
   it('wording at 0, 1, 2, 3 eligible units', () => {
     const b = (lines: { productId: string; quantity: number; unitAmount: number }[]) => bundleCopy(promotionProgress(lines.map((l, i) => ({ key: String(i), ...l }))).find((p) => p.kind === 'bundle_percent') ?? null)
     expect(b([]).headline).toBe('Iei 2 bucăți din același produs: 10% reducere. Iei 3: 20%.')
