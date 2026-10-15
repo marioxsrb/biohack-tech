@@ -29,7 +29,8 @@ const COPY = {
     placeholder: 'Adresa ta de email',
     send: 'Trimite-mi codul',
     sending: 'Se trimite…',
-    done: 'Gata! Verifică emailul: codul de 10% e pe drum.',
+    done: 'Gata! Ți-am trimis codul de 10% pe email. Dacă nu îl vezi în câteva minute, uită-te și în Spam sau Promoții.',
+    spamHint: 'Dacă nu găsești emailul, verifică și folderul Spam sau Promoții.',
     already: 'Pe această adresă am trimis deja codul de 10%. Caută emailul de la Biohack Tech (și în Promoții sau Spam).',
     privacy: 'Confidențialitate',
     close: 'Închide',
@@ -46,7 +47,8 @@ const COPY = {
     placeholder: 'Your email address',
     send: 'Send me the code',
     sending: 'Sending…',
-    done: 'Done! Check your email: your 10% code is on its way.',
+    done: 'Done! We sent your 10% code by email. If you do not see it within a few minutes, also check Spam or Promotions.',
+    spamHint: 'If you cannot find the email, also check your Spam or Promotions folder.',
     already: 'We already sent the 10% code to this address. Look for the Biohack Tech email (also in Promotions or Spam).',
     privacy: 'Privacy',
     close: 'Close',
@@ -207,6 +209,7 @@ export function WelcomePopup() {
               <button type="submit" disabled={state === 'busy'} className="cta mt-3 w-full">
                 {state === 'busy' ? t.sending : t.send}
               </button>
+              <p className="mt-2 text-center text-[12.5px] text-muted">{t.spamHint}</p>
               <button type="button" onClick={close} className="mt-2 w-full py-2 text-[14px] text-muted underline underline-offset-4 hover:text-ink">
                 {t.noThanks}
               </button>
