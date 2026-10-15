@@ -866,7 +866,7 @@ function SummaryLine({ line: l }: { line: ResolvedLine }) {
         </span>
       </span>
       <span className="text-[15px] font-medium text-ink tabular-nums">{formatLei(l.unit * l.quantity)}</span>
-      <LineBundle line={l} className="col-span-3 mt-3" />
+      <LineBundle line={l} placement="checkout" className="col-span-3 mt-3" />
     </li>
   )
 }

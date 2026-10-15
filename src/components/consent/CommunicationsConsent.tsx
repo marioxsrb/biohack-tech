@@ -30,7 +30,7 @@ export function CommunicationsConsent({ checked, onChange, locale = 'ro', classN
         <a href={`${en ? '/en' : ''}${COMMUNICATIONS_TERMS_HREF}`} target="_blank" rel="noopener" className="font-medium text-ink underline underline-offset-4">
           {link}
         </a>
-        {after} <span className="whitespace-nowrap text-[12.5px] text-faint">{en ? '(optional)' : '(opțional)'}</span>
+        {after} <span className="whitespace-nowrap text-[12px] text-[#b9c2c6]">{en ? '(optional)' : '(opțional)'}</span>
       </span>
     </label>
   )

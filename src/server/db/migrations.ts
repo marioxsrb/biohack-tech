@@ -484,4 +484,15 @@ create table if not exists admin_api_keys (
 alter table admin_api_keys enable row level security
 `,
   },
+  {
+    // Visits per site: the main store, acces and each landing (calm., focus., amber.). Older counts are the
+    // main site's, except the price-gated funnel's (acces).
+    id: '015_visit_site',
+    sql: `
+alter table visit_stats add column if not exists site text not null default 'main';
+update visit_stats set site = 'acces' where funnel = 'gated_price' and site = 'main';
+alter table visit_stats drop constraint if exists visit_stats_pkey;
+alter table visit_stats add primary key (day, site, funnel, page, source, campaign)
+`,
+  },
 ]

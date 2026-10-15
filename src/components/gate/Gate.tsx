@@ -171,8 +171,8 @@ async function recognize(email?: string): Promise<boolean | 'invalid'> {
 
 function LeadForm({ target, onClose, onUnlocked }: { target: Target | null; onClose: () => void; onUnlocked: () => void }) {
   const [values, setValues] = useState({ name: '', email: '', phone: '' })
-  // Two optional boxes. The terms are never required to see a price (the checkout asks for them, required); the
-  // communications box names email and AI calls, so both consents follow it.
+  // Two boxes: the terms, required (business decision 15.10.2026); the communications box, optional, names email
+  // and AI calls, so both consents follow it (never a condition for the price).
   const [terms, setTerms] = useState(false)
   const [consent, setConsent] = useState(false)
   const callConsent = consent
@@ -201,7 +201,7 @@ function LeadForm({ target, onClose, onUnlocked }: { target: Target | null; onCl
     e.preventDefault()
     if (!target || state === 'sending') return
     const contact = normalizeContact(values)
-    const found = validateContact(contact)
+    const found: LeadErrors = { ...validateContact(contact), ...(!terms && { terms: 'Bifează acceptarea Termenilor și Condițiilor ca să vezi prețul.' }) }
     setErrors(found)
     if (Object.keys(found).length) {
       document.getElementById(`lead-${Object.keys(found)[0]}`)?.focus()
@@ -332,15 +332,24 @@ function LeadForm({ target, onClose, onUnlocked }: { target: Target | null; onCl
           </div>
           <div className="mt-5 space-y-3">
             <label className="flex cursor-pointer items-start gap-3 text-[14.5px] leading-snug text-text">
-              <input type="checkbox" name="termsAccepted" checked={terms} onChange={(e) => setTerms(e.target.checked)} className="mt-0.5 h-5 w-5 flex-none accent-[var(--color-ink)]" />
+              <input
+                id="lead-terms"
+                type="checkbox"
+                name="termsAccepted"
+                checked={terms}
+                onChange={(e) => (setTerms(e.target.checked), e.target.checked && setErrors((x) => ({ ...x, terms: undefined })))}
+                aria-invalid={!!errors.terms}
+                className="mt-0.5 h-5 w-5 flex-none accent-[var(--color-ink)]"
+              />
               <span>
                 Accept{' '}
                 <a href="/terms-of-service" target="_blank" rel="noopener" className="font-medium text-ink underline underline-offset-4">
                   Termenii și Condițiile
                 </a>
-                . <span className="whitespace-nowrap text-[12.5px] text-faint">(opțional)</span>
+                .
               </span>
             </label>
+            {errors.terms && <p className="-mt-1 text-[13.5px] text-red-deep">{errors.terms}</p>}
             <CommunicationsConsent checked={consent} onChange={setConsent} className="text-[14.5px]" />
           </div>
           <p className="mt-4 text-[13px] leading-relaxed text-muted">

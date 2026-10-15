@@ -136,6 +136,7 @@ export function BundleOffer({
   onQuantity,
   className = '',
   compact = false,
+  onAmberGroup,
 }: {
   productId: ProductId
   variantId?: string
@@ -144,6 +145,11 @@ export function BundleOffer({
   className?: string
   /** Smaller rows, for the add-to-cart confirmation and the checkout summary. */
   compact?: boolean
+  /**
+   * NEUROS Amber: choosing the 2+1 row opens the frames configurator (any mix of frames) instead of setting the
+   * quantity of one frame. Called with the number of pairs that row stands for; default: the product page's picker.
+   */
+  onAmberGroup?: (pairs: number) => void
 }) {
   const locale = useLocale()
   const t = COPY[locale]
@@ -175,7 +181,7 @@ export function BundleOffer({
               type="button"
               role="radio"
               aria-checked={on}
-              onClick={() => onQuantity(n)}
+              onClick={() => (amber && n >= p.group ? (onAmberGroup ?? ((x: number) => openAmber('product_page', Math.min(3, x))))(n) : onQuantity(n))}
               className={`flex ${compact ? 'min-h-[48px] rounded-[12px] px-3 py-1.5' : 'min-h-[60px] rounded-[14px] px-3.5 py-2.5'} items-center gap-3 text-left transition-[box-shadow,background-color] duration-150 ${
                 on ? 'bg-paper shadow-[inset_0_0_0_2px_var(--color-ink)]' : 'bg-paper shadow-[inset_0_0_0_1px_var(--color-line)] hover:shadow-[inset_0_0_0_1px_var(--color-ink)]'
               }`}

@@ -97,7 +97,7 @@ const checkout = async (cart: unknown[], extra: Record<string, unknown> = {}) =>
   await lead(post('/api/lead', MAIN, { action: 'checkout', ...ana, cart, callConsent: true, marketingConsent: true, ...extra }))
   return (await db.query<{ id: string }>(`select id from leads where product_id = '${CART_INTEREST}' order by created_at desc limit 1`)).rows[0].id
 }
-const reveal = async (extra: Record<string, unknown> = {}) => (await (await lead(post('/api/lead', GATED, { action: 'reveal', ...ana, productId: 'balance-wave', callConsent: true, ...extra }))).json()) as { leadId: string }
+const reveal = async (extra: Record<string, unknown> = {}) => (await (await lead(post('/api/lead', GATED, { action: 'reveal', termsAccepted: true, ...ana, productId: 'balance-wave', callConsent: true, ...extra }))).json()) as { leadId: string }
 async function later() {
   await runDueJobs()
   await db.query("update jobs set run_at = now() where status in ('pending','retry')")
@@ -338,7 +338,7 @@ describe('acces: the cart of an unlocked device', () => {
     lead(new NextRequest(`https://${GATED}/api/lead`, { method: 'POST', headers: { host: GATED, 'content-type': 'application/json', cookie: `bt_vid=${vid}; bt_gate2=${leadId}` }, body: JSON.stringify({ action: 'cart', cart }) }))
 
   it('form only: called after 30 minutes about the product; a cart filled later: called 20 minutes after the change, about the cart', async () => {
-    const res = await lead(post('/api/lead', GATED, { action: 'reveal', ...ana, productId: 'balance-wave', callConsent: true, marketingConsent: true }))
+    const res = await lead(post('/api/lead', GATED, { action: 'reveal', termsAccepted: true, ...ana, productId: 'balance-wave', callConsent: true, marketingConsent: true }))
     const { leadId } = (await res.json()) as { leadId: string }
     const vid = res.cookies.get('bt_vid')!.value
     expect(await firstCallIn(leadId)).toBe(30)
@@ -355,7 +355,7 @@ describe('acces: the cart of an unlocked device', () => {
   })
 
   it('an emptied cart goes back to the product of the form', async () => {
-    const res = await lead(post('/api/lead', GATED, { action: 'reveal', ...ana, productId: 'balance-wave', callConsent: true }))
+    const res = await lead(post('/api/lead', GATED, { action: 'reveal', termsAccepted: true, ...ana, productId: 'balance-wave', callConsent: true }))
     const { leadId } = (await res.json()) as { leadId: string }
     const vid = res.cookies.get('bt_vid')!.value
     await cartOn(leadId, vid, [{ productId: 'brainlink-pro', quantity: 1 }])

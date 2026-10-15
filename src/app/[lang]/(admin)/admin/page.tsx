@@ -157,6 +157,37 @@ export default async function Dashboard({ searchParams }: PageProps<'/[lang]/adm
         </Card>
       </div>
 
+      <Card title="Pe site-uri" className="mt-3">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[640px] text-[14px]">
+            <thead>
+              <tr className="text-left text-[12.5px] text-muted">
+                <th className="py-1.5 font-medium">Site</th>
+                <th className="py-1.5 text-right font-medium">Sesiuni</th>
+                <th className="py-1.5 text-right font-medium">Afișări</th>
+                <th className="py-1.5 text-right font-medium">Leaduri</th>
+                <th className="py-1.5 text-right font-medium">Comenzi</th>
+                <th className="py-1.5 text-right font-medium">Conversie</th>
+                <th className="py-1.5 text-right font-medium">Valoare</th>
+              </tr>
+            </thead>
+            <tbody className="tabular-nums">
+              {r.sites.map((s) => (
+                <tr key={s.site} className="border-t border-mist-2">
+                  <td className="py-2 font-medium text-ink">{s.label}</td>
+                  <td className="py-2 text-right">{s.sessions}</td>
+                  <td className="py-2 text-right">{s.views}</td>
+                  <td className="py-2 text-right">{s.leads}</td>
+                  <td className="py-2 text-right font-semibold text-ink">{s.orders}</td>
+                  <td className="py-2 text-right">{s.conversionPct === null ? '–' : `${s.conversionPct}%`}</td>
+                  <td className="py-2 text-right">{L(s.revenueLei)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
       <Card title="Funnel" className="mt-3">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[640px] text-[14px]">

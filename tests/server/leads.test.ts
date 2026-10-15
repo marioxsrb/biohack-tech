@@ -107,7 +107,7 @@ const setCookies = (res: Response) => Object.fromEntries(res.headers.getSetCooki
 const value = (setCookie: string | undefined) => setCookie?.split(';')[0].split('=')[1] ?? ''
 
 async function reveal(extra: Record<string, unknown> = {}, cookies: Record<string, string> = {}, host = GATED) {
-  const res = await lead(post('/api/lead', host, { action: 'reveal', ...ana, productId: 'balance-wave', page: '/calm', attribution: { utm_source: 'facebook', utm_campaign: 'acces-test', fbclid: 'IwAR0abcdefghij' }, ...extra }, cookies))
+  const res = await lead(post('/api/lead', host, { action: 'reveal', termsAccepted: true, ...ana, productId: 'balance-wave', page: '/calm', attribution: { utm_source: 'facebook', utm_campaign: 'acces-test', fbclid: 'IwAR0abcdefghij' }, ...extra }, cookies))
   const data = await res.json()
   const c = setCookies(res)
   return { res, data, vid: value(c.bt_vid), gate: value(c.bt_gate2), cookies: c }
@@ -191,7 +191,7 @@ describe('price-gated funnel: the form', () => {
     expect((await reveal({ productId: 'brain-flow' })).res.status).toBe(400)
     const bad = new NextRequest(`https://${GATED}/api/lead`, { method: 'POST', headers: { host: GATED }, body: '{nope' })
     expect((await lead(bad)).status).toBe(400)
-    const big = new NextRequest(`https://${GATED}/api/lead`, { method: 'POST', headers: { host: GATED }, body: JSON.stringify({ action: 'reveal', pad: 'x'.repeat(9000) }) })
+    const big = new NextRequest(`https://${GATED}/api/lead`, { method: 'POST', headers: { host: GATED }, body: JSON.stringify({ action: 'reveal', termsAccepted: true, pad: 'x'.repeat(9000) }) })
     expect((await lead(big)).status).toBe(413)
   })
 })

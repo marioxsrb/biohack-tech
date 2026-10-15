@@ -2,7 +2,7 @@
 
 import Link from '@/components/ui/Link'
 import { CarryLink } from '@/components/cart/CarryLink'
-import { LineOffer } from '@/components/cart/LineOffer'
+import { LineBundle } from '@/components/cart/LineBundle'
 import { Suggestions } from '@/components/offers/Suggestions'
 import { Totals } from '@/components/cart/Totals'
 import { useEffect, useSyncExternalStore } from 'react'
@@ -110,7 +110,6 @@ export function CartView() {
                     </Link>
                     <p className="text-[15px] text-muted">{l.variantLabel ?? l.product.purpose}</p>
                     <p data-price className="mt-0.5 text-[14px] text-muted tabular-nums">{formatLei(l.unit)} {t.each}</p>
-                    <LineOffer line={l} />
                   </div>
                   <p data-price className="flex-none text-[17px] font-medium text-ink tabular-nums">{formatLei(l.unit * l.quantity)}</p>
                 </div>
@@ -125,6 +124,8 @@ export function CartView() {
                     {t.remove}
                   </button>
                 </div>
+                {/* The product page's choices: 2 or 3 at a lower price (Amber: the frames configurator). */}
+                <LineBundle line={l} placement="cart" className="mt-4 max-w-[460px]" />
               </div>
             </li>
           ))}

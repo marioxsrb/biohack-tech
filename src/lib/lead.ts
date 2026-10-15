@@ -42,7 +42,7 @@ export const LEAD_PRIVACY_VERSION: LeadPrivacyVersion = 'lead-2026-10-14b'
 export const LEAD_PRIVACY_TEXT = LEAD_PRIVACY_TEXTS[LEAD_PRIVACY_VERSION]
 
 export type LeadContact = { name: string; email: string; phone: string }
-export type LeadErrors = Partial<Record<keyof LeadContact, string>>
+export type LeadErrors = Partial<Record<keyof LeadContact | 'terms', string>>
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 

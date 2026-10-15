@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { funnelForHost } from '@/lib/lead'
+import { funnelForHost, isGatedHost } from '@/lib/lead'
+import { landingForHost } from '@/lib/landing-hosts'
 import { getDb } from '@/server/db'
 import { countVisit } from '@/server/leads'
 import { clientIp, rateLimit } from '@/server/rate-limit'
@@ -29,7 +30,10 @@ export async function POST(req: NextRequest) {
   const page = typeof body.page === 'string' ? body.page : ''
   if (!PAGES.has(page)) return new NextResponse(null, { status: 204 })
   try {
-    await countVisit(await getDb(), funnelForHost(req.headers.get('host')), page, { session: body.session === true, source: slug(body.source), campaign: slug(body.campaign) })
+    const host = req.headers.get('host')
+    // Which site: a landing's own hostname (calm., focus., amber.), acces, or the main store.
+    const site = landingForHost(host) ?? (isGatedHost(host) ? 'acces' : 'main')
+    await countVisit(await getDb(), funnelForHost(host), page, { session: body.session === true, source: slug(body.source), campaign: slug(body.campaign), site })
   } catch {}
   return new NextResponse(null, { status: 204 })
 }

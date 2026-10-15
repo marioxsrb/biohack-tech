@@ -486,11 +486,11 @@ export function interestOf(lead: Pick<Lead, 'productId' | 'cart'>): string[] {
 }
 
 /** One page load (and, for the first page of a browser session, one session) in the anonymous daily counts. */
-export async function countVisit(q: Queryable, funnel: Funnel, page: string, v: { session?: boolean; source?: string; campaign?: string } = {}) {
+export async function countVisit(q: Queryable, funnel: Funnel, page: string, v: { session?: boolean; source?: string; campaign?: string; site?: string } = {}) {
   await q.query(
-    `insert into visit_stats (day, funnel, page, source, campaign, views, sessions) values ((now() at time zone 'Europe/Bucharest')::date, $1, $2, $3, $4, 1, $5)
-     on conflict (day, funnel, page, source, campaign) do update set views = visit_stats.views + 1, sessions = visit_stats.sessions + excluded.sessions`,
-    [funnel, page, v.source ?? '', v.campaign ?? '', v.session ? 1 : 0],
+    `insert into visit_stats (day, site, funnel, page, source, campaign, views, sessions) values ((now() at time zone 'Europe/Bucharest')::date, $6, $1, $2, $3, $4, 1, $5)
+     on conflict (day, site, funnel, page, source, campaign) do update set views = visit_stats.views + 1, sessions = visit_stats.sessions + excluded.sessions`,
+    [funnel, page, v.source ?? '', v.campaign ?? '', v.session ? 1 : 0, v.site ?? (funnel === 'gated_price' ? 'acces' : 'main')],
   )
 }
 

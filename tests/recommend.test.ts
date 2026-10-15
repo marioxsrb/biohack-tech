@@ -207,9 +207,11 @@ describe('pages', () => {
     expect(at('<AddToCartButton')).toBeLessThan(at('<TrustRow'))
     const box = read('src/components/product/BuyBox.tsx')
     expect(box).toContain("openAmber('product_page', 3)")
-    // The rows use the cart's own engine on this product; choosing one sets the quantity, it adds nothing by itself.
+    // The rows use the cart's own engine on this product; choosing one sets the quantity, it adds nothing by itself,
+    // except Amber's 2+1 row, which opens the frames configurator (any mix of frames).
     expect(box).toContain("priceLines([{ key: 'x', productId, quantity: n, unitAmount: unit }])")
-    expect(box).toContain('onClick={() => onQuantity(n)}')
+    expect(box).toContain(': onQuantity(n))}')
+    expect(box).toContain("amber && n >= p.group ? (onAmberGroup ?? ((x: number) => openAmber('product_page', Math.min(3, x))))(n)")
   })
   it('checkout: the suggestion module is the only product surface, before the payment decision', () => {
     const v = read('src/app/[lang]/(checkout)/checkout/CheckoutView.tsx')

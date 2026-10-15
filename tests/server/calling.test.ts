@@ -107,7 +107,7 @@ function post(path: string, host: string, body: unknown, cookies: Record<string,
   return new NextRequest(`https://${host}${path}`, { method: 'POST', headers: { host, 'content-type': 'application/json', 'x-forwarded-for': `10.7.0.${++ip}`, ...(cookie && { cookie }) }, body: JSON.stringify(body) })
 }
 async function reveal(extra: Record<string, unknown> = {}) {
-  const res = await lead(post('/api/lead', GATED, { action: 'reveal', ...ana, productId: 'balance-wave', ...extra }))
+  const res = await lead(post('/api/lead', GATED, { action: 'reveal', termsAccepted: true, ...ana, productId: 'balance-wave', ...extra }))
   return (await res.json()) as { leadId: string }
 }
 /** Lets a background run finish, makes every waiting job due, runs the queue (twice: results queue more). */

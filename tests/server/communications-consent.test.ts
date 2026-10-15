@@ -56,7 +56,7 @@ function post(path: string, host: string, body: unknown) {
   return new NextRequest(`https://${host}${path}`, { method: 'POST', headers: { host, 'content-type': 'application/json', 'x-forwarded-for': `10.9.0.${++ip}` }, body: JSON.stringify(body) })
 }
 /** The price form as the page sends it: one box drives both fields. */
-const reveal = (box: boolean) => lead(post('/api/lead', GATED, { action: 'reveal', ...ana, productId: 'balance-wave', marketingConsent: box, callConsent: box, page: '/products/calm' }))
+const reveal = (box: boolean) => lead(post('/api/lead', GATED, { action: 'reveal', termsAccepted: true, ...ana, productId: 'balance-wave', marketingConsent: box, callConsent: box, page: '/products/calm' }))
 /** The checkout: the order itself, and the checkout lead the contact step saves (same box, both fields). */
 const order = (host: string, box: boolean, acceptedTerms = true) =>
   checkout(post('/api/checkout', host, { lines: [{ productId: 'balance-wave', quantity: 1 }], order: { ...person, marketingConsent: box, paymentMethod: 'cod' }, acceptedTerms, attemptId: `a-${Math.random()}` }))

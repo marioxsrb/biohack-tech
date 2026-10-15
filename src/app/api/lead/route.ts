@@ -66,7 +66,9 @@ export async function POST(req: NextRequest) {
         consent = false
         callConsent = false
       } else {
-        const fields = validateContact(contact)
+        const fields: Record<string, string> = { ...validateContact(contact) }
+        // The terms are required on the price form (the communications box stays optional and separate).
+        if (body.termsAccepted !== true) fields.terms = 'Bifează acceptarea Termenilor și Condițiilor.'
         if (Object.keys(fields).length) return NextResponse.json({ error: 'INVALID', fields }, { status: 422 })
         if (!rateLimit(`lead-email:${contact.email}`, 10, 60 * 60_000)) return NextResponse.json({ error: 'RATE_LIMIT' }, { status: 429 })
       }

@@ -36,6 +36,11 @@ describe('report', () => {
     expect(r.products).toEqual([expect.objectContaining({ units: 2 })])
     expect(r.payments).toEqual([expect.objectContaining({ method: 'cash_on_delivery', orders: 1 })])
     expect(r.sources[0]).toMatchObject({ source: 'facebook', campaign: 'toamna', sessions: 3 })
+    await countVisit(db, 'visible_price', 'calm', { session: true, site: 'calm' })
+    await countVisit(db, 'gated_price', 'calm', { session: true })
+    const bySite = (await buildReport(db, period('azi'))).sites
+    expect(bySite.map((s) => [s.site, s.sessions])).toEqual([['main', 3], ['acces', 1], ['calm', 1], ['focus', 0], ['amber', 0]])
+    expect(bySite.find((s) => s.site === 'main')).toMatchObject({ orders: 1 })
     expect(r.orders).toHaveLength(2)
     expect(r.orders[0]).toMatchObject({ firstName: 'Ana', city: 'Cluj-Napoca' })
     expect(JSON.stringify(r)).not.toMatch(/ana@exemplu|0722123456|Lalelelor/)

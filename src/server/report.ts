@@ -12,6 +12,19 @@ import type { Queryable } from '@/server/db'
 import { orders as ordersRepo, QUEUES, type QueueKey } from '@/server/orders/repository'
 
 const TZ = 'Europe/Bucharest'
+
+/** The sites the report separates: the main store, acces (prices behind the form) and each landing. */
+export const SITES = [
+  { site: 'main', label: 'biohack-tech.ro' },
+  { site: 'acces', label: 'acces.biohack-tech.ro' },
+  { site: 'calm', label: 'calm.biohack-tech.ro' },
+  { site: 'focus', label: 'focus.biohack-tech.ro' },
+  { site: 'amber', label: 'amber.biohack-tech.ro' },
+] as const
+/** A lead's site, from the host it was captured on. */
+const LEAD_SITE = `case when funnel = 'gated_price' then 'acces' when split_part(coalesce(landing_host,''), '.', 1) in ('calm','focus','amber') then split_part(landing_host, '.', 1) else 'main' end`
+/** An order's site: the landing it came through, acces, or the main store. */
+const ORDER_SITE = `case when o.attribution->>'landing' in ('calm','focus','amber') then o.attribution->>'landing' when coalesce(o.attribution->>'funnel','') = 'gated_price' then 'acces' else 'main' end`
 /** An order that stands (counted in sales). */
 const STANDS = `o.kind = 'checkout' and o.status not in ('cancelled', 'abandoned') and (o.payment_method <> 'card' or o.payment_status in ('paid', 'partially_refunded', 'refunded'))`
 
@@ -108,7 +121,7 @@ async function totals(q: Queryable, p: Pick<Period, 'from' | 'to'>) {
 
 export async function buildReport(q: Queryable, p: Period) {
   const range = [p.from, p.to]
-  const [now, before, byFunnel, pages, sources, leadRows, orderRows, payments, products, calls, outcomes, emails, codes, signups, queues, daily] = await Promise.all([
+  const [now, before, byFunnel, pages, sources, leadRows, orderRows, payments, products, calls, outcomes, emails, codes, signups, queues, daily, siteVisits, siteLeads, siteOrders] = await Promise.all([
     totals(q, p),
     totals(q, previous(p)),
     q.query(
@@ -117,8 +130,8 @@ export async function buildReport(q: Queryable, p: Period) {
       range,
     ),
     q.query(
-      `select page, sum(views)::int as views from visit_stats where day >= ($1::timestamptz at time zone '${TZ}')::date and day <= (($2::timestamptz - interval '1 second') at time zone '${TZ}')::date
-       group by page order by views desc limit 8`,
+      `select site, page, sum(views)::int as views from visit_stats where day >= ($1::timestamptz at time zone '${TZ}')::date and day <= (($2::timestamptz - interval '1 second') at time zone '${TZ}')::date
+       group by site, page order by views desc limit 10`,
       range,
     ),
     q.query(
@@ -174,6 +187,13 @@ export async function buildReport(q: Queryable, p: Period) {
        from d order by d.day`,
       [p.days > 1 ? p.from : new Date(p.to.getTime() - 14 * 86_400_000), p.to],
     ),
+    q.query(
+      `select site, sum(sessions)::int as sessions, sum(views)::int as views from visit_stats
+       where day >= ($1::timestamptz at time zone '${TZ}')::date and day <= (($2::timestamptz - interval '1 second') at time zone '${TZ}')::date group by site`,
+      range,
+    ),
+    q.query(`select ${LEAD_SITE} as site, count(*)::int as leads from leads where created_at >= $1 and created_at < $2 group by 1`, range),
+    q.query(`select ${ORDER_SITE} as site, count(*)::int as orders, coalesce(sum(o.total_minor - o.refunded_minor),0)::bigint as revenue from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1`, range),
   ])
 
   const funnels = ['visible_price', 'gated_price'].map((f) => {
@@ -215,7 +235,21 @@ export async function buildReport(q: Queryable, p: Period) {
     previous: before,
     changePct: { sessions: change(now.sessions, before.sessions), leads: change(now.leads, before.leads), orders: change(now.orders, before.orders), revenue: change(now.revenueLei, before.revenueLei) },
     funnels,
-    topPages: pages.rows.map((r) => ({ page: (r.page as string) || '/', views: n(r.views) })),
+    topPages: pages.rows.map((r) => ({ page: `${r.site === 'main' ? '' : `${r.site}: `}${(r.page as string) || '/'}`, views: n(r.views) })),
+    sites: SITES.map(({ site, label }) => {
+      const v = siteVisits.rows.find((r) => r.site === site)
+      const orders = n(siteOrders.rows.find((r) => r.site === site)?.orders)
+      return {
+        site,
+        label,
+        sessions: n(v?.sessions),
+        views: n(v?.views),
+        leads: n(siteLeads.rows.find((r) => r.site === site)?.leads),
+        orders,
+        revenueLei: lei(siteOrders.rows.find((r) => r.site === site)?.revenue),
+        conversionPct: pct(orders, n(v?.sessions)),
+      }
+    }),
     sources: sources.rows.map((r) => ({ source: r.source as string, campaign: r.campaign as string, sessions: n(r.sessions) })),
     orders: list,
     ordersPlacedAll: list.length,
@@ -257,6 +291,9 @@ export function reportMarkdown(r: Report) {
     `- Comenzi valide: ${t.orders} (${signed(r.changePct.orders)}), valoare ${L(t.revenueLei)} (${signed(r.changePct.revenue)}), coș mediu ${L(t.averageOrderLei)}`,
     `- Rata de conversie (comenzi / sesiuni): ${t.conversionPct ?? 0}%`,
     `- Comenzi anulate: ${r.cancelled}, plăți cu cardul nefinalizate: ${r.unpaidCard}`,
+    '',
+    '## Pe site-uri',
+    ...r.sites.map((s) => `- ${s.label}: ${s.sessions} sesiuni, ${s.leads} leaduri, ${s.orders} comenzi, ${L(s.revenueLei)}${s.conversionPct !== null ? `, conversie ${s.conversionPct}%` : ''}`),
     '',
     '## Funnel',
     ...r.funnels.map((f) => `- ${f.funnel}: ${f.sessions} sesiuni → ${f.leads} leaduri (${f.priceReveals} au văzut prețul, ${f.checkouts} au început checkout-ul, ${f.abandoned} abandonate) → ${f.orders} comenzi, ${L(f.revenueLei)}`),

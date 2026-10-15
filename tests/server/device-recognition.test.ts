@@ -31,7 +31,7 @@ beforeEach(async () => {
 function post(body: unknown, ip: string, host = GATED) {
   return new NextRequest(`https://${host}/api/lead`, { method: 'POST', headers: { host, 'content-type': 'application/json', 'x-forwarded-for': ip }, body: JSON.stringify(body) })
 }
-const reveal = (extra: Record<string, unknown>, ip = '86.120.10.20') => lead(post({ action: 'reveal', ...ana, productId: 'balance-wave', ...extra }, ip))
+const reveal = (extra: Record<string, unknown>, ip = '86.120.10.20') => lead(post({ action: 'reveal', termsAccepted: true, ...ana, productId: 'balance-wave', ...extra }, ip))
 const recognize = async (body: Record<string, unknown>, ip = '86.120.10.20', host = GATED) => {
   const res = await lead(post({ action: 'recognize', ...body }, ip, host))
   return { status: res.status, cookie: res.headers.get('set-cookie') ?? '', ...((await res.json()) as { unlocked?: boolean; leadId?: string }) }
@@ -94,11 +94,12 @@ describe('device recognition', () => {
   })
 })
 
-describe('price form: the optional terms box', () => {
-  it('unticked: the price unlocks and nothing is recorded; ticked: the time is kept on the lead', async () => {
-    const a = await (await reveal({ termsAccepted: false })).json()
-    expect((await leads.byId(db, a.leadId))!.termsAcceptedAt).toBeNull()
-    const b = await (await lead(post({ action: 'reveal', ...ana, email: 'ion@exemplu.ro', productId: 'balance-wave', termsAccepted: true }, '86.120.10.21'))).json()
+describe('price form: the terms box is required (15.10.2026)', () => {
+  it('unticked: refused, nothing stored; ticked: the price unlocks and the time is kept on the lead', async () => {
+    const res = await reveal({ termsAccepted: false })
+    expect(res.status).toBe(422)
+    expect((await res.json()).fields).toHaveProperty('terms')
+    const b = await (await lead(post({ action: 'reveal', termsAccepted: true, ...ana, email: 'ion@exemplu.ro', productId: 'balance-wave' }, '86.120.10.21'))).json()
     expect((await leads.byId(db, b.leadId))!.termsAcceptedAt).toBeInstanceOf(Date)
   })
 })
@@ -107,8 +108,8 @@ describe('duplicate filter', () => {
   it('admin: one row per person (newest form, with the count); every form on request. Stats: distinct people', async () => {
     await reveal({ productId: 'balance-wave' }, '86.120.10.20')
     await reveal({ productId: 'brainlink-pro' }, '86.120.10.20')
-    await lead(post({ action: 'reveal', ...ana, productId: 'balance-wave' }, '5.12.200.7')) // another browser, no cookie
-    await lead(post({ action: 'reveal', name: 'Ion', email: 'ion@exemplu.ro', phone: '0733 123 456', productId: 'balance-wave' }, '5.12.200.8'))
+    await lead(post({ action: 'reveal', termsAccepted: true, ...ana, productId: 'balance-wave' }, '5.12.200.7')) // another browser, no cookie
+    await lead(post({ action: 'reveal', termsAccepted: true, name: 'Ion', email: 'ion@exemplu.ro', phone: '0733 123 456', productId: 'balance-wave' }, '5.12.200.8'))
     const all = await leads.listWithForms(db, {})
     const unique = await leads.listWithForms(db, { unique: true })
     expect(all.length).toBeGreaterThanOrEqual(3)
