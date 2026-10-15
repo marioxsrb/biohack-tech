@@ -226,7 +226,7 @@ export default async function Dashboard({ searchParams }: PageProps<'/[lang]/adm
         </Card>
       </div>
 
-      <div className="mt-3 grid gap-3 lg:grid-cols-3">
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <Card title="Apeluri AI" action={<Link href="/admin/leaduri" className="text-[13px] text-muted underline underline-offset-4">Leaduri</Link>}>
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-[14px]">
             <dt className="text-muted">Apeluri</dt>
@@ -259,12 +259,6 @@ export default async function Dashboard({ searchParams }: PageProps<'/[lang]/adm
               </div>
             ))}
           </dl>
-        </Card>
-        <Card title="Raport pentru AI" action={<Link href="/admin/raport" className="text-[13px] text-muted underline underline-offset-4">Detalii</Link>}>
-          <p className="text-[14px] leading-snug text-text">Același raport, ca text sau JSON, pentru un asistent AI care îți scrie zilnic despre trafic și comenzi.</p>
-          <a href={`/api/admin/report?perioada=${key}&format=md`} target="_blank" className="btn-secondary sm mt-3 w-full">
-            Vezi raportul ca text
-          </a>
         </Card>
       </div>
 

@@ -55,6 +55,8 @@ describe('report', () => {
     const md = await call({ authorization: `Bearer ${TOKEN}` }, '?perioada=7&format=md')
     expect(md.headers.get('content-type')).toMatch(/text\/markdown/)
     expect(await md.text()).toMatch(/Ultimele 7 zile/)
+    expect((await call({}, `?token=${TOKEN}`)).status).toBe(200)
+    expect((await call({}, '?token=wrong')).status).toBe(401)
     const session = await createAdminSession(TEST_ENV.ADMIN_PASSWORD ? 'admin' : 'admin')
     expect((await call({ cookie: `${ADMIN_COOKIE}=${session}` })).status).toBe(200)
   })

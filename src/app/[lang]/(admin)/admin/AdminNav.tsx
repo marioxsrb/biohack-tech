@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
 const GROUPS: { title: string; items: { href: string; label: string }[] }[] = [
-  { title: 'Privire de ansamblu', items: [{ href: '/admin', label: 'Dashboard' }, { href: '/admin/raport', label: 'Raport zilnic (AI)' }] },
+  { title: 'Privire de ansamblu', items: [{ href: '/admin', label: 'Dashboard' }] },
   {
     title: 'Operațional',
     items: [
