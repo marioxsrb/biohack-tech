@@ -13,8 +13,8 @@ import type { Queryable } from '@/server/db'
 import { jobs } from '@/server/jobs/outbox'
 import { leads } from '@/server/leads'
 import { promoCodes } from '@/server/promo'
-import { calls, callScenario, optOut, type Call } from './calls'
-import { cartTotal, describeItems, formatExpiry, lei, RECOVERY_PERCENT } from './offer'
+import { calls, callScenario, normalizeOutcome, optOut, type Call } from './calls'
+import { cartTotal, describeItems, existingDiscounts, formatExpiry, lei, RECOVERY_PERCENT } from './offer'
 
 /** The header the agent's server tools send (set in the agent's tool configuration, never in a prompt). */
 export const TOOL_SECRET_HEADER = 'x-biohack-tool-secret'
@@ -23,7 +23,7 @@ export const CALL_TOOLS = ['get_recovery_context', 'check_discount', 'recovery_e
 export type CallTool = (typeof CALL_TOOLS)[number]
 
 /** Outcomes the agent may record during the call (the line outcomes come from the provider). */
-const AGENT_OUTCOMES = ['interested', 'more_info', 'human_follow_up', 'not_interested', 'opted_out'] as const
+const AGENT_OUTCOMES = ['interested', 'discount_accepted', 'needs_information', 'human_followup', 'not_interested', 'no_time', 'opted_out', 'technical_failure'] as const
 
 const ACTIVE_HOURS = 2
 const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/[\u0000-\u001f]+/g, ' ').trim().slice(0, max) : '')
@@ -87,6 +87,7 @@ export async function runCallTool(q: Queryable, c: Config, tool: string, body: R
           product_names: items.names,
           product_quantities: cart ? items.quantities : '',
           cart_total: lei(cartTotal(lead)),
+          existing_discounts: existingDiscounts(lead),
           discount: await discountState(q, call, lead.email),
           recovery_email: emailState(call),
         },
@@ -99,7 +100,7 @@ export async function runCallTool(q: Queryable, c: Config, tool: string, body: R
     case 'record_outcome': {
       const outcome = clean(body.outcome, 30)
       if (!(AGENT_OUTCOMES as readonly string[]).includes(outcome)) return { status: 422, body: { error: `outcome must be one of ${AGENT_OUTCOMES.join(', ')}` } }
-      await calls.update(q, call.id, { agent_outcome: outcome })
+      await calls.update(q, call.id, { agent_outcome: normalizeOutcome(outcome) })
       if (outcome === 'opted_out') await recordOptOut(q, c, call, lead)
       return { status: 200, body: { ok: true } }
     }

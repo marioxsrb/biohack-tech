@@ -476,23 +476,31 @@ describe('agent', () => {
     expect(k).toMatch(/ramburs/)
   })
 
-  it('docs/ai-calling/agent.json is in sync with the code (UPDATE_AGENT_JSON=1 refreshes it)', () => {
-    const json = `${JSON.stringify(agentDefinition('https://biohack-tech.ro'), null, 2)}\n`
-    const file = 'docs/ai-calling/agent.json'
-    if (process.env.UPDATE_AGENT_JSON === '1' || !existsSync(file)) writeFileSync(file, json)
-    expect(readFileSync(file, 'utf8')).toBe(json)
+  it('docs/ai-calling/{agent,tools,knowledge} are in sync with the code (UPDATE_AGENT_JSON=1 refreshes them)', () => {
+    const sync = (file: string, content: string) => {
+      if (process.env.UPDATE_AGENT_JSON === '1' || !existsSync(file)) writeFileSync(file, content)
+      expect(readFileSync(file, 'utf8'), file).toBe(content)
+    }
+    const json = `${JSON.stringify(agentDefinition(), null, 2)}\n`
     const tools = `${JSON.stringify(agentTools('https://biohack-tech.ro'), null, 2)}\n`
-    const toolsFile = 'docs/ai-calling/tools.json'
-    if (process.env.UPDATE_AGENT_JSON === '1' || !existsSync(toolsFile)) writeFileSync(toolsFile, tools)
-    expect(readFileSync(toolsFile, 'utf8')).toBe(tools)
+    sync('docs/ai-calling/agent.json', json)
+    sync('docs/ai-calling/tools.json', tools)
+    sync('docs/ai-calling/knowledge.md', `${agentKnowledge('https://biohack-tech.ro')}\n`)
     const def = JSON.parse(json)
-    expect(def.name).toBe('BiohackTech — Recuperare Comenzi')
+    expect(def.name).toBe('BiohackTech — AI Recovery Agent')
+    expect(def.conversation_config.tts.voice_id).toBe('k1tFw6wFoibtJrwu6GTz')
     expect(def.conversation_config.agent.language).toBe('ro')
     expect(def.conversation_config.agent.first_message).toBe('{{opening_line}}')
+    expect(def.conversation_config.conversation.max_duration_seconds).toBe(240)
     expect(def.conversation_config.agent.dynamic_variables.dynamic_variable_placeholders.opening_line).toMatch(/asistent AI/)
+    expect(Object.keys(def.conversation_config.agent.dynamic_variables.dynamic_variable_placeholders)).toEqual(
+      expect.arrayContaining(['customer_first_name', 'funnel_type', 'product_names', 'product_quantities', 'cart_total', 'existing_discounts', 'recovery_discount_percent', 'recovery_code', 'recovery_expiration', 'recovery_email_sent', 'checkout_recovery_url']),
+    )
     expect(def.platform_settings.privacy.record_voice).toBe(false)
-    expect(Object.keys(def.platform_settings.data_collection).sort()).toEqual(['discount_offered', 'follow_up_required', 'opted_out', 'outcome', 'wants_link'])
-    // The tools carry no secret: the setup script adds the header from an ElevenLabs workspace secret.
+    expect(def.platform_settings.data_collection.outcome.description).toMatch(/discount_accepted.*needs_information.*human_followup.*no_time.*technical_failure/s)
+    // Every variable the prompt uses is passed on each call.
+    const used = [...new Set([...def.conversation_config.agent.prompt.prompt.matchAll(/\{\{(\w+)\}\}/g)].map((m: RegExpMatchArray) => m[1]))]
+    for (const v of used) expect(def.conversation_config.agent.dynamic_variables.dynamic_variable_placeholders, v).toHaveProperty(v)
     expect(tools).not.toMatch(/secret_id|x-biohack-tool-secret/)
     expect(JSON.parse(tools).map((t: { name: string }) => t.name)).toEqual(['get_recovery_context', 'check_discount', 'recovery_email_status', 'record_outcome', 'request_human_follow_up', 'record_opt_out'])
   })

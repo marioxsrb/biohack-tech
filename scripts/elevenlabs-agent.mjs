@@ -5,10 +5,11 @@
 //   node scripts/elevenlabs-agent.mjs agents          the account's agents (nothing is changed)
 //   node scripts/elevenlabs-agent.mjs voices          the account's voices (pick the Romanian one)
 //   node scripts/elevenlabs-agent.mjs phone-numbers   numbers imported in ElevenLabs (id, number, provider)
-//   node scripts/elevenlabs-agent.mjs push            creates or updates the server tools and the agent:
-//                                                     needs ELEVENLABS_VOICE_ID and ELEVENLABS_TOOL_SECRET; updates
-//                                                     ELEVENLABS_AGENT_ID when set, otherwise creates a NEW agent
-//                                                     (existing agents are never overwritten); prints the ids
+//   node scripts/elevenlabs-agent.mjs push            the voice (added from the library if needed), the server
+//                                                     tools, the knowledge base and the agent "BiohackTech — AI
+//                                                     Recovery Agent": updated when an agent with that exact name
+//                                                     exists, otherwise created (no other agent is ever touched);
+//                                                     needs ELEVENLABS_TOOL_SECRET; prints the ids
 //
 // The agent definition is docs/ai-calling/agent.json and the tools docs/ai-calling/tools.json, generated from the
 // site's catalog and approved content (src/server/calling/agent.ts; `UPDATE_AGENT_JSON=1 npx vitest run
@@ -61,6 +62,39 @@ async function pushTools(secretId) {
   return ids
 }
 
+/** A voice from the ElevenLabs library is added to the account once (agents use the account's voices). */
+async function ensureVoice(id) {
+  const res = await fetch(`${BASE}/v1/voices/${id}`, { headers: { 'xi-api-key': KEY } })
+  if (res.ok) return console.log(`Voce: ${(await res.json()).name} (${id}), deja în cont`)
+  const found = ((await api('GET', `/v1/shared-voices?search=${id}&page_size=5`)).voices ?? []).find((v) => v.voice_id === id)
+  if (!found) throw new Error(`Vocea ${id} nu e nici în cont, nici în bibliotecă.`)
+  await api('POST', `/v1/voices/add/${found.public_owner_id}/${id}`, { new_name: found.name })
+  console.log(`Voce adăugată în cont: ${found.name} (${id})`)
+}
+
+const KB_TEXT = 'BiohackTech — produse, prețuri, livrare, retur, garanție, plăți (site)'
+const KB_URLS = ['https://biohack-tech.ro', 'https://calm.biohack-tech.ro', 'https://focus.biohack-tech.ro', 'https://amber.biohack-tech.ro']
+
+/**
+ * The knowledge base: the site's approved content (docs/ai-calling/knowledge.md, always in the prompt) and the four
+ * public sites (searched when needed). A changed text gets a new document; the old one is detached.
+ */
+async function pushKnowledge() {
+  const docs = (await api('GET', '/v1/convai/knowledge-base?page_size=100')).documents ?? []
+  const text = readFileSync('docs/ai-calling/knowledge.md', 'utf8')
+  const stamp = `${KB_TEXT} · ${text.length}`
+  let main = docs.find((d) => d.name === stamp)
+  if (!main) main = await api('POST', '/v1/convai/knowledge-base/text', { text, name: stamp })
+  const out = [{ type: 'text', name: stamp, id: main.id, usage_mode: 'prompt' }]
+  for (const url of KB_URLS) {
+    let d = docs.find((x) => x.name === url || x.url === url)
+    if (!d) d = await api('POST', '/v1/convai/knowledge-base/url', { url, name: url })
+    out.push({ type: 'url', name: url, id: d.id, usage_mode: 'auto' })
+  }
+  for (const k of out) console.log(`Knowledge base: ${k.name} (${k.id}, ${k.usage_mode})`)
+  return out
+}
+
 const cmd = process.argv[2]
 if (cmd === 'agents') {
   const r = await api('GET', '/v1/convai/agents?page_size=100')
@@ -73,17 +107,18 @@ if (cmd === 'agents') {
   for (const n of Array.isArray(r) ? r : (r.phone_numbers ?? [])) console.log(`${n.phone_number_id}  ${n.phone_number}  ${n.provider ?? ''}  ${n.label ?? ''}  agent=${n.assigned_agent?.agent_id ?? '-'}`)
   console.log('\nPune id-ul în ELEVENLABS_PHONE_NUMBER_ID și providerul (twilio sau sip_trunk) în ELEVENLABS_PHONE_PROVIDER.')
 } else if (cmd === 'push') {
-  const voice = process.env.ELEVENLABS_VOICE_ID?.trim()
+  const def = JSON.parse(readFileSync('docs/ai-calling/agent.json', 'utf8'))
   const secret = process.env.ELEVENLABS_TOOL_SECRET?.trim()
-  if (!voice) throw new Error('ELEVENLABS_VOICE_ID lipsește: rulează întâi `voices`.')
   if (!secret || secret.length < 24) throw new Error('ELEVENLABS_TOOL_SECRET lipsește sau e prea scurt (minimum 24 de caractere).')
-  const toolIds = await pushTools(await toolSecretId(secret))
-  const def = JSON.parse(readFileSync('docs/ai-calling/agent.json', 'utf8').replaceAll('${ELEVENLABS_VOICE_ID}', voice))
-  def.conversation_config.agent.prompt.tool_ids = toolIds
-  const id = process.env.ELEVENLABS_AGENT_ID?.trim()
-  if (id) {
-    await api('PATCH', `/v1/convai/agents/${encodeURIComponent(id)}`, def)
-    console.log(`Agent actualizat: ${id}`)
+  await ensureVoice(def.conversation_config.tts.voice_id)
+  def.conversation_config.agent.prompt.tool_ids = await pushTools(await toolSecretId(secret))
+  def.conversation_config.agent.prompt.knowledge_base = await pushKnowledge()
+  // Matched by its exact name: never another agent, whatever ELEVENLABS_AGENT_ID says.
+  const agents = (await api('GET', `/v1/convai/agents?page_size=100&search=${encodeURIComponent(def.name)}`)).agents ?? []
+  const same = agents.find((a) => a.name === def.name)
+  if (same) {
+    await api('PATCH', `/v1/convai/agents/${encodeURIComponent(same.agent_id)}`, def)
+    console.log(`Agent actualizat: ${same.agent_id}`)
   } else {
     const r = await api('POST', '/v1/convai/agents/create', def)
     console.log(`Agent creat: ${r.agent_id}\nPune-l în ELEVENLABS_AGENT_ID (Vercel Production).`)

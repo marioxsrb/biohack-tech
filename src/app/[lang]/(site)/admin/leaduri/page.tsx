@@ -37,6 +37,8 @@ const CALL_STATUS: Record<string, string> = {
 }
 const OUTCOME: Record<string, string> = {
   interested: 'interesat',
+  discount_accepted: 'a acceptat reducerea',
+  no_time: 'nu are timp',
   more_info: 'vrea informații',
   human_follow_up: 'cere un om',
   not_interested: 'nu e interesat',

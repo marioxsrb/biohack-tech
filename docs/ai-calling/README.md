@@ -96,7 +96,7 @@ tests/server/calling.test.ts` after a content change).
    Production). The free plan's credits do not include telephony; calls cost per minute.
 2. `node scripts/elevenlabs-agent.mjs voices` → the Romanian voice → `ELEVENLABS_VOICE_ID`; a random
    `ELEVENLABS_TOOL_SECRET` (≥ 24 chars, also in Vercel Production); `node scripts/elevenlabs-agent.mjs push`
-   creates the tools and a NEW agent "BiohackTech — Recuperare Comenzi" (existing agents are never touched) →
+   creates the voice, tools, knowledge base and the agent "BiohackTech — AI Recovery Agent" (matched by exact name; no other agent is touched) →
    `ELEVENLABS_AGENT_ID`. Run `push` again after a content change (it then updates that agent).
 3. The number already connected in ElevenLabs: `node scripts/elevenlabs-agent.mjs phone-numbers` →
    `ELEVENLABS_PHONE_NUMBER_ID` and `ELEVENLABS_PHONE_PROVIDER` (`twilio` or `sip_trunk`).

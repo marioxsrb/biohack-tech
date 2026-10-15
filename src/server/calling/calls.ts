@@ -22,14 +22,22 @@ import { log } from '@/server/log'
 import { marketing } from '@/server/marketing/consent'
 import { callConsent } from './consent'
 import { callScenario, firstCallDelay, type CallScenario } from './delay'
-import { cartTotal, describeItems, lei, openingLine, prepareOffer, RECOVERY_PERCENT, formatExpiry, type OfferEmailStatus } from './offer'
+import { cartTotal, describeItems, existingDiscounts, lei, openingLine, prepareOffer, RECOVERY_PERCENT, formatExpiry, type OfferEmailStatus } from './offer'
 
 /** What a call ended with. The first four come from the conversation, the rest from the line. */
-export const CALL_OUTCOMES = ['interested', 'more_info', 'human_follow_up', 'not_interested', 'opted_out', 'no_answer', 'busy', 'invalid_number', 'technical_failure'] as const
+export const CALL_OUTCOMES = ['interested', 'discount_accepted', 'more_info', 'human_follow_up', 'not_interested', 'no_time', 'opted_out', 'no_answer', 'busy', 'invalid_number', 'technical_failure'] as const
 export type CallOutcome = (typeof CALL_OUTCOMES)[number]
 
+/** The agent's words for an outcome (ElevenLabs data collection and the record_outcome tool) → ours. */
+const AGENT_WORDS: Record<string, CallOutcome> = { needs_information: 'more_info', human_followup: 'human_follow_up', voicemail: 'no_answer', wrong_person: 'invalid_number' }
+/** A known outcome, from either vocabulary; null for anything else. */
+export const normalizeOutcome = (raw: unknown): CallOutcome | null => {
+  const v = String(raw ?? '').trim()
+  return (CALL_OUTCOMES as readonly string[]).includes(v) ? (v as CallOutcome) : (AGENT_WORDS[v] ?? null)
+}
+
 /** Outcomes of a real conversation: the person is never called again for another lead. */
-const TALKED: CallOutcome[] = ['interested', 'more_info', 'human_follow_up', 'not_interested', 'opted_out']
+const TALKED: CallOutcome[] = ['interested', 'discount_accepted', 'more_info', 'human_follow_up', 'not_interested', 'no_time', 'opted_out']
 /** Outcomes after which another attempt makes sense (nobody really talked). */
 const RETRYABLE: CallOutcome[] = ['no_answer', 'busy', 'technical_failure']
 /** One sequence per person in this window. */
@@ -247,6 +255,7 @@ export function callVariables(lead: Lead, callId: string, offer: { code: string;
     product_names: items.names,
     product_quantities: scenario === 'cart' ? items.quantities : '',
     cart_total: lei(cartTotal(lead)),
+    existing_discounts: existingDiscounts(lead),
     recovery_discount_percent: offer ? RECOVERY_PERCENT : 0,
     recovery_code: offer?.code ?? '',
     recovery_expiration: offer ? formatExpiry(offer.expires) : '',
@@ -350,7 +359,8 @@ export type CallResultInput = {
 export async function applyCallResult(q: Queryable, c: Config, call: Call, r: CallResultInput): Promise<boolean> {
   if (call.status === 'completed' || (call.status === 'failed' && call.outcome)) return false
   // What the agent recorded during the call (tools) counts too, when the post-call report says less.
-  const outcome: CallOutcome = r.status === 'completed' && r.outcomeGuessed && call.agentOutcome && (CALL_OUTCOMES as readonly string[]).includes(call.agentOutcome) ? (call.agentOutcome as CallOutcome) : r.outcome
+  const noted = normalizeOutcome(call.agentOutcome)
+  const outcome: CallOutcome = r.status === 'completed' && r.outcomeGuessed && noted ? noted : r.outcome
   r = { ...r, outcome }
   const optedOut = !!r.optedOut || r.outcome === 'opted_out' || call.optedOut
   const ended = r.startedAt && r.durationSecs != null ? new Date(r.startedAt.getTime() + r.durationSecs * 1000) : new Date()
@@ -370,7 +380,7 @@ export async function applyCallResult(q: Queryable, c: Config, call: Call, r: Ca
   // A refusal of further contact stops every commercial contact: calls (this number) and marketing email.
   if (optedOut) await optOut(q, c, call, lead)
   let status = 'completed'
-  if (optedOut || r.outcome === 'not_interested' || r.outcome === 'invalid_number') status = 'stopped'
+  if (optedOut || r.outcome === 'not_interested' || r.outcome === 'no_time' || r.outcome === 'invalid_number') status = 'stopped'
   else if (RETRYABLE.includes(r.outcome)) {
     if (call.attempt < c.calling.maxAttempts) {
       status = 'scheduled'
@@ -390,13 +400,12 @@ const asBool = (v: unknown) => v === true || v === 'true'
 /** The agent's recorded answers (data collection) → our result. Unknown or missing values are safe defaults. */
 export function resultFromConversation(conv: Pick<Conversation, 'metadata' | 'analysis'>): CallResultInput {
   const dc = conv.analysis?.data_collection_results ?? {}
-  const raw = String(dc.outcome?.value ?? '').trim()
-  const map: Record<string, CallOutcome> = { voicemail: 'no_answer', wrong_person: 'invalid_number' }
-  const outcome = (CALL_OUTCOMES as readonly string[]).includes(raw) ? (raw as CallOutcome) : (map[raw] ?? (Number(conv.metadata?.call_duration_secs ?? 0) < 10 ? 'no_answer' : 'more_info'))
+  const known = normalizeOutcome(dc.outcome?.value)
+  const outcome = known ?? (Number(conv.metadata?.call_duration_secs ?? 0) < 10 ? 'no_answer' : 'more_info')
   return {
     status: 'completed',
     outcome,
-    outcomeGuessed: !(CALL_OUTCOMES as readonly string[]).includes(raw) && !map[raw],
+    outcomeGuessed: !known,
     followUp: asBool(dc.follow_up_required?.value),
     optedOut: asBool(dc.opted_out?.value),
     wantsLink: asBool(dc.wants_link?.value),
@@ -448,6 +457,8 @@ export async function optOut(q: Queryable, c: Config, call: Pick<Call, 'id' | 'p
 
 const OUTCOME_RO: Record<string, string> = {
   interested: 'interesat',
+  discount_accepted: 'a acceptat reducerea',
+  no_time: 'nu are timp',
   more_info: 'vrea informații',
   human_follow_up: 'a cerut un om',
   not_interested: 'nu e interesat',

@@ -15,6 +15,7 @@ import { companyLine } from '@/config/company'
 import { gatedOrigin } from '@/lib/lead'
 import { formatLei } from '@/lib/money'
 import { priceLines } from '@/lib/promotions'
+import { PROMOTIONS } from '@/config/promotions'
 import type { Config } from '@/server/config'
 import type { Queryable } from '@/server/db'
 import { deliver } from '@/server/integrations/email/transport'
@@ -49,6 +50,20 @@ export function cartTotal(lead: Pick<Lead, 'productId' | 'variantId' | 'cart'>):
   const items = leadItems(lead)
   if (!items.length) return null
   return priceLines(items.map((l, i) => ({ key: String(i), productId: l.productId, quantity: l.quantity, unitAmount: l.unit }))).totalMinor
+}
+
+/**
+ * The automatic promotions, in words: for a checkout, what its cart already gets ("10% la 2 buc. NEUROS Calm:
+ * −1.276 lei"); for the price form, the promotion available on the product. Empty when there is none.
+ */
+export function existingDiscounts(lead: Pick<Lead, 'productId' | 'variantId' | 'cart'>): string {
+  const items = leadItems(lead)
+  if (lead.productId !== CART_INTEREST) {
+    const promo = items[0] && PROMOTIONS.find((p) => (p.products as string[]).includes(items[0].productId))
+    return promo ? `promoție disponibilă: ${promo.line}` : ''
+  }
+  const pricing = priceLines(items.map((l, i) => ({ key: String(i), productId: l.productId, quantity: l.quantity, unitAmount: l.unit })))
+  return pricing.promotions.map((a) => `${a.label}: −${formatLei(a.amountMinor)}`).join('; ')
 }
 
 /** The lead's personal code, made once (a second call reuses it, still with its first expiry). */

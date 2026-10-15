@@ -86,7 +86,7 @@
           },
           "outcome": {
             "type": "string",
-            "description": "Una dintre: interested, more_info, human_follow_up, not_interested, opted_out"
+            "description": "Una dintre: interested, discount_accepted, needs_information, human_followup, not_interested, no_time, opted_out, technical_failure"
           }
         },
         "required": [
