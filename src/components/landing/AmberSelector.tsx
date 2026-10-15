@@ -243,7 +243,8 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
       <div
         aria-hidden={!(inSection && !summaryVisible && units > 0)}
         inert={!(inSection && !summaryVisible && units > 0)}
-        className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--lp-line)] bg-paper/95 backdrop-blur-md transition-transform duration-300 lg:hidden ${inSection && !summaryVisible && units > 0 ? 'translate-y-0' : 'translate-y-full'}`}
+        data-sticky-bar
+      className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--lp-line)] bg-paper/95 backdrop-blur-md transition-transform duration-300 lg:hidden ${inSection && !summaryVisible && units > 0 ? 'translate-y-0' : 'translate-y-full'}`}
       >
         <div className="lp-wrap flex items-center justify-between gap-4 py-3">
           <p className="min-w-0 leading-tight">

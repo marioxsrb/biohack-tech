@@ -27,6 +27,7 @@ export type JobKind =
   | 'email.welcome'
   | 'agent.sync'
   | 'ghl.call'
+  | 'support.notify'
 export type JobStatus = 'pending' | 'running' | 'retry' | 'done' | 'failed' | 'skipped'
 
 export type Job = {

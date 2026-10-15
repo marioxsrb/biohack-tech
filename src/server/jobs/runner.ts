@@ -36,6 +36,7 @@ import { releaseUpsellCard } from '@/server/orders/upsell'
 import { syncEnquiry } from '@/server/enquiries'
 import { expireUnpaidTransfer, markAbandonedIfUnpaid } from '@/server/orders/service'
 import { withdrawals } from '@/server/orders/withdrawal'
+import { renderSupportNotice, supportRequests } from '@/server/assistant/support'
 import { jobs, type Job } from './outbox'
 
 class Skip extends Error {}
@@ -307,6 +308,17 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
   },
 
   // A call's result in the CRM: contact upsert (no duplicate: by email) and outcome tags. Retried on its own.
+  // The team hears about each new support request from the website assistant (once: the job's dedupe key).
+  'support.notify': async (j) => {
+    const c = getConfig()
+    if (!notificationsOn()) throw new Skip('notifications off')
+    const db = await getDb()
+    const r = await supportRequests.byId(db, String(j.payload.id ?? ''))
+    if (!r) throw new Skip('request gone')
+    const mail = renderSupportNotice(r, `${c.siteUrl}/admin/suport/${r.id}`)
+    return deliver(c, { ...mail, to: c.email.notifyTo!, name: `support-${r.id}` })
+  },
+
   'ghl.call': async (j) => {
     const c = getConfig()
     if (!c.ghl) throw new Skip('ghl not configured')
@@ -419,7 +431,7 @@ export function runDueJobs(limit = 20): Promise<number> {
           const dead = await jobs.fail(db, job, errText(e), permanent)
           log[dead ? 'error' : 'warn'](dead ? 'job.failed' : 'job.retry', { job: job.kind, jobId: job.id, orderId: job.orderId, attempt: job.attempts, error: errText(e) })
           // Stopped for good: the team hears about it once (never about its own notifications, which would loop).
-          if (dead && job.orderId && job.kind !== 'notify.send' && notificationsOn())
+          if (dead && job.orderId && job.kind !== 'notify.send' && job.kind !== 'support.notify' && notificationsOn())
             await jobs
               .enqueue(db, { kind: 'notify.send', orderId: job.orderId, dedupeKey: `notify:job_failed:${job.id}`, payload: { event: 'job_failed', jobId: job.id } })
               .catch((err) => log.error('job.failed_alert_error', { jobId: job.id, error: errText(err) }))

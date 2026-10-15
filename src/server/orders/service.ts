@@ -28,7 +28,7 @@ import type { Address, Order, OrderStatus, PaymentMethod } from './model'
 import { orders } from './repository'
 import { ensureOrderLead, markLeadsPurchased } from '@/server/leads'
 
-export type Source = 'checkout' | 'stripe.webhook' | 'stripe.reconcile' | 'upsell' | 'admin' | 'system'
+export type Source = 'checkout' | 'stripe.webhook' | 'stripe.reconcile' | 'upsell' | 'admin' | 'system' | 'assistant'
 
 /**
  * Shipping cost in bani. Current rule: free delivery in Romania (stated on the current

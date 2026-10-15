@@ -22,9 +22,11 @@ export type StoreSettings = {
   soldOut: string[]
   welcomePopup: boolean
   callsPaused: boolean
+  /** The chat assistant (bottom-right bubble) on every site. */
+  assistant: boolean
 }
 
-export const DEFAULT_SETTINGS: StoreSettings = { prices: {}, soldOut: [], welcomePopup: true, callsPaused: false }
+export const DEFAULT_SETTINGS: StoreSettings = { prices: {}, soldOut: [], welcomePopup: true, callsPaused: false, assistant: true }
 
 /** Prices outside this range are refused (a typo of one zero too many or too few). */
 export const PRICE_MIN = 100 // 1 leu
@@ -45,6 +47,7 @@ function normalize(raw: unknown): StoreSettings {
     soldOut: Array.isArray(v.soldOut) ? v.soldOut.filter((x) => typeof x === 'string') : [],
     welcomePopup: v.welcomePopup !== false,
     callsPaused: v.callsPaused === true,
+    assistant: v.assistant !== false,
   }
 }
 
@@ -76,7 +79,7 @@ export async function ensureStoreSettings(maxAgeMs = 15_000): Promise<StoreSetti
 
 /** What the page tells the browser (the script runs before the app, so the first render already uses it). */
 export function storeScript(s: StoreSettings = current) {
-  return `window.__BT_STORE__=${JSON.stringify({ ...toOverrides(s), welcomePopup: s.welcomePopup }).replace(/</g, '\\u003c')};`
+  return `window.__BT_STORE__=${JSON.stringify({ ...toOverrides(s), welcomePopup: s.welcomePopup, assistant: s.assistant }).replace(/</g, '\\u003c')};`
 }
 
 export type SettingsProblem = { field: string; message: string }

@@ -197,7 +197,8 @@ export function ProductHero({ productId, intro, highlights }: Props) {
 
       {purchasable && (
         <div
-          className={`fixed inset-x-0 bottom-0 z-[200] border-t border-line bg-paper/95 backdrop-blur-md transition-transform duration-300 ease-[var(--ease-brand)] lg:hidden ${
+          data-sticky-bar
+      className={`fixed inset-x-0 bottom-0 z-[200] border-t border-line bg-paper/95 backdrop-blur-md transition-transform duration-300 ease-[var(--ease-brand)] lg:hidden ${
             barVisible ? 'translate-y-0' : 'translate-y-full'
           }`}
           aria-hidden={!barVisible}

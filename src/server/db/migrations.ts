@@ -537,4 +537,43 @@ create table if not exists admin_charts (
 alter table admin_charts enable row level security
 `,
   },
+  {
+    // The website assistant: support requests (escalations to a person) and one-time codes that prove an
+    // order's email before the assistant says anything about the order. Codes are stored hashed only.
+    id: '018_assistant_support',
+    sql: `
+create table if not exists support_requests (
+  id uuid primary key,
+  ref text not null unique,
+  category text not null,
+  summary text not null,
+  status text not null default 'open',
+  urgent boolean not null default false,
+  order_id uuid references orders(id),
+  email text,
+  name text,
+  phone text,
+  dedupe_key text,
+  source text not null default 'assistant',
+  resolution_notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  resolved_at timestamptz
+);
+create index if not exists support_requests_status on support_requests (status, created_at desc);
+create index if not exists support_requests_dedupe on support_requests (dedupe_key, created_at desc);
+alter table support_requests enable row level security;
+create table if not exists order_otps (
+  id uuid primary key,
+  order_id uuid not null references orders(id),
+  code_hash text not null,
+  expires_at timestamptz not null,
+  attempts integer not null default 0,
+  used_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists order_otps_order on order_otps (order_id, created_at desc);
+alter table order_otps enable row level security
+`,
+  },
 ]

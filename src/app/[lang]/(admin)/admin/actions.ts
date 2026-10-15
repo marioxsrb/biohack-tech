@@ -13,6 +13,7 @@ import { audit, ensureStoreSettings, readStoreSettings, saveStoreSettings, type 
 import { callBlocklist } from '@/server/calling/blocklist'
 import { placeTestCall } from '@/server/calling/test-call'
 import { enquiries, type EnquiryStatus } from '@/server/enquiries'
+import { isSupportStatus, supportRequests } from '@/server/assistant/support'
 import { cancelScheduledCalls, disableCalling, retryCall } from '@/server/calling/admin'
 import { getConfig } from '@/server/config'
 import { CODE_RE, normalizeCode, promoCodes } from '@/server/promo'
@@ -243,6 +244,7 @@ export async function saveSettingsAction(_: SettingsFormState, f: FormData): Pro
     soldOut: products.filter((p) => f.get(`soldOut:${p.id}`) === 'da').map((p) => p.id),
     welcomePopup: f.get('welcomePopup') === 'da',
     callsPaused: f.get('callsPaused') === 'da',
+    assistant: f.get('assistant') === 'da',
   }
   if (JSON.stringify(next.prices) !== JSON.stringify(now.prices) && f.get('confirmPrices') !== 'da')
     return { error: 'Ai schimbat un preț: bifează confirmarea de sub prețuri ca să salvezi.' }
@@ -326,4 +328,22 @@ export async function testCallAction(_: TestCallState, f: FormData): Promise<Tes
   await audit(db, adminActor(), 'test_call.place', { id: r.call.id, phone: r.call.phone, status: r.call.status })
   revalidatePath('/admin/apeluri')
   return r.call.status === 'failed' ? { error: `Apelul nu a pornit: ${r.call.error}` } : { placed: r.call.phone }
+}
+
+/** A support request from the website assistant: status, urgency and resolution notes (each change audited). */
+export async function supportAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id', 40)
+  const status = text(f, 'status', 20)
+  const notes = f.get('notes')
+  const urgent = f.get('urgent')
+  const db = await getDb()
+  const r = await supportRequests.update(db, id, {
+    ...(isSupportStatus(status) && { status }),
+    ...(urgent === 'da' || urgent === 'nu' ? { urgent: urgent === 'da' } : {}),
+    ...(typeof notes === 'string' && { notes: notes.slice(0, 2000) }),
+  })
+  if (r) await audit(db, adminActor(), 'support.update', { id, ref: r.ref, status: r.status, urgent: r.urgent })
+  log.info('admin.action', { supportId: id, action: `support_${status || 'notes'}`, changed: !!r })
+  revalidatePath('/admin/suport')
 }

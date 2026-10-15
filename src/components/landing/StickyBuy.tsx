@@ -29,6 +29,7 @@ export function StickyBuy({ name, productId, cta }: { name: string; productId: P
     <div
       aria-hidden={!show}
       inert={!show}
+      data-sticky-bar
       className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--lp-line)] bg-[var(--lp-bg)]/95 backdrop-blur-md transition-transform duration-300 ease-[var(--ease-brand)] lg:hidden ${show ? 'translate-y-0' : 'translate-y-full'}`}
     >
       <div className="lp-wrap flex items-center gap-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))]">

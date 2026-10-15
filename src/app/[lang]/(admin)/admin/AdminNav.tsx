@@ -11,6 +11,7 @@ const GROUPS: { title: string; items: { href: string; label: string }[] }[] = [
       { href: '/admin/comenzi', label: 'Comenzi' },
       { href: '/admin/leaduri', label: 'Leaduri' },
       { href: '/admin/apeluri', label: 'Apeluri AI: test și „nu suna”' },
+      { href: '/admin/suport', label: 'Suport (asistent)' },
       { href: '/admin/mesaje', label: 'Mesaje' },
     ],
   },

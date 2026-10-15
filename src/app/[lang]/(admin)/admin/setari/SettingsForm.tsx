@@ -8,7 +8,7 @@ type Row = { id: string; name: string; codePriceLei: number | null; overrideLei:
 const fmt = (lei: number | null) => (lei === null ? '' : String(lei).replace('.', ','))
 
 /** Prices, stock and the two switches, saved together (a price change needs the confirmation box). */
-export function SettingsForm({ rows, welcomePopup, callsPaused }: { rows: Row[]; welcomePopup: boolean; callsPaused: boolean }) {
+export function SettingsForm({ rows, welcomePopup, callsPaused, assistant }: { rows: Row[]; welcomePopup: boolean; callsPaused: boolean; assistant: boolean }) {
   const [state, action, pending] = useActionState<SettingsFormState, FormData>(saveSettingsAction, {})
   const [touched, setTouched] = useState(false)
   return (
@@ -73,6 +73,12 @@ export function SettingsForm({ rows, welcomePopup, callsPaused }: { rows: Row[];
           <input type="checkbox" name="callsPaused" value="da" defaultChecked={callsPaused} className="mt-0.5 h-5 w-5 accent-[var(--color-ink)]" />
           <span>
             <b className="text-ink">Pauză la apelurile AI.</b> Apelurile programate așteaptă și se reiau când scoți pauza (verificat la 30 de minute).
+          </span>
+        </label>
+        <label className="mt-3 flex items-start gap-2.5 text-[14.5px] text-text">
+          <input type="checkbox" name="assistant" value="da" defaultChecked={assistant} className="mt-0.5 h-5 w-5 accent-[var(--color-ink)]" />
+          <span>
+            <b className="text-ink">Asistentul de chat</b> (bulina din dreapta jos) pe toate site-urile: produse, coș, comenzi verificate cu cod, cereri către echipă.
           </span>
         </label>
       </section>

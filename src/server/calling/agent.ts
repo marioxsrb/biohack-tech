@@ -29,16 +29,22 @@ function legalSection(slug: string, title: string) {
   return `## ${title}\n${body.join('\n')}`
 }
 
-/** Everything the agent may say about the products and the shop, in Romanian. */
-export function agentKnowledge(siteUrl: string = site.url): string {
+/**
+ * Everything the agent may say about the products and the shop, in Romanian. Without prices (`prices: false`, the
+ * website assistant on acces.<domain> before the price form): no price, no promotion amount, no payment details
+ * page (which repeats the promotions); everything else is the same.
+ */
+export function agentKnowledge(siteUrl: string = site.url, opts: { prices: boolean } = { prices: true }): string {
   const products = productsIn('ro').map((p) => {
     const c = getProductContent(p.id, 'ro')
-    const variants = (p.variants ?? []).map((v) => `- ${variantLabel(p, v)}: ${formatLei(unitPrice(p, v) ?? p.price ?? 0)}`)
-    const promo = PROMOTIONS.find((x) => (x.products as string[]).includes(p.id))
+    const variants = (p.variants ?? []).map((v) => `- ${variantLabel(p, v)}${opts.prices ? `: ${formatLei(unitPrice(p, v) ?? p.price ?? 0)}` : ''}`)
+    const promo = opts.prices ? PROMOTIONS.find((x) => (x.products as string[]).includes(p.id)) : undefined
     return [
       `## ${p.name} (${p.kind})`,
       `Pentru ce este: ${p.purpose}. ${p.tagline}`,
-      `Preț: ${p.price !== null ? `${p.variablePrice ? 'de la ' : ''}${formatLei(p.price)}` : 'nu are încă preț'} (${terms.vat}, ${terms.shipping.toLowerCase()}).`,
+      opts.prices
+        ? `Preț: ${p.price !== null ? `${p.variablePrice ? 'de la ' : ''}${formatLei(p.price)}` : 'nu are încă preț'} (${terms.vat}, ${terms.shipping.toLowerCase()}).`
+        : `Preț: se vede după formularul „Vezi prețul și oferta” (${terms.shipping.toLowerCase()}).`,
       ...(variants.length ? ['Variante:', ...variants] : []),
       ...(promo ? [`Promoție: ${promo.line}`] : []),
       `Pagina produsului: ${siteUrl}/products/${p.slug}`,
@@ -60,7 +66,7 @@ export function agentKnowledge(siteUrl: string = site.url): string {
     `Produse vândute acum: ${productsIn('ro').map((p) => p.name).join(', ')}. NEUROS Flow nu se mai vinde.`,
     ...products,
     `## Plată\nMetode: ${[cashOnDelivery.enabled && 'ramburs (plata la livrare, curierului)', 'card bancar online prin Stripe', 'transfer bancar'].filter(Boolean).join(', ')}. Datele cardului se introduc doar pe site, niciodată la telefon.`,
-    legalSection('plati', 'Plăți (detalii)'),
+    opts.prices ? legalSection('plati', 'Plăți (detalii)') : '',
     legalSection('politica-livrare', 'Livrare'),
     legalSection('politica-retur', 'Retur și drept de retragere'),
     legalSection('garantie', 'Garanție și reclamații'),

@@ -270,7 +270,7 @@ async function handle(req: NextRequest, ctx: Ctx, method: 'GET' | 'POST' | 'PUT'
   }
 }
 
-/** PATCH /settings: { prices: { "balance-wave": 638000 | null (back to the code's price) }, soldOut: [...], welcomePopup, callsPaused }. */
+/** PATCH /settings: { prices: { "balance-wave": 638000 | null (back to the code's price) }, soldOut: [...], welcomePopup, callsPaused, assistant }. */
 function mergePatch(now: StoreSettings, body: Record<string, unknown>): StoreSettings {
   const prices = { ...now.prices }
   if (body.prices && typeof body.prices === 'object')
@@ -283,6 +283,7 @@ function mergePatch(now: StoreSettings, body: Record<string, unknown>): StoreSet
     soldOut: Array.isArray(body.soldOut) ? (body.soldOut as string[]) : now.soldOut,
     welcomePopup: typeof body.welcomePopup === 'boolean' ? body.welcomePopup : now.welcomePopup,
     callsPaused: typeof body.callsPaused === 'boolean' ? body.callsPaused : now.callsPaused,
+    assistant: typeof body.assistant === 'boolean' ? body.assistant : now.assistant,
   }
 }
 
@@ -306,7 +307,7 @@ const INDEX = {
     'POST /api/admin/v1/codes {code, kind: percent|fixed, value, products?, minOrderLei?, startsAt?, endsAt?, maxUses?, oncePerEmail?, note?}',
     'PATCH /api/admin/v1/codes/{code} {active}',
     'GET  /api/admin/v1/settings',
-    'PATCH /api/admin/v1/settings {prices?: {productId: bani | {variantId: bani} | null}, soldOut?: [productId], welcomePopup?, callsPaused?}',
+    'PATCH /api/admin/v1/settings {prices?: {productId: bani | {variantId: bani} | null}, soldOut?: [productId], welcomePopup?, callsPaused?, assistant?}',
     'GET  /api/admin/v1/blocklist · POST {phone, note?} · DELETE /blocklist/{phone}',
     'GET  /api/admin/v1/test-calls · GET /test-calls/{id} · POST {consent: true, phone, firstName, scenario: cart|price_reveal, funnel?, items: [{productId, variantId?, quantity}], emailSent?}',
     'GET  /api/admin/v1/series?metric=sessions|views|leads|orders|revenue|units|aov|conversion|calls|welcome|codes&by=none|site|funnel|source|payment|product|outcome|code&days=7|14|30|60|90|180|365&grain=day|week',
