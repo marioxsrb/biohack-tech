@@ -209,7 +209,7 @@ describe('placing calls', () => {
       recovery_code: 'BIOHACK10',
       recovery_email_sent: 'nu', // no email marketing consent: nothing was sent before the call
     })
-    expect(vars.opening_line).toMatch(/^Bună (ziua|seara)! Numele meu este Maria, sunt asistentul virtual al Baiohec Tec\. Aveți un minut la dispoziție\?$/)
+    expect(vars.opening_line).toMatch(/^Bună (ziua|seara)! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec\. Sunt un asistent automat\. Aveți un minut la dispoziție\?$/)
     expect(vars.checkout_recovery_url).toMatch(/^https:\/\/acces\.biohack-tech\.ro\/api\/lead\/resume\?t=[\w-]+&cod=BIOHACK10/)
     expect(JSON.stringify(vars)).not.toMatch(/@|0722|Popescu/)
     expect(sent).toEqual([])
@@ -499,7 +499,7 @@ describe('agent', () => {
     expect(def.conversation_config.agent.language).toBe('ro')
     expect(def.conversation_config.agent.first_message).toBe('{{opening_line}}')
     expect(def.conversation_config.conversation.max_duration_seconds).toBe(240)
-    expect(def.conversation_config.agent.dynamic_variables.dynamic_variable_placeholders.opening_line).toMatch(/Numele meu este Maria, sunt asistentul virtual al Baiohec Tec/)
+    expect(def.conversation_config.agent.dynamic_variables.dynamic_variable_placeholders.opening_line).toMatch(/Numele meu este Maria și vă sun din partea magazinului Baiohec Tec\. Sunt un asistent automat/)
     expect(Object.keys(def.conversation_config.agent.dynamic_variables.dynamic_variable_placeholders)).toEqual(
       expect.arrayContaining(['customer_first_name', 'funnel_type', 'product_names', 'product_quantities', 'cart_total', 'existing_discounts', 'recovery_discount_percent', 'recovery_code', 'recovery_email_sent', 'checkout_recovery_url']),
     )

@@ -97,7 +97,7 @@ Ești asistentul cu inteligență artificială al magazinului Biohack Tech, care
 - Doar română naturală, de conversație, cu „dumneavoastră”. Fiecare replică are cel mult două fraze scurte, sub 35 de cuvinte în total, apoi taci și asculți. Detalii lungi doar dacă omul le cere.
 - Răspunzi imediat și direct, fără introduceri de tipul „Înțeleg perfect întrebarea dumneavoastră”. Fără liste, fără emoji, fără paranteze sau etichete. Vorbești alert: fraze scurte, cu puține virgule, fără cuvinte de umplutură („deci”, „practic”, „ei bine”).
 - Pronunție: scrie mereu numele firmei „Baiohec Tec” (nu în engleză), cuvântul email ca „imeil”, iar codul ca „Baiohec zece”. Numerele și prețurile scrie-le în cuvinte când e firesc („șase mii trei sute optzeci de lei”).
-- Te numești Maria și ești asistent virtual, adică un asistent cu inteligență artificială: dacă te întreabă cineva, spui sincer că nu ești om. Nu te dai niciodată drept om. Dacă te întrerupe, te oprești și asculți.
+- Te numești Maria și ești un asistent automat (inteligență artificială) care sună din partea magazinului: dacă te întreabă cineva, spui sincer că nu ești om. Nu te dai niciodată drept om. Dacă te întrerupe, te oprești și asculți.
 - Un apel bun durează un minut, cel mult două.
 
 # Ce știi despre apel (din sistem; nu inventa nimic în plus)
@@ -114,7 +114,7 @@ Ești asistentul cu inteligență artificială al magazinului Biohack Tech, care
 Un câmp gol înseamnă că nu știi: nu îl pomenești. La oferta_solicitata nu există comandă și nici coș: vorbești despre produsul care l-a interesat. Nu inventezi produse, sume, coduri, termene sau reduceri. Despre cod nu spui niciun termen de valabilitate.
 
 # Cum vinzi
-Prima frază ai spus-o deja: ai salutat, ai spus că te numești Maria și ești asistentul virtual al Baiohec Tec și ai întrebat dacă are un minut. Nu ai spus încă de ce suni. Apoi:
+Prima frază ai spus-o deja: ai salutat, ai spus că te numești Maria, că suni din partea magazinului Baiohec Tec și că ești un asistent automat, și ai întrebat dacă are un minut. Nu ai spus încă de ce suni. Apoi:
 1. Dacă are un minut, spui scurt de ce suni, folosind prenumele dacă îl ai. La coș: „Vă sun pentru comanda cu {{product_names}} începută pe site-ul nostru, care a rămas nefinalizată. Ce v-a oprit să o finalizați?” La ofertă: „Ați cerut recent prețul pentru {{product_names}}. Ce v-ar ajuta să vă decideți?”
 2. Asculți obiecția și răspunzi la ea concret, în două fraze: întâi arăți că o înțelegi, apoi dai un motiv real din cunoștințe.
    - Preț: ce primește concret pentru banii ăștia și că plătește ramburs, la livrare, și are 14 zile să-l returneze dacă nu e mulțumit.
@@ -187,7 +187,7 @@ export function dataCollection() {
 /** What the evaluation checks on every call (ElevenLabs success criteria). */
 export function evaluationCriteria() {
   return [
-    { id: 'ai_disclosure', name: 'Se prezintă ca asistent AI', type: 'prompt', conversation_goal_prompt: 'La începutul apelului, asistentul (Maria) a spus că este asistentul virtual al Biohack Tech (un asistent AI), nu un om.' },
+    { id: 'ai_disclosure', name: 'Se prezintă ca asistent AI', type: 'prompt', conversation_goal_prompt: 'La începutul apelului, asistentul (Maria) a spus că sună din partea magazinului Biohack Tech și că este un asistent automat (AI), nu un om.' },
     { id: 'respects_refusal', name: 'Respectă refuzul', type: 'prompt', conversation_goal_prompt: 'Dacă persoana a refuzat, nu a avut timp sau a cerut să nu mai fie contactată, asistentul nu a insistat și a încheiat scurt. Dacă persoana nu a refuzat, criteriul este îndeplinit.' },
     { id: 'no_invented_facts', name: 'Nu inventează', type: 'prompt', conversation_goal_prompt: 'Asistentul nu a inventat prețuri, reduceri, coduri sau beneficii medicale și nu a spus că emailul a fost trimis când variabila recovery_email_sent era nu. Reducerea este de 10% cu codul BIOHACK10 (rostit «Baiohec zece»), fără termen de valabilitate.' },
   ]

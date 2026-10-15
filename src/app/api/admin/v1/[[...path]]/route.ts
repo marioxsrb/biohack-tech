@@ -20,6 +20,8 @@ import { cancelOrder, confirmPayment, markDelivered, markProcessing, markReturnR
 import { CODE_RE, normalizeCode, promoCodes } from '@/server/promo'
 import { rateLimit } from '@/server/rate-limit'
 import { buildReport, period, reportMarkdown } from '@/server/report'
+import { buildSeries, parseSeriesQuery } from '@/server/series'
+import { charts } from '@/server/charts'
 import { audit, ensureStoreSettings, priceTable, readStoreSettings, saveStoreSettings, type StoreSettings } from '@/server/store-settings'
 
 export const runtime = 'nodejs'
@@ -246,6 +248,14 @@ async function handle(req: NextRequest, ctx: Ctx, method: 'GET' | 'POST' | 'PUT'
       }
     }
 
+    // ── custom charts: data and the saved list ──
+    if (resource === 'series' && method === 'GET') return json(await buildSeries(db, parseSeriesQuery(Object.fromEntries(sp))))
+    if (resource === 'charts') {
+      if (method === 'GET') return json(await charts.list(db))
+      if (method === 'POST') return changed('chart.add', { title: body.title }, { ok: true, chart: await charts.add(db, String(body.title ?? ''), body) })
+      if (method === 'DELETE' && id) return changed('chart.remove', { id }, { ok: await charts.remove(db, id) })
+    }
+
     // ── messages, audit ──
     if (resource === 'messages' && method === 'GET') return json(await enquiries.list(undefined, Math.min(Number(sp.get('limit')) || 100, 500)))
     if (resource === 'audit' && method === 'GET') {
@@ -299,6 +309,8 @@ const INDEX = {
     'PATCH /api/admin/v1/settings {prices?: {productId: bani | {variantId: bani} | null}, soldOut?: [productId], welcomePopup?, callsPaused?}',
     'GET  /api/admin/v1/blocklist · POST {phone, note?} · DELETE /blocklist/{phone}',
     'GET  /api/admin/v1/test-calls · GET /test-calls/{id} · POST {consent: true, phone, firstName, scenario: cart|price_reveal, funnel?, items: [{productId, variantId?, quantity}], emailSent?}',
+    'GET  /api/admin/v1/series?metric=sessions|views|leads|orders|revenue|units|aov|conversion|calls|welcome|codes&by=none|site|funnel|source|payment|product|outcome|code&days=7|14|30|60|90|180|365&grain=day|week',
+    'GET  /api/admin/v1/charts · POST {title, metric, by, days, grain, kind: line|bar} · DELETE /charts/{id}',
     'GET  /api/admin/v1/messages',
     'GET  /api/admin/v1/audit',
   ],

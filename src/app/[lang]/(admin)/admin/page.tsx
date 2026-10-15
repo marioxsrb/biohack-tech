@@ -5,6 +5,8 @@ import { formatLei } from '@/lib/money'
 import { getDb } from '@/server/db'
 import { buildReport, period, type Report } from '@/server/report'
 import { ORDER_LABEL, PAYMENT_LABEL, tone } from './labels'
+import { CustomCharts } from './CustomCharts'
+import { charts } from '@/server/charts'
 
 export const metadata: Metadata = { title: 'Dashboard' }
 
@@ -95,7 +97,8 @@ export default async function Dashboard({ searchParams }: PageProps<'/[lang]/adm
   const sp = await searchParams
   const key = typeof sp.p === 'string' ? sp.p : 'azi'
   const p = period(key)
-  const r = await buildReport(await getDb(), p)
+  const db = await getDb()
+  const [r, saved] = await Promise.all([buildReport(db, p), charts.list(db)])
   const t = r.totals
   const maxSource = Math.max(0, ...r.sources.map((s) => s.sessions))
   const maxProduct = Math.max(0, ...r.products.map((s) => s.units))
@@ -156,6 +159,8 @@ export default async function Dashboard({ searchParams }: PageProps<'/[lang]/adm
           )}
         </Card>
       </div>
+
+      <CustomCharts initial={saved} />
 
       <Card title="Pe site-uri" className="mt-3">
         <div className="overflow-x-auto">

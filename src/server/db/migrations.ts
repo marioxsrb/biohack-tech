@@ -524,4 +524,17 @@ create table if not exists test_calls (
 alter table test_calls enable row level security
 `,
   },
+  {
+    // The admin's custom charts on the dashboard (metric, split, period, kind), in the order they were added.
+    id: '017_admin_charts',
+    sql: `
+create table if not exists admin_charts (
+  id uuid primary key,
+  title text not null,
+  config jsonb not null,
+  created_at timestamptz not null default now()
+);
+alter table admin_charts enable row level security
+`,
+  },
 ]

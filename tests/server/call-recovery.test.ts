@@ -139,7 +139,7 @@ describe('scenario A: a cart on the main site', () => {
       recovery_email_sent: 'da',
     })
     expect(vars).not.toHaveProperty('recovery_expiration')
-    expect(vars.opening_line).toMatch(/^Bună (ziua|seara)! Numele meu este Maria, sunt asistentul virtual al Baiohec Tec\. Aveți un minut la dispoziție\?$/)
+    expect(vars.opening_line).toMatch(/^Bună (ziua|seara)! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec\. Sunt un asistent automat\. Aveți un minut la dispoziție\?$/)
     // One email in total: the code email (it replaces the regular first recovery email).
     expect(sent.map((m) => m.subject)).toEqual(['Codul tău de 10% pentru NEUROS Calm'])
     expect(sent[0].text).toContain(String(vars.recovery_code))
@@ -443,7 +443,7 @@ describe('test calls from the admin', () => {
 describe('the agent’s first sentence', () => {
   it('„Bună ziua” until 18:00 and „Bună seara” after, Bucharest time; Maria, with the AI disclosure', async () => {
     const { openingLine } = await import('@/server/calling/offer')
-    expect(openingLine({ firstName: 'Ana', cart: true, productNames: 'NEUROS Calm', at: new Date('2026-10-15T07:00:00Z') })).toBe('Bună ziua! Numele meu este Maria, sunt asistentul virtual al Baiohec Tec. Aveți un minut la dispoziție?')
+    expect(openingLine({ firstName: 'Ana', cart: true, productNames: 'NEUROS Calm', at: new Date('2026-10-15T07:00:00Z') })).toBe('Bună ziua! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat. Aveți un minut la dispoziție?')
     expect(openingLine({ firstName: 'Ana', cart: true, productNames: 'NEUROS Calm', at: new Date('2026-10-15T18:00:00Z') })).toMatch(/^Bună seara!/) // 21:00
   })
 })

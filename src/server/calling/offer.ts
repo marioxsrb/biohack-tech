@@ -165,5 +165,5 @@ export function openingLine(x: { firstName: string; cart: boolean; productNames:
   // so the Romanian voice does not switch to an English accent. The AI disclosure stays (EU AI Act, art. 50).
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Bucharest', hour: '2-digit', hourCycle: 'h23' }).format(x.at ?? new Date()))
   const hello = hour >= 18 || hour < 5 ? 'Bună seara!' : 'Bună ziua!'
-  return `${hello} Numele meu este Maria, sunt asistentul virtual al Baiohec Tec. Aveți un minut la dispoziție?`
+  return `${hello} Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat. Aveți un minut la dispoziție?`
 }
