@@ -28,7 +28,7 @@ export async function withdrawMarketing(email: string, source: ConsentSource, pa
 async function withdrawIn(t: Queryable, email: string, source: ConsentSource, page?: string) {
   const id = await marketing.withdraw(t, { email, source, page })
   // An unsubscribe stops every commercial contact: the AI call consents of the address are withdrawn too.
-  const calls = await callConsent.withdrawForEmail(t, email, source === 'checkout' || source === 'lead_form' ? 'admin' : source)
+  const calls = await callConsent.withdrawForEmail(t, email, source === 'checkout' || source === 'lead_form' || source === 'popup' ? 'admin' : source)
   return { id, calls }
 }
 

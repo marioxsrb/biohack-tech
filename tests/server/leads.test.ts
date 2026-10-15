@@ -110,7 +110,7 @@ async function reveal(extra: Record<string, unknown> = {}, cookies: Record<strin
   const res = await lead(post('/api/lead', host, { action: 'reveal', ...ana, productId: 'balance-wave', page: '/calm', attribution: { utm_source: 'facebook', utm_campaign: 'acces-test', fbclid: 'IwAR0abcdefghij' }, ...extra }, cookies))
   const data = await res.json()
   const c = setCookies(res)
-  return { res, data, vid: value(c.bt_vid), gate: value(c.bt_gate), cookies: c }
+  return { res, data, vid: value(c.bt_vid), gate: value(c.bt_gate2), cookies: c }
 }
 
 /** Time passes: every waiting job is due now. (First lets a run the routes started in the background finish.) */
@@ -142,7 +142,7 @@ describe('price-gated funnel: the form', () => {
     const { res, data, cookies, vid, gate } = await reveal()
     expect(res.status).toBe(200)
     expect(cookies.bt_vid).toMatch(/HttpOnly/i)
-    expect(cookies.bt_gate).not.toMatch(/HttpOnly/i)
+    expect(cookies.bt_gate2).not.toMatch(/HttpOnly/i)
     expect(gate).toBe(data.leadId)
     const l = (await leads.byId(db, data.leadId))!
     expect(l).toMatchObject({ visitorId: vid, funnel: 'gated_price', productId: 'balance-wave', name: 'Ana Popescu', email: 'ana@exemplu.ro', phone: '0722 123 456', stage: 'lead', landingHost: GATED, fbclid: 'IwAR0abcdefghij', privacyVersion: LEAD_PRIVACY_VERSION, marketingConsent: false, callConsent: false })
@@ -168,14 +168,14 @@ describe('price-gated funnel: the form', () => {
 
   it('another product opened on an unlocked device: a separate lead with the same contact, without sending it again', async () => {
     const first = await reveal()
-    const res = await lead(post('/api/lead', GATED, { action: 'interest', productId: 'ochelari-biohack' }, { bt_vid: first.vid, bt_gate: first.gate }))
+    const res = await lead(post('/api/lead', GATED, { action: 'interest', productId: 'ochelari-biohack' }, { bt_vid: first.vid, bt_gate2: first.gate }))
     expect(res.status).toBe(200)
     const rows = await leads.forVisitor(db, first.vid)
     expect(rows.map((r) => r.productId).sort()).toEqual(['balance-wave', 'ochelari-biohack'])
     expect(rows.find((r) => r.productId === 'ochelari-biohack')).toMatchObject({ email: 'ana@exemplu.ro', name: 'Ana Popescu', marketingConsent: false })
     // Without the unlocked state of this same browser: refused.
     expect((await lead(post('/api/lead', GATED, { action: 'interest', productId: 'brainlink-pro' }, { bt_vid: first.vid }))).status).toBe(403)
-    expect((await lead(post('/api/lead', GATED, { action: 'interest', productId: 'brainlink-pro' }, { bt_vid: crypto.randomUUID(), bt_gate: first.gate }))).status).toBe(403)
+    expect((await lead(post('/api/lead', GATED, { action: 'interest', productId: 'brainlink-pro' }, { bt_vid: crypto.randomUUID(), bt_gate2: first.gate }))).status).toBe(403)
   })
 
   it('rate limited per address: the 11th form in an hour for the same email is refused', async () => {
@@ -216,7 +216,7 @@ describe('checkout contact step (progressive capture)', () => {
 
   it('on acces, after the form: the same visitor gets a checkout lead next to the interest; the interest is superseded, not chased', async () => {
     const first = await reveal()
-    const { leadId } = await (await step(ana, { bt_vid: first.vid, bt_gate: first.gate }, GATED)).json()
+    const { leadId } = await (await step(ana, { bt_vid: first.vid, bt_gate2: first.gate }, GATED)).json()
     expect((await leads.byId(db, leadId))!.funnel).toBe('gated_price')
     await quiet(first.data.leadId, 60)
     await quiet(leadId, 60)
@@ -233,7 +233,7 @@ describe('leads → orders → purchases', () => {
 
   it('a cash-on-delivery order from acces: the order says gated_price, the visitor’s leads are ordered and linked', async () => {
     const first = await reveal()
-    const res = await order(GATED, { bt_vid: first.vid, bt_gate: first.gate }, 'cod', 'gated-cod-1')
+    const res = await order(GATED, { bt_vid: first.vid, bt_gate2: first.gate }, 'cod', 'gated-cod-1')
     expect(res.status).toBe(200)
     const o = (await orders.byToken(db, (await res.json()).token))!
     expect(o.attribution).toMatchObject({ funnel: 'gated_price', utm: { utm_source: 'facebook' } })
@@ -381,8 +381,8 @@ describe('recovery emails', () => {
   it('one sequence per person: three products and a checkout give one recovery email, for the checkout', async () => {
     const first = await reveal({ marketingConsent: true })
     for (const productId of ['brainlink-pro', 'ochelari-biohack'])
-      await lead(post('/api/lead', GATED, { action: 'interest', productId }, { bt_vid: first.vid, bt_gate: first.gate }))
-    await lead(post('/api/lead', GATED, { action: 'checkout', ...ana, cart: [{ productId: 'balance-wave', quantity: 1 }] }, { bt_vid: first.vid, bt_gate: first.gate }))
+      await lead(post('/api/lead', GATED, { action: 'interest', productId }, { bt_vid: first.vid, bt_gate2: first.gate }))
+    await lead(post('/api/lead', GATED, { action: 'checkout', ...ana, cart: [{ productId: 'balance-wave', quantity: 1 }] }, { bt_vid: first.vid, bt_gate2: first.gate }))
     await db.query(`update leads set last_activity_at = now() - interval '40 minutes'`)
     await later()
     expect(recoveries().map((m) => m.subject)).toEqual(['Comanda ta NEUROS Calm te așteaptă'])
@@ -407,7 +407,7 @@ describe('recovery emails', () => {
 
   it('the older lead owns the sequence: a product opened later never emails first, even when its step runs first', async () => {
     const first = await reveal({ marketingConsent: true })
-    await lead(post('/api/lead', GATED, { action: 'interest', productId: 'brainlink-pro' }, { bt_vid: first.vid, bt_gate: first.gate }))
+    await lead(post('/api/lead', GATED, { action: 'interest', productId: 'brainlink-pro' }, { bt_vid: first.vid, bt_gate2: first.gate }))
     await runDueJobs()
     // The Calm lead was active again (its step moves later); the Focus interest's step is due now.
     await db.query(`update leads set last_activity_at = now() - interval '40 minutes' where product_id = 'brainlink-pro'`)
@@ -496,12 +496,12 @@ describe('recovery link', () => {
     const res = await resume(new NextRequest(`https://${GATED}/api/lead/resume?t=${l.recoveryToken}`, { headers: { host: GATED } }))
     expect(res.status).toBe(303)
     expect(res.headers.get("location")).toBe(`https://${GATED}/products/calm?recuperare=1`)
-    expect(value(setCookies(res).bt_gate)).toBe(l.id)
+    expect(value(setCookies(res).bt_gate2)).toBe(l.id)
     const step = await (await lead(post('/api/lead', MAIN, { action: 'checkout', ...ana, cart: [{ productId: 'balance-wave', quantity: 1 }] }))).json()
     const c = (await leads.byId(db, step.leadId))!
     const r2 = await resume(new NextRequest(`https://${MAIN}/api/lead/resume?t=${c.recoveryToken}`, { headers: { host: MAIN } }))
     expect(r2.headers.get('location')).toBe(`https://${MAIN}/reluare/${c.recoveryToken}`)
-    expect(setCookies(r2).bt_gate).toBeUndefined()
+    expect(setCookies(r2).bt_gate2).toBeUndefined()
     const bad = await resume(new NextRequest(`https://${MAIN}/api/lead/resume?t=../../x`, { headers: { host: MAIN } }))
     expect(bad.headers.get('location')).toBe(`https://${MAIN}/reluare/invalid`)
   })
@@ -569,7 +569,7 @@ describe('retention, measurement, helpers', () => {
   })
 
   it('cookie parsing', () => {
-    expect(cookieFrom('a=1; bt_vid=abc%20d; bt_gate=x', 'bt_vid')).toBe('abc d')
+    expect(cookieFrom('a=1; bt_vid=abc%20d; bt_gate2=x', 'bt_vid')).toBe('abc d')
     expect(cookieFrom(null, 'bt_vid')).toBeUndefined()
   })
 })

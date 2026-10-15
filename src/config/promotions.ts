@@ -96,3 +96,11 @@ export const promoText = (ro: string, locale: Locale = 'ro'): string => {
   const m = ro.match(/^(\d+% la \d+ bucăți) (.+)$/)
   return m && EN[m[1]] ? `${EN[m[1]]}, ${m[2]}` : ro
 }
+
+/**
+ * The two fixed 10% codes (business decision 15.10.2026), created by migration 013 and editable in /admin/coduri:
+ * the AI caller's code and the website email popup's code. One code per order, so they never add up to each other;
+ * like every code they add to the automatic promotions (10% of the full price).
+ */
+export const CALL_CODE = 'BIOHACK10'
+export const WELCOME_CODE = 'LONGEVITY10'

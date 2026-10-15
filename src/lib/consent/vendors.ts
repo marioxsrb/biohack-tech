@@ -25,7 +25,7 @@ export type Vendor = {
 }
 
 /** BiohackTech's Meta Pixel (Events Manager). */
-export const META_PIXEL_ID = '826932839766824'
+export const META_PIXEL_ID = '967887562483664'
 
 const PRIVATE_PAGES = /^\/(checkout|comanda|reluare|dezabonare|retragere|admin)(\/|$)/
 

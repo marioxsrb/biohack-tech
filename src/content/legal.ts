@@ -111,7 +111,7 @@ export const legalPages: LegalPage[] = [
             list: [
               'Emailuri: noutăți, oferte și recomandări despre produsele Biohack Tech.',
               'Recuperarea comenzilor nefinalizate: dacă ai început o comandă sau ai cerut prețul și nu ai finalizat, îți putem trimite cel mult două emailuri de reamintire, cu linkul către produs sau coș. Ele se opresc imediat ce comanzi, te dezabonezi sau retragi acordul.',
-              'Apeluri de la asistentul AI: te poate suna un asistent AI al Biohack Tech, un sistem automat, despre produsul ales, dacă nu ai finalizat comanda. Îți spune de la început că este un asistent AI. Sună doar la un număr românesc, în zilele lucrătoare, între orele 10 și 19, de cel mult două ori pentru aceeași comandă nefinalizată. Nu înregistrăm apelul și nu îți cere date de card.',
+              'Apeluri de la asistentul AI: te poate suna un asistent AI al Biohack Tech, un sistem automat, despre produsul ales, dacă nu ai finalizat comanda. Îți spune de la început că este un asistent AI. Sună doar la un număr românesc, în zilele lucrătoare, între orele 8 și 21, de cel mult trei ori pentru aceeași comandă nefinalizată (dacă nu răspunzi: o dată după o oră, apoi a doua zi). Nu înregistrăm apelul și nu îți cere date de card.',
             ],
           },
           'Poți retrage acordul oricând, gratuit: din linkul de dezabonare din fiecare email de marketing (oprește și apelurile), spunându-i asistentului în timpul apelului că nu mai vrei să fii sunat (oprește apelurile) sau scriindu-ne. După retragere nu te mai contactăm în scop comercial. Emailurile despre comenzi (confirmare, plată, factură, livrare, rambursare) vin în continuare, pentru că sunt necesare comenzii.',
@@ -186,7 +186,7 @@ export const legalPages: LegalPage[] = [
         id: 'apeluri',
         body: [
           `Te putem suna cu un asistent AI doar dacă bifezi căsuța care numește explicit apelurile: „${COMMUNICATIONS_CONSENT_TEXT}” Bifa este opțională și nu este necesară pentru a vedea prețul sau pentru a comanda. Acordul pentru apeluri este înregistrat separat, pentru numărul tău de telefon. Un acord mai vechi, dat doar pentru emailuri, nu înseamnă acord pentru apeluri.`,
-          'Asistentul îți spune de la început că este un asistent AI al Biohack Tech. Te sună doar la un număr românesc, în zilele lucrătoare, între orele 10 și 19, de cel mult două ori pentru aceeași comandă nefinalizată. Nu îți cere date de card și nu face recomandări medicale.',
+          'Asistentul îți spune de la început că este un asistent AI al Biohack Tech. Te sună doar la un număr românesc, în zilele lucrătoare, între orele 8 și 21, de cel mult trei ori pentru aceeași comandă nefinalizată (dacă nu răspunzi: o dată după o oră, apoi a doua zi). Nu îți cere date de card și nu face recomandări medicale.',
           'Nu înregistrăm apelul. Păstrăm doar data, durata și rezultatul (de exemplu „vrea mai multe informații” sau „nu mai dorește apeluri”), legate de solicitarea ta. Dacă ceri, îți trimitem pe email linkul către produs.',
           'Poți refuza oricând: spune-i asistentului că nu mai vrei să fii sunat, dezabonează-te din orice email sau scrie-ne. Nu te mai sunăm după ce comanzi.',
         ],
@@ -264,8 +264,8 @@ export const legalPages: LegalPage[] = [
                 ['bt-cart-cleared-*', 'Stocare locală', 'Ține minte că produsele unei comenzi au fost scoase din coș', 'Până ștergi datele site-ului'],
                 ['bt-consent-v1', 'Stocare locală', 'Ține minte alegerea ta privind cookie-urile', `${Math.round(CONSENT_MAX_AGE_DAYS / 30)} luni`],
                 ['bt_vid', 'Cookie (doar după un formular)', 'Un cod aleator care leagă formularul de preț sau pasul de contact de comanda plasată din același browser, ca să nu apară de două ori', '90 de zile'],
-                ['bt_gate', 'Cookie, pe acces.biohack-tech.ro', 'Ține minte că ai completat formularul de preț, ca să nu ți-l cerem din nou', '90 de zile'],
-                ['bt-gate', 'Stocare locală, pe acces.biohack-tech.ro', 'Aceeași informație, dacă cookie-ul se șterge', '90 de zile (verificat de server)'],
+                ['bt_gate2', 'Cookie, pe acces.biohack-tech.ro', 'Ține minte că ai completat formularul de preț, ca să nu ți-l cerem din nou', '90 de zile'],
+                ['bt-gate2', 'Stocare locală, pe acces.biohack-tech.ro', 'Aceeași informație, dacă cookie-ul se șterge', '90 de zile (verificat de server)'],
                 ['bt-gate-checked', 'Stocare de sesiune', 'Verificăm o singură dată pe sesiune dacă dispozitivul a mai completat formularul', 'Până închizi fila'],
                 ['Recunoașterea dispozitivului', 'Citirea unor caracteristici ale dispozitivului (ecran, fus orar, limbă, sistem)', 'Când deschizi acces.biohack-tech.ro fără cookie, verificăm o dată dacă dispozitivul a completat deja formularul de preț, ca să nu ți-l cerem din nou. Trimitem doar un cod criptografic, nu caracteristicile; dacă nu ai completat formularul, nu păstrăm nimic', '90 de zile'],
                 ['bt-visit', 'Stocare de sesiune', 'Numără vizita o singură dată pe sesiune, pentru statisticile noastre agregate; nu trimite niciun identificator', 'Până închizi fila'],

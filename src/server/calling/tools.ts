@@ -14,7 +14,7 @@ import { jobs } from '@/server/jobs/outbox'
 import { leads } from '@/server/leads'
 import { promoCodes } from '@/server/promo'
 import { calls, callScenario, normalizeOutcome, optOut, type Call } from './calls'
-import { cartTotal, describeItems, existingDiscounts, formatExpiry, lei, RECOVERY_PERCENT } from './offer'
+import { cartTotal, describeItems, existingDiscounts, lei, RECOVERY_PERCENT } from './offer'
 
 /** The header the agent's server tools send (set in the agent's tool configuration, never in a prompt). */
 export const TOOL_SECRET_HEADER = 'x-biohack-tool-secret'
@@ -35,7 +35,7 @@ const SAMPLE = {
   product_names: 'NEUROS Calm',
   product_quantities: '1 × NEUROS Calm',
   cart_total: '6.380 lei',
-  discount: { eligible: true, percent: RECOVERY_PERCENT, code: 'BTTEST01', expires: 'mâine, ora 12:00', combinable_with_promotions: true },
+  discount: { eligible: true, percent: RECOVERY_PERCENT, code: 'BIOHACK10', combinable_with_promotions: true },
   recovery_email: { sent: true, status: 'sent' },
 }
 
@@ -57,7 +57,6 @@ async function discountState(q: Queryable, call: Call, email: string) {
     eligible: true,
     percent: checked.code.value,
     code: checked.code.code,
-    expires: checked.code.endsAt ? formatExpiry(checked.code.endsAt) : '',
     combinable_with_promotions: true,
     rule: 'Se adaugă la promoțiile din coș: încă 10% din prețul întreg (de exemplu 20% la 3 bucăți + 10% = 30%).',
   }

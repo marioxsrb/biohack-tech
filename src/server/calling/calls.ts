@@ -22,7 +22,7 @@ import { log } from '@/server/log'
 import { marketing } from '@/server/marketing/consent'
 import { callConsent } from './consent'
 import { callScenario, firstCallDelay, type CallScenario } from './delay'
-import { cartTotal, describeItems, existingDiscounts, lei, openingLine, prepareOffer, RECOVERY_PERCENT, formatExpiry, type OfferEmailStatus } from './offer'
+import { cartTotal, describeItems, existingDiscounts, lei, openingLine, prepareOffer, RECOVERY_PERCENT, type OfferEmailStatus } from './offer'
 
 /** What a call ended with. The first four come from the conversation, the rest from the line. */
 export const CALL_OUTCOMES = ['interested', 'discount_accepted', 'more_info', 'human_follow_up', 'not_interested', 'no_time', 'opted_out', 'no_answer', 'busy', 'invalid_number', 'technical_failure'] as const
@@ -244,7 +244,7 @@ export type StepResult = { skip: string } | { note: string }
  * What the agent is told about this lead: first name, the products (and, for a checkout, quantities and total at
  * today's prices), the offer the server made and whether its email went out. No email address, no street address.
  */
-export function callVariables(lead: Lead, callId: string, offer: { code: string; expires: Date; emailStatus: OfferEmailStatus; link: string } | null) {
+export function callVariables(lead: Lead, callId: string, offer: { code: string; emailStatus: OfferEmailStatus; link: string } | null) {
   const items = describeItems(lead)
   const scenario = callScenario(lead)
   const firstName = lead.name?.split(' ')[0]?.slice(0, 40) ?? ''
@@ -260,7 +260,6 @@ export function callVariables(lead: Lead, callId: string, offer: { code: string;
     existing_discounts: existingDiscounts(lead),
     recovery_discount_percent: offer ? RECOVERY_PERCENT : 0,
     recovery_code: offer?.code ?? '',
-    recovery_expiration: offer ? formatExpiry(offer.expires) : '',
     checkout_recovery_url: offer?.link ?? '',
     recovery_email_sent: offer?.emailStatus === 'sent' ? 'da' : 'nu',
   }
@@ -296,9 +295,8 @@ export async function runCallAttempt(q: Queryable, c: Config, payload: { leadId:
   if (!rows.length) return { skip: `attempt ${attempt} already recorded` }
   await leads.update(q, lead.id, { call_attempts: attempt, last_call_at: now })
   // The offer exists before the phone rings: the agent only repeats what the server made and sent.
-  const prepared = await prepareOffer(q, c, lead, { dryRun: c.calling.dryRun })
-  // A later attempt after the code's 24 hours: no offer at all (the agent offers no discount without a code).
-  const offer = prepared.code.endsAt && prepared.code.endsAt.getTime() > now.getTime() + 30 * 60_000 ? prepared : null
+  // No active code (BIOHACK10 switched off in /admin/coduri): no offer at all; the agent offers no discount.
+  const offer = await prepareOffer(q, c, lead, { dryRun: c.calling.dryRun })
   await calls.update(q, id, { discount_code: offer?.code.code ?? null, email_status: offer?.emailStatus ?? 'not_sent' })
 
   if (c.calling.dryRun) {
@@ -314,7 +312,7 @@ export async function runCallAttempt(q: Queryable, c: Config, payload: { leadId:
   }
   await calls.update(q, id, { status: 'dialing', started_at: now })
   try {
-    const r = await elevenlabs.outboundCall(c.elevenlabs, d.phone, callVariables(lead, id, offer && { code: offer.code.code, expires: offer.code.endsAt!, emailStatus: offer.emailStatus, link: offer.link }))
+    const r = await elevenlabs.outboundCall(c.elevenlabs, d.phone, callVariables(lead, id, offer && { code: offer.code.code, emailStatus: offer.emailStatus, link: offer.link }))
     if (!r.success || !r.conversation_id) throw new ElevenLabsError(`ElevenLabs refused the call: ${r.message}`.slice(0, 300), 200)
     await calls.update(q, id, { provider_call_id: r.conversation_id, provider_call_sid: r.callSid })
     await leads.update(q, lead.id, { call_status: 'dialing' })
@@ -386,7 +384,8 @@ export async function applyCallResult(q: Queryable, c: Config, call: Call, r: Ca
   else if (RETRYABLE.includes(r.outcome)) {
     if (call.attempt < c.calling.maxAttempts) {
       status = 'scheduled'
-      const at = nextCallingWindow(new Date(Date.now() + c.calling.retryHours * 3_600_000), c.calling)
+      // Second attempt an hour later; the third the next day, same time (each moved into the calling window).
+      const at = nextCallingWindow(new Date(Date.now() + (call.attempt === 1 ? c.calling.retryHours : 24) * 3_600_000), c.calling)
       await jobs.enqueue(q, { kind: 'call.attempt', dedupeKey: `call.attempt:${lead.id}:${call.attempt + 1}`, payload: { leadId: lead.id, attempt: call.attempt + 1 }, runAt: at })
     } else status = 'stopped'
   }

@@ -43,7 +43,7 @@ describe('device recognition', () => {
     const { leadId } = await (await reveal({ device: DEV_A })).json()
     const r = await recognize({ device: DEV_A })
     expect(r).toMatchObject({ status: 200, unlocked: true, leadId })
-    expect(r.cookie).toMatch(new RegExp(`bt_gate=${leadId}`))
+    expect(r.cookie).toMatch(new RegExp(`bt_gate2=${leadId}`))
     expect(await count()).toBe(1)
   })
 

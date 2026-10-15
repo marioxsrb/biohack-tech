@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { usePathname } from 'next/navigation'
 import { Sheet } from '@/components/offers/Sheet'
+import { cartStore } from '@/components/cart/cart-store'
 import { Arrow } from '@/components/ui/icons'
 import { getProduct, getProductBySlug, type ProductId } from '@/content/catalog'
 import { attributionParams } from '@/lib/attribution'
@@ -102,6 +103,26 @@ export function GateRoot({ children }: { children: ReactNode }) {
     } catch {}
     void fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'interest', productId: product.id, attribution: Object.fromEntries(attributionParams(location.search)) }) }).catch(() => {})
   }, [gated, locked, pathname])
+
+  // An unlocked device changing its cart: the server learns it (products and quantities only), so an AI call about
+  // an abandoned cart can follow 20 minutes after the last change instead of 30 after the form.
+  useEffect(() => {
+    if (!gated || locked) return
+    const snap = () => JSON.stringify(cartStore.getSnapshot().map((l) => ({ productId: l.productId, variantId: l.variantId, quantity: l.quantity })))
+    let last = snap()
+    let timer: ReturnType<typeof setTimeout> | undefined
+    const unsubscribe = cartStore.subscribe(() => {
+      const now = snap()
+      if (now === last) return
+      last = now
+      clearTimeout(timer)
+      timer = setTimeout(() => void fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, keepalive: true, body: JSON.stringify({ action: 'cart', cart: JSON.parse(now) }) }).catch(() => {}), 1500)
+    })
+    return () => {
+      clearTimeout(timer)
+      unsubscribe()
+    }
+  }, [gated, locked])
 
   const value = useMemo<Gate>(() => ({ gated, locked: gated && locked, open }), [gated, locked, open])
   return (

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { site } from '@/config/site'
-import { checkAdminAuth } from '@/lib/admin-auth'
+import { ADMIN_COOKIE, checkAdminRequest } from '@/lib/admin-auth'
 import { DISCONTINUED_PATH, isGatedHostname, isLandingSlug, landingForHost, presentationPath, retiredLandingRedirect, routeGated, routeLanding, wwwRedirect } from '@/lib/landing-hosts'
 import { GATE_COOKIE } from '@/lib/lead'
 import { defaultLocale, splitLocale } from '@/i18n/locales'
@@ -28,7 +28,8 @@ import { defaultLocale, splitLocale } from '@/i18n/locales'
  *    redirects to the plain URL, so each page has exactly one public address per language. API routes and
  *    files are outside the matcher's page logic and stay where they are.
  *
- * 2. /admin is behind HTTP Basic Auth (ADMIN_USER / ADMIN_PASSWORD). Without a password configured,
+ * 2. /admin is behind the login page (a signed session cookie; HTTP Basic Auth still works for scripts),
+ *    with ADMIN_USER / ADMIN_PASSWORD. Without a password configured,
  *    the area does not exist. Serve the site over HTTPS only (it is, in production).
  */
 /** Requests that are not pages: API routes and generated files keep their own paths. */
@@ -54,7 +55,7 @@ function noindex(res: NextResponse) {
   return res
 }
 
-export function proxy(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname, search } = req.nextUrl
   const www = wwwRedirect(req.headers.get('host'), site.url, `${pathname}${search}`)
   if (www) return NextResponse.redirect(www, 308)
@@ -73,7 +74,7 @@ export function proxy(req: NextRequest) {
     if (route.action === 'main') return NextResponse.redirect(new URL(`${route.path}${search}`, mainOrigin), 307)
     if (route.action === 'redirect') return noindex(NextResponse.redirect(new URL(`${route.path}${search}`, req.url), 307))
     // The same storefront as the main site, never indexed (prices are gated in the page, see components/gate).
-    return noindex(storefront(req, pathname, search))
+    return noindex(await storefront(req, pathname, search))
   }
 
   // Old price-gated funnel addresses on the main host (/acces/<slug>): the product page.
@@ -103,7 +104,7 @@ export function proxy(req: NextRequest) {
 }
 
 /** The main storefront's routing (also used by the gated hostname): presentation previews, languages, admin. */
-function storefront(req: NextRequest, pathname: string, search: string) {
+async function storefront(req: NextRequest, pathname: string, search: string) {
   // Presentation pages on the main host: /lp/<slug>/prezentare, for previews. Never indexed.
   const presentation = /^\/lp\/([\w-]+)\/prezentare\/?$/.exec(pathname)?.[1]
   if (presentation && isLandingSlug(presentation)) return noindex(NextResponse.rewrite(new URL(`${presentationPath(presentation)}${search}`, req.url)))
@@ -113,15 +114,19 @@ function storefront(req: NextRequest, pathname: string, search: string) {
   if (locale === defaultLocale && pathname !== path) return NextResponse.redirect(new URL(`${path}${search}`, req.url), 308)
 
   if (path === '/admin' || path.startsWith('/admin/')) {
-    const auth = checkAdminAuth(req.headers.get('authorization'))
+    const auth = await checkAdminRequest(req.cookies.get(ADMIN_COOKIE)?.value, req.headers.get('authorization'))
     if (auth === 'disabled') return new NextResponse('Not found', { status: 404 })
-    if (auth === 'ok') {
-      const res = serve(req, locale, path, search)
+    const admin = (res: NextResponse) => {
       res.headers.set('X-Robots-Tag', 'noindex, nofollow')
       res.headers.set('Cache-Control', 'no-store')
       return res
     }
-    return new NextResponse('Autentificare necesară', { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Biohack Tech admin", charset="UTF-8"' } })
+    // The login page is the only admin page open without a session (signed in: straight to the dashboard).
+    if (path === '/admin/login') return admin(auth === 'ok' ? NextResponse.redirect(new URL('/admin', req.url), 303) : serve(req, locale, path, search))
+    if (auth === 'ok') return admin(serve(req, locale, path, search))
+    const login = new URL('/admin/login', req.url)
+    login.searchParams.set('next', path)
+    return admin(NextResponse.redirect(login, 303))
   }
 
   const res = serve(req, locale, path, search)

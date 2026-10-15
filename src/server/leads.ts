@@ -12,7 +12,7 @@ import 'server-only'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { getProduct, resolveLine } from '@/content/catalog'
 import type { Attribution } from '@/lib/attribution'
-import { LEAD_PRIVACY_VERSION, type Funnel, type LeadContact } from '@/lib/lead'
+import { GATE_RESET_AT, LEAD_PRIVACY_VERSION, type Funnel, type LeadContact } from '@/lib/lead'
 import { getConfig } from '@/server/config'
 import type { Queryable, Row } from '@/server/db'
 import { jobs, type NewJob } from '@/server/jobs/outbox'
@@ -234,6 +234,23 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
   return { lead, created, stageChanged }
 }
 
+/**
+ * acces: the cart of a device that gave its details on the price form, kept on that lead (an empty cart clears
+ * it). It is activity: the lead's quiet time starts again, and with the call box ticked the AI call is planned
+ * for the cart's quiet time (20 minutes) after this change; the attempt itself checks everything again.
+ */
+export async function recordGatedCart(t: Queryable, lead: Lead, cart: CartSnapshot) {
+  const { rows } = await t.query('update leads set cart = $2, last_activity_at = now(), updated_at = now() where id = $1 returning *', [lead.id, cart.length ? JSON.stringify(cart) : null])
+  const fresh = toLead(rows[0])
+  const c = getConfig()
+  const phone = romanianE164(fresh.phone)
+  if (cart.length && fresh.callConsent && phone && c.calling.enabled && fresh.callAttempts === 0) {
+    const job = firstCallJob(fresh, c, phone)
+    await jobs.enqueue(t, { ...job, dedupeKey: `${job.dedupeKey}:cart:${Math.floor(Date.now() / 60_000)}` })
+  }
+  return fresh
+}
+
 /** The CRM copy and the two abandonment checks for the lead's current stage. */
 function leadJobs(lead: Lead, c = getConfig()): NewJob[] {
   const list: NewJob[] = []
@@ -267,7 +284,7 @@ export const leads = {
    * device key, or by the email the visitor types again. The newest one wins.
    */
   async recognize(q: Queryable, by: { id?: string; deviceKey?: string | null; email?: string }, days: number) {
-    const since = new Date(Date.now() - days * 86_400_000)
+    const since = new Date(Math.max(Date.now() - days * 86_400_000, GATE_RESET_AT.getTime()))
     if (by.id && UUID_RE.test(by.id)) {
       const { rows } = await q.query("select * from leads where id = $1 and funnel = 'gated_price' and created_at > $2", [by.id, since])
       if (rows[0]) return toLead(rows[0])

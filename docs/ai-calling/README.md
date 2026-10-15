@@ -24,7 +24,7 @@ lead (Supabase) → eligibility (at run time) → call.attempt job → ElevenLab
   first sentence of every call says so.
 - **No recording**: the outbound call requests no recording; the agent is set to `record_voice: false` and
   30-day retention on ElevenLabs. The app stores outcome, timings and ids only — never the transcript.
-- Calling window: weekdays 10–19 Europe/Bucharest (only +40 numbers are called), at most 2 attempts.
+- Calling window: weekdays 8–21 Europe/Bucharest (only +40 numbers are called), at most 3 attempts.
 - **A lawyer should confirm** the consent text and the processor setup before real calls start.
 
 ## The two scenarios
@@ -71,7 +71,7 @@ scenario's delay · inside the calling window
 (otherwise the attempt waits for the next window).
 
 After a call: `opted_out` → call consent and email marketing withdrawn, stop · `not_interested` / `invalid_number` → stop ·
-`no_answer` / `busy` / `technical_failure` → one more attempt after `AI_CALLING_RETRY_HOURS` (in the window),
+`no_answer` / `busy` / `technical_failure` → second attempt after `AI_CALLING_RETRY_HOURS` (1 h), third the next day at the same time (each moved into the window),
 then stop · a provider timeout or 5xx → status `unknown`, **never redialed automatically** (an admin decides).
 
 ## Outcomes

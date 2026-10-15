@@ -49,11 +49,15 @@ describe('admin credentials', () => {
 describe('admin Server Actions check credentials themselves', () => {
   it('reject any request without valid credentials, even with a Basic header', async () => {
     let header: string | null = null
-    vi.doMock('next/headers', () => ({ headers: async () => new Headers(header ? { authorization: header } : {}) }))
+    let session: string | undefined
+    vi.doMock('next/headers', () => ({
+      headers: async () => new Headers(header ? { authorization: header } : {}),
+      cookies: async () => ({ get: () => (session ? { value: session } : undefined) }),
+    }))
     vi.doMock('next/cache', () => ({ revalidatePath: () => {} }))
     vi.stubEnv('ADMIN_USER', env.ADMIN_USER)
     vi.stubEnv('ADMIN_PASSWORD', env.ADMIN_PASSWORD)
-    const actions = await import('@/app/[lang]/(site)/admin/actions')
+    const actions = await import('@/app/[lang]/(admin)/admin/actions')
     const form = new FormData()
     form.set('id', '00000000-0000-4000-8000-000000000000')
     for (const h of [null, 'Basic x', basic('ops:wrong-password-123'), basic('ops')]) {
@@ -61,6 +65,13 @@ describe('admin Server Actions check credentials themselves', () => {
       await expect(actions.markPaidAction(form)).rejects.toThrow('unauthorized')
       await expect(actions.retryJobsAction(form)).rejects.toThrow('unauthorized')
       await expect(actions.cancelAction(form)).rejects.toThrow('unauthorized')
+    }
+    // A forged or expired session cookie does not pass either.
+    header = null
+    const { createAdminSession } = await import('@/lib/admin-auth')
+    for (const s of ['x.1.y', await createAdminSession(env.ADMIN_USER, env, Date.now() - 30 * 86_400_000), await createAdminSession('someone-else', env)]) {
+      session = s
+      await expect(actions.retryJobsAction(form)).rejects.toThrow('unauthorized')
     }
     vi.unstubAllEnvs()
   })

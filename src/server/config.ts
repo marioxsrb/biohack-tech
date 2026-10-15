@@ -107,7 +107,11 @@ export type CallingConfig = {
    */
   testMode: boolean
   testDelayMinutes: number
-  /** Hours between a missed attempt and the next one. */
+  /**
+   * After a first missed attempt, the second comes this many hours later (default 1) if that is inside the calling
+   * window (otherwise at the next window); a third, after a second miss, the next day at the same time (or the
+   * next window).
+   */
   retryHours: number
   /** Allowed local calling window [startHour, endHour) on allowed weekdays (1 = Monday ... 7 = Sunday), in `timezone`. */
   hours: { start: number; end: number }
@@ -238,12 +242,12 @@ function readCalling(issues: ConfigIssue[], isolated: boolean): { calling: Calli
     enabled: flag('AI_CALLING_ENABLED'),
     dryRun: str('AI_CALLING_DRY_RUN') !== 'false',
     provider: 'elevenlabs',
-    maxAttempts: Math.min(positiveInt(str('AI_CALLING_MAX_ATTEMPTS')) ?? 2, 3),
+    maxAttempts: Math.min(positiveInt(str('AI_CALLING_MAX_ATTEMPTS')) ?? 3, 3),
     delays: { cart: positiveInt(str('AI_CALL_DELAY_VISIBLE_MINUTES')) ?? 20, price_reveal: positiveInt(str('AI_CALL_DELAY_GATED_MINUTES')) ?? 30 },
     testMode: flag('AI_CALLING_TEST_MODE'),
     testDelayMinutes: Math.min(positiveInt(str('AI_CALLING_TEST_DELAY_MINUTES')) ?? 2, 10),
-    retryHours: positiveInt(str('AI_CALLING_RETRY_HOURS')) ?? 24,
-    hours: hourRange(str('AI_CALLING_HOURS'), { start: 10, end: 19 }),
+    retryHours: positiveInt(str('AI_CALLING_RETRY_HOURS')) ?? 1,
+    hours: hourRange(str('AI_CALLING_HOURS'), { start: 8, end: 21 }),
     days: days && Number(days[1]) <= Number(days[2]) ? Array.from({ length: Number(days[2]) - Number(days[1]) + 1 }, (_, i) => Number(days[1]) + i) : [1, 2, 3, 4, 5],
     timezone: str('AI_CALLING_TIMEZONE') ?? 'Europe/Bucharest',
     testNumbers: str('AI_CALLING_TEST_NUMBERS')?.split(',').map((n) => n.trim()).filter(Boolean) || null,

@@ -18,7 +18,7 @@ vi.mock('nodemailer', () => ({
 }))
 
 const { freshDb, person, TEST_ENV, lines } = await import('./helpers')
-const { leads, captureLead, CART_INTEREST } = await import('@/server/leads')
+const { leads, CART_INTEREST } = await import('@/server/leads')
 const { calls } = await import('@/server/calling/calls')
 const { callConsent } = await import('@/server/calling/consent')
 const { recoveryCode } = await import('@/server/calling/offer')
@@ -31,6 +31,7 @@ const { runDueJobs } = await import('@/server/jobs/runner')
 const { POST: lead } = await import('@/app/api/lead/route')
 const { POST: webhook } = await import('@/app/api/webhooks/elevenlabs/route')
 const { POST: tool } = await import('@/app/api/calling/tools/[tool]/route')
+const { POST: welcome } = await import('@/app/api/welcome/route')
 
 const SECRET = 'whsec_el_test_secret'
 const TOOL_SECRET = 'tool-secret-for-tests-0123456789'
@@ -131,9 +132,11 @@ describe('scenario A: a cart on the main site', () => {
       product_quantities: '2 × NEUROS Calm',
       cart_total: '11.484 lei', // 2 × 6.380 lei with the 10% for two
       recovery_discount_percent: 10,
+      recovery_code: 'BIOHACK10',
       recovery_email_sent: 'da',
     })
-    expect(vars.opening_line).toBe('Bună ziua, Ana! Sunt asistentul virtual Biohack Tech, un asistent AI. Vă contactez în legătură cu o comandă începută pe site-ul nostru, care a rămas nefinalizată. Aveți un minut?')
+    expect(vars).not.toHaveProperty('recovery_expiration')
+    expect(vars.opening_line).toBe('Bună ziua, Ana! Sunt asistentul cu inteligență artificială al Baiohec Tec. Vă contactez în legătură cu o comandă începută pe site-ul nostru, care a rămas nefinalizată. Aveți un minut?')
     // One email in total: the code email (it replaces the regular first recovery email).
     expect(sent.map((m) => m.subject)).toEqual(['Codul tău de 10% pentru NEUROS Calm'])
     expect(sent[0].text).toContain(String(vars.recovery_code))
@@ -164,21 +167,14 @@ describe('scenario A: a cart on the main site', () => {
   })
 })
 
-describe('a later attempt', () => {
-  it('after the code expired: no offer is made (empty code, 0%)', async () => {
-    const leadId = await checkout([{ productId: 'brainlink-pro', quantity: 1 }])
+describe('the caller’s code switched off', () => {
+  it('BIOHACK10 inactive in /admin/coduri: no offer is made (empty code, 0%), no code email', async () => {
+    await db.query("update promo_codes set active = false where code = 'BIOHACK10'")
+    await checkout([{ productId: 'brainlink-pro', quantity: 1 }])
     await quiet()
     await later()
-    const [first] = await calls.forLeads(db, [leadId])
-    await db.query("update promo_codes set ends_at = now() - interval '1 minute'")
-    const body = JSON.stringify({ type: 'call_initiation_failure', data: { agent_id: 'agent_test', conversation_id: first.providerCallId, failure_reason: 'no-answer' } })
-    await webhook(new NextRequest('https://biohack-tech.ro/api/webhooks/elevenlabs', { method: 'POST', headers: { 'elevenlabs-signature': signWebhook(body, SECRET) }, body }))
-    await runDueJobs() // the webhook's own run
-    await db.query("update jobs set run_at = now() where kind = 'call.attempt' and status = 'pending'")
-    await runDueJobs()
-    expect(dials()).toHaveLength(2)
-    expect(varsOf(1)).toMatchObject({ recovery_code: '', recovery_discount_percent: 0, recovery_email_sent: 'nu' })
-    expect(sent).toHaveLength(1) // the first code email only
+    expect(varsOf()).toMatchObject({ recovery_code: '', recovery_discount_percent: 0, recovery_email_sent: 'nu' })
+    expect(sent.filter((m) => /Codul tău/.test(m.subject))).toEqual([]) // only the regular reminder, no code
   })
 })
 
@@ -232,50 +228,33 @@ describe('test mode', () => {
   })
 })
 
-describe('the personal recovery code', () => {
-  const codeFor = async (email = ana.email) => {
-    const r = await captureLead(db, { visitorId: `v-${email}`, funnel: 'visible_price', stage: 'checkout_started', productId: CART_INTEREST, contact: { ...ana, email }, marketingConsent: false, cart: [{ productId: 'brainlink-pro', quantity: 1 }] })
-    return recoveryCode(db, r.lead)
-  }
+describe('the fixed codes: BIOHACK10 (caller) and LONGEVITY10 (website popup)', () => {
   const order = (code: string, raw: unknown[], email = ana.email) => svc.placeOrder({ lines: lines(raw), form: { ...person, email, paymentMethod: 'cod' }, attemptId: `o-${Math.random()}`, promoCode: code })
 
-  it('10% of the full price, once, for 24 hours, only for its own address', async () => {
-    const code = await codeFor()
-    expect(code).toMatchObject({ kind: 'percent', value: 10, maxUses: 1, exclusive: false, restrictedEmail: ana.email })
-    expect(code.endsAt!.getTime() - code.createdAt.getTime()).toBe(24 * 3_600_000)
-    expect((await recoveryCode(db, (await leads.byId(db, code.leadId!))!)).code).toBe(code.code) // one per lead
-    expect(await promoCodes.check(db, code.code, { email: 'altcineva@exemplu.ro' })).toEqual({ ok: false, problem: 'other_email' })
-    await expect(order(code.code, [{ productId: 'brainlink-pro', quantity: 1 }], 'altcineva@exemplu.ro')).rejects.toMatchObject({ problem: 'other_email' })
-    const { order: o } = await order(code.code, [{ productId: 'brainlink-pro', quantity: 1 }])
-    expect(o.totalMinor).toBe(71100) // 790 lei − 79 lei
-    await expect(order(code.code, [{ productId: 'brainlink-pro', quantity: 1 }])).rejects.toBeInstanceOf(svc.PromoError)
+  it('both exist after the migrations: 10%, once per address, no time limit, listed in /admin/coduri', async () => {
+    for (const code of ['BIOHACK10', 'LONGEVITY10'])
+      expect(await promoCodes.get(db, code)).toMatchObject({ kind: 'percent', value: 10, oncePerEmail: true, endsAt: null, maxUses: null, active: true, exclusive: false })
+    expect((await promoCodes.list(db)).map((c) => c.code).sort()).toEqual(['BIOHACK10', 'LONGEVITY10'])
+    expect((await recoveryCode(db))?.code).toBe('BIOHACK10')
   })
 
-  it('expired after 24 hours; dead once the address bought without it', async () => {
-    const a = await codeFor()
-    await db.query("update promo_codes set ends_at = now() - interval '1 minute' where code = $1", [a.code])
-    expect(await promoCodes.check(db, a.code, { email: ana.email })).toEqual({ ok: false, problem: 'expired' })
-    const b = await codeFor('ion@exemplu.ro')
-    await svc.placeOrder({ lines: lines([{ productId: 'brainlink-pro', quantity: 1 }]), form: { ...person, email: 'ion@exemplu.ro', paymentMethod: 'cod' }, attemptId: 'no-code' })
-    expect(await promoCodes.check(db, b.code, { email: 'ion@exemplu.ro' })).toEqual({ ok: false, problem: 'inactive' })
+  it('once per address; anyone else can still use it', async () => {
+    const { order: o } = await order('BIOHACK10', [{ productId: 'brainlink-pro', quantity: 1 }])
+    expect(o.totalMinor).toBe(71100) // 790 lei − 79 lei
+    await expect(order('BIOHACK10', [{ productId: 'brainlink-pro', quantity: 1 }])).rejects.toMatchObject({ problem: 'already_used' })
+    expect((await order('BIOHACK10', [{ productId: 'brainlink-pro', quantity: 1 }], 'altcineva@exemplu.ro')).order.totalMinor).toBe(71100)
   })
 
   it('adds to the automatic promotions like every promo code: 10% of the full price on top (20% + 10% = 30%)', async () => {
-    const code = await codeFor()
-    const rule = ruleOf(code)
+    const rule = ruleOf((await promoCodes.get(db, 'BIOHACK10'))!)
     const price = (raw: { productId: string; quantity: number; unitAmount: number }[]) => priceLines(raw.map((l, i) => ({ key: String(i), ...l })), undefined, rule)
     expect(price([{ productId: 'balance-wave', quantity: 1, unitAmount: 638000 }])).toMatchObject({ discountMinor: 63800, totalMinor: 574200 })
     expect(price([{ productId: 'balance-wave', quantity: 2, unitAmount: 638000 }])).toMatchObject({ discountMinor: 255200, totalMinor: 1020800 }) // 10% + 10%
     expect(price([{ productId: 'balance-wave', quantity: 3, unitAmount: 638000 }])).toMatchObject({ discountMinor: 574200, totalMinor: 1339800 }) // 20% + 10%
     expect(price([{ productId: 'brainlink-pro', quantity: 3, unitAmount: 79000 }])).toMatchObject({ discountMinor: 71100, totalMinor: 165900 }) // 20% + 10%
     expect(price([{ productId: 'ochelari-biohack', quantity: 3, unitAmount: 31500 }])).toMatchObject({ discountMinor: 40950 }) // 2+1 + 10%
-    const { order: o } = await order(code.code, [{ productId: 'balance-wave', quantity: 3 }])
+    const { order: o } = await order('LONGEVITY10', [{ productId: 'balance-wave', quantity: 3 }])
     expect(o.totalMinor).toBe(1339800)
-  })
-
-  it('personal codes stay out of the campaign codes list in /admin/coduri', async () => {
-    await codeFor()
-    expect(await promoCodes.list(db)).toEqual([])
   })
 })
 
@@ -351,5 +330,62 @@ describe('the agent’s server tools', () => {
     await quiet()
     await later()
     expect(dials()).toHaveLength(1)
+  })
+})
+
+describe('acces: the cart of an unlocked device', () => {
+  const cartOn = (leadId: string, vid: string, cart: unknown[]) =>
+    lead(new NextRequest(`https://${GATED}/api/lead`, { method: 'POST', headers: { host: GATED, 'content-type': 'application/json', cookie: `bt_vid=${vid}; bt_gate2=${leadId}` }, body: JSON.stringify({ action: 'cart', cart }) }))
+
+  it('form only: called after 30 minutes about the product; a cart filled later: called 20 minutes after the change, about the cart', async () => {
+    const res = await lead(post('/api/lead', GATED, { action: 'reveal', ...ana, productId: 'balance-wave', callConsent: true, marketingConsent: true }))
+    const { leadId } = (await res.json()) as { leadId: string }
+    const vid = res.cookies.get('bt_vid')!.value
+    expect(await firstCallIn(leadId)).toBe(30)
+    expect((await cartOn(leadId, vid, [{ productId: 'balance-wave', quantity: 2 }])).status).toBe(200)
+    const jobs = (await db.query<{ run_at: string }>(`select run_at from jobs where kind = 'call.attempt' and payload->>'leadId' = $1 order by id`, [leadId])).rows
+    expect(Math.round((new Date(jobs.at(-1)!.run_at).getTime() - Date.now()) / 60_000)).toBe(20)
+    expect((await leads.byId(db, leadId))!.cart).toEqual([{ productId: 'balance-wave', quantity: 2 }])
+    await quiet(25)
+    await later()
+    expect(dials()).toHaveLength(1) // two planned attempts, one call
+    expect(varsOf()).toMatchObject({ abandonment_type: 'cos_nefinalizat', product_quantities: '2 × NEUROS Calm', cart_total: '11.484 lei', funnel_type: 'gated_price' })
+    // Somebody else's cookie, or no unlocked lead: refused.
+    expect((await cartOn(leadId, crypto.randomUUID(), [])).status).toBe(403)
+  })
+
+  it('an emptied cart goes back to the product of the form', async () => {
+    const res = await lead(post('/api/lead', GATED, { action: 'reveal', ...ana, productId: 'balance-wave', callConsent: true }))
+    const { leadId } = (await res.json()) as { leadId: string }
+    const vid = res.cookies.get('bt_vid')!.value
+    await cartOn(leadId, vid, [{ productId: 'brainlink-pro', quantity: 1 }])
+    await cartOn(leadId, vid, [])
+    expect((await leads.byId(db, leadId))!.cart).toBeNull()
+  })
+})
+
+describe('the website popup: 10% by email (LONGEVITY10)', () => {
+  const join = (email: string, host = MAIN, extra: Record<string, unknown> = {}) =>
+    welcome(new NextRequest(`https://${host}/api/welcome`, { method: 'POST', headers: { host, 'content-type': 'application/json', 'x-forwarded-for': `10.9.0.${++ip}` }, body: JSON.stringify({ email, page: '/products/calm', ...extra }) }))
+
+  it('sends LONGEVITY10 once, records the popup consent (email only, never calls)', async () => {
+    expect((await join('Nou@Exemplu.ro')).status).toBe(200)
+    await later()
+    expect(sent).toHaveLength(1)
+    expect(sent[0]).toMatchObject({ to: 'nou@exemplu.ro', subject: 'Codul tău de 10%: LONGEVITY10' })
+    expect(sent[0].text).toMatch(/dezabonare/)
+    expect(await marketing.state(db, 'nou@exemplu.ro')).toMatchObject({ granted: true, source: 'popup', version: 'welcome-2026-10-15' })
+    expect(await db.query('select count(*)::int as n from call_consent_events')).toMatchObject({ rows: [{ n: 0 }] })
+    expect((await join('nou@exemplu.ro')).status).toBe(200)
+    await later()
+    expect(sent).toHaveLength(1)
+  })
+
+  it('not on acces; a bad address is refused; a bot (hidden field) records nothing', async () => {
+    expect((await join('a@exemplu.ro', GATED)).status).toBe(404)
+    expect((await join('nu-e-email')).status).toBe(422)
+    expect((await join('bot@exemplu.ro', MAIN, { website: 'spam' })).status).toBe(200)
+    await later()
+    expect(sent).toEqual([])
   })
 })

@@ -36,3 +36,55 @@ export function checkAdminAuth(authorization: string | null | undefined, env: Re
   const passOk = safeEqual(decoded.slice(i + 1), password)
   return userOk && passOk ? 'ok' : 'denied'
 }
+
+// ─── session (the login page) ────────────────────────────────────────────────
+
+/** The admin session cookie: "<user>.<expiry ms>.<HMAC>", httpOnly, signed with a key derived from the password. */
+export const ADMIN_COOKIE = 'bt_admin'
+export const ADMIN_SESSION_DAYS = 7
+
+const enc = new TextEncoder()
+const hex = (b: ArrayBuffer) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('')
+
+/** The signing key: from ADMIN_SESSION_SECRET when set, else from the password (a new password ends every session). */
+async function sessionKey(env: Record<string, string | undefined>) {
+  const secret = env.ADMIN_SESSION_SECRET || `session:${env.ADMIN_PASSWORD ?? ''}`
+  return crypto.subtle.importKey('raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign'])
+}
+
+async function sign(payload: string, env: Record<string, string | undefined>) {
+  return hex(await crypto.subtle.sign('HMAC', await sessionKey(env), enc.encode(payload)))
+}
+
+/** Checks a user name and password typed on the login page (same rules as Basic Auth). */
+export function checkAdminCredentials(user: string, password: string, env: Record<string, string | undefined> = process.env): AdminAuth {
+  const expected = env.ADMIN_PASSWORD
+  if (!expected || expected.length < ADMIN_PASSWORD_MIN) return 'disabled'
+  const userOk = safeEqual(user, env.ADMIN_USER || 'admin')
+  const passOk = safeEqual(password, expected)
+  return userOk && passOk ? 'ok' : 'denied'
+}
+
+export async function createAdminSession(user: string, env: Record<string, string | undefined> = process.env, now = Date.now()) {
+  const payload = `${encodeURIComponent(user)}.${now + ADMIN_SESSION_DAYS * 86_400_000}`
+  return `${payload}.${await sign(payload, env)}`
+}
+
+/** A valid, unexpired session cookie value → 'ok'. */
+export async function checkAdminSession(token: string | null | undefined, env: Record<string, string | undefined> = process.env, now = Date.now()): Promise<AdminAuth> {
+  const password = env.ADMIN_PASSWORD
+  if (!password || password.length < ADMIN_PASSWORD_MIN) return 'disabled'
+  const parts = (token ?? '').split('.')
+  if (parts.length !== 3) return 'denied'
+  const [user, exp, mac] = parts
+  if (!/^\d+$/.test(exp) || Number(exp) < now) return 'denied'
+  if (!safeEqual(decodeURIComponent(user), env.ADMIN_USER || 'admin')) return 'denied'
+  return safeEqual(mac, await sign(`${user}.${exp}`, env)) ? 'ok' : 'denied'
+}
+
+/** The login session, or (for scripts) Basic Auth: either one lets a request into /admin. */
+export async function checkAdminRequest(cookie: string | null | undefined, authorization: string | null | undefined, env: Record<string, string | undefined> = process.env): Promise<AdminAuth> {
+  const session = await checkAdminSession(cookie, env)
+  if (session !== 'denied') return session
+  return checkAdminAuth(authorization, env)
+}

@@ -22,7 +22,12 @@ export type Funnel = 'visible_price' | 'gated_price'
 export const funnelForHost = (host: string | null | undefined): Funnel => (isGatedHost(host) ? 'gated_price' : 'visible_price')
 
 /** First-party cookies. Set only after the visitor submits a form (or by a recovery link they received). */
-export const GATE_COOKIE = 'bt_gate'
+export const GATE_COOKIE = 'bt_gate2'
+/**
+ * Every device unlocked before this moment sees the form again (renamed cookie and storage key, and recognition
+ * only of forms sent after it). To reset all acces sessions again: bump the names and this date.
+ */
+export const GATE_RESET_AT = new Date('2026-10-15T16:03:00Z')
 export const VISITOR_COOKIE = 'bt_vid'
 export const GATE_DAYS = 90
 

@@ -19,7 +19,8 @@ export async function GET(req: NextRequest) {
   const lead = safe === 'invalid' ? null : await leads.byRecoveryToken(await getDb(), safe).catch(() => null)
   const gatedHost = isGatedHost(req.headers.get('host'))
   // Stopped at the price: back to that product (or the home page, for a form sent without one), unlocked.
-  const priceStage = lead?.stage === 'lead'
+  // A price-form lead whose device then filled a cart (acces) gets its cart back like a checkout.
+  const priceStage = lead?.stage === 'lead' && !lead.cart?.length
   const product = priceStage ? getProduct(lead.productId) : undefined
   const to = priceStage ? (product ? `/products/${product.slug}` : '/') : `/reluare/${safe}`
   // The address the visitor used (acces.<domain> or the main site): req.url can carry the server's own hostname.

@@ -1,8 +1,8 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { headers } from 'next/headers'
-import { checkAdminAuth } from '@/lib/admin-auth'
+import { cookies, headers } from 'next/headers'
+import { ADMIN_COOKIE, checkAdminRequest } from '@/lib/admin-auth'
 import { getDb } from '@/server/db'
 import { jobs } from '@/server/jobs/outbox'
 import { runDueJobs } from '@/server/jobs/runner'
@@ -20,7 +20,8 @@ import { cancelOrder, confirmPayment, markDelivered, markProcessing, markReturnR
  * /admin matcher is not treated as the only line of defense.
  */
 async function guard() {
-  if (checkAdminAuth((await headers()).get('authorization')) !== 'ok') {
+  const h = await headers()
+  if ((await checkAdminRequest((await cookies()).get(ADMIN_COOKIE)?.value, h.get('authorization'))) !== 'ok') {
     log.warn('admin.unauthorized_action')
     throw new Error('unauthorized')
   }
@@ -35,6 +36,7 @@ async function done(id: string, action: string, changed: boolean) {
   await runDueJobs()
   revalidatePath(`/admin/orders/${id}`)
   revalidatePath('/admin')
+  revalidatePath('/admin/comenzi')
 }
 
 export async function markPaidAction(f: FormData) {

@@ -24,4 +24,4 @@ export async function deviceHash(): Promise<string | null> {
 }
 
 /** Where the device keeps its unlocked lead id, beside the cookie (a cleared cookie alone does not lock it again). */
-export const GATE_STORAGE_KEY = 'bt-gate'
+export const GATE_STORAGE_KEY = 'bt-gate2'

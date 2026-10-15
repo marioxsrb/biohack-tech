@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Geist, Geist_Mono } from 'next/font/google'
 import { AddedPopup } from '@/components/cart/AddedPopup'
+import { WelcomePopup } from '@/components/site/WelcomePopup'
 import { CartProvider } from '@/components/cart/CartProvider'
 import { OfferSheetsProvider } from '@/components/offers/OfferSheets'
 import { ConsentManager } from '@/components/consent/ConsentManager'
@@ -62,6 +63,7 @@ export default async function RootLayout({ children }: LayoutProps<'/[lang]'>) {
               <OfferSheetsProvider>
                 {children}
                 <AddedPopup />
+                <WelcomePopup />
               </OfferSheetsProvider>
             </CartProvider>
           </GateRoot>

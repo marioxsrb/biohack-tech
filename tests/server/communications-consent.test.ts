@@ -86,7 +86,7 @@ describe('price form (acces)', () => {
   it('box unticked: the price unlocks, nothing is consented, no recovery, no call', async () => {
     const res = await reveal(false)
     expect(res.status).toBe(200)
-    expect(res.headers.get('set-cookie')).toMatch(/bt_gate=/)
+    expect(res.headers.get('set-cookie')).toMatch(/bt_gate2=/)
     const { leadId } = await res.json()
     const l = (await leads.byId(db, leadId))!
     expect(l).toMatchObject({ marketingConsent: false, callConsent: false })

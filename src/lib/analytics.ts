@@ -60,7 +60,7 @@ export function track(
   }
   const meta = META_EVENT[event]
   if (meta && metaOn()) {
-    whenLoaded('meta', () => w.fbq?.('track', meta, { currency: 'RON', value: lei(data.value), content_type: 'product', content_ids: items.map((i) => i.item_id), num_items: items.reduce((n, i) => n + i.quantity, 0) }, data.transaction_id ? { eventID: data.transaction_id } : undefined))
+    whenLoaded('meta', () => w.fbq?.('track', meta, { currency: 'RON', value: lei(data.value), content_type: 'product', content_ids: items.map((i) => i.item_id), content_name: [...new Set(items.map((i) => i.item_name))].join(', '), num_items: items.reduce((n, i) => n + i.quantity, 0) }, data.transaction_id ? { eventID: data.transaction_id } : undefined))
   }
 }
 

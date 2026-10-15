@@ -19,8 +19,10 @@ import { gatedOrigin } from '@/lib/lead'
 import { marketing } from '@/server/marketing/consent'
 import { CALL_TAGS, INTEREST_TAG, LEAD_TAGS, attributionTags, callOutcomeTag } from '@/server/integrations/ghl'
 import { callConsent } from '@/server/calling/consent'
-import { leadItems, recoveryLink, renderRecoveryOffer } from '@/server/calling/offer'
+import { hasCart, leadItems, recoveryLink, renderRecoveryOffer } from '@/server/calling/offer'
 import { promoCodes } from '@/server/promo'
+import { renderWelcome } from '@/server/welcome'
+import { WELCOME_CODE } from '@/config/promotions'
 import { calls, leadProduct, renderCallFollowUp, renderCallLink, runCallAttempt, runCallCheck, type StepResult } from '@/server/calling/calls'
 import { companyLine } from '@/config/company'
 import { errText, log } from '@/server/log'
@@ -254,9 +256,9 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     if (call.discountCode) {
       if (call.emailStatus === 'sent' || call.emailStatus === 'sent_on_request') throw new Skip('offer already emailed')
       const code = await promoCodes.get(db, call.discountCode)
-      if (!code?.endsAt) throw new Skip('code gone')
+      if (!code?.active) throw new Skip('code switched off')
       const token = await marketing.unsubscribeToken(db, lead.email)
-      const mail = renderRecoveryOffer({ firstName: lead.name?.split(' ')[0] ?? null, items: leadItems(lead), cart: lead.productId === CART_INTEREST, code: code.code, expires: code.endsAt, link: recoveryLink(lead, code.code, c), unsubscribeUrl: `${c.siteUrl}/dezabonare/${token}` })
+      const mail = renderRecoveryOffer({ firstName: lead.name?.split(' ')[0] ?? null, items: leadItems(lead), cart: hasCart(lead), code: code.code, link: recoveryLink(lead, code.code, c), unsubscribeUrl: `${c.siteUrl}/dezabonare/${token}` })
       const ref = await deliver(c, { ...mail, to: lead.email, name: `call-offer-request-${call.id}` })
       await calls.update(db, call.id, { email_status: 'sent_on_request' })
       return ref
@@ -265,6 +267,20 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const base = lead.funnel === 'gated_price' ? gatedOrigin(c.siteUrl) : c.siteUrl
     const mail = renderCallLink({ firstName: lead.name?.split(' ')[0] ?? null, productName: product.name, link: `${base}/api/lead/resume?t=${lead.recoveryToken}`, company: companyLine() || null })
     return deliver(c, { ...mail, to: lead.email, name: `call-link-${call.id}` })
+  },
+
+  // The website popup's code (LONGEVITY10), once per address; still only with the marketing consent in force.
+  'email.welcome': async (j) => {
+    const c = getConfig()
+    const db = await getDb()
+    const email = String(j.payload.email ?? '')
+    if (c.email.transport !== 'smtp' && c.email.transport !== 'file') throw new Skip('no own email transport')
+    if (!(await marketing.state(db, email))?.granted) throw new Skip('no marketing consent')
+    const code = await promoCodes.get(db, WELCOME_CODE)
+    if (!code?.active) throw new Skip('code switched off')
+    const token = await marketing.unsubscribeToken(db, email)
+    const mail = renderWelcome({ siteUrl: c.siteUrl, unsubscribeUrl: `${c.siteUrl}/dezabonare/${token}`, code: code.code })
+    return deliver(c, { ...mail, to: email, name: `welcome-${email.replace(/[^\w.-]+/g, '-')}` })
   },
 
   // The team hears about a call that needs a person (asked for a human, or a question the agent could not answer).

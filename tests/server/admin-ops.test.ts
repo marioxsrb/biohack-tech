@@ -10,7 +10,7 @@ vi.mock('@/config/prices', () => ({ PRICES_RON: { ...TEST_PRICES, 'balance-wave'
 vi.mock('next/server', () => ({ after: (fn: () => unknown) => void fn() }))
 vi.mock('next/cache', () => ({ revalidatePath: () => {} }))
 const auth = { header: '' }
-vi.mock('next/headers', () => ({ headers: async () => new Headers({ authorization: auth.header }) }))
+vi.mock('next/headers', () => ({ headers: async () => new Headers({ authorization: auth.header }), cookies: async () => ({ get: () => undefined }) }))
 
 const { freshDb, person, lines, TEST_ENV } = await import('./helpers')
 const svc = await import('@/server/orders/service')
@@ -18,7 +18,7 @@ const { orders } = await import('@/server/orders/repository')
 type Queue = keyof typeof import('@/server/orders/repository').QUEUES
 const { jobs } = await import('@/server/jobs/outbox')
 const { runDueJobs } = await import('@/server/jobs/runner')
-const actions = await import('@/app/[lang]/(site)/admin/actions')
+const actions = await import('@/app/[lang]/(admin)/admin/actions')
 
 let db: Awaited<ReturnType<typeof freshDb>>
 let seq = 0

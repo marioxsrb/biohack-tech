@@ -12,7 +12,7 @@ import { randomBytes } from 'node:crypto'
 import type { Queryable } from '@/server/db'
 import { MARKETING_CONSENT_TEXTS, MARKETING_CONSENT_VERSION, type MarketingConsentVersion } from '@/lib/consent/marketing'
 
-export type ConsentSource = 'checkout' | 'lead_form' | 'unsubscribe_link' | 'ghl' | 'admin' | 'call'
+export type ConsentSource = 'checkout' | 'lead_form' | 'unsubscribe_link' | 'ghl' | 'admin' | 'call' | 'popup'
 export type ConsentState = { granted: boolean; at: Date; version: string; source: ConsentSource }
 
 const norm = (email: string) => email.trim().toLowerCase()
@@ -58,7 +58,7 @@ export const marketing = {
     return new Map(rows.map((r) => [r.email, r.granted]))
   },
 
-  grant: (q: Queryable, e: { email: string; source: ConsentSource; orderId?: string; page?: string }) => record(q, { ...e, granted: true }),
+  grant: (q: Queryable, e: { email: string; source: ConsentSource; orderId?: string; page?: string; version?: MarketingConsentVersion }) => record(q, { ...e, granted: true }),
 
   /** Returns the event id, or null when the address had already withdrawn (nothing new to record). */
   async withdraw(q: Queryable, e: { email: string; source: ConsentSource; page?: string }) {

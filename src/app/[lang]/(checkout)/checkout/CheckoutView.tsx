@@ -8,7 +8,8 @@ import { cartStore } from '@/components/cart/cart-store'
 import { CarryLink } from '@/components/cart/CarryLink'
 import { Price } from '@/components/cart/Price'
 import { Thumb } from '@/components/cart/Thumb'
-import { LineOffer } from '@/components/cart/LineOffer'
+import { LineBundle } from '@/components/cart/LineBundle'
+import { QuantityStepper } from '@/components/cart/QuantityStepper'
 import { Suggestions } from '@/components/offers/Suggestions'
 import { Totals } from '@/components/cart/Totals'
 import { Arrow, Bank, CardIcon, Lock, Mail, Truck } from '@/components/ui/icons'
@@ -102,6 +103,9 @@ const COPY = {
     codText: 'Plătești curierului când primești coletul. Nu plătești nimic acum.',
     codAfter: (amount: string) => `Comanda se confirmă imediat. Plătești ${amount} curierului când primești coletul.`,
     edit: 'Modifică',
+    quantityOf: (name: string) => `Cantitate ${name}`,
+    remove: 'Elimină',
+    removeOf: (name: string) => `Elimină ${name} din comandă`,
     accept: 'Accept',
     terms: 'Termenii și Condițiile',
     optional: '(opțional)',
@@ -180,6 +184,9 @@ const COPY = {
     codText: 'You pay the courier when the parcel arrives. Nothing to pay now.',
     codAfter: (amount: string) => `Your order is confirmed right away. You pay ${amount} to the courier when the parcel arrives.`,
     edit: 'Edit',
+    quantityOf: (name: string) => `Quantity of ${name}`,
+    remove: 'Remove',
+    removeOf: (name: string) => `Remove ${name} from the order`,
     accept: 'I accept the',
     terms: 'Terms and Conditions',
     optional: '(optional)',
@@ -314,6 +321,10 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
   // A cart change can make an applied code stop fitting (minimum, products): the totals fall back, and the order says why.
   const pricing = withCode && !withCode.code?.problem ? withCode : cartPricing
   const total = pricing.totalMinor
+  // The summary stays in view only when it fits the window; a taller one scrolls with the page, so its lower part
+  // (consents, the pay button) is never out of reach.
+  const summaryRef = useRef<HTMLDivElement>(null)
+  const summaryFits = useFitsWindow(summaryRef)
   const methods: Methods = offered
   const anyMethod = methods.card || methods.transfer || methods.cod
 
@@ -634,7 +645,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
         )}
 
         <aside className="md:col-span-5" aria-labelledby="summary-title">
-          <div className="rounded-[20px] bg-paper p-6 md:sticky md:top-[calc(var(--nav-h)+24px)] max-sm:rounded-none max-sm:border-t max-sm:border-line max-sm:bg-transparent max-sm:px-0 max-sm:pt-7">
+          <div ref={summaryRef} className={`rounded-[20px] bg-paper p-6 ${summaryFits ? 'md:sticky md:top-[calc(var(--nav-h)+24px)]' : ''} max-sm:rounded-none max-sm:border-t max-sm:border-line max-sm:bg-transparent max-sm:px-0 max-sm:pt-7`}>
             <div className="flex items-baseline justify-between">
               <h2 id="summary-title" className="text-[20px] tracking-[-0.015em]">
                 {t.yourOrder}
@@ -826,10 +837,12 @@ function PayOption({
   )
 }
 
+/** A product in the order: quantity and removal right here (no detour through the cart), and its bundle offer. */
 function SummaryLine({ line: l }: { line: ResolvedLine }) {
   const t = useCopy()
+  const { setQuantity, remove } = useCart()
   return (
-    <li className="grid grid-cols-[72px_1fr_auto] items-center gap-3.5 py-3.5">
+    <li className="grid grid-cols-[72px_1fr_auto] items-start gap-x-3.5 py-3.5">
       <span className="relative">
         <Thumb image={l.variant?.images[0] ?? l.product.cutout} sizes="72px" className="h-14 w-[72px] bg-mist" />
         <span className="absolute -top-1.5 -right-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1 text-[11.5px] font-semibold text-white tabular-nums">
@@ -840,9 +853,20 @@ function SummaryLine({ line: l }: { line: ResolvedLine }) {
         <span className="block font-medium text-ink">{l.product.name}</span>
         <span className="block text-muted">{l.variantLabel ?? l.product.purpose}</span>
         {l.quantity > 1 && <span className="block text-[13px] text-muted">{formatLei(l.unit)} / {t.perUnit}</span>}
-        <LineOffer line={l} />
+        <span className="mt-2 flex items-center gap-2">
+          <QuantityStepper size="sm" value={l.quantity} onChange={(q) => setQuantity(l.key, q)} label={t.quantityOf(l.product.name)} />
+          <button
+            type="button"
+            onClick={() => remove(l.key)}
+            className="flex min-h-11 items-center rounded px-2 text-[14px] text-muted underline underline-offset-4 hover:text-ink"
+            aria-label={t.removeOf(`${l.product.name}${l.variantLabel ? `, ${l.variantLabel}` : ''}`)}
+          >
+            {t.remove}
+          </button>
+        </span>
       </span>
       <span className="text-[15px] font-medium text-ink tabular-nums">{formatLei(l.unit * l.quantity)}</span>
+      <LineBundle line={l} className="col-span-3 mt-3" />
     </li>
   )
 }
@@ -999,3 +1023,24 @@ function PromoField({
   )
 }
 
+/** Whether the element (plus the header and a margin) fits the window's height; follows resizes of both. */
+function useFitsWindow(ref: React.RefObject<HTMLElement | null>) {
+  const [fits, setFits] = useState(true)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const check = () => {
+      const nav = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--nav-h')) || 64
+      setFits(el.offsetHeight + nav + 48 <= window.innerHeight)
+    }
+    check()
+    const ro = new ResizeObserver(check)
+    ro.observe(el)
+    window.addEventListener('resize', check)
+    return () => {
+      ro.disconnect()
+      window.removeEventListener('resize', check)
+    }
+  }, [ref])
+  return fits
+}

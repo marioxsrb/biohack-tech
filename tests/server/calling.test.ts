@@ -206,11 +206,11 @@ describe('placing calls', () => {
       product_quantities: '',
       cart_total: '',
       recovery_discount_percent: 10,
-      recovery_code: expect.stringMatching(/^BT[A-Z2-9]{6}$/),
+      recovery_code: 'BIOHACK10',
       recovery_email_sent: 'nu', // no email marketing consent: nothing was sent before the call
     })
-    expect(vars.opening_line).toBe('Bună ziua, Ana! Sunt asistentul virtual Biohack Tech, un asistent AI. Ați solicitat recent oferta pentru NEUROS Calm și voiam să vă întreb dacă vă pot ajuta cu vreo informație. Aveți un minut?')
-    expect(vars.checkout_recovery_url).toMatch(/^https:\/\/acces\.biohack-tech\.ro\/api\/lead\/resume\?t=[\w-]+&cod=BT/)
+    expect(vars.opening_line).toBe('Bună ziua, Ana! Sunt asistentul cu inteligență artificială al Baiohec Tec. Ați solicitat recent oferta pentru NEUROS Calm și voiam să vă întreb dacă vă pot ajuta cu vreo informație. Aveți un minut?')
+    expect(vars.checkout_recovery_url).toMatch(/^https:\/\/acces\.biohack-tech\.ro\/api\/lead\/resume\?t=[\w-]+&cod=BIOHACK10/)
     expect(JSON.stringify(vars)).not.toMatch(/@|0722|Popescu/)
     expect(sent).toEqual([])
     const [call] = await callsOf(leadId)
@@ -229,7 +229,7 @@ describe('placing calls', () => {
     const link = sent.find((m) => m.subject === 'Codul tău de 10% pentru NEUROS Calm')!
     expect(link.to).toBe('ana@exemplu.ro')
     expect(link.text).toContain(vars.recovery_code)
-    expect(link.text).toMatch(/https:\/\/acces\.biohack-tech\.ro\/api\/lead\/resume\?t=[\w-]+&cod=BT/)
+    expect(link.text).toMatch(/https:\/\/acces\.biohack-tech\.ro\/api\/lead\/resume\?t=[\w-]+&cod=BIOHACK10/)
     expect((await callsOf(leadId))[0].emailStatus).toBe('sent_on_request')
     // The same webhook again (ElevenLabs retries): nothing changes, nothing is sent twice.
     expect(await (await transcription(call.providerCallId!, { outcome: 'not_interested' })).json()).toMatchObject({ duplicate: true })
@@ -254,27 +254,34 @@ describe('placing calls', () => {
     expect((await db.query(`select count(*)::int as n from jobs where kind = 'call.attempt' and status = 'pending'`)).rows[0].n).toBe(0)
   })
 
-  it('busy, then no answer: a second attempt later, then stop (maximum two)', async () => {
+  it('busy, no answer, no answer: an hour later, then the next day, then stop (maximum three)', async () => {
     const { leadId } = await reveal({ callConsent: true })
     await quiet()
     await later()
     const first = (await callsOf(leadId))[0]
     await hook('call_initiation_failure', { conversation_id: first.providerCallId, failure_reason: 'busy', metadata: { type: 'twilio', body: {} } })
     const retry = (await db.query<{ run_at: string }>(`select run_at from jobs where dedupe_key = $1`, [`call.attempt:${leadId}:2`])).rows[0]
-    expect(Math.round((new Date(retry.run_at).getTime() - Date.now()) / 3_600_000)).toBe(24)
+    expect(Math.round((new Date(retry.run_at).getTime() - Date.now()) / 60_000)).toBe(60)
     await db.query("update jobs set run_at = now() where dedupe_key like 'call.attempt:%:2'")
     await runDueJobs()
     await runDueJobs()
     const second = (await callsOf(leadId))[1]
     expect(second).toMatchObject({ attempt: 2, status: 'dialing' })
     await hook('call_initiation_failure', { conversation_id: second.providerCallId, failure_reason: 'no-answer', metadata: { type: 'twilio', body: {} } })
+    const third = (await db.query<{ run_at: string }>(`select run_at from jobs where dedupe_key = $1`, [`call.attempt:${leadId}:3`])).rows[0]
+    expect(Math.round((new Date(third.run_at).getTime() - Date.now()) / 3_600_000)).toBe(24) // the next day, same time
+    await db.query("update jobs set run_at = now() where dedupe_key like 'call.attempt:%:3'")
+    await runDueJobs()
+    await runDueJobs()
+    await hook('call_initiation_failure', { conversation_id: (await callsOf(leadId))[2].providerCallId, failure_reason: 'no-answer', metadata: { type: 'twilio', body: {} } })
     await later()
     expect((await callsOf(leadId)).map((c) => [c.attempt, c.status, c.outcome])).toEqual([
       [1, 'failed', 'busy'],
       [2, 'failed', 'no_answer'],
+      [3, 'failed', 'no_answer'],
     ])
     expect((await leads.byId(db, leadId))!.callStatus).toBe('stopped')
-    expect(dials()).toHaveLength(2)
+    expect(dials()).toHaveLength(3)
   })
 
   it('a provider timeout may have dialed: marked for review, never redialed on its own', async () => {
@@ -454,7 +461,7 @@ describe('calling window and decision', () => {
     expect(callDecision(lead, { ...ok, consentGranted: false })).toMatchObject({ call: false, status: 'stopped' })
     expect(callDecision(lead, { ...ok, phone: null })).toMatchObject({ call: false, status: 'stopped' })
     expect(callDecision(lead, { ...ok, converted: true })).toMatchObject({ call: false, reason: 'converted' })
-    expect(callDecision(lead, { ...ok, attempt: 3 })).toMatchObject({ call: false, reason: 'maximum attempts reached' })
+    expect(callDecision(lead, { ...ok, attempt: 4 })).toMatchObject({ call: false, reason: 'maximum attempts reached' })
     expect(callDecision(lead, { ...ok, otherCall: true })).toMatchObject({ call: false, reason: 'another call for this person' })
     expect(callDecision(lead, { ...ok, talkedBefore: true })).toMatchObject({ call: false, reason: 'already talked to the agent', status: 'stopped' })
     expect(callDecision({ ...(lead as object), lastActivityAt: new Date() } as never, ok)).toMatchObject({ call: false, reason: 'still active', later: expect.any(Date) })
@@ -492,9 +499,9 @@ describe('agent', () => {
     expect(def.conversation_config.agent.language).toBe('ro')
     expect(def.conversation_config.agent.first_message).toBe('{{opening_line}}')
     expect(def.conversation_config.conversation.max_duration_seconds).toBe(240)
-    expect(def.conversation_config.agent.dynamic_variables.dynamic_variable_placeholders.opening_line).toMatch(/asistent AI/)
+    expect(def.conversation_config.agent.dynamic_variables.dynamic_variable_placeholders.opening_line).toMatch(/asistentul cu inteligență artificială al Baiohec Tec/)
     expect(Object.keys(def.conversation_config.agent.dynamic_variables.dynamic_variable_placeholders)).toEqual(
-      expect.arrayContaining(['customer_first_name', 'funnel_type', 'product_names', 'product_quantities', 'cart_total', 'existing_discounts', 'recovery_discount_percent', 'recovery_code', 'recovery_expiration', 'recovery_email_sent', 'checkout_recovery_url']),
+      expect.arrayContaining(['customer_first_name', 'funnel_type', 'product_names', 'product_quantities', 'cart_total', 'existing_discounts', 'recovery_discount_percent', 'recovery_code', 'recovery_email_sent', 'checkout_recovery_url']),
     )
     expect(def.platform_settings.privacy.record_voice).toBe(false)
     expect(def.platform_settings.data_collection.outcome.description).toMatch(/discount_accepted.*needs_information.*human_followup.*no_time.*technical_failure/s)

@@ -8,13 +8,14 @@ import { Arrow, Check, Close } from '@/components/ui/icons'
 import { useLocale, useUi } from '@/i18n/LocaleProvider'
 import { formatLei } from '@/lib/money'
 import { useCart } from './CartProvider'
+import { LineBundle } from './LineBundle'
 
-const VISIBLE_MS = 8000
+const VISIBLE_MS = 15000
 
 /**
  * Compact confirmation after "Adaugă în coș": top right under the header on desktop,
  * a small card at the bottom on phones. It stays until the visitor acts or for about
- * eight seconds; hovering or focusing it pauses the timer. It never takes focus.
+ * fifteen seconds (it holds the bundle choices); hovering or focusing it pauses the timer. It never takes focus.
  */
 export function AddedPopup() {
   const { confirmation, dismissConfirmation, lines } = useCart()
@@ -79,12 +80,15 @@ export function AddedPopup() {
         <span className="min-w-0">
           <span className="block truncate text-[16px] font-medium text-ink">{line.product.name}</span>
           <span className="block truncate text-[14px] text-muted">
-            {[line.variantLabel, confirmation.quantity > 1 ? ui.pieces(confirmation.quantity) : null].filter(Boolean).join(' · ')}
-            {!line.variantLabel && confirmation.quantity === 1 ? line.product.purpose : null}
+            {[line.variantLabel, line.quantity > 1 ? ui.pieces(line.quantity) : null].filter(Boolean).join(' · ')}
+            {!line.variantLabel && line.quantity === 1 ? line.product.purpose : null}
           </span>
         </span>
-        <span data-price className="text-[15px] font-medium text-ink tabular-nums">{formatLei(line.unit * confirmation.quantity)}</span>
+        <span data-price className="text-[15px] font-medium text-ink tabular-nums">{formatLei(line.unit * line.quantity)}</span>
       </div>
+
+      {/* The product page's bundle choices: 2 or 3 at a lower price, picked right here. */}
+      <LineBundle line={line} className="mt-4" />
 
       <div className="mt-4 grid gap-2">
         <Link href="/checkout" onClick={dismissConfirmation} className="cta w-full">

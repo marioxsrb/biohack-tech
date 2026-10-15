@@ -6,7 +6,7 @@ import { cookieFrom, funnelForHost, GATE_COOKIE, GATE_DAYS, normalizeContact, va
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { kickJobs } from '@/server/jobs/runner'
-import { CART_INTEREST, captureLead, leads, sanitizeCart } from '@/server/leads'
+import { CART_INTEREST, captureLead, leads, recordGatedCart, sanitizeCart } from '@/server/leads'
 import { errText, log } from '@/server/log'
 import { clientIp, rateLimit } from '@/server/rate-limit'
 import { deviceKey } from '@/server/device'
@@ -101,6 +101,16 @@ export async function POST(req: NextRequest) {
       log.info('lead.recognize', { found: !!found, by: email ? 'email' : 'device' })
       if (!found) return NextResponse.json({ ok: true, unlocked: false })
       return withCookies(NextResponse.json({ ok: true, unlocked: true, leadId: found.id }), visitorId, found.id, c.siteUrl.startsWith('https://'))
+    }
+    if (action === 'cart') {
+      // acces: an unlocked device changed its cart. Its price-form lead (the one with the contact and the
+      // consents) records the cart and the activity; an AI call about the cart may follow after its quiet time.
+      if (funnel !== 'gated_price' || !c.features.priceGate) return NextResponse.json({ error: 'UNAVAILABLE' }, { status: 404 })
+      const from = await leads.byId(db, cookieFrom(req.headers.get('cookie'), GATE_COOKIE) ?? '')
+      if (!from || from.visitorId !== visitorId) return NextResponse.json({ error: 'LOCKED' }, { status: 403 })
+      await db.tx((t) => recordGatedCart(t, from, sanitizeCart(body.cart)))
+      kickJobs()
+      return NextResponse.json({ ok: true })
     }
     if (action === 'checkout') {
       if (!c.features.abandonedCheckout) return NextResponse.json({ ok: true, skipped: 'off' })

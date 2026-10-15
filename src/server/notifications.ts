@@ -8,7 +8,7 @@
  * sending; an order that moved on in the meantime gets nothing.
  */
 import 'server-only'
-import { ORDER_LABEL, PAYMENT_LABEL } from '@/app/[lang]/(site)/admin/labels'
+import { ORDER_LABEL, PAYMENT_LABEL } from '@/app/[lang]/(admin)/admin/labels'
 import { formatLei } from '@/lib/money'
 import { PAYMENT_METHOD_LABEL, type Order } from '@/server/orders/model'
 

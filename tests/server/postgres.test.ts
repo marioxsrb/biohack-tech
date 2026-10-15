@@ -57,16 +57,12 @@ describe.skipIf(!url)('on real PostgreSQL', () => {
     expect((await promoCodes.uses(db, 'RACE3')).total).toBe(3)
   })
 
-  it('an AI call recovery code: ten simultaneous preparations make one code; five simultaneous orders use it once', async () => {
-    const { recoveryCode } = await import('@/server/calling/offer')
+  it('the caller’s code BIOHACK10 (once per address): five simultaneous orders of one address use it once', async () => {
     const { promoCodes } = await import('@/server/promo')
-    const r = await captureLead(db, { visitorId: 'race-offer', funnel: 'visible_price', stage: 'checkout_started', productId: CART_INTEREST, contact: { name: 'Ana', email: 'oferta@exemplu.ro', phone: '0722123456' }, marketingConsent: false, cart: [{ productId: 'brainlink-pro', quantity: 1 }] })
-    const codes = await Promise.all(Array.from({ length: 10 }, () => recoveryCode(db, r.lead)))
-    expect(new Set(codes.map((c) => c.code)).size).toBe(1)
     const cart = lines([{ productId: 'brainlink-pro', quantity: 1 }])
-    const res = await Promise.allSettled(Array.from({ length: 5 }, (_, i) => svc.placeOrder({ lines: cart, form: { ...person, email: 'oferta@exemplu.ro' }, attemptId: `offer-race-${i}`, promoCode: codes[0].code })))
+    const res = await Promise.allSettled(Array.from({ length: 5 }, (_, i) => svc.placeOrder({ lines: cart, form: { ...person, email: 'oferta@exemplu.ro' }, attemptId: `offer-race-${i}`, promoCode: 'BIOHACK10' })))
     expect(res.filter((x) => x.status === 'fulfilled')).toHaveLength(1)
-    expect((await promoCodes.uses(db, codes[0].code)).total).toBe(1)
+    expect((await promoCodes.uses(db, 'BIOHACK10', 'oferta@exemplu.ro')).byEmail).toBe(1)
   })
 
   it('two workers never claim the same job', async () => {

@@ -33,12 +33,12 @@ describe('proxy', () => {
     expect(away.headers.get('location')).toBe('https://biohack-tech.ro/admin')
   })
 
-  it('a forged Host is just the main site: no landing, and /admin still asks for credentials', async () => {
+  it('a forged Host is just the main site: no landing, and /admin still asks to sign in', async () => {
     const res = await run('https://biohack-tech.ro/', 'calm.biohack-tech.ro.evil.com')
     expect(getRewrittenUrl(res)).toBe('https://biohack-tech.ro/ro')
     expect(res.headers.get('x-robots-tag')).toBeNull()
     const admin = await run('https://biohack-tech.ro/admin', 'calm.biohack-tech.ro.evil.com')
-    expect(admin.status).toBe(401)
+    expect([admin.status, admin.headers.get('location')]).toEqual([303, 'https://biohack-tech.ro/admin/login?next=%2Fadmin'])
   })
 
   it('serves the presentation page at /prezentare on a landing hostname, outside the language tree, never indexed', async () => {
@@ -107,7 +107,27 @@ describe('proxy', () => {
   })
 
   it('the admin gate also covers /en/admin', async () => {
-    expect((await run('https://biohack-tech.ro/en/admin', 'biohack-tech.ro')).status).toBe(401)
+    expect((await run('https://biohack-tech.ro/en/admin', 'biohack-tech.ro')).status).toBe(303)
+  })
+
+  it('admin login: the page is open; a signed session lets in; a forged, expired or old-password session does not', async () => {
+    const { createAdminSession, ADMIN_COOKIE } = await import('@/lib/admin-auth')
+    const login = await run('https://biohack-tech.ro/admin/login', 'biohack-tech.ro')
+    expect(getRewrittenUrl(login)).toBe('https://biohack-tech.ro/ro/admin/login')
+    expect(login.headers.get('cache-control')).toBe('no-store')
+    const env = { ADMIN_PASSWORD: 'a-long-test-password' }
+    const good = await createAdminSession('admin', env)
+    const page = await run('https://biohack-tech.ro/admin/comenzi', 'biohack-tech.ro', { cookie: `${ADMIN_COOKIE}=${good}` })
+    expect(getRewrittenUrl(page)).toBe('https://biohack-tech.ro/ro/admin/comenzi')
+    // Signed in: the login page goes straight to the dashboard.
+    expect((await run('https://biohack-tech.ro/admin/login', 'biohack-tech.ro', { cookie: `${ADMIN_COOKIE}=${good}` })).headers.get('location')).toBe('https://biohack-tech.ro/admin')
+    const forged = good.replace(/.$/, (c) => (c === 'a' ? 'b' : 'a'))
+    const expired = await createAdminSession('admin', env, Date.now() - 8 * 86_400_000)
+    const oldPassword = await createAdminSession('admin', { ADMIN_PASSWORD: 'the-previous-password' })
+    for (const v of [forged, expired, oldPassword, 'garbage']) expect((await run('https://biohack-tech.ro/admin', 'biohack-tech.ro', { cookie: `${ADMIN_COOKIE}=${v}` })).status).toBe(303)
+    // Basic Auth still works for scripts.
+    const basic = await run('https://biohack-tech.ro/admin', 'biohack-tech.ro', { authorization: `Basic ${btoa('admin:a-long-test-password')}` })
+    expect(getRewrittenUrl(basic)).toBe('https://biohack-tech.ro/ro/admin')
   })
 
   describe('price-gated funnel (acces.<domain>)', () => {
@@ -127,7 +147,7 @@ describe('proxy', () => {
       vi.stubEnv('PRICE_GATE_ENABLED', 'true')
       const locked = await run('https://acces.biohack-tech.ro/checkout', 'acces.biohack-tech.ro')
       expect([locked.status, locked.headers.get('location')]).toEqual([307, 'https://acces.biohack-tech.ro/'])
-      const open = await run('https://acces.biohack-tech.ro/checkout', 'acces.biohack-tech.ro', { cookie: 'bt_gate=6f1c2a1e-1111-4111-8111-111111111111' })
+      const open = await run('https://acces.biohack-tech.ro/checkout', 'acces.biohack-tech.ro', { cookie: 'bt_gate2=6f1c2a1e-1111-4111-8111-111111111111' })
       expect(getRewrittenUrl(open)).toBe('https://acces.biohack-tech.ro/ro/checkout')
       const admin = await run('https://acces.biohack-tech.ro/admin', 'acces.biohack-tech.ro')
       expect([admin.status, admin.headers.get('location')]).toEqual([307, 'https://biohack-tech.ro/admin'])

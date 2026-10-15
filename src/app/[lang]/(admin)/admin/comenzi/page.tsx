@@ -9,13 +9,13 @@ import { customerName } from '@/server/orders/model'
 import { isQueue, orders, QUEUES, type QueueKey } from '@/server/orders/repository'
 import { withdrawals } from '@/server/orders/withdrawal'
 import { enquiries } from '@/server/enquiries'
-import { retryJobsAction } from './actions'
-import { INVOICE_LABEL, ORDER_LABEL, PAYMENT_LABEL, tone } from './labels'
+import { retryJobsAction } from '../actions'
+import { INVOICE_LABEL, ORDER_LABEL, PAYMENT_LABEL, tone } from '../labels'
 
 const dt = (d: Date) => d.toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
 
 /** Every order at a glance, newest first, plus anything that needs a person. */
-export default async function AdminPage({ searchParams }: PageProps<'/[lang]/admin'>) {
+export default async function AdminPage({ searchParams }: PageProps<'/[lang]/admin/comenzi'>) {
   await connection()
   const sp = await searchParams
   const q = String(sp.q ?? '').trim().slice(0, 80)
@@ -46,13 +46,13 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
       </div>
 
       <nav aria-label="Cozi de lucru" className="mt-4 flex flex-wrap gap-2 text-[14px]">
-        <Link href={q ? `/admin?q=${encodeURIComponent(q)}` : '/admin'} className={`rounded-full px-3.5 py-1.5 ${!queue ? 'bg-ink text-paper' : 'bg-paper text-ink'}`} aria-current={!queue ? 'page' : undefined}>
+        <Link href={q ? `/admin/comenzi?q=${encodeURIComponent(q)}` : '/admin/comenzi'} className={`rounded-full px-3.5 py-1.5 ${!queue ? 'bg-ink text-paper' : 'bg-paper text-ink'}`} aria-current={!queue ? 'page' : undefined}>
           Toate
         </Link>
         {(Object.keys(QUEUES) as QueueKey[]).map((k) => (
           <Link
             key={k}
-            href={`/admin?coada=${k}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
+            href={`/admin/comenzi?coada=${k}${q ? `&q=${encodeURIComponent(q)}` : ''}`}
             aria-current={queue === k ? 'page' : undefined}
             className={`rounded-full px-3.5 py-1.5 tabular-nums ${queue === k ? 'bg-ink text-paper' : k === 'atentie' && counts[k] > 0 ? 'bg-[#fdecec] text-red-deep' : 'bg-paper text-ink'}`}
           >

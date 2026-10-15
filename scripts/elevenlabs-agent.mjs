@@ -73,7 +73,8 @@ async function ensureVoice(id) {
 }
 
 const KB_TEXT = 'BiohackTech — produse, prețuri, livrare, retur, garanție, plăți (site)'
-const KB_URLS = ['https://biohack-tech.ro', 'https://calm.biohack-tech.ro', 'https://focus.biohack-tech.ro', 'https://amber.biohack-tech.ro']
+// The public sites are not attached: a search on every turn slows the answers, and the approved text has it all.
+const KB_URLS = []
 
 /**
  * The knowledge base: the site's approved content (docs/ai-calling/knowledge.md, always in the prompt) and the four

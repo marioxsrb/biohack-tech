@@ -127,7 +127,22 @@ export function PriceBlock({ productId, variantId, purchasable }: { productId: P
  * (lib/promotions.ts) from the real price. Choosing a row sets the quantity the order buttons use.
  * The unit price never changes: the reduction is a bundle reduction, applied to the order.
  */
-export function BundleOffer({ productId, variantId, quantity, onQuantity, className = '' }: { productId: ProductId; variantId?: string; quantity: number; onQuantity: (n: number) => void; className?: string }) {
+export function BundleOffer({
+  productId,
+  variantId,
+  quantity,
+  onQuantity,
+  className = '',
+  compact = false,
+}: {
+  productId: ProductId
+  variantId?: string
+  quantity: number
+  onQuantity: (n: number) => void
+  className?: string
+  /** Smaller rows, for the add-to-cart confirmation and the checkout summary. */
+  compact?: boolean
+}) {
   const locale = useLocale()
   const t = COPY[locale]
   const { openAmber } = useOfferSheets()
@@ -143,8 +158,8 @@ export function BundleOffer({ productId, variantId, quantity, onQuantity, classN
 
   return (
     <div className={className}>
-      <p className="text-[15px] font-semibold text-ink">{amber ? t.amberHead : t.bundleHead}</p>
-      <div role="radiogroup" aria-label={amber ? t.amberHead : t.bundleHead} className="mt-2.5 grid gap-2">
+      <p className={`${compact ? 'text-[14px]' : 'text-[15px]'} font-semibold text-ink`}>{amber ? t.amberHead : t.bundleHead}</p>
+      <div role="radiogroup" aria-label={amber ? t.amberHead : t.bundleHead} className={`${compact ? 'mt-2 gap-1.5' : 'mt-2.5 gap-2'} grid`}>
         {steps.map((step) => {
           // The last row stands for "this many or more": it follows the stepper above it.
           const n = step === last && quantity > last ? quantity : step
@@ -159,7 +174,7 @@ export function BundleOffer({ productId, variantId, quantity, onQuantity, classN
               role="radio"
               aria-checked={on}
               onClick={() => onQuantity(n)}
-              className={`flex min-h-[60px] items-center gap-3 rounded-[14px] px-3.5 py-2.5 text-left transition-[box-shadow,background-color] duration-150 ${
+              className={`flex ${compact ? 'min-h-[48px] rounded-[12px] px-3 py-1.5' : 'min-h-[60px] rounded-[14px] px-3.5 py-2.5'} items-center gap-3 text-left transition-[box-shadow,background-color] duration-150 ${
                 on ? 'bg-paper shadow-[inset_0_0_0_2px_var(--color-ink)]' : 'bg-paper shadow-[inset_0_0_0_1px_var(--color-line)] hover:shadow-[inset_0_0_0_1px_var(--color-ink)]'
               }`}
             >
@@ -175,7 +190,7 @@ export function BundleOffer({ productId, variantId, quantity, onQuantity, classN
                     </span>
                   )}
                 </span>
-                {deal && <span className="mt-0.5 block text-[13px] text-text">{amber ? t.amberLine : t.bundleLine(n, tier!.percent)}</span>}
+                {deal && !compact && <span className="mt-0.5 block text-[13px] text-text">{amber ? t.amberLine : t.bundleLine(n, tier!.percent)}</span>}
               </span>
               <span className="flex-none text-right leading-snug">
                 <span data-price className="block text-[15.5px] font-semibold text-ink tabular-nums">{formatLei(r.totalMinor)}</span>
@@ -185,7 +200,7 @@ export function BundleOffer({ productId, variantId, quantity, onQuantity, classN
           )
         })}
       </div>
-      <p className="mt-2 text-[13px] leading-snug text-muted">
+      {!compact && <p className="mt-2 text-[13px] leading-snug text-muted">
         {amber ? (
           <>
             {t.amberNote}{' '}
@@ -196,7 +211,7 @@ export function BundleOffer({ productId, variantId, quantity, onQuantity, classN
         ) : (
           t.bundleNote
         )}
-      </p>
+      </p>}
     </div>
   )
 }

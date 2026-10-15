@@ -8,7 +8,7 @@ import { getDb } from '@/server/db'
 import { shipmentFor } from '@/server/fulfillment/courier'
 import { customerName, formatAddress, PAYMENT_METHOD_LABEL, type Order } from '@/server/orders/model'
 import { orders } from '@/server/orders/repository'
-import { ORDER_LABEL, PAYMENT_LABEL } from '../../../(site)/admin/labels'
+import { ORDER_LABEL, PAYMENT_LABEL } from '../../../(admin)/admin/labels'
 import { PrintButton } from './PrintButton'
 
 export const metadata: Metadata = { title: 'Printare comenzi', robots: { index: false, follow: false } }

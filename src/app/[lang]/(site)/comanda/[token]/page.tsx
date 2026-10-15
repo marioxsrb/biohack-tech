@@ -35,6 +35,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
 
   const c = getConfig()
   const paid = isPaid(order.paymentStatus)
+  // A sale for the ad platforms: a card order once paid; cash on delivery and bank transfer once placed (firm orders).
+  const sale = order.status !== 'cancelled' && (paid || order.paymentMethod === 'cash_on_delivery' || order.paymentMethod === 'bank_transfer')
   const transfer = order.paymentMethod === 'bank_transfer' && order.paymentStatus === 'awaiting_transfer' && order.status !== 'cancelled'
   // Stripe's redirect parameter only tells us the attempt failed in the browser; success is never taken from it.
   const redirectFailed = sp.redirect_status === 'failed'
@@ -60,7 +62,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
           clearKeys={placed ? items : []}
           funnel={order.attribution?.funnel}
           placed={!paid && (cod || transfer) ? { orderNumber: order.orderNumber, value: order.totalMinor, payment: cod ? 'cod' : 'transfer' } : null}
-          purchase={paid ? { orderNumber: order.orderNumber, value: order.totalMinor, items: order.items.map((i) => ({ item_id: i.variantId ? `${i.productId}/${i.variantId}` : i.productId, item_name: i.productName, item_variant: i.variantName ?? undefined, price: i.unitPriceMinor / 100, quantity: i.quantity })) } : null}
+          purchase={sale ? { orderNumber: order.orderNumber, value: order.totalMinor, items: order.items.map((i) => ({ item_id: i.variantId ? `${i.productId}/${i.variantId}` : i.productId, item_name: i.productName, item_variant: i.variantName ?? undefined, price: i.unitPriceMinor / 100, quantity: i.quantity })) } : null}
         />
 
         {placed && (

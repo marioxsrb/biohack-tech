@@ -21,7 +21,7 @@ describe('pre-paint gate script', () => {
   it('acces without the gate cookie: one blur style in <head>; with it, or on any other host: nothing', () => {
     expect(runScript('acces.biohack-tech.ro', 'a=1')).toEqual([{ id: GATE_STYLE_ID, textContent: GATE_CSS }])
     expect(runScript('acces.localhost', '')).toHaveLength(1)
-    expect(runScript('acces.biohack-tech.ro', 'a=1; bt_gate=6f1c2a1e-1111-4111-8111-111111111111')).toEqual([])
+    expect(runScript('acces.biohack-tech.ro', 'a=1; bt_gate2=6f1c2a1e-1111-4111-8111-111111111111')).toEqual([])
     expect(runScript('biohack-tech.ro', '')).toEqual([])
     expect(runScript('calm.biohack-tech.ro', '')).toEqual([])
     expect(runScript('xacces.biohack-tech.ro', '')).toEqual([])

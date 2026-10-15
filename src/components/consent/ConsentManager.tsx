@@ -23,6 +23,7 @@ const COPY = {
     whatMarketing: 'de marketing, pentru reclame relevante',
     whatJoin: ', și ',
     bannerTitle: 'Tu alegi ce cookie-uri folosim',
+    customizeShort: 'Setări',
     bannerText: (what: string) => `Coșul și plata folosesc doar ce este necesar. Cu acordul tău, folosim și cookie-uri ${what}.`,
     policy: 'Politica de cookies',
     reject: 'Refuz opționalele',
@@ -47,6 +48,7 @@ const COPY = {
     whatMarketing: 'marketing cookies, for relevant ads',
     whatJoin: ', and ',
     bannerTitle: 'You choose which cookies we use',
+    customizeShort: 'Settings',
     bannerText: (what: string) => `The cart and payment use only what is necessary. With your consent, we also use ${what}.`,
     policy: 'Cookie policy',
     reject: 'Reject optional',
@@ -134,28 +136,29 @@ function Banner({ used, onAccept, onReject, onCustomize }: { used: Set<OptionalC
     <section
       role="region"
       aria-labelledby={titleId}
-      className="consent-in fixed z-[300] print:hidden rounded-[20px] bg-paper p-5 text-[15px] leading-relaxed text-text shadow-[0_24px_60px_-20px_rgba(8,17,19,.4),0_0_0_1px_rgba(8,17,19,.06)] md:bottom-6 md:left-6 md:w-[430px] max-md:inset-x-3 max-md:bottom-[max(12px,env(safe-area-inset-bottom))]"
+      className="consent-in fixed z-[300] print:hidden rounded-[16px] bg-paper p-3.5 text-[13.5px] leading-snug text-text shadow-[0_18px_44px_-18px_rgba(8,17,19,.4),0_0_0_1px_rgba(8,17,19,.06)] md:bottom-5 md:left-5 md:w-[340px] max-md:inset-x-3 max-md:bottom-[max(10px,env(safe-area-inset-bottom))]"
     >
-      <h2 id={titleId} className="text-[17px] leading-snug tracking-[-0.015em]">
+      <h2 id={titleId} className="sr-only">
         {t.bannerTitle}
       </h2>
-      <p className="mt-2">
+      <p>
         {t.bannerText(what)}{' '}
-        <Link href="/politica-cookies" className="font-medium text-ink underline underline-offset-4">
+        <Link href="/politica-cookies" className="font-medium text-ink underline underline-offset-2">
           {t.policy}
         </Link>
       </p>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <button type="button" onClick={onReject} className="consent-btn">
+      {/* Refusing is as easy as accepting: the same button, side by side. */}
+      <div className="mt-2.5 grid grid-cols-[1fr_1fr_auto] items-center gap-1.5">
+        <button type="button" onClick={onReject} className="consent-btn sm">
           {t.reject}
         </button>
-        <button type="button" onClick={onAccept} className="consent-btn">
+        <button type="button" onClick={onAccept} className="consent-btn sm">
           {t.accept}
         </button>
+        <button type="button" onClick={onCustomize} className="flex min-h-10 items-center rounded-[10px] px-2 text-[13px] font-medium text-ink underline underline-offset-2 hover:bg-mist">
+          {t.customizeShort}
+        </button>
       </div>
-      <button type="button" onClick={onCustomize} className="mt-2 flex min-h-11 w-full items-center justify-center rounded-[10px] text-[14.5px] font-medium text-ink underline underline-offset-4 hover:bg-mist">
-        {t.customize}
-      </button>
     </section>
   )
 }

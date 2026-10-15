@@ -434,4 +434,21 @@ alter table calls add column if not exists agent_outcome text;
 alter table calls add column if not exists follow_up_reason text
 `,
   },
+  {
+    // The two fixed 10% codes: the AI caller's and the website popup's. Only created when missing (an edit made in
+    // /admin/coduri stays). Once per address; like every code they add to the automatic promotions.
+    id: '013_fixed_codes',
+    sql: `
+insert into promo_codes (code, kind, value, once_per_email, note) values
+  ('BIOHACK10', 'percent', 10, true, 'Apel AI: reducerea oferită de asistent'),
+  ('LONGEVITY10', 'percent', 10, true, 'Popup site: emailul de bun venit')
+on conflict (code) do nothing;
+create table if not exists welcome_signups (
+  email text primary key,
+  page text,
+  created_at timestamptz not null default now()
+);
+alter table welcome_signups enable row level security
+`,
+  },
 ]
