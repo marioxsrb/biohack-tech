@@ -79,7 +79,7 @@ export async function ensureStoreSettings(maxAgeMs = 15_000): Promise<StoreSetti
 
 /** What the page tells the browser (the script runs before the app, so the first render already uses it). */
 export function storeScript(s: StoreSettings = current) {
-  return `window.__BT_STORE__=${JSON.stringify({ ...toOverrides(s), welcomePopup: s.welcomePopup, assistant: s.assistant }).replace(/</g, '\\u003c')};`
+  return `window.__BT_STORE__=${JSON.stringify({ ...toOverrides(s), welcomePopup: s.welcomePopup, assistant: s.assistant && process.env.ASSISTANT_ENABLED !== 'false' }).replace(/</g, '\\u003c')};`
 }
 
 export type SettingsProblem = { field: string; message: string }
