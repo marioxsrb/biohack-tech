@@ -12,7 +12,6 @@ import { useGate } from '@/components/gate/Gate'
 import { Arrow, Check, Close } from '@/components/ui/icons'
 import { getProduct, type ProductId } from '@/content/catalog'
 import { useLocale } from '@/i18n/LocaleProvider'
-import { onIntlSite } from '@/lib/sites'
 
 /**
  * The website assistant: a bubble at the bottom right that opens a chat (full screen on phones). Answers stream
@@ -23,6 +22,10 @@ import { onIntlSite } from '@/lib/sites'
  */
 
 const STORE_KEY = 'bt-assistant-v1'
+const TEASER_KEY = 'bt-chat-teaser'
+const TEASER_START = 'bt-chat-start'
+/** The greeting bubble 30 seconds into the visit (business decision 16.10.2026). */
+const TEASER_AFTER_MS = 30_000
 const HIDDEN = /^(?:\/en)?\/(?:admin|prezentare)(?:\/|$)/
 
 const COPY = {
@@ -61,6 +64,11 @@ const COPY = {
     cancelFail: 'Anularea nu a reușit.',
     request: 'Cerere trimisă echipei',
     disclaimer: 'Asistent automat. Nu introduce aici date de card.',
+    teaserFrom: 'Asistent Biohack Tech',
+    teaserNow: 'acum',
+    teaserText: 'Bună! 👋 Te pot ajuta să alegi dispozitivul potrivit pentru tine?',
+    teaserReplies: ['Da, ajută-mă să aleg', 'Am o întrebare'],
+    teaserClose: 'Închide mesajul',
   },
   en: {
     open: 'Open the assistant',
@@ -97,6 +105,11 @@ const COPY = {
     cancelFail: 'The cancellation did not go through.',
     request: 'Request sent to the team',
     disclaimer: 'Automated assistant. Do not enter card details here.',
+    teaserFrom: 'Biohack Tech assistant',
+    teaserNow: 'now',
+    teaserText: 'Hi! 👋 Can I help you find the right device for you?',
+    teaserReplies: ['Yes, help me choose', 'I have a question'],
+    teaserClose: 'Close message',
   },
 }
 type Copy = (typeof COPY)['ro']
@@ -110,6 +123,8 @@ const TRANSPORT = new DefaultChatTransport({
       cart: cartStore.getSnapshot().map((l) => ({ productId: l.productId, variantId: l.variantId, quantity: l.quantity })),
       page: window.location.pathname,
       locale: document.documentElement.lang === 'en' ? 'en' : 'ro',
+      // The currency the visitor sees (the server keeps lei for Romanian pages whatever this says).
+      currency: /(?:^|; )bt_cur=USD/.test(document.cookie) ? 'USD' : 'EUR',
     },
   }),
 })
@@ -134,9 +149,8 @@ export function Assistant() {
   const [initial, setInitial] = useState<Saved | null>(null)
 
   useEffect(() => {
-    // Never on the international site (biohack-tech.net).
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setEnabled(window.__BT_STORE__?.assistant !== false && !onIntlSite())
+    setEnabled(window.__BT_STORE__?.assistant !== false)
     setInitial(load())
   }, [])
 
@@ -153,6 +167,10 @@ function AssistantChat({ initial }: { initial: Saved }) {
   const [done, setDone] = useState<Record<string, string>>(initial.done)
   const [offset, setOffset] = useState(0)
   const [consentShown, setConsentShown] = useState(false)
+  // The greeting bubble: 30 seconds into the visit, once per browser session, until opened or closed.
+  const [teaser, setTeaser] = useState<'hidden' | 'new' | 'shown'>('hidden')
+  // Phones: the panel follows the visible part of the screen, so the on-screen keyboard never covers the input.
+  const [viewport, setViewport] = useState<{ height: number; top: number } | null>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const launcherRef = useRef<HTMLButtonElement>(null)
@@ -210,6 +228,13 @@ function AssistantChat({ initial }: { initial: Saved }) {
     }
     document.addEventListener('keydown', onKey)
     const phone = window.matchMedia('(max-width: 639px)').matches
+    const vv = window.visualViewport
+    const fit = () => vv && setViewport({ height: vv.height, top: vv.offsetTop })
+    if (phone && vv) {
+      fit()
+      vv.addEventListener('resize', fit)
+      vv.addEventListener('scroll', fit)
+    }
     const html = document.documentElement
     const before = html.style.overflow
     if (phone) html.style.overflow = 'hidden'
@@ -217,8 +242,43 @@ function AssistantChat({ initial }: { initial: Saved }) {
       clearTimeout(id)
       document.removeEventListener('keydown', onKey)
       if (phone) html.style.overflow = before
+      vv?.removeEventListener('resize', fit)
+      vv?.removeEventListener('scroll', fit)
+      setViewport(null)
     }
   }, [open])
+
+  useEffect(() => {
+    if (open || messages.length) return
+    let state: string | null = null
+    let start = Date.now()
+    try {
+      state = sessionStorage.getItem(TEASER_KEY)
+      start = Number(sessionStorage.getItem(TEASER_START) ?? 0) || Date.now()
+      sessionStorage.setItem(TEASER_START, String(start))
+    } catch {}
+    if (state === 'closed') return
+    // Already greeted on an earlier page of this visit: the bubble is simply there (no sound, no entrance).
+    if (state === 'shown') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setTeaser('shown')
+      return
+    }
+    const timer = setTimeout(() => {
+      setTeaser('new')
+      try {
+        sessionStorage.setItem(TEASER_KEY, 'shown')
+      } catch {}
+    }, Math.max(0, start + TEASER_AFTER_MS - Date.now()))
+    return () => clearTimeout(timer)
+  }, [open, messages.length])
+
+  const closeTeaser = () => {
+    setTeaser('hidden')
+    try {
+      sessionStorage.setItem(TEASER_KEY, 'closed')
+    } catch {}
+  }
 
   const send = useCallback(
     (text: string) => {
@@ -246,15 +306,31 @@ function AssistantChat({ initial }: { initial: Saved }) {
 
   return (
     <>
+      {!open && teaser !== 'hidden' && !consentShown && (
+        <Teaser
+          t={t}
+          fresh={teaser === 'new'}
+          bottom={`calc(${offset ? offset + 12 : 20}px + 68px + env(safe-area-inset-bottom, 0px))`}
+          onOpen={(text) => {
+            closeTeaser()
+            setOpen(true)
+            if (text) send(text)
+          }}
+          onClose={closeTeaser}
+        />
+      )}
       {!open && (
         <button
           ref={launcherRef}
           type="button"
-          onClick={() => setOpen(true)}
+          onClick={() => {
+            if (teaser !== 'hidden') closeTeaser()
+            setOpen(true)
+          }}
           aria-label={t.open}
           aria-expanded={false}
           style={{ bottom: `calc(${offset ? offset + 12 : 20}px + env(safe-area-inset-bottom, 0px))` }}
-          className={`assistant-launcher fixed right-4 z-[230] flex h-14 w-14 items-center justify-center rounded-full bg-ink text-white shadow-[0_14px_34px_-12px_rgba(8,17,19,.55),0_0_0_1px_rgba(255,255,255,.08)] transition-[transform,bottom,opacity] duration-300 ease-[var(--ease-brand)] hover:scale-[1.05] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-cyan-600 sm:right-5 print:hidden ${consentShown ? 'max-sm:pointer-events-none max-sm:opacity-0' : ''}`}
+          className={`assistant-launcher ${teaser !== 'hidden' ? 'assistant-attract' : ''} fixed right-4 z-[230] flex h-14 w-14 items-center justify-center rounded-full bg-ink text-white shadow-[0_14px_34px_-12px_rgba(8,17,19,.55),0_0_0_1px_rgba(255,255,255,.08)] transition-[transform,bottom,opacity] duration-300 ease-[var(--ease-brand)] hover:scale-[1.05] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-cyan-600 sm:right-5 print:hidden ${consentShown ? 'max-sm:pointer-events-none max-sm:opacity-0' : ''}`}
         >
           <ChatIcon />
           <span className="absolute top-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-ink bg-cyan-400" aria-hidden />
@@ -265,6 +341,7 @@ function AssistantChat({ initial }: { initial: Saved }) {
           role="dialog"
           aria-modal="false"
           aria-labelledby={titleId}
+          style={viewport ? { height: viewport.height, top: viewport.top, bottom: 'auto' } : undefined}
           className="assistant-panel fixed z-[270] flex flex-col overflow-hidden bg-mist shadow-[0_30px_80px_-24px_rgba(8,17,19,.45),0_0_0_1px_rgba(8,17,19,.08)] max-sm:inset-0 max-sm:h-dvh sm:right-5 sm:bottom-5 sm:h-[min(680px,calc(100dvh_-_40px))] sm:w-[400px] sm:rounded-[24px] print:hidden"
         >
           <header className="flex items-center gap-3 border-b border-line bg-paper px-4 py-3 pt-[max(12px,env(safe-area-inset-top))]">
@@ -301,7 +378,7 @@ function AssistantChat({ initial }: { initial: Saved }) {
             </button>
           </header>
 
-          <div ref={listRef} className="flex-1 space-y-3 overflow-y-auto overscroll-contain px-3.5 py-4" aria-live="polite" aria-busy={busy}>
+          <div ref={listRef} className="assistant-scroll flex-1 space-y-3 overflow-y-auto overscroll-contain px-3.5 py-4" aria-live="polite" aria-busy={busy}>
             <Bubble role="assistant">{t.hello}</Bubble>
             {messages.length === 0 && (
               <div className="flex flex-wrap gap-2 pt-1">
@@ -479,6 +556,19 @@ function Btn({ children, onClick, primary, href }: { children: ReactNode; onClic
   )
 }
 
+function SmallBtn({ children, onClick, primary, href }: { children: ReactNode; onClick?: () => void; primary?: boolean; href?: string }) {
+  const cls = `inline-flex min-h-9 items-center justify-center rounded-full px-3 text-[12.5px] font-medium whitespace-nowrap transition-colors ${primary ? 'bg-ink text-white hover:bg-[#1c2a2f]' : 'border border-line bg-paper text-ink hover:border-ink'}`
+  return href ? (
+    <Link href={href} className={cls}>
+      {children}
+    </Link>
+  ) : (
+    <button type="button" onClick={onClick} className={cls}>
+      {children}
+    </button>
+  )
+}
+
 function Card({ children }: { children: ReactNode }) {
   return <div className="max-w-[92%] rounded-[18px] bg-paper p-3 text-[14px] text-text shadow-[0_0_0_1px_rgba(8,17,19,.05)]">{children}</div>
 }
@@ -509,55 +599,56 @@ function ToolView({ name, id, output, t, done, mark }: { name: string; id: strin
 
   if (name === 'show_products') {
     const list = (output.products as { id: string; name: string; purpose: string; href: string; price?: string; promotion?: string; soldOut?: boolean; variants?: unknown[] }[]) ?? []
+    // One compact row per product (no sideways scrolling, so it reads well on a phone): picture, name, price, action.
     return (
-      <div className="-mx-3.5 flex snap-x gap-2.5 overflow-x-auto px-3.5 pb-1">
+      <ul className="w-full max-w-[420px] space-y-2">
         {list.map((p) => {
           const product = getProduct(p.id, locale)
           if (!product) return null
           const key = `${id}:${p.id}`
+          const action = p.soldOut ? (
+            <span className="text-[12.5px] text-muted">{t.soldOut}</span>
+          ) : output.locked ? (
+            <SmallBtn primary onClick={() => gate.open({ productId: p.id as ProductId })}>
+              {t.seePrice}
+            </SmallBtn>
+          ) : done[key] === 'added' ? (
+            <span className="inline-flex items-center gap-1 text-[12.5px] font-medium text-[#167a4a]">
+              <Check className="h-4 w-4" /> {t.added}
+            </span>
+          ) : p.variants?.length ? (
+            <SmallBtn primary href={p.href}>
+              {product.chooseLabel ?? t.view}
+            </SmallBtn>
+          ) : (
+            <SmallBtn
+              primary
+              onClick={() => {
+                if (add(p.id as ProductId, undefined, 1, 'assistant')) {
+                  dismissConfirmation()
+                  mark(key, 'added')
+                }
+              }}
+            >
+              {t.add}
+            </SmallBtn>
+          )
           return (
-            <div key={p.id} className="w-[220px] flex-none snap-start rounded-[18px] bg-paper p-3 shadow-[0_0_0_1px_rgba(8,17,19,.05)]">
-              <Link href={p.href} className="block">
-                <Thumb image={product.cutout} sizes="200px" className="aspect-[4/3] w-full bg-mist" />
-                <p className="mt-2.5 text-[15px] font-semibold text-ink">{p.name}</p>
-                <p className="text-[13px] text-muted">{p.purpose}</p>
+            <li key={p.id} className="flex items-center gap-3 rounded-[16px] bg-paper p-2.5 shadow-[0_0_0_1px_rgba(8,17,19,.05)]">
+              <Link href={p.href} className="flex min-w-0 flex-1 items-center gap-3" aria-label={`${t.view}: ${p.name}`}>
+                <Thumb image={product.cutout} sizes="64px" className="h-16 w-16 flex-none bg-mist" />
+                <span className="min-w-0">
+                  <span className="block truncate text-[14.5px] font-semibold text-ink">{p.name}</span>
+                  <span className="block truncate text-[12.5px] text-muted">{p.purpose}</span>
+                  {p.price && <span className="block text-[13.5px] font-semibold text-ink tabular-nums">{p.price}</span>}
+                  {p.promotion && <span className="block truncate text-[11.5px] font-medium text-cyan-700">{p.promotion}</span>}
+                </span>
               </Link>
-              {p.price && <p className="mt-1.5 text-[14.5px] font-semibold text-ink">{p.price}</p>}
-              {p.promotion && <p className="mt-0.5 text-[12.5px] font-medium text-cyan-700">{p.promotion}</p>}
-              <div className="mt-2.5 flex flex-wrap gap-1.5">
-                {p.soldOut ? (
-                  <span className="text-[13px] text-muted">{t.soldOut}</span>
-                ) : output.locked ? (
-                  <Btn primary onClick={() => gate.open({ productId: p.id as ProductId })}>
-                    {t.seePrice}
-                  </Btn>
-                ) : done[key] === 'added' ? (
-                  <span className="inline-flex items-center gap-1 text-[13px] font-medium text-[#167a4a]">
-                    <Check className="h-4 w-4" /> {t.added}
-                  </span>
-                ) : p.variants?.length ? (
-                  <Btn primary href={p.href}>
-                    {product.chooseLabel ?? t.view}
-                  </Btn>
-                ) : (
-                  <Btn
-                    primary
-                    onClick={() => {
-                      if (add(p.id as ProductId, undefined, 1, 'assistant')) {
-                        dismissConfirmation()
-                        mark(key, 'added')
-                      }
-                    }}
-                  >
-                    {t.add}
-                  </Btn>
-                )}
-                <Btn href={p.href}>{t.view}</Btn>
-              </div>
-            </div>
+              <span className="flex-none">{action}</span>
+            </li>
           )
         })}
-      </div>
+      </ul>
     )
   }
 
@@ -761,4 +852,126 @@ function CancelCard({ id, o, t, done, mark }: { id: string; o: { orderNumber: st
       {problem && <p className="mt-2 text-[13.5px] text-red-deep">{problem}</p>}
     </Card>
   )
+}
+
+/**
+ * The greeting above the chat button, like an incoming iMessage: three typing dots grow out of the button, then the
+ * message bubble (with its tail toward the button) replaces them and the notification "ping" plays. Browsers allow
+ * sound only after the visitor touched the page; until then the ping waits for the first touch, once. The replies
+ * open the chat. It stays (gently floating) until opened or closed, for the rest of the visit.
+ */
+function Teaser({ t, fresh, bottom, onOpen, onClose }: { t: Copy; fresh: boolean; bottom: string; onOpen: (text?: string) => void; onClose: () => void }) {
+  const [typing, setTyping] = useState(fresh)
+  useEffect(() => {
+    if (!fresh) return
+    const show = setTimeout(() => setTyping(false), 1400)
+    const sound = setTimeout(() => ping(), 1400 + 180)
+    return () => {
+      clearTimeout(show)
+      clearTimeout(sound)
+    }
+  }, [fresh])
+  return (
+    <div role="status" aria-live="polite" style={{ bottom }} className="fixed right-4 z-[231] flex w-[min(290px,calc(100vw-32px))] flex-col items-end sm:right-5 print:hidden">
+      <p className={`mb-1 mr-3 flex items-center gap-1.5 text-[11px] text-muted ${fresh ? 'assistant-teaser-in' : ''}`}>
+        <span className="h-1.5 w-1.5 rounded-full bg-[#34c759]" aria-hidden />
+        {t.teaserFrom}
+      </p>
+      {typing ? (
+        <div className="assistant-teaser-in imsg-in relative mr-1 flex w-fit items-center gap-1 rounded-[20px] px-4 py-3.5" aria-label="…">
+          {[0, 1, 2].map((i) => (
+            <span key={i} className="assistant-dot h-2 w-2 rounded-full bg-[#8e8e93]" style={{ animationDelay: `${i * 0.16}s` }} />
+          ))}
+        </div>
+      ) : (
+        <div className={`assistant-teaser-float w-full ${fresh ? 'assistant-teaser-pop' : ''}`}>
+          <div className="relative">
+            <button type="button" onClick={() => onOpen()} className="imsg-in relative block w-full rounded-[20px] px-4 py-2.5 text-left text-[15.5px] leading-snug text-black">
+              {t.teaserText}
+              {/* The bubble's tail, toward the chat button. */}
+              <svg viewBox="0 0 17 21" aria-hidden className="absolute -right-[6px] bottom-0 h-[21px] w-[17px] text-[#e9e9eb]">
+                <path fill="currentColor" d="M0 0v14c0 4 2 7 6 7 4 0 8-1 11-3-4-1-6-4-7-8C9 6 9 3 9 0H0Z" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label={t.teaserClose}
+              className="absolute -top-2 -left-2 flex h-6 w-6 items-center justify-center rounded-full bg-paper text-muted shadow-[0_1px_4px_rgba(0,0,0,.18)] hover:text-ink"
+            >
+              <Close className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap justify-end gap-1.5">
+            {t.teaserReplies.map((r, i) => (
+              <button
+                key={r}
+                type="button"
+                onClick={() => onOpen(i === 0 ? t.suggestions[0] : undefined)}
+                className={`rounded-full px-3.5 py-1.5 text-[13.5px] font-medium shadow-[0_4px_14px_-6px_rgba(0,0,0,.25)] transition-transform active:scale-95 ${i === 0 ? 'bg-[#0a84ff] text-white' : 'bg-paper text-[#0a84ff]'}`}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+let pinged = false
+/** A short two-note chime (like a message arriving); waits for the first touch when the browser blocks sound. */
+function ping() {
+  if (pinged || typeof window === 'undefined') return
+  const W = window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }
+  const Ctx = W.AudioContext ?? W.webkitAudioContext
+  if (!Ctx) return
+  // An iOS-like "note": two bright notes a fifth apart, each a sine with a soft bell overtone, quick attack.
+  const play = (ctx: AudioContext) => {
+    pinged = true
+    const now = ctx.currentTime
+    const master = ctx.createGain()
+    master.gain.value = 0.55
+    master.connect(ctx.destination)
+    // A soft echo, so the ping rings on for a moment (business request 16.10.2026: longer).
+    const echo = ctx.createDelay()
+    echo.delayTime.value = 0.16
+    const feedback = ctx.createGain()
+    feedback.gain.value = 0.3
+    master.connect(echo).connect(feedback).connect(echo)
+    feedback.connect(ctx.destination)
+    for (const [freq, at, len] of [
+      [1318.5, 0, 0.55],
+      [1975.5, 0.12, 1.7],
+    ] as const) {
+      for (const [mult, level] of [
+        [1, 0.5],
+        [2.76, 0.12],
+      ] as const) {
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sine'
+        osc.frequency.value = freq * mult
+        gain.gain.setValueAtTime(0, now + at)
+        gain.gain.linearRampToValueAtTime(level, now + at + 0.006)
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + at + len)
+        osc.connect(gain).connect(master)
+        osc.start(now + at)
+        osc.stop(now + at + len + 0.05)
+      }
+    }
+  }
+  try {
+    const ctx = new Ctx()
+    if (ctx.state === 'running') return play(ctx)
+    void ctx.resume().then(() => (ctx.state === 'running' ? play(ctx) : undefined))
+    // Still blocked (no touch yet): the ping plays on the first touch, key or click.
+    const later = () => {
+      remove()
+      void ctx.resume().then(() => !pinged && play(ctx))
+    }
+    const remove = () => ['pointerdown', 'keydown', 'touchstart'].forEach((e) => window.removeEventListener(e, later))
+    ;['pointerdown', 'keydown', 'touchstart'].forEach((e) => window.addEventListener(e, later, { once: true, passive: true }))
+  } catch {}
 }

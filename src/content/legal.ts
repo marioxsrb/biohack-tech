@@ -11,6 +11,7 @@ import { site, terms } from '@/config/site'
 import { COMMUNICATIONS_CONSENT_TEXT } from '@/lib/consent/communications'
 import { CONSENT_MAX_AGE_DAYS } from '@/lib/consent/cookies'
 import { configuredVendors } from '@/lib/consent/vendors'
+import { legalPagesEn } from './legal-en'
 
 export type LegalBlock = string | { list: string[] } | { table: { head: string[]; rows: string[][] } }
 export type LegalSection = { heading: string; id?: string; body: LegalBlock[] }
@@ -488,6 +489,7 @@ export const legalPages: LegalPage[] = [
   },
 ]
 
-export function getLegalPage(slug: string) {
-  return legalPages.find((p) => p.slug === slug)
+export function getLegalPage(slug: string, locale: 'ro' | 'en' = 'ro') {
+  const ro = legalPages.find((p) => p.slug === slug)
+  return locale === 'en' ? (legalPagesEn.find((p) => p.slug === slug) ?? ro) : ro
 }

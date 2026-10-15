@@ -223,3 +223,39 @@ describe('abandoned carts on biohack-tech.net', () => {
     expect(await jobs.problems(db)).toEqual([])
   })
 })
+
+describe('the chat on the English pages', () => {
+  it('shows prices in the visitor currency and says card only', async () => {
+    vi.stubEnv('ASSISTANT_MODEL', 'mock')
+    const { assistantTurn } = await import('@/server/assistant/chat')
+    const { scriptedModel } = await import('@/server/assistant/mock-model')
+    const { assistantInstructions } = await import('@/server/assistant/prompt')
+    const res = await assistantTurn({
+      db,
+      config: getConfig(),
+      context: { locked: false, gated: false, locale: 'en', currency: 'USD', intl: true, page: '/en', siteUrl: 'https://www.biohack-tech.net' },
+      messages: [{ id: 'u', role: 'user', parts: [{ type: 'text', text: 'Ce produs mi se potrivește?' }] }],
+      cart: [],
+      model: scriptedModel(),
+    })
+    const text = await res.text()
+    expect(text).toContain('$1,418') // 6.380 lei / 4.5
+    expect(text).not.toContain('6.380 lei')
+    const prompt = assistantInstructions({ locked: false, gated: false, locale: 'en', currency: 'EUR', page: '/en', siteUrl: 'https://www.biohack-tech.net' })
+    expect(prompt).toContain('doar card online prin Stripe, în EUR')
+    expect(prompt).toContain('€1,276')
+  })
+})
+
+describe('English legal pages', () => {
+  it('has every legal page in English, same slugs and anchors', async () => {
+    const { legalPages, getLegalPage } = await import('@/content/legal')
+    for (const p of legalPages) {
+      const en = getLegalPage(p.slug, 'en')!
+      expect(en.slug).toBe(p.slug)
+      expect(en.title).not.toBe(p.title)
+      expect(en.sections.map((s) => s.id).filter(Boolean)).toEqual(p.sections.map((s) => s.id).filter(Boolean))
+      expect(JSON.stringify(en)).not.toMatch(/ zile|Livrare gratuită|în cel mult/)
+    }
+  })
+})

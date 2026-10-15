@@ -11,7 +11,10 @@ import { tool } from 'ai'
 import { z } from 'zod'
 import { getProduct, productsIn, resolveLine, unitPrice, variantLabel, type ProductId } from '@/content/catalog'
 import { promoText, PROMOTIONS } from '@/config/promotions'
-import { formatLei } from '@/lib/money'
+import { convertUnit, formatMoney, type Currency } from '@/lib/currency'
+
+/** A catalog price (lei) in the visitor's currency. */
+const money = (ctx: { currency: Currency }, bani: number) => formatMoney(convertUnit(bani, ctx.currency), ctx.currency)
 import { MAX_QTY } from '@/lib/purchase'
 import { priceLines, promotionHints } from '@/lib/promotions'
 import type { Config } from '@/server/config'
@@ -30,6 +33,8 @@ export type ToolContext = {
   locked: boolean
   gated: boolean
   locale: 'ro' | 'en'
+  /** The visitor's currency (lei on Romanian pages, euro or dollar on English ones): every price is shown in it. */
+  currency: Currency
   /** The visitor's cart as the browser sent it (validated again here). */
   cart: CartInput
   /** Order ids proved with the email code in this conversation (signed references, checked by the route). */
@@ -53,7 +58,7 @@ function card(id: ProductId, ctx: ToolContext) {
     tagline: p.tagline,
     href: `${ctx.locale === 'en' ? '/en' : ''}/products/${p.slug}`,
     soldOut: !!p.soldOut,
-    ...(!ctx.locked && p.price !== null && { price: `${p.variablePrice ? (ctx.locale === 'en' ? 'from ' : 'de la ') : ''}${formatLei(p.price)}` }),
+    ...(!ctx.locked && p.price !== null && { price: `${p.variablePrice ? (ctx.locale === 'en' ? 'from ' : 'de la ') : ''}${money(ctx, p.price)}` }),
     ...(!ctx.locked && promo && { promotion: promoText(promo.badge, ctx.locale) }),
     ...(p.variants?.length && { variants: p.variants.map((v) => ({ id: v.id, label: variantLabel(p, v) })) }),
   }
@@ -82,7 +87,7 @@ export function assistantTools(ctx: ToolContext) {
         if (ctx.locked) return { status: 'locked' as const, productId, name: p.name, message: 'Pe această pagină coșul se deschide după formularul „Vezi prețul și oferta”. Vizitatorul vede acum butonul formularului (nu un buton de coș).' }
         if (p.soldOut) return { status: 'sold_out' as const, productId, name: p.name }
         // No frame chosen, or one that does not exist: the card lets the visitor pick.
-        if (p.variants?.length && (!variantId || !p.variants.some((v) => v.id === variantId))) return { status: 'choose_variant' as const, productId, name: p.name, quantity, variants: p.variants.map((v) => ({ id: v.id, label: variantLabel(p, v), price: formatLei(unitPrice(p, v) ?? 0) })) }
+        if (p.variants?.length && (!variantId || !p.variants.some((v) => v.id === variantId))) return { status: 'choose_variant' as const, productId, name: p.name, quantity, variants: p.variants.map((v) => ({ id: v.id, label: variantLabel(p, v), price: money(ctx, unitPrice(p, v) ?? 0) })) }
         const r = resolveLine(productId, variantId, ctx.locale)
         if (!r || r.unit === null) return { status: 'unavailable' as const, productId, name: p.name }
         return {
@@ -92,7 +97,7 @@ export function assistantTools(ctx: ToolContext) {
           variant: r.variant ? variantLabel(p, r.variant) : undefined,
           name: p.name,
           quantity,
-          unitPrice: formatLei(r.unit),
+          unitPrice: money(ctx, r.unit),
         }
       },
     }),
@@ -108,14 +113,14 @@ export function assistantTools(ctx: ToolContext) {
         if (!lines.length) return { empty: true as const }
         const items = lines.map((l) => `${l.quantity} × ${l.r.product.name}${l.r.variant ? ` (${variantLabel(l.r.product, l.r.variant)})` : ''}${l.r.unit === null ? ' (indisponibil)' : ''}`)
         if (ctx.locked) return { empty: false as const, locked: true as const, items }
-        const priced = lines.filter((l) => l.r.unit !== null).map((l) => ({ key: l.key, productId: l.r.product.id, quantity: l.quantity, unitAmount: l.r.unit! }))
+        const priced = lines.filter((l) => l.r.unit !== null).map((l) => ({ key: l.key, productId: l.r.product.id, quantity: l.quantity, unitAmount: convertUnit(l.r.unit!, ctx.currency) }))
         const p = priceLines(priced)
         return {
           empty: false as const,
           items,
-          subtotal: formatLei(p.subtotalMinor),
-          promotions: p.promotions.map((a) => `${promoText(a.label, ctx.locale)}: −${formatLei(a.amountMinor)}`),
-          total: formatLei(p.totalMinor),
+          subtotal: formatMoney(p.subtotalMinor, ctx.currency),
+          promotions: p.promotions.map((a) => `${promoText(a.label, ctx.locale)}: −${formatMoney(a.amountMinor, ctx.currency)}`),
+          total: formatMoney(p.totalMinor, ctx.currency),
           shipping: ctx.locale === 'en' ? 'free' : 'gratuită',
           hints: promotionHints(priced).map((h) => h.text),
         }
@@ -190,7 +195,7 @@ export function assistantTools(ctx: ToolContext) {
           eligible: true as const,
           orderNumber: o.orderNumber,
           items: o.items.map((i) => `${i.quantity} × ${i.productName}${i.variantName ? ` (${i.variantName})` : ''}`),
-          total: formatLei(o.totalMinor),
+          total: formatMoney(o.totalMinor, o.currency),
           cancelToken: signToken('cancel', o.id, CANCEL_TTL_MS),
         }
       },

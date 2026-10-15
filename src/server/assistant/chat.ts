@@ -173,7 +173,7 @@ export async function assistantTurn(x: TurnInput): Promise<Response> {
     return cannedResponse(UNAVAILABLE[lang])
   }
   const verified = await verifiedOrders(x.db, x.messages)
-  const tools = assistantTools({ db: x.db, config: x.config, locked: x.context.locked, gated: x.context.gated, locale: lang, cart: x.cart, verified, onQueued: x.onQueued ?? (() => {}) })
+  const tools = assistantTools({ db: x.db, config: x.config, locked: x.context.locked, gated: x.context.gated, locale: lang, currency: x.context.currency ?? 'RON', cart: x.cart, verified, onQueued: x.onQueued ?? (() => {}) })
   let quota = false
   const result = streamText({
     model: x.model ?? (await assistantModel()),

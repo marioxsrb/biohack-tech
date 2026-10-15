@@ -11,7 +11,7 @@
  */
 import 'server-only'
 import { createHmac, randomInt, randomUUID, timingSafeEqual } from 'node:crypto'
-import { formatLei } from '@/lib/money'
+import { formatMoney } from '@/lib/currency'
 import type { Config } from '@/server/config'
 import type { Queryable } from '@/server/db'
 import { emailShell, esc } from '@/server/integrations/email/shell'
@@ -173,7 +173,7 @@ export function orderView(o: Order) {
     status: STATUS_TEXT[o.status],
     payment: `${PAYMENT_METHOD_LABEL[o.paymentMethod]}: ${PAYMENT_TEXT[o.paymentStatus]}`,
     items: o.items.map((i) => `${i.quantity} × ${i.productName}${i.variantName ? ` (${i.variantName})` : ''}`),
-    total: formatLei(o.totalMinor),
+    total: formatMoney(o.totalMinor, o.currency),
     ...(o.promoCode && { promoCode: o.promoCode }),
     ...(o.courier && { courier: o.courier }),
     ...(o.trackingNumber && { awb: o.trackingNumber }),

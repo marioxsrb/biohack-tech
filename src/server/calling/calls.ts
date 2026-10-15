@@ -10,6 +10,7 @@
  */
 import 'server-only'
 import { isIntlHost } from '@/lib/sites'
+import { givenName } from './names'
 import { randomUUID } from 'node:crypto'
 import { getProduct } from '@/content/catalog'
 import { romanianE164 } from '@/lib/consent/calling'
@@ -255,10 +256,11 @@ export type StepResult = { skip: string } | { note: string }
 export function callVariables(lead: Lead, callId: string, offer: { code: string; emailStatus: OfferEmailStatus; link: string } | null) {
   const items = describeItems(lead)
   const scenario = callScenario(lead)
-  const firstName = lead.name?.split(' ')[0]?.slice(0, 40) ?? ''
+  // The given name to confirm who answered (the form may hold "Popescu Ana"); the greeting uses the whole name.
+  const firstName = givenName(lead.name).slice(0, 40)
   return {
     call_id: callId,
-    opening_line: openingLine({ firstName, cart: scenario === 'cart', productNames: items.names, items: leadItems(lead) }),
+    opening_line: openingLine({ firstName, name: lead.name, cart: scenario === 'cart', productNames: items.names, items: leadItems(lead) }),
     customer_first_name: firstName,
     funnel_type: lead.funnel,
     abandonment_type: scenario === 'cart' ? 'cos_nefinalizat' : 'oferta_solicitata',

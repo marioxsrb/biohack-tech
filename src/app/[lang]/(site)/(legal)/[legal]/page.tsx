@@ -3,13 +3,14 @@ import Link from '@/components/ui/Link'
 import { notFound } from 'next/navigation'
 import { Fragment, type ReactNode } from 'react'
 import { legalPages, getLegalPage, type LegalBlock } from '@/content/legal'
+import { legalPagesEn } from '@/content/legal-en'
 import { getLocale } from '@/i18n/server'
 import { pageMetadata } from '@/lib/seo'
 
-/** The legal texts are Romanian only; on /en the page around them speaks English and says so. */
+/** The legal texts in Romanian (binding) and their English translation on /en, which says the Romanian prevails. */
 const COPY = {
   ro: { updated: 'Actualizat la', otherPages: 'Alte pagini legale', newTab: ' (se deschide într-o filă nouă)', note: null },
-  en: { updated: 'Updated on', otherPages: 'Other legal pages', newTab: ' (opens in a new tab)', note: 'Legal documents are in Romanian, which is the binding version.' },
+  en: { updated: 'Updated on', otherPages: 'Other legal pages', newTab: ' (opens in a new tab)', note: 'This is an English translation for convenience. If it differs from the Romanian version, the Romanian version prevails.' },
 }
 
 export function generateStaticParams() {
@@ -19,9 +20,10 @@ export function generateStaticParams() {
 export const dynamicParams = false
 
 export async function generateMetadata({ params }: PageProps<'/[lang]/[legal]'>): Promise<Metadata> {
-  const page = getLegalPage((await params).legal)
+  const locale = await getLocale()
+  const page = getLegalPage((await params).legal, locale)
   if (!page) return {}
-  return pageMetadata({ title: page.title, description: page.description, path: `/${page.slug}`, locale: await getLocale(), translated: false })
+  return pageMetadata({ title: page.title, description: page.description, path: `/${page.slug}`, locale, translated: true })
 }
 
 const LINK = /\[([^\]]+)\]\(([^)\s]+)\)/g
@@ -91,24 +93,30 @@ function Block({ block, newTab }: { block: LegalBlock; newTab: string }) {
 }
 
 export default async function LegalPage({ params }: PageProps<'/[lang]/[legal]'>) {
-  const page = getLegalPage((await params).legal)
+  const locale = await getLocale()
+  const page = getLegalPage((await params).legal, locale)
   if (!page) notFound()
-  const t = COPY[await getLocale()]
+  const t = COPY[locale]
+  const lang = locale === 'en' ? 'en' : 'ro'
+  // "14 octombrie 2026" → "14 October 2026" on the English page.
+  const MONTHS = ['ianuarie', 'februarie', 'martie', 'aprilie', 'mai', 'iunie', 'iulie', 'august', 'septembrie', 'octombrie', 'noiembrie', 'decembrie']
+  const EN_MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+  const updated = lang === 'en' ? page.updated.replace(/[a-zăîâșț]+/i, (m) => EN_MONTHS[MONTHS.indexOf(m.toLowerCase())] ?? m) : page.updated
 
   return (
     <article className="pt-[calc(var(--nav-h)+var(--sec))] pb-[var(--sec)] max-sm:pt-[calc(var(--nav-h)+32px)]">
       <div className="wrap grid gap-y-8 md:grid-cols-12 md:gap-x-6">
         <header className="md:col-span-4">
           {t.note && <p className="mb-5 rounded-[12px] bg-paper px-4 py-3 text-[14.5px] leading-snug text-text">{t.note}</p>}
-          <h1 lang="ro" className="text-[36px] leading-[1.06] tracking-[-0.035em] max-sm:text-[30px]">{page.title}</h1>
+          <h1 lang={lang} className="text-[36px] leading-[1.06] tracking-[-0.035em] max-sm:text-[30px]">{page.title}</h1>
           <p className="mt-3 text-[14.5px] text-muted">
-            {t.updated} <span lang="ro">{page.updated}</span>
+            {t.updated} <span lang={lang}>{updated}</span>
           </p>
           <nav aria-label={t.otherPages} className="mt-8 max-md:hidden">
             <ul className="space-y-1 text-[15px]">
-              {legalPages.map((p) => (
+              {(lang === 'en' ? legalPagesEn : legalPages).map((p) => (
                 <li key={p.slug}>
-                  <Link href={`/${p.slug}`} lang="ro" aria-current={p.slug === page.slug ? 'page' : undefined} className={`flex min-h-9 items-center hover:text-ink ${p.slug === page.slug ? 'font-medium text-ink' : 'text-muted'}`}>
+                  <Link href={`/${p.slug}`} lang={lang} aria-current={p.slug === page.slug ? 'page' : undefined} className={`flex min-h-9 items-center hover:text-ink ${p.slug === page.slug ? 'font-medium text-ink' : 'text-muted'}`}>
                     {p.shortTitle}
                   </Link>
                 </li>
@@ -116,7 +124,7 @@ export default async function LegalPage({ params }: PageProps<'/[lang]/[legal]'>
             </ul>
           </nav>
         </header>
-        <div lang="ro" className="min-w-0 md:col-span-7 md:col-start-6">
+        <div lang={lang} className="min-w-0 md:col-span-7 md:col-start-6">
           <div className="space-y-10">
             {page.sections.map((s) => (
               <section key={s.heading} id={s.id} className="scroll-mt-[calc(var(--nav-h)+24px)]">

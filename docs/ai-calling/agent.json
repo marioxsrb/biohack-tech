@@ -44,7 +44,7 @@
       "dynamic_variables": {
         "dynamic_variable_placeholders": {
           "call_id": "test",
-          "opening_line": "Bună ziua! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat. Am văzut că ați adăugat în coș NEUROS Calm. Aveți un minut?",
+          "opening_line": "Bună ziua, doamna Ana! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat. Am văzut că ați adăugat în coș NEUROS Calm. Aveți un minut?",
           "customer_first_name": "Ana",
           "funnel_type": "visible_price",
           "abandonment_type": "cos_nefinalizat",

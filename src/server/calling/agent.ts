@@ -12,6 +12,7 @@ import { PROMOTIONS } from '@/config/promotions'
 import { cashOnDelivery } from '@/config/payments'
 import { site, terms } from '@/config/site'
 import { formatLei } from '@/lib/money'
+import { convertUnit, formatMoney, type Currency } from '@/lib/currency'
 import { openingLine } from './offer'
 
 export { openingLine }
@@ -34,16 +35,19 @@ function legalSection(slug: string, title: string) {
  * website assistant on acces.<domain> before the price form): no price, no promotion amount, no payment details
  * page (which repeats the promotions); everything else is the same.
  */
-export function agentKnowledge(siteUrl: string = site.url, opts: { prices: boolean } = { prices: true }): string {
+export function agentKnowledge(siteUrl: string = site.url, opts: { prices: boolean; currency?: Currency } = { prices: true }): string {
+  // Prices in lei (the call agent), or in the website visitor's euro or dollars (whole units, like the site).
+  const cur = opts.currency ?? 'RON'
+  const money = (bani: number) => formatMoney(convertUnit(bani, cur), cur)
   const products = productsIn('ro').map((p) => {
     const c = getProductContent(p.id, 'ro')
-    const variants = (p.variants ?? []).map((v) => `- ${variantLabel(p, v)}${opts.prices ? `: ${formatLei(unitPrice(p, v) ?? p.price ?? 0)}` : ''}`)
+    const variants = (p.variants ?? []).map((v) => `- ${variantLabel(p, v)}${opts.prices ? `: ${money(unitPrice(p, v) ?? p.price ?? 0)}` : ''}`)
     const promo = opts.prices ? PROMOTIONS.find((x) => (x.products as string[]).includes(p.id)) : undefined
     return [
       `## ${p.name} (${p.kind})`,
       `Pentru ce este: ${p.purpose}. ${p.tagline}`,
       opts.prices
-        ? `Preț: ${p.price !== null ? `${p.variablePrice ? 'de la ' : ''}${formatLei(p.price)}` : 'nu are încă preț'} (${terms.vat}, ${terms.shipping.toLowerCase()}).`
+        ? `Preț: ${p.price !== null ? `${p.variablePrice ? 'de la ' : ''}${money(p.price)}` : 'nu are încă preț'} (${terms.vat}, ${cur === 'RON' ? terms.shipping.toLowerCase() : 'livrare gratuită oriunde în lume'}).`
         : `Preț: se vede după formularul „Vezi prețul și oferta” (${terms.shipping.toLowerCase()}).`,
       ...(variants.length ? ['Variante:', ...variants] : []),
       ...(promo ? [`Promoție: ${promo.line}`] : []),
@@ -65,7 +69,9 @@ export function agentKnowledge(siteUrl: string = site.url, opts: { prices: boole
     `Magazin online din România care vinde dispozitivele NEUROS. Site: ${siteUrl}. Email: ${site.email}. Telefon: ${site.phone}. Răspundem ${terms.responseTime}.`,
     `Produse vândute acum: ${productsIn('ro').map((p) => p.name).join(', ')}. NEUROS Flow nu se mai vinde.`,
     ...products,
-    `## Plată\nMetode: ${[cashOnDelivery.enabled && 'ramburs (plata la livrare, curierului)', 'card bancar online prin Stripe', 'transfer bancar'].filter(Boolean).join(', ')}. Datele cardului se introduc doar pe site, niciodată la telefon.`,
+    cur === 'RON'
+      ? `## Plată\nMetode: ${[cashOnDelivery.enabled && 'ramburs (plata la livrare, curierului)', 'card bancar online prin Stripe', 'transfer bancar'].filter(Boolean).join(', ')}. Datele cardului se introduc doar pe site, niciodată la telefon.`
+      : `## Plată\nÎn ${cur}: doar card bancar online prin Stripe (rambursul și transferul sunt pentru comenzile în lei, cu livrare în România). Datele cardului se introduc doar pe site.`,
     opts.prices ? legalSection('plati', 'Plăți (detalii)') : '',
     legalSection('politica-livrare', 'Livrare'),
     legalSection('politica-retur', 'Retur și drept de retragere'),

@@ -10,8 +10,8 @@ import { WELCOME_CONSENT_TEXT, WELCOME_CONSENT_TEXT_EN } from '@/lib/consent/mar
 import { getProduct } from '@/content/catalog'
 import { GATE_COOKIE } from '@/lib/lead'
 
-/** 40 seconds on the site (anywhere, across pages of the same visit) before the offer shows. */
-const AFTER_MS = 40_000
+/** One minute on the site (anywhere, across pages of the same visit) before the offer shows (business decision 16.10.2026). */
+const AFTER_MS = 60_000
 /** Closed without an address: not again for a week. Sent: never again on this browser. */
 const SNOOZE_MS = 7 * 86_400_000
 // Renamed on 15.10.2026: every browser may see the offer again once.
@@ -73,7 +73,7 @@ const write = (k: string, v: string) => {
 
 /**
  * The website's 10% offer: a centred window over the dimmed page (a large card at the bottom on phones), with a
- * product photo, after 40 seconds anywhere on the main site or a landing, and on acces 40 seconds after the price
+ * product photo, after one minute anywhere on the main site or a landing, and on acces one minute after the price
  * is unlocked (never over the price form); never in the cart, checkout or admin, nor over the cookie choice. Escape, a click outside or "Nu, mulțumesc" close it
  * for a week. The address gets LONGEVITY10 by email (/api/welcome).
  */
@@ -92,8 +92,8 @@ export function WelcomePopup() {
     if (hiddenHere || window.__BT_STORE__?.welcomePopup === false) return
     const s = read(STATE_KEY)
     if (s === 'sent' || (s && Number(s) > Date.now())) return
-    // acces.<domain>: only once the price is unlocked (the gate cookie), 40 seconds after that; the main site and
-    // the landings: 40 seconds after the visit's first page.
+    // acces.<domain>: only once the price is unlocked (the gate cookie), one minute after that; the main site and
+    // the landings: one minute after the visit's first page.
     const gated = /^acces\./.test(location.hostname)
     const key = gated ? `${START_KEY}-acces` : START_KEY
     const unlocked = () => !gated || new RegExp(`(?:^|; )${GATE_COOKIE}=`).test(document.cookie)
@@ -111,7 +111,7 @@ export function WelcomePopup() {
     }
     // Never on top of the cookie choice, the price form or an open chat: waits until they are out of the way.
     const show = () => (document.querySelector('.consent-in, .assistant-panel') || !unlocked() ? (timer = setTimeout(show, 3000)) : setOpen(true))
-    // Still locked: check every few seconds; the 40 seconds start at the unlock.
+    // Still locked: check every few seconds; the minute starts at the unlock.
     const wait = () => {
       if (!unlocked()) {
         timer = setTimeout(wait, 2000)

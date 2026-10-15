@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { cookieFrom, GATE_COOKIE, isGatedHost } from '@/lib/lead'
-import { isIntlHost } from '@/lib/sites'
+import { isIntlHost, siteOrigin } from '@/lib/sites'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { assistantEnabled, assistantTurn, cleanMessages } from '@/server/assistant/chat'
@@ -18,8 +18,7 @@ const BUSY = { error: 'RATE_LIMIT', message: 'Ai trimis multe mesaje într-un ti
 
 /** The website assistant (components/assistant): one streamed answer per visitor message. */
 export async function POST(req: NextRequest) {
-  // No chat on the international site (biohack-tech.net).
-  if (!(await assistantEnabled()) || isIntlHost(req.headers.get('host'))) return NextResponse.json({ error: 'UNAVAILABLE' }, { status: 404 })
+  if (!(await assistantEnabled())) return NextResponse.json({ error: 'UNAVAILABLE' }, { status: 404 })
   const ip = clientIp(req.headers)
   if (!rateLimit(`assistant:${ip}`, 20, 5 * 60_000) || !rateLimit(`assistant-day:${ip}`, 200, 24 * 3600_000)) return NextResponse.json(BUSY, { status: 429 })
   const raw = await req.text()
@@ -44,11 +43,21 @@ export async function POST(req: NextRequest) {
     // Locked: the price-gated host, the gate on, and no lead behind this browser's gate cookie.
     const gated = isGatedHost(req.headers.get('host')) && c.features.priceGate
     const locked = gated && !(await leads.byId(db, cookieFrom(req.headers.get('cookie'), GATE_COOKIE) ?? ''))
+    const locale: 'ro' | 'en' = body.locale === 'en' ? 'en' : 'ro'
     const page = typeof body.page === 'string' && /^\/[\w\-/.]{0,150}$/.test(body.page) ? body.page : '/'
     return await assistantTurn({
       db,
       config: c,
-      context: { locked, gated, locale: body.locale === 'en' ? 'en' : 'ro', page, siteUrl: c.siteUrl },
+      context: {
+        locked,
+        gated,
+        locale,
+        // Romanian pages are in lei; English pages in euro unless the visitor picked dollars (same rule as the checkout).
+        currency: locale === 'ro' ? 'RON' : body.currency === 'USD' ? 'USD' : 'EUR',
+        intl: isIntlHost(req.headers.get('host')),
+        page,
+        siteUrl: isIntlHost(req.headers.get('host')) ? siteOrigin('net', c.siteUrl) : c.siteUrl,
+      },
       messages,
       cart,
       onQueued: kickJobs,

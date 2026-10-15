@@ -473,12 +473,45 @@ textarea.field { resize: vertical; }
   to { opacity: 1; transform: none; }
 }
 .assistant-dot { animation: assistant-dot 1.1s ease-in-out infinite; }
+.assistant-scroll { scrollbar-width: thin; scrollbar-color: rgb(8 17 19 / 0.15) transparent; -webkit-overflow-scrolling: touch; }
 @keyframes assistant-dot {
   0%, 60%, 100% { transform: none; opacity: 0.45; }
   30% { transform: translateY(-4px); opacity: 1; }
 }
+/* The greeting bubble grows out of the chat button; then both breathe gently to draw the eye, nothing more. */
+.assistant-teaser-in { animation: assistant-teaser-in 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both; transform-origin: bottom right; }
+@keyframes assistant-teaser-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.6); }
+  to { opacity: 1; transform: none; }
+}
+/* An incoming iMessage: light grey bubble with its tail toward the chat button. */
+.imsg-in { background: #e9e9eb; box-shadow: 0 10px 30px -12px rgba(8,17,19,.35); }
+.assistant-teaser-pop { animation: assistant-teaser-pop 0.38s cubic-bezier(0.34, 1.56, 0.64, 1) both; transform-origin: bottom right; }
+@keyframes assistant-teaser-pop {
+  from { opacity: 0.4; transform: scale(0.85); }
+  to { opacity: 1; transform: none; }
+}
+.assistant-teaser-float { animation: assistant-float 4s ease-in-out 0.6s infinite; }
+@keyframes assistant-float {
+  0%, 100% { transform: none; }
+  50% { transform: translateY(-3px); }
+}
+.assistant-attract { animation: assistant-in 0.35s var(--ease-brand) both, assistant-nudge 6s ease-in-out 1s infinite; }
+.assistant-attract::after {
+  content: ''; position: absolute; inset: 0; border-radius: 9999px; pointer-events: none;
+  box-shadow: 0 0 0 0 rgb(34 211 238 / 0.45); animation: assistant-ring 3s ease-out 0.8s infinite;
+}
+@keyframes assistant-nudge {
+  0%, 86%, 100% { transform: none; }
+  90% { transform: rotate(-9deg) scale(1.04); }
+  94% { transform: rotate(7deg) scale(1.04); }
+}
+@keyframes assistant-ring {
+  0% { box-shadow: 0 0 0 0 rgb(34 211 238 / 0.45); }
+  70%, 100% { box-shadow: 0 0 0 14px rgb(34 211 238 / 0); }
+}
 @media (prefers-reduced-motion: reduce) {
-  .assistant-launcher, .assistant-panel, .assistant-dot { animation: none; }
+  .assistant-launcher, .assistant-panel, .assistant-dot, .assistant-teaser-in, .assistant-teaser-pop, .assistant-teaser-float, .assistant-attract, .assistant-attract::after { animation: none; }
 }
 
 /* ---------- small feedback ---------- */

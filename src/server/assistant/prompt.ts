@@ -7,6 +7,7 @@ import 'server-only'
 import { site, terms } from '@/config/site'
 import { cashOnDelivery } from '@/config/payments'
 import { agentKnowledge } from '@/server/calling/agent'
+import type { Currency } from '@/lib/currency'
 import { productIdGuide } from './tools'
 
 export type AssistantContext = {
@@ -15,6 +16,10 @@ export type AssistantContext = {
   /** The price-hidden funnel (locked or not). */
   gated: boolean
   locale: 'ro' | 'en'
+  /** Lei on Romanian pages; euro or dollar on English ones (biohack-tech.net, /en). */
+  currency?: Currency
+  /** The international site: no AI calls there, worldwide delivery, card payments in euro or dollars. */
+  intl?: boolean
   /** The page the visitor is on (path only). */
   page: string
   siteUrl: string
@@ -57,7 +62,7 @@ Ești asistentul de cumpărături și suport al magazinului online Biohack Tech 
 # Coș și checkout
 - Nu creezi comenzi și nu inițiezi plăți. Comanda se plasează doar de vizitator, în checkout.
 - Prețurile și totalurile le spui doar din cunoștințe sau din cart_summary; nu calculezi tu altfel.
-- Checkout: nume, email, telefon, adresa de livrare, opțional firmă (CUI) pentru factură pe firmă; metode de plată: ${[cashOnDelivery.enabled && 'ramburs (plătești curierului la livrare)', 'card online prin Stripe', 'transfer bancar'].filter(Boolean).join(', ')}. ${terms.shipping}. Codul promoțional se scrie în coș sau în checkout la „Cod promoțional”; un singur cod pe comandă. Nu inventezi coduri și nu oferi reduceri în afara celor din cunoștințe.
+- Checkout: nume, email, telefon, adresa de livrare, opțional firmă (CUI) pentru factură pe firmă; metode de plată: ${(x.currency ?? 'RON') === 'RON' ? `${[cashOnDelivery.enabled && 'ramburs (plătești curierului la livrare)', 'card online prin Stripe', 'transfer bancar'].filter(Boolean).join(', ')} (rambursul și transferul doar pentru livrare în România)` : `doar card online prin Stripe, în ${x.currency}`}. Livrare gratuită oriunde în lume; în checkout se alege țara. Prețurile sunt în ${(x.currency ?? 'RON') === 'RON' ? 'lei' : `${x.currency} (prețul în lei la cursul BNR, rotunjit)`}. Codul promoțional se scrie în coș sau în checkout la „Cod promoțional”; un singur cod pe comandă. Nu inventezi coduri și nu oferi reduceri în afara celor din cunoștințe.
 - Nu ceri și nu primești niciodată în chat date de card, CNP, parole sau adresa completă.
 
 # Comenzi existente (OBLIGATORIU)
@@ -84,7 +89,7 @@ ${lockedRules}
 ${productIdGuide()}
 
 # Cunoștințe (singura sursă pentru produse, prețuri și condiții)
-${agentKnowledge(x.siteUrl, { prices: !x.locked })}`
+${agentKnowledge(x.siteUrl, { prices: !x.locked, currency: x.currency })}`
 }
 
 const pageNote = (x: AssistantContext) => `# Pagina curentă\nVizitatorul este acum pe: ${x.page || '/'}`

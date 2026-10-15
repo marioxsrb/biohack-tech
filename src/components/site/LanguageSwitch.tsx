@@ -1,6 +1,5 @@
 'use client'
 
-import NextLink from 'next/link'
 import { usePathname } from 'next/navigation'
 import { setCurrency, useCurrency } from '@/i18n/currency'
 import { useLocale } from '@/i18n/LocaleProvider'
@@ -32,7 +31,9 @@ export function LanguageSwitch({ dark = false, className = '' }: { dark?: boolea
       {order.map((l) => {
         const on = l === locale
         return (
-          <NextLink
+          // A full page load (not a client-side link): the site remembers the choice in a cookie first, and a
+          // prefetched copy of the other language can never send the visitor back (biohack-tech.net opens in English).
+          <a
             key={l}
             href={localePath(l, path)}
             hrefLang={l}
@@ -46,7 +47,7 @@ export function LanguageSwitch({ dark = false, className = '' }: { dark?: boolea
             className={`relative z-10 flex h-7 w-9 items-center justify-center rounded-full transition-opacity duration-200 ${on ? '' : 'opacity-60 hover:opacity-100'}`}
           >
             {l === 'en' ? <FlagUK /> : <FlagRO />}
-          </NextLink>
+          </a>
         )
       })}
     </div>

@@ -9,6 +9,7 @@
  * recovery email, so the regular sequence never sends a second one on top of it.
  */
 import 'server-only'
+import { addressee, givenName } from './names'
 import { getProduct, resolveLine, variantLabel } from '@/content/catalog'
 import { companyLine } from '@/config/company'
 import { gatedOrigin } from '@/lib/lead'
@@ -170,11 +171,15 @@ export function cartInWords(items: { name: string; quantity: number }[]) {
   return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} și ${parts.at(-1)}` : (parts[0] ?? 'produsele noastre')
 }
 
-export function openingLine(x: { firstName: string; cart: boolean; productNames: string; items?: { name: string; quantity: number }[]; at?: Date }) {
+export function openingLine(x: { firstName: string; name?: string | null; cart: boolean; productNames: string; items?: { name: string; quantity: number }[]; at?: Date }) {
   // "Bună ziua" until 18:00, "Bună seara" after, in Bucharest time. The company name spelled the Romanian way,
   // so the Romanian voice does not switch to an English accent. The AI disclosure stays (EU AI Act, art. 50).
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Bucharest', hour: '2-digit', hourCycle: 'h23' }).format(x.at ?? new Date()))
-  const hello = hour >= 18 || hour < 5 ? 'Bună seara!' : 'Bună ziua!'
+  // With the person's given name: "Bună ziua, doamna Ana!" (domnule/doamna only when the given name is known
+  // for sure, otherwise the name alone; no usable name, the greeting alone). See names.ts.
+  // Only the given name reaches the voice provider (data minimisation), found among the words when it is known.
+  const who = addressee(givenName(x.name ?? x.firstName))
+  const hello = `${hour >= 18 || hour < 5 ? 'Bună seara' : 'Bună ziua'}${who ? `, ${who}` : ''}!`
   // The reason comes first, so "Aveți un minut?" has a context: the cart, or the price asked for.
   const why = x.cart
     ? `Am văzut că ați adăugat în coș ${x.items?.length ? cartInWords(x.items) : x.productNames || 'produse de pe site'}.`
