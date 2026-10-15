@@ -44,7 +44,7 @@
       }
     },
     "tts": {
-      "model_id": "eleven_flash_v2_5",
+      "model_id": "eleven_v4_turbo",
       "voice_id": "${ELEVENLABS_VOICE_ID}"
     },
     "turn": {

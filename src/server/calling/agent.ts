@@ -146,7 +146,7 @@ export function dataCollection() {
   }
 }
 
-const CALL_ID = { type: 'string', description: 'Identificatorul apelului', dynamic_variable: 'call_id' }
+const CALL_ID = { type: 'string', dynamic_variable: 'call_id' }
 
 /**
  * The server tools (webhooks to /api/calling/tools/<name>); the secret header is added by the setup script from a
@@ -211,7 +211,7 @@ export function agentDefinition(siteUrl: string = site.url) {
         dynamic_variables: { dynamic_variable_placeholders: SAMPLE_VARIABLES },
       },
       // Romanian needs a multilingual model; the voice is the one selected in ElevenLabs (ELEVENLABS_VOICE_ID).
-      tts: { model_id: 'eleven_flash_v2_5', voice_id: '${ELEVENLABS_VOICE_ID}' },
+      tts: { model_id: 'eleven_v4_turbo', voice_id: '${ELEVENLABS_VOICE_ID}' },
       turn: { turn_timeout: 7 },
       conversation: { max_duration_seconds: 240 },
     },
