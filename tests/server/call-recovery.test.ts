@@ -243,9 +243,9 @@ describe('the fixed codes: BIOHACK10 (caller) and LONGEVITY10 (website popup)', 
 
   it('once per address; anyone else can still use it', async () => {
     const { order: o } = await order('BIOHACK10', [{ productId: 'brainlink-pro', quantity: 1 }])
-    expect(o.totalMinor).toBe(71100) // 790 lei − 79 lei
+    expect(o.totalMinor).toBe(162000) // 1.800 lei − 180 lei
     await expect(order('BIOHACK10', [{ productId: 'brainlink-pro', quantity: 1 }])).rejects.toMatchObject({ problem: 'already_used' })
-    expect((await order('BIOHACK10', [{ productId: 'brainlink-pro', quantity: 1 }], 'altcineva@exemplu.ro')).order.totalMinor).toBe(71100)
+    expect((await order('BIOHACK10', [{ productId: 'brainlink-pro', quantity: 1 }], 'altcineva@exemplu.ro')).order.totalMinor).toBe(162000)
   })
 
   it('adds to the automatic promotions like every promo code: 10% of the full price on top (20% + 10% = 30%)', async () => {
@@ -254,7 +254,7 @@ describe('the fixed codes: BIOHACK10 (caller) and LONGEVITY10 (website popup)', 
     expect(price([{ productId: 'balance-wave', quantity: 1, unitAmount: 638000 }])).toMatchObject({ discountMinor: 63800, totalMinor: 574200 })
     expect(price([{ productId: 'balance-wave', quantity: 2, unitAmount: 638000 }])).toMatchObject({ discountMinor: 255200, totalMinor: 1020800 }) // 10% + 10%
     expect(price([{ productId: 'balance-wave', quantity: 3, unitAmount: 638000 }])).toMatchObject({ discountMinor: 574200, totalMinor: 1339800 }) // 20% + 10%
-    expect(price([{ productId: 'brainlink-pro', quantity: 3, unitAmount: 79000 }])).toMatchObject({ discountMinor: 71100, totalMinor: 165900 }) // 20% + 10%
+    expect(price([{ productId: 'brainlink-pro', quantity: 3, unitAmount: 180000 }])).toMatchObject({ discountMinor: 162000, totalMinor: 378000 }) // 20% + 10%
     expect(price([{ productId: 'ochelari-biohack', quantity: 3, unitAmount: 31500 }])).toMatchObject({ discountMinor: 40950 }) // 2+1 + 10%
     const { order: o } = await order('LONGEVITY10', [{ productId: 'balance-wave', quantity: 3 }])
     expect(o.totalMinor).toBe(1339800)

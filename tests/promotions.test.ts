@@ -8,7 +8,7 @@ import { resolveOrderLines } from '@/lib/orders/resolve'
 import { allocate, percentOf, priceLines, promotionHints, promotionProgress, savedBy } from '@/lib/promotions'
 
 const CALM = 638000
-const FOCUS = 79000
+const FOCUS = 180000
 const AMBER = 31500
 
 type L = { productId: string; variantId?: string; quantity: number }

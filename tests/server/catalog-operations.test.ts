@@ -24,7 +24,7 @@ describe('the three-product catalog (NEUROS Flow discontinued 13.10.2026)', () =
   it('sells only NEUROS Calm, Focus and Amber, each with its page content and CRM tag', () => {
     expect(products.map((p) => [p.id, p.slug, p.name, p.price])).toEqual([
       ['balance-wave', 'calm', 'NEUROS Calm', 638000],
-      ['brainlink-pro', 'focus', 'NEUROS Focus', 79000],
+      ['brainlink-pro', 'focus', 'NEUROS Focus', 180000],
       ['ochelari-biohack', 'amber', 'NEUROS Amber', 31500],
     ])
     expect(products.every(isPurchasable)).toBe(true)
@@ -85,23 +85,23 @@ describe('the three-product catalog (NEUROS Flow discontinued 13.10.2026)', () =
       form: person,
       attemptId: 'catalog-1',
     })
-    // 2 Focus: 10% off the two Focus (15.800 bani); the single Calm and Amber stay at full price.
-    expect(order.totalMinor).toBe(638000 + 2 * 79000 - 15800 + 2 * 31500)
+    // 2 Focus: 10% off the two Focus (36.000 bani); the single Calm and Amber stay at full price.
+    expect(order.totalMinor).toBe(638000 + 2 * 180000 - 36000 + 2 * 31500)
     expect(order.items.map((i) => [i.productName, i.variantName, i.quantity, i.unitPriceMinor])).toEqual([
       ['NEUROS Calm', null, 1, 638000],
-      ['NEUROS Focus', null, 2, 79000],
+      ['NEUROS Focus', null, 2, 180000],
       ['NEUROS Amber', 'Unisex pătrat · Maro', 2, 31500],
     ])
     const c = getConfig()
     expect(invoicePayload(c.fgo!, order).Continut.map((l) => [l.Denumire, l.NrProduse, l.PretTotal])).toEqual([
       ['NEUROS Calm', 1, 6380],
-      ['NEUROS Focus, 10% la 2 bucăți: -158.00 lei', 2, 1422],
+      ['NEUROS Focus, 10% la 2 bucăți: -360.00 lei', 2, 3240],
       ['NEUROS Amber (Unisex pătrat · Maro)', 2, 630],
     ])
     const products = contactPayload(c.ghl!, order, { orders: 1, valueMinor: order.totalMinor }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, c.siteUrl).customFields.find((f) => f.key === 'bt_last_order_products')!
     expect(products.field_value).toBe('1 x NEUROS Calm, 2 x NEUROS Focus, 2 x NEUROS Amber (Unisex pătrat · Maro)')
     const mail = renderEmail('order_confirmed', order, { siteUrl: c.siteUrl, bank: c.bank })
-    for (const s of ['NEUROS Calm', 'NEUROS Focus', 'NEUROS Amber', '6.380 lei', '1.580 lei', '630 lei', '10% la 2 bucăți NEUROS Focus', '8.432 lei', order.orderNumber, 'Plata a fost confirmată']) expect(mail.text).toContain(s)
+    for (const s of ['NEUROS Calm', 'NEUROS Focus', 'NEUROS Amber', '6.380 lei', '3.600 lei', '630 lei', '10% la 2 bucăți NEUROS Focus', '10.250 lei', order.orderNumber, 'Plata a fost confirmată']) expect(mail.text).toContain(s)
   })
 
   it('the bank-transfer email has beneficiary, IBAN, bank, exact amount and the order number as reference', async () => {

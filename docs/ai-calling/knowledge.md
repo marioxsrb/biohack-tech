@@ -45,7 +45,7 @@ R: NEUROS Calm este un produs de wellness. Pentru o afecțiune, vorbește întâ
 
 ## NEUROS Focus (Cască EEG pentru antrenamentul atenției)
 Pentru ce este: Pentru concentrare. O cască ușoară, cu jocuri pe tabletă. Le controlezi cu atenția ta. Așa îți antrenezi concentrarea.
-Preț: 790 lei (TVA 21% inclus, livrare gratuită în românia).
+Preț: 1.800 lei (TVA 21% inclus, livrare gratuită în românia).
 Promoție: Iei 2 bucăți din același produs: 10% reducere la ele. Iei 3: 20%. Reducerea apare în coș.
 Pagina produsului: https://biohack-tech.ro/products/focus
 Pe scurt: Atenția se risipește ușor printre notificări. Pui casca și deschizi aplicația Neuros Game pe tabletă. Jocurile răspund la cât de atent ești.
