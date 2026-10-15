@@ -32,6 +32,9 @@ const { POST: lead } = await import('@/app/api/lead/route')
 const { POST: webhook } = await import('@/app/api/webhooks/elevenlabs/route')
 const { POST: tool } = await import('@/app/api/calling/tools/[tool]/route')
 const { POST: welcome } = await import('@/app/api/welcome/route')
+const { callBlocklist } = await import('@/server/calling/blocklist')
+const { placeTestCall, testCalls } = await import('@/server/calling/test-call')
+const { getConfig } = await import('@/server/config')
 
 const SECRET = 'whsec_el_test_secret'
 const TOOL_SECRET = 'tool-secret-for-tests-0123456789'
@@ -388,5 +391,48 @@ describe('the website popup: 10% by email (LONGEVITY10)', () => {
     expect((await join('bot@exemplu.ro', MAIN, { website: 'spam' })).status).toBe(200)
     await later()
     expect(sent).toEqual([])
+  })
+})
+
+describe('the do-not-call list', () => {
+  it('a listed number is never called, whatever the consent or test list; its waiting attempt is dropped', async () => {
+    await setup({ ...ENV, AI_CALLING_TEST_MODE: 'true', AI_CALLING_TEST_NUMBERS: PHONE })
+    const leadId = await checkout([{ productId: 'brainlink-pro', quantity: 1 }])
+    expect(await callBlocklist.add(db, '0722-123-456', 'cerut de client', 'test')).toBe(PHONE)
+    expect((await db.query(`select count(*)::int as n from jobs where kind = 'call.attempt' and status = 'pending' and payload->>'leadId' = $1`, [leadId])).rows[0].n).toBe(0)
+    await db.query("update jobs set status = 'pending' where kind = 'call.attempt'") // even if one were still waiting
+    await quiet()
+    await later()
+    expect(dials()).toEqual([])
+    expect((await leads.byId(db, leadId))!.callOutcome).toBe('number on the do-not-call list')
+  })
+})
+
+describe('test calls from the admin', () => {
+  const input = { phone: '0733 111 222', firstName: 'Mario', scenario: 'cart' as const, funnel: 'visible_price' as const, items: [{ productId: 'balance-wave', quantity: 3 }], emailSent: true }
+
+  it('calls with the imaginary order (today’s prices and promotions); tools answer from it; the result lands on the test only', async () => {
+    const r = await placeTestCall(db, getConfig(), input, 'admin:test')
+    expect(r.ok).toBe(true)
+    const vars = varsOf()
+    expect(vars).toMatchObject({ customer_first_name: 'Mario', product_quantities: '3 × NEUROS Calm', cart_total: '15.312 lei', recovery_code: 'BIOHACK10', recovery_email_sent: 'da' })
+    expect(String(vars.call_id)).toMatch(/^test-/)
+    const ctx = await (await useTool('get_recovery_context', { call_id: vars.call_id })).json()
+    expect(ctx).toMatchObject({ customer_first_name: 'Mario', cart_total: '15.312 lei' })
+    await useTool('record_opt_out', { call_id: vars.call_id })
+    expect(await db.query('select count(*)::int as n from call_consent_events')).toMatchObject({ rows: [{ n: 0 }] })
+    const body = JSON.stringify({ type: 'post_call_transcription', data: { agent_id: 'agent_test', conversation_id: 'conv_x', status: 'done', conversation_initiation_client_data: { dynamic_variables: { call_id: vars.call_id } }, metadata: { call_duration_secs: 61 }, analysis: { data_collection_results: { outcome: { value: 'interested' } } } } })
+    await webhook(new NextRequest('https://biohack-tech.ro/api/webhooks/elevenlabs', { method: 'POST', headers: { 'elevenlabs-signature': signWebhook(body, SECRET) }, body }))
+    const [t] = await testCalls.recent(db)
+    expect(t).toMatchObject({ status: 'completed', outcome: 'interested', agentOutcome: 'opted_out', durationSecs: 61 })
+    expect((await db.query('select count(*)::int as n from leads')).rows[0].n).toBe(0)
+    expect((await db.query('select count(*)::int as n from calls')).rows[0].n).toBe(0)
+  })
+
+  it('refused for a number on the do-not-call list or not Romanian', async () => {
+    await callBlocklist.add(db, '0733111222', null, 'test')
+    expect(await placeTestCall(db, getConfig(), input, 'admin:test')).toMatchObject({ ok: false, problem: 'blocked' })
+    expect(await placeTestCall(db, getConfig(), { ...input, phone: '+44 20 7946 0000' }, 'admin:test')).toMatchObject({ ok: false, problem: 'no_phone' })
+    expect(dials()).toEqual([])
   })
 })

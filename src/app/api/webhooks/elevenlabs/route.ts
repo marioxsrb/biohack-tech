@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { applyCallResult, calls, resultFromConversation, type CallOutcome } from '@/server/calling/calls'
+import { testCalls } from '@/server/calling/test-call'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { verifyWebhookSignature, type Conversation } from '@/server/integrations/elevenlabs'
@@ -53,6 +54,18 @@ export async function POST(req: NextRequest) {
       if (call && !call.providerCallId) await calls.update(db, call.id, { provider_call_id: conversationId })
     }
     if (!call) {
+      // A test call from /admin/apeluri: only its own row gets the result.
+      if (typeof ours === 'string' && ours.startsWith('test-')) {
+        const failed = event.type === 'call_initiation_failure'
+        const r = failed ? null : resultFromConversation(data)
+        await testCalls.finish(db, ours.slice(5), {
+          status: failed ? 'failed' : 'completed',
+          outcome: failed ? (data.failure_reason ?? 'technical_failure') : String(data.analysis?.data_collection_results?.outcome?.value ?? r?.outcome ?? ''),
+          durationSecs: r?.durationSecs ?? null,
+          error: failed ? `initiation failed: ${data.failure_reason ?? 'unknown'}` : null,
+        })
+        return NextResponse.json({ ok: true, test: true })
+      }
       log.warn('call.webhook_unknown', { type: event.type })
       return NextResponse.json({ ok: true, ignored: 'unknown call' })
     }

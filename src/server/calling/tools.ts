@@ -14,6 +14,7 @@ import { jobs } from '@/server/jobs/outbox'
 import { leads } from '@/server/leads'
 import { promoCodes } from '@/server/promo'
 import { calls, callScenario, normalizeOutcome, optOut, type Call } from './calls'
+import { testCalls } from './test-call'
 import { cartTotal, describeItems, existingDiscounts, lei, RECOVERY_PERCENT } from './offer'
 
 /** The header the agent's server tools send (set in the agent's tool configuration, never in a prompt). */
@@ -67,6 +68,7 @@ const emailState = (call: Call) => ({ sent: call.emailStatus === 'sent', status:
 export async function runCallTool(q: Queryable, c: Config, tool: string, body: Record<string, unknown>): Promise<ToolResult> {
   if (!(CALL_TOOLS as readonly string[]).includes(tool)) return { status: 404, body: { error: 'unknown tool' } }
   const callId = clean(body.call_id, 64)
+  if (callId.startsWith('test-')) return testCallTool(q, tool as CallTool, callId.slice(5), body)
   if (callId === 'test') return { status: 200, body: tool === 'get_recovery_context' ? SAMPLE : tool === 'check_discount' ? SAMPLE.discount : tool === 'recovery_email_status' ? SAMPLE.recovery_email : { ok: true, test: true } }
   const call = await activeCall(q, callId)
   if (!call) return { status: 404, body: { error: 'no active call' } }
@@ -120,4 +122,26 @@ async function recordOptOut(q: Queryable, c: Config, call: Call, lead: { id: str
   await q.query("update leads set call_status = 'stopped', call_outcome = 'opted_out', updated_at = now() where id = $1", [lead.id])
   await q.query(`update jobs set status = 'skipped', last_error = 'opted out by phone', updated_at = now() where kind in ('call.attempt', 'lead.recovery') and payload->>'leadId' = $1 and status in ('pending', 'retry')`, [lead.id])
   await optOut(q, c, call, lead)
+}
+
+/** A test call from /admin/apeluri: answers from its own imaginary order; records only on test_calls. */
+async function testCallTool(q: Queryable, tool: CallTool, id: string, body: Record<string, unknown>): Promise<ToolResult> {
+  const t = await testCalls.byId(q, id)
+  if (!t || t.status !== 'dialing' || Date.now() - t.createdAt.getTime() > ACTIVE_HOURS * 3_600_000) return { status: 404, body: { error: 'no active call' } }
+  const v = t.vars
+  const discount = { eligible: true, percent: v.recovery_discount_percent, code: v.recovery_code, combinable_with_promotions: true }
+  const email = { sent: v.recovery_email_sent === 'da', status: v.recovery_email_sent === 'da' ? 'sent' : 'not_sent' }
+  switch (tool) {
+    case 'get_recovery_context':
+      return { status: 200, body: { customer_first_name: v.customer_first_name, funnel_type: v.funnel_type, abandonment_type: v.abandonment_type, product_names: v.product_names, product_quantities: v.product_quantities, cart_total: v.cart_total, existing_discounts: v.existing_discounts, discount, recovery_email: email } }
+    case 'check_discount':
+      return { status: 200, body: discount }
+    case 'recovery_email_status':
+      return { status: 200, body: email }
+    default: {
+      const noted = tool === 'record_opt_out' ? 'opted_out' : tool === 'request_human_follow_up' ? 'human_followup' : clean(body.outcome, 30)
+      if (noted) await q.query('update test_calls set agent_outcome = $2, updated_at = now() where id = $1', [id, noted])
+      return { status: 200, body: { ok: true, test: true } }
+    }
+  }
 }

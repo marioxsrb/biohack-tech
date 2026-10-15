@@ -6,6 +6,8 @@ import { products } from '@/content/catalog'
 import { adminKeys, type KeyScope } from '@/server/admin-keys'
 import { cancelScheduledCalls, disableCalling, retryCall } from '@/server/calling/admin'
 import { calls } from '@/server/calling/calls'
+import { callBlocklist } from '@/server/calling/blocklist'
+import { placeTestCall, testCalls } from '@/server/calling/test-call'
 import { getConfig } from '@/server/config'
 import { getDb, type Queryable } from '@/server/db'
 import { enquiries } from '@/server/enquiries'
@@ -219,6 +221,31 @@ async function handle(req: NextRequest, ctx: Ctx, method: 'GET' | 'POST' | 'PUT'
       }
     }
 
+    // ── AI calls: do-not-call list and test calls ──
+    if (resource === 'blocklist') {
+      if (method === 'GET') return json(await callBlocklist.list(db))
+      if (method === 'POST') {
+        const phone = await callBlocklist.add(db, String(body.phone ?? ''), typeof body.note === 'string' ? body.note : null, w.actor)
+        if (!phone) return bad('phone: a Romanian number')
+        return changed('call_blocklist.add', { phone }, { ok: true, phone })
+      }
+      if (method === 'DELETE' && id) return changed('call_blocklist.remove', { phone: id }, { ok: await callBlocklist.remove(db, decodeURIComponent(id)) })
+    }
+    if (resource === 'test-calls') {
+      if (method === 'GET' && !id) return json(await testCalls.recent(db, Math.min(Number(sp.get('limit')) || 20, 100)))
+      if (method === 'GET' && id) {
+        const t = await testCalls.byId(db, id)
+        return t ? json(t) : bad('test call not found', 404)
+      }
+      if (method === 'POST') {
+        if (body.consent !== true) return bad('consent: true is required (the person agreed to the test call)')
+        const items = Array.isArray(body.items) ? (body.items as { productId?: unknown; variantId?: unknown; quantity?: unknown }[]).map((i) => ({ productId: String(i.productId ?? ''), variantId: typeof i.variantId === 'string' ? i.variantId : undefined, quantity: Math.min(10, Math.max(1, Math.round(Number(i.quantity) || 1))) })) : []
+        const r = await placeTestCall(db, getConfig(), { phone: String(body.phone ?? ''), firstName: String(body.firstName ?? '').slice(0, 40), scenario: body.scenario === 'price_reveal' ? 'price_reveal' : 'cart', funnel: body.funnel === 'gated_price' ? 'gated_price' : 'visible_price', items, emailSent: body.emailSent !== false }, w.actor)
+        if (!r.ok) return bad(r.message)
+        return changed('test_call.place', { id: r.call.id, phone: r.call.phone }, { ok: true, call: r.call })
+      }
+    }
+
     // ── messages, audit ──
     if (resource === 'messages' && method === 'GET') return json(await enquiries.list(undefined, Math.min(Number(sp.get('limit')) || 100, 500)))
     if (resource === 'audit' && method === 'GET') {
@@ -270,6 +297,8 @@ const INDEX = {
     'PATCH /api/admin/v1/codes/{code} {active}',
     'GET  /api/admin/v1/settings',
     'PATCH /api/admin/v1/settings {prices?: {productId: bani | {variantId: bani} | null}, soldOut?: [productId], welcomePopup?, callsPaused?}',
+    'GET  /api/admin/v1/blocklist · POST {phone, note?} · DELETE /blocklist/{phone}',
+    'GET  /api/admin/v1/test-calls · GET /test-calls/{id} · POST {consent: true, phone, firstName, scenario: cart|price_reveal, funnel?, items: [{productId, variantId?, quantity}], emailSent?}',
     'GET  /api/admin/v1/messages',
     'GET  /api/admin/v1/audit',
   ],

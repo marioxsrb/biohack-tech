@@ -495,4 +495,33 @@ alter table visit_stats drop constraint if exists visit_stats_pkey;
 alter table visit_stats add primary key (day, site, funnel, page, source, campaign)
 `,
   },
+  {
+    // AI calls: numbers never to call (whatever else says), and test calls placed from /admin/apeluri.
+    id: '016_call_blocklist_tests',
+    sql: `
+create table if not exists call_blocklist (
+  phone text primary key,
+  note text,
+  created_at timestamptz not null default now(),
+  created_by text
+);
+alter table call_blocklist enable row level security;
+create table if not exists test_calls (
+  id uuid primary key,
+  phone text not null,
+  scenario text not null,
+  vars jsonb not null,
+  status text not null default 'dialing',
+  conversation_id text unique,
+  outcome text,
+  agent_outcome text,
+  duration_secs integer,
+  error text,
+  created_by text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+alter table test_calls enable row level security
+`,
+  },
 ]

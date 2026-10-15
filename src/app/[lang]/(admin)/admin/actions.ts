@@ -9,7 +9,9 @@ import { runDueJobs } from '@/server/jobs/runner'
 import { log } from '@/server/log'
 import { courier } from '@/server/fulfillment/courier'
 import { adminKeys } from '@/server/admin-keys'
-import { audit, readStoreSettings, saveStoreSettings, type StoreSettings } from '@/server/store-settings'
+import { audit, ensureStoreSettings, readStoreSettings, saveStoreSettings, type StoreSettings } from '@/server/store-settings'
+import { callBlocklist } from '@/server/calling/blocklist'
+import { placeTestCall } from '@/server/calling/test-call'
 import { enquiries, type EnquiryStatus } from '@/server/enquiries'
 import { cancelScheduledCalls, disableCalling, retryCall } from '@/server/calling/admin'
 import { getConfig } from '@/server/config'
@@ -272,4 +274,56 @@ export async function revokeKeyAction(f: FormData) {
   const db = await getDb()
   if (await adminKeys.revoke(db, id)) await audit(db, adminActor(), 'api_key.revoke', { id })
   revalidatePath('/admin/setari')
+}
+
+// ─── AI calls: do-not-call list and test calls (/admin/apeluri) ─────────────
+
+export async function addBlockAction(f: FormData) {
+  await guard()
+  const db = await getDb()
+  const phone = await callBlocklist.add(db, text(f, 'phone', 30), text(f, 'note', 120) || null, adminActor())
+  if (phone) await audit(db, adminActor(), 'call_blocklist.add', { phone })
+  revalidatePath('/admin/apeluri')
+}
+
+export async function removeBlockAction(f: FormData) {
+  await guard()
+  const db = await getDb()
+  const phone = text(f, 'phone', 30)
+  if (await callBlocklist.remove(db, phone)) await audit(db, adminActor(), 'call_blocklist.remove', { phone })
+  revalidatePath('/admin/apeluri')
+}
+
+export type TestCallState = { error?: string; placed?: string }
+
+/** One test call with an imaginary order; needs the ticked confirmation that the person agreed to it. */
+export async function testCallAction(_: TestCallState, f: FormData): Promise<TestCallState> {
+  await guard()
+  if (f.get('consent') !== 'da') return { error: 'Bifează că persoana a acceptat apelul de test.' }
+  const items = products.flatMap((p) => {
+    const quantity = Math.min(10, Math.max(0, Math.round(Number(text(f, `qty:${p.id}`, 3)) || 0)))
+    const variantId = text(f, `variant:${p.id}`, 40) || p.variants?.[0]?.id
+    return quantity ? [{ productId: p.id, variantId, quantity }] : []
+  })
+  const scenario = f.get('scenario') === 'price_reveal' ? 'price_reveal' : 'cart'
+  const db = await getDb()
+  await ensureStoreSettings(0)
+  const r = await placeTestCall(
+    db,
+    getConfig(),
+    {
+      phone: text(f, 'phone', 30),
+      firstName: text(f, 'firstName', 40),
+      scenario,
+      funnel: f.get('funnel') === 'gated_price' ? 'gated_price' : 'visible_price',
+      // The price form is about one product: the first one chosen.
+      items: scenario === 'price_reveal' ? items.slice(0, 1).map((i) => ({ ...i, quantity: 1 })) : items,
+      emailSent: f.get('emailSent') === 'da',
+    },
+    adminActor(),
+  )
+  if (!r.ok) return { error: r.message }
+  await audit(db, adminActor(), 'test_call.place', { id: r.call.id, phone: r.call.phone, status: r.call.status })
+  revalidatePath('/admin/apeluri')
+  return r.call.status === 'failed' ? { error: `Apelul nu a pornit: ${r.call.error}` } : { placed: r.call.phone }
 }

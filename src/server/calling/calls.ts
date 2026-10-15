@@ -22,6 +22,7 @@ import { ensureStoreSettings } from '@/server/store-settings'
 import { log } from '@/server/log'
 import { marketing } from '@/server/marketing/consent'
 import { callConsent } from './consent'
+import { callBlocklist } from './blocklist'
 import { callScenario, firstCallDelay, type CallScenario } from './delay'
 import { cartTotal, describeItems, existingDiscounts, lei, openingLine, prepareOffer, RECOVERY_PERCENT, type OfferEmailStatus } from './offer'
 
@@ -169,6 +170,8 @@ export type CallFacts = {
   otherCall: boolean
   /** This number or address already had a real conversation with the agent (any lead, any time). */
   talkedBefore: boolean
+  /** The number is on the do-not-call list (/admin/apeluri). */
+  blocked?: boolean
 }
 
 export type CallCheck = { call: true; phone: string } | { call: false; reason: string; status?: 'stopped' | 'disabled'; later?: Date }
@@ -181,6 +184,7 @@ export function callDecision(lead: Lead, ctx: { attempt: number; now: Date; call
   if (lead.stage === 'ordered' || lead.stage === 'purchased' || ctx.converted) return { call: false, reason: 'converted', status: 'stopped' }
   if (lead.orderId) return { call: false, reason: 'order placed', status: 'stopped' }
   if (!ctx.phone) return { call: false, reason: 'no valid Romanian phone number', status: 'stopped' }
+  if (ctx.blocked) return { call: false, reason: 'number on the do-not-call list', status: 'stopped' }
   if (ctx.consentGranted === null) return { call: false, reason: 'no call consent', status: 'stopped' }
   if (!ctx.consentGranted) return { call: false, reason: 'call consent withdrawn', status: 'stopped' }
   if (ctx.unsubscribed) return { call: false, reason: 'unsubscribed', status: 'stopped' }
@@ -202,7 +206,7 @@ export async function callFacts(q: Queryable, lead: Lead, calling?: Pick<Calling
   const phone = romanianE164(lead.phone)
   // Test mode, a listed number: one person per email (marioxsrb+a@…, +b@…), so both scenarios can be tested on one phone.
   const samePhone = phone && !(calling?.testMode && calling.testNumbers?.includes(phone)) ? phone : ''
-  const [consent, mkt, conv, sup, other, talked] = await Promise.all([
+  const [consent, mkt, conv, sup, other, talked, blocked] = await Promise.all([
     phone ? callConsent.state(q, phone) : null,
     marketing.state(q, lead.email),
     q.query(
@@ -225,6 +229,7 @@ export async function callFacts(q: Queryable, lead: Lead, calling?: Pick<Calling
       `select 1 from calls c join leads l on l.id = c.lead_id where (c.phone = $1 or l.email = $2) and c.status = 'completed' and c.outcome = any($3::text[]) limit 1`,
       [samePhone, lead.email, TALKED],
     ),
+    callBlocklist.has(q, phone),
   ])
   return {
     phone,
@@ -234,6 +239,7 @@ export async function callFacts(q: Queryable, lead: Lead, calling?: Pick<Calling
     superseded: sup.rows.length > 0,
     otherCall: other.rows.length > 0,
     talkedBefore: talked.rows.length > 0,
+    blocked,
   }
 }
 

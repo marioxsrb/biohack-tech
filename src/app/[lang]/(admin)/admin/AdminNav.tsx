@@ -9,7 +9,8 @@ const GROUPS: { title: string; items: { href: string; label: string }[] }[] = [
     title: 'Operațional',
     items: [
       { href: '/admin/comenzi', label: 'Comenzi' },
-      { href: '/admin/leaduri', label: 'Leaduri și apeluri AI' },
+      { href: '/admin/leaduri', label: 'Leaduri' },
+      { href: '/admin/apeluri', label: 'Apeluri AI: test și „nu suna”' },
       { href: '/admin/mesaje', label: 'Mesaje' },
     ],
   },
