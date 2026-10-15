@@ -197,8 +197,10 @@ export function callDecision(lead: Lead, ctx: { attempt: number; now: Date; call
   return { call: true, phone: ctx.phone }
 }
 
-export async function callFacts(q: Queryable, lead: Lead): Promise<CallFacts> {
+export async function callFacts(q: Queryable, lead: Lead, calling?: Pick<CallingConfig, 'testMode' | 'testNumbers'>): Promise<CallFacts> {
   const phone = romanianE164(lead.phone)
+  // Test mode, a listed number: one person per email (marioxsrb+a@…, +b@…), so both scenarios can be tested on one phone.
+  const samePhone = phone && !(calling?.testMode && calling.testNumbers?.includes(phone)) ? phone : ''
   const [consent, mkt, conv, sup, other, talked] = await Promise.all([
     phone ? callConsent.state(q, phone) : null,
     marketing.state(q, lead.email),
@@ -216,11 +218,11 @@ export async function callFacts(q: Queryable, lead: Lead): Promise<CallFacts> {
        select 1 from leads l where l.email = $4 and l.id <> $2 and l.created_at < $5 and l.call_status not in ('stopped', 'disabled') and exists (
          select 1 from jobs j where j.kind = 'call.attempt' and j.payload->>'leadId' = l.id::text and j.status in ('pending', 'retry', 'running'))
        limit 1`,
-      [phone ?? '', lead.id, new Date(Date.now() - CALL_PERSON_DAYS * 86_400_000), lead.email, lead.createdAt],
+      [samePhone, lead.id, new Date(Date.now() - CALL_PERSON_DAYS * 86_400_000), lead.email, lead.createdAt],
     ),
     q.query(
       `select 1 from calls c join leads l on l.id = c.lead_id where (c.phone = $1 or l.email = $2) and c.status = 'completed' and c.outcome = any($3::text[]) limit 1`,
-      [phone ?? '', lead.email, TALKED],
+      [samePhone, lead.email, TALKED],
     ),
   ])
   return {
@@ -275,7 +277,7 @@ export async function runCallAttempt(q: Queryable, c: Config, payload: { leadId:
   if (!lead) return { skip: 'lead gone' }
   const attempt = Math.max(1, Math.floor(payload.attempt))
   const now = new Date()
-  const d = callDecision(lead, { attempt, now, calling: c.calling, ...(await callFacts(q, lead)) })
+  const d = callDecision(lead, { attempt, now, calling: c.calling, ...(await callFacts(q, lead, c.calling)) })
   if (!d.call) {
     if (d.later) {
       await jobs.enqueue(q, { kind: 'call.attempt', dedupeKey: `${dedupeKey}:${d.later.getTime()}`, payload, runAt: d.later })

@@ -167,7 +167,7 @@ export function dataCollection() {
     outcome: {
       type: 'string',
       description:
-        'Rezultatul apelului, exact una dintre valorile: interested (vrea să comande sau e aproape decis), discount_accepted (a acceptat reducerea de recuperare sau a spus că folosește codul), needs_information (are întrebări sau vrea informații), human_followup (vrea să vorbească cu un om sau a rămas o întrebare fără răspuns), not_interested (nu e interesat), no_time (nu are timp acum, nu acum sau se mai gândește), opted_out (a cerut să nu mai fie contactat), technical_failure (convorbirea nu a putut avea loc: probleme de sunet, s-a întrerupt, mesagerie vocală).',
+        'Rezultatul apelului, exact una dintre valorile: interested (vrea să comande sau e aproape decis), discount_accepted (a acceptat reducerea de recuperare sau a spus că folosește codul), needs_information (are întrebări sau vrea informații), human_followup (vrea să vorbească cu un om sau a rămas o întrebare fără răspuns), not_interested (nu e interesat), no_time (nu are timp acum, nu acum sau se mai gândește), opted_out (a cerut să nu mai fie contactat), technical_failure (nu a avut loc o conversație reală: persoana nu a răspuns la ce a spus asistentul, se aude altă discuție sau zgomot, mesagerie vocală, probleme de sunet, apelul s-a închis înainte de un răspuns). Alege not_interested sau no_time doar dacă persoana i-a răspuns clar asistentului.',
     },
     follow_up_required: { type: 'boolean', description: 'true dacă persoana a cerut să fie contactată de un om sau a rămas o întrebare la care asistentul nu a putut răspunde.' },
     opted_out: { type: 'boolean', description: 'true dacă persoana a cerut, în orice formă, să nu mai fie contactată.' },

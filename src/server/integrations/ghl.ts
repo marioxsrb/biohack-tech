@@ -47,7 +47,25 @@ async function call<T>(c: GhlConfig, method: string, path: string, body?: unknow
  * updated (PUT, without `source`, so an existing NEUROS contact keeps where it came from); only an address GHL
  * does not have is created. A stale known id (contact deleted in GHL) falls back to the lookup.
  */
+/** GHL refuses a phone number another contact already has (the location forbids duplicates). */
+const isDuplicatePhone = (e: unknown) => e instanceof GhlError && e.status === 400 && /duplicat/i.test(e.message)
+
+/**
+ * The contact is the email's; a phone that belongs to another contact (two people sharing a number) is left out
+ * rather than failing the sync or merging two people.
+ */
 async function saveContact(c: GhlConfig, body: { locationId: string; email: string; source?: string; [k: string]: unknown }, knownId?: string | null): Promise<string> {
+  try {
+    return await saveContactOnce(c, body, knownId)
+  } catch (e) {
+    if (!isDuplicatePhone(e) || !('phone' in body)) throw e
+    const { phone: _p, ...withoutPhone } = body
+    void _p
+    return saveContactOnce(c, withoutPhone, knownId)
+  }
+}
+
+async function saveContactOnce(c: GhlConfig, body: { locationId: string; email: string; source?: string; [k: string]: unknown }, knownId?: string | null): Promise<string> {
   const { locationId: _l, source: _s, ...update } = body
   void _l
   void _s
@@ -58,7 +76,7 @@ async function saveContact(c: GhlConfig, body: { locationId: string; email: stri
       await call(c, 'PUT', `/contacts/${encodeURIComponent(target)}`, update)
       return target
     } catch (e) {
-      if (!(e instanceof GhlError) || !id || (e.status !== 404 && e.status !== 400)) throw e
+      if (!(e instanceof GhlError) || !id || isDuplicatePhone(e) || (e.status !== 404 && e.status !== 400)) throw e
     }
   }
   const r = await call<{ contact: { id: string } }>(c, 'POST', '/contacts/upsert', body)
