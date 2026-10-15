@@ -118,8 +118,6 @@ export type Product = {
   variants?: Variant[]
   /** Button that sends the closing section back to the variant picker: "Alege rama". */
   chooseLabel?: string
-  /** Includes an onboarding consultation with a specialist (stated on the source site). */
-  guidance: boolean
   /** Out of stock (set in /admin/setari): shown, never sold. */
   soldOut?: boolean
 }
@@ -155,7 +153,6 @@ const catalog: Omit<Product, 'price'>[] = [
       cut(bwCutie, 'NEUROS Calm lângă cutia produsului'),
       photo(bwCanapea, 'Femeie relaxată pe canapea, purtând NEUROS Calm'),
     ],
-    guidance: true,
   },
   {
     id: 'brainlink-pro',
@@ -175,7 +172,6 @@ const catalog: Omit<Product, 'price'>[] = [
       cut(blGeanta, 'NEUROS Focus lângă geanta de transport'),
       photo(blRelaxare, 'Femeie relaxată, cu ochii închiși, purtând NEUROS Focus'),
     ],
-    guidance: false,
   },
   {
     id: 'ochelari-biohack',
@@ -258,7 +254,6 @@ const catalog: Omit<Product, 'price'>[] = [
       },
     ],
     chooseLabel: 'Alege rama',
-    guidance: false,
   },
 ]
 

@@ -19,7 +19,7 @@ const whyRo = {
   image: photo(glSeara, 'Femeie în pat, seara, citind pe tabletă cu ochelarii NEUROS Amber'),
   points: [
     { title: 'Câteva minute pe zi', text: 'O ședință NEUROS Calm durează câteva minute. NEUROS Amber se poartă ca orice ochelari.' },
-    { title: 'Un specialist te ajută să începi', text: 'Pentru NEUROS Calm, un specialist Biohack Tech îți potrivește programul.' },
+    { title: 'Răspundem la orice întrebare', text: 'Ne scrii sau ne suni și îți răspundem despre produse, comandă și livrare.' },
     { title: 'Livrare gratuită și retur în 14 zile', text: `Livrarea este gratuită în România. Ai ${terms.returnDays} zile să te răzgândești. Primești garanție ${terms.warrantyYears} ani.` },
   ],
 }
@@ -51,7 +51,7 @@ const homeFaqRo: FaqItem[] = [
   },
   {
     q: 'Cum se folosesc?',
-    a: 'NEUROS Calm se poartă la gât, câteva minute. NEUROS Focus se conectează prin Bluetooth la o tabletă, unde rulează jocurile. NEUROS Amber se poartă ca orice ochelari. Pentru Calm, un specialist te ajută să începi.',
+    a: 'NEUROS Calm se poartă la gât, câteva minute. NEUROS Focus se conectează prin Bluetooth la o tabletă, unde rulează jocurile. NEUROS Amber se poartă ca orice ochelari.',
   },
   {
     q: 'Cum funcționează ofertele?',
@@ -85,8 +85,8 @@ const faqRo: FaqGroup[] = [
         a: 'Sunt produse de wellness, pentru uz zilnic. Dacă ai o afecțiune sau urmezi un tratament, vorbește întâi cu medicul tău.',
       },
       {
-        q: 'Mă ajută cineva să încep?',
-        a: 'Da. Pentru NEUROS Calm, un specialist Biohack Tech îți recomandă programul potrivit.',
+        q: 'Cum încep?',
+        a: 'Fiecare produs se folosește simplu, câteva minute pe zi. Pentru orice întrebare despre folosire, ne scrii sau ne suni.',
       },
     ],
   },
@@ -145,7 +145,7 @@ const whyEn: typeof whyRo = {
   image: photo(glSeara, 'Woman in bed in the evening, reading on a tablet with NEUROS Amber glasses'),
   points: [
     { title: 'A few minutes a day', text: 'A NEUROS Calm session takes a few minutes. You wear NEUROS Amber like any other glasses.' },
-    { title: 'A specialist helps you start', text: 'For NEUROS Calm, a Biohack Tech specialist sets up your programme.' },
+    { title: 'We answer any question', text: 'Write or call us and we answer about the products, your order and delivery.' },
     { title: `Free delivery and ${terms.returnDays}-day returns`, text: `Delivery is free in Romania. You have ${terms.returnDays} days to change your mind. You get a ${terms.warrantyYears}-year warranty.` },
   ],
 }
@@ -170,7 +170,7 @@ const homeFaqEn: FaqItem[] = [
   },
   {
     q: 'How do I use them?',
-    a: 'You wear NEUROS Calm around your neck for a few minutes. NEUROS Focus connects to a tablet by Bluetooth, where the games run. You wear NEUROS Amber like any other glasses. For Calm, a specialist helps you get started.',
+    a: 'You wear NEUROS Calm around your neck for a few minutes. NEUROS Focus connects to a tablet by Bluetooth, where the games run. You wear NEUROS Amber like any other glasses.',
   },
   {
     q: 'How do the offers work?',
@@ -207,8 +207,8 @@ const faqEn: FaqGroup[] = [
       },
       faqItem(homeFaqEn, 'What kind of products are these?'),
       {
-        q: 'Will someone help me get started?',
-        a: 'Yes. For NEUROS Calm, a Biohack Tech specialist recommends the right programme.',
+        q: 'How do I start?',
+        a: 'Each product is simple to use, a few minutes a day. For any question about using it, write or call us.',
       },
     ],
   },

@@ -26,7 +26,7 @@ export function PresentationPage({ landing }: { landing: Landing }) {
           <CalmHow />
           <CalmUse />
           <CalmMoments />
-          <Facts image={p.cutout} rows={rows(p, [['Ghidaj', 'Un specialist îți recomandă programul']])} />
+          <Facts image={p.cutout} rows={rows(p, [])} />
           <Questions landing={landing} />
           <Contact text="Spune-ne cum arată seara ta. Îți explicăm cum se folosește NEUROS Calm și dacă ți se potrivește." />
         </PresentationShell>

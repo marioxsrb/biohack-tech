@@ -49,7 +49,7 @@ export const landings: Landing[] = [
     faqs: [
       { q: 'Cât durează o ședință?', a: 'Câteva minute. Îl pornești dintr-un singur buton, iar la final se oprește singur.' },
       { q: 'Pot să lucrez sau să citesc în timp ce îl port?', a: 'Da. În timpul ședinței poți citi, medita sau lucra ușor.' },
-      { q: 'Mă ajută cineva să încep?', a: 'Da. Un specialist Biohack Tech îți recomandă programul potrivit pentru tine.' },
+      { q: 'Cum încep?', a: 'Îl încarci, îl așezi la gât și îl pornești. Ședința se oprește singură după câteva minute. Pentru întrebări despre folosire, ne scrii sau ne suni.' },
       { q: 'Ce fel de produs este?', a: 'NEUROS Calm este un produs de wellness. Pentru o afecțiune, cere întâi sfatul medicului.' },
       { q: 'Pot să îl returnez?', a: 'Da. Ai 14 zile de la primire să te răzgândești. Garanția este de 2 ani.', buy: true },
     ],

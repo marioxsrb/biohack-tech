@@ -14,10 +14,10 @@ Ce oferă:
 - 6 diode de 810 nm pe zona nervului vag
 - Lumină roșie de 660 nm pe restul gâtului
 - Ședințe de câteva minute, cu oprire automată
-- Un specialist te ajută să începi
+- Lumină pulsată la 14 Hz
 - Relaxare în câteva minute: O ședință durează câteva minute.
 - Se oprește singur: Îl pornești și te relaxezi.
-- Ghidaj inclus: Un specialist te ajută să începi.
+- Retur în 14 zile: Dacă nu ți se potrivește, ai 14 zile să îl returnezi.
 Cum se folosește:
 1. Îl așezi la gât.
 2. Îl pornești dintr-un singur buton.
@@ -34,12 +34,11 @@ Specificații:
 - Lumină pulsată: 14 Hz (ritmul SMR)
 - Oprire: Automată
 - Garanție: 2 ani
-Include o discuție de inițiere cu un specialist, care recomandă programul de folosire.
 Întrebări frecvente:
 Î: Pot să lucrez în timp ce îl port?
 R: Da. Poți citi, medita sau lucra ușor în timpul ședinței.
-Î: Mă ajută cineva să încep?
-R: Da. Un specialist Biohack Tech îți recomandă programul potrivit pentru tine.
+Î: Cum încep?
+R: Îl încarci, îl așezi la gât și îl pornești. Ședința se oprește singură după câteva minute. Pentru întrebări despre folosire, ne scrii sau ne suni.
 Î: Ce fel de produs este?
 R: NEUROS Calm este un produs de wellness. Pentru o afecțiune, vorbește întâi cu medicul tău.
 

@@ -68,12 +68,12 @@ export const productContent: Record<ProductId, ProductContent> = {
       '6 diode de 810 nm pe zona nervului vag',
       'Lumină roșie de 660 nm pe restul gâtului',
       'Ședințe de câteva minute, cu oprire automată',
-      'Un specialist te ajută să începi',
+      'Lumină pulsată la 14 Hz',
     ],
     benefits: [
       { title: 'Relaxare în câteva minute', text: 'O ședință durează câteva minute.' },
       { title: 'Se oprește singur', text: 'Îl pornești și te relaxezi.' },
-      { title: 'Ghidaj inclus', text: 'Un specialist te ajută să începi.' },
+      { title: 'Retur în 14 zile', text: 'Dacă nu ți se potrivește, ai 14 zile să îl returnezi.' },
     ],
     scene: {
       title: 'Un moment doar pentru tine.',
@@ -112,7 +112,7 @@ export const productContent: Record<ProductId, ProductContent> = {
     ],
     faqs: [
       { q: 'Pot să lucrez în timp ce îl port?', a: 'Da. Poți citi, medita sau lucra ușor în timpul ședinței.' },
-      { q: 'Mă ajută cineva să încep?', a: 'Da. Un specialist Biohack Tech îți recomandă programul potrivit pentru tine.' },
+      { q: 'Cum încep?', a: 'Îl încarci, îl așezi la gât și îl pornești. Ședința se oprește singură după câteva minute. Pentru întrebări despre folosire, ne scrii sau ne suni.' },
       { q: 'Ce fel de produs este?', a: 'NEUROS Calm este un produs de wellness. Pentru o afecțiune, vorbește întâi cu medicul tău.' },
     ],
   },
@@ -249,12 +249,12 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       '6 diodes at 810 nm over the vagus nerve area',
       'Red light at 660 nm on the rest of the neck',
       'Sessions of a few minutes, switches off by itself',
-      'A specialist helps you get started',
+      'Light pulsed at 14 Hz',
     ],
     benefits: [
       { title: 'Relaxation in a few minutes', text: 'A session lasts a few minutes.' },
       { title: 'Switches off by itself', text: 'You switch it on and relax.' },
-      { title: 'Guidance included', text: 'A specialist helps you get started.' },
+      { title: '14-day returns', text: 'If it does not suit you, you have 14 days to return it.' },
     ],
     scene: {
       title: 'A moment just for you.',
@@ -293,7 +293,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
     ],
     faqs: [
       { q: 'Can I work while wearing it?', a: 'Yes. You can read, meditate or do light work during a session.' },
-      { q: 'Will someone help me get started?', a: 'Yes. A Biohack Tech specialist suggests the routine that suits you.' },
+      { q: 'How do I start?', a: 'Charge it, place it around your neck and switch it on. The session stops by itself after a few minutes. If you have questions about using it, write or call us.' },
       { q: 'What kind of product is it?', a: 'NEUROS Calm is a wellness product. If you have a medical condition, talk to your doctor first.' },
     ],
   },
