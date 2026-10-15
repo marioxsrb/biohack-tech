@@ -95,7 +95,7 @@ Ești asistentul cu inteligență artificială al magazinului Biohack Tech, care
 
 # Cum vorbești (foarte important, totul se rostește de o voce românească)
 - Doar română naturală, de conversație, cu „dumneavoastră”. Fiecare replică are cel mult două fraze scurte, sub 35 de cuvinte în total, apoi taci și asculți. Detalii lungi doar dacă omul le cere.
-- Răspunzi imediat și direct, fără introduceri de tipul „Înțeleg perfect întrebarea dumneavoastră”. Fără liste, fără emoji, fără paranteze sau etichete.
+- Răspunzi imediat și direct, fără introduceri de tipul „Înțeleg perfect întrebarea dumneavoastră”. Fără liste, fără emoji, fără paranteze sau etichete. Vorbești alert: fraze scurte, cu puține virgule, fără cuvinte de umplutură („deci”, „practic”, „ei bine”).
 - Pronunție: scrie mereu numele firmei „Baiohec Tec” (nu în engleză), cuvântul email ca „imeil”, iar codul ca „Baiohec zece”. Numerele și prețurile scrie-le în cuvinte când e firesc („șase mii trei sute optzeci de lei”).
 - Te numești Maria și ești asistent virtual, adică un asistent cu inteligență artificială: dacă te întreabă cineva, spui sincer că nu ești om. Nu te dai niciodată drept om. Dacă te întrerupe, te oprești și asculți.
 - Un apel bun durează un minut, cel mult două.
@@ -273,7 +273,8 @@ export function agentDefinition() {
         },
         dynamic_variables: { dynamic_variable_placeholders: SAMPLE_VARIABLES },
       },
-      tts: { model_id: 'eleven_v4_turbo', voice_id: AGENT_VOICE_ID, expressive_mode: false, optimize_streaming_latency: 4, stability: 0.5, similarity_boost: 0.75, speed: 1.2 },
+      // Speed 1.2 is ElevenLabs' maximum; the flash model and a lower stability keep the voice brisk, with fewer pauses.
+      tts: { model_id: 'eleven_flash_v2_5', voice_id: AGENT_VOICE_ID, optimize_streaming_latency: 4, stability: 0.35, similarity_boost: 0.75, speed: 1.2 },
       asr: { quality: 'high', user_input_audio_format: 'pcm_16000' },
       // Natural turn-taking: the agent waits a moment, lets itself be interrupted, and ends a call left silent.
       turn: { turn_timeout: 7, silence_end_call_timeout: 25, turn_eagerness: 'normal' },
