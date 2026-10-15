@@ -14,6 +14,7 @@ import { callBlocklist } from '@/server/calling/blocklist'
 import { placeTestCall } from '@/server/calling/test-call'
 import { enquiries, type EnquiryStatus } from '@/server/enquiries'
 import { isSupportStatus, supportRequests } from '@/server/assistant/support'
+import { isChatSound, type ChatSound } from '@/lib/chat-sounds'
 import { cancelScheduledCalls, disableCalling, retryCall } from '@/server/calling/admin'
 import { getConfig } from '@/server/config'
 import { CODE_RE, normalizeCode, promoCodes } from '@/server/promo'
@@ -245,6 +246,7 @@ export async function saveSettingsAction(_: SettingsFormState, f: FormData): Pro
     welcomePopup: f.get('welcomePopup') === 'da',
     callsPaused: f.get('callsPaused') === 'da',
     assistant: f.get('assistant') === 'da',
+    chatSound: isChatSound(f.get('chatSound')) ? (f.get('chatSound') as ChatSound) : now.chatSound,
     fx: now.fx,
   }
   if (JSON.stringify(next.prices) !== JSON.stringify(now.prices) && f.get('confirmPrices') !== 'da')

@@ -16,6 +16,7 @@ import { getDb } from '@/server/db'
 import { errText, log } from '@/server/log'
 import { jobs } from '@/server/jobs/outbox'
 import type { Rates } from '@/lib/currency'
+import { isChatSound, type ChatSound } from '@/lib/chat-sounds'
 
 export type StoreSettings = {
   /** Bani per product (or per variant id for per-frame prices); a product left out keeps config/prices.ts. */
@@ -25,11 +26,13 @@ export type StoreSettings = {
   callsPaused: boolean
   /** The chat assistant (bottom-right bubble) on every site. */
   assistant: boolean
+  /** The chat greeting's notification sound (lib/chat-sounds.ts), or 'off'. */
+  chatSound: ChatSound
   /** BNR exchange rates for the euro and dollar prices (refreshed by the fx.refresh job), with when they were read. */
   fx: (Rates & { fetchedAt: string }) | null
 }
 
-export const DEFAULT_SETTINGS: StoreSettings = { prices: {}, soldOut: [], welcomePopup: true, callsPaused: false, assistant: true, fx: null }
+export const DEFAULT_SETTINGS: StoreSettings = { prices: {}, soldOut: [], welcomePopup: true, callsPaused: false, assistant: true, chatSound: 'ping', fx: null }
 
 /** Prices outside this range are refused (a typo of one zero too many or too few). */
 export const PRICE_MIN = 100 // 1 leu
@@ -51,6 +54,7 @@ function normalize(raw: unknown): StoreSettings {
     welcomePopup: v.welcomePopup !== false,
     callsPaused: v.callsPaused === true,
     assistant: v.assistant !== false,
+    chatSound: isChatSound(v.chatSound) ? v.chatSound : 'ping',
     fx: v.fx && typeof v.fx === 'object' && typeof v.fx.EUR === 'number' && typeof v.fx.USD === 'number' ? v.fx : null,
   }
 }
@@ -87,7 +91,7 @@ export async function ensureStoreSettings(maxAgeMs = 15_000): Promise<StoreSetti
 
 /** What the page tells the browser (the script runs before the app, so the first render already uses it). */
 export function storeScript(s: StoreSettings = current) {
-  return `window.__BT_STORE__=${JSON.stringify({ ...toOverrides(s), welcomePopup: s.welcomePopup, assistant: s.assistant && process.env.ASSISTANT_ENABLED !== 'false' && (!!process.env.ANTHROPIC_API_KEY || process.env.ASSISTANT_MODEL === 'mock') }).replace(/</g, '\\u003c')};`
+  return `window.__BT_STORE__=${JSON.stringify({ ...toOverrides(s), welcomePopup: s.welcomePopup, chatSound: s.chatSound, assistant: s.assistant && process.env.ASSISTANT_ENABLED !== 'false' && (!!process.env.ANTHROPIC_API_KEY || process.env.ASSISTANT_MODEL === 'mock') }).replace(/</g, '\\u003c')};`
 }
 
 export type SettingsProblem = { field: string; message: string }

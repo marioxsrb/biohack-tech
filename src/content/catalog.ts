@@ -287,7 +287,7 @@ const productsEn: Product[] = products.map((p) => ({
  * set. Applied in place on both lists, on the server (from Supabase) and in the browser (from the page, see
  * STORE_SCRIPT), so every price on the site, in the cart and in the order comes from the same numbers.
  */
-export type CatalogOverrides = { prices?: Partial<Record<string, PriceEntry>>; soldOut?: string[]; welcomePopup?: boolean; assistant?: boolean; fx?: Partial<Rates> | null }
+export type CatalogOverrides = { prices?: Partial<Record<string, PriceEntry>>; soldOut?: string[]; welcomePopup?: boolean; assistant?: boolean; chatSound?: string; fx?: Partial<Rates> | null }
 
 export function applyCatalogOverrides(o: CatalogOverrides) {
   setRates(o.fx)

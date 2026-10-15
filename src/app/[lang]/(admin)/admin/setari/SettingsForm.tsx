@@ -1,5 +1,6 @@
 'use client'
 
+import { CHAT_SOUNDS, newAudioContext, playChatSound, type ChatSound } from '@/lib/chat-sounds'
 import { startTransition, useActionState, useState } from 'react'
 import { saveSettingsAction, type SettingsFormState } from '../actions'
 
@@ -8,7 +9,7 @@ type Row = { id: string; name: string; codePriceLei: number | null; overrideLei:
 const fmt = (lei: number | null) => (lei === null ? '' : String(lei).replace('.', ','))
 
 /** Prices, stock and the two switches, saved together (a price change needs the confirmation box). */
-export function SettingsForm({ rows, welcomePopup, callsPaused, assistant }: { rows: Row[]; welcomePopup: boolean; callsPaused: boolean; assistant: boolean }) {
+export function SettingsForm({ rows, welcomePopup, callsPaused, assistant, chatSound }: { rows: Row[]; welcomePopup: boolean; callsPaused: boolean; assistant: boolean; chatSound: ChatSound }) {
   const [state, action, pending] = useActionState<SettingsFormState, FormData>(saveSettingsAction, {})
   const [touched, setTouched] = useState(false)
   return (
@@ -81,6 +82,33 @@ export function SettingsForm({ rows, welcomePopup, callsPaused, assistant }: { r
             <b className="text-ink">Asistentul de chat</b> (bulina din dreapta jos) pe toate site-urile: produse, coș, comenzi verificate cu cod, cereri către echipă.
           </span>
         </label>
+        <fieldset className="mt-5 border-t border-mist-2 pt-4">
+          <legend className="text-[14.5px] font-semibold text-ink">Sunetul mesajului de chat</legend>
+          <p className="mt-1 text-[13.5px] text-muted">Se aude când apare bula „Bună! Te pot ajuta?” (la 30 de secunde). Apasă „Ascultă” ca să-l auzi, apoi salvează.</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2">
+            {(Object.keys(CHAT_SOUNDS) as ChatSound[]).map((k) => (
+              <label key={k} className="flex items-center gap-2.5 rounded-[12px] border border-line bg-white px-3 py-2.5 text-[14px] has-[:checked]:border-ink">
+                <input type="radio" name="chatSound" value={k} defaultChecked={chatSound === k} className="h-4 w-4 accent-[var(--color-ink)]" />
+                <span className="min-w-0 flex-1">
+                  <b className="block text-ink">{CHAT_SOUNDS[k].label}</b>
+                  <span className="block text-[12.5px] text-muted">{CHAT_SOUNDS[k].hint}</span>
+                </span>
+                {k !== 'off' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const ctx = newAudioContext()
+                      if (ctx) void ctx.resume().then(() => playChatSound(ctx, k))
+                    }}
+                    className="btn-secondary sm flex-none"
+                  >
+                    ▶ Ascultă
+                  </button>
+                )}
+              </label>
+            ))}
+          </div>
+        </fieldset>
       </section>
 
       <div className="flex flex-wrap items-center gap-3">

@@ -37,7 +37,7 @@ export default async function SettingsPage() {
       <p className="mt-1 text-[15px] text-text">Ce poți schimba fără o nouă versiune a site-ului. Fiecare modificare rămâne în jurnal.</p>
 
       <div className="mt-5">
-        <SettingsForm rows={rows} welcomePopup={settings.welcomePopup} callsPaused={settings.callsPaused} assistant={settings.assistant} />
+        <SettingsForm rows={rows} welcomePopup={settings.welcomePopup} callsPaused={settings.callsPaused} assistant={settings.assistant} chatSound={settings.chatSound} />
       </div>
 
       <section className="mt-4 rounded-[18px] bg-paper p-5">

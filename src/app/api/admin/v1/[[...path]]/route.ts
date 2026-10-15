@@ -1,3 +1,4 @@
+import { isChatSound } from '@/lib/chat-sounds'
 import { timingSafeEqual } from 'node:crypto'
 import { revalidatePath } from 'next/cache'
 import { NextResponse, type NextRequest } from 'next/server'
@@ -284,6 +285,7 @@ function mergePatch(now: StoreSettings, body: Record<string, unknown>): StoreSet
     welcomePopup: typeof body.welcomePopup === 'boolean' ? body.welcomePopup : now.welcomePopup,
     callsPaused: typeof body.callsPaused === 'boolean' ? body.callsPaused : now.callsPaused,
     assistant: typeof body.assistant === 'boolean' ? body.assistant : now.assistant,
+    chatSound: isChatSound(body.chatSound) ? body.chatSound : now.chatSound,
     fx: now.fx,
   }
 }

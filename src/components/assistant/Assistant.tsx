@@ -12,6 +12,7 @@ import { useGate } from '@/components/gate/Gate'
 import { Arrow, Check, Close } from '@/components/ui/icons'
 import { getProduct, type ProductId } from '@/content/catalog'
 import { useLocale } from '@/i18n/LocaleProvider'
+import { isChatSound, newAudioContext, playChatSound, type ChatSound } from '@/lib/chat-sounds'
 
 /**
  * The website assistant: a bubble at the bottom right that opens a chat (full screen on phones). Answers stream
@@ -921,55 +922,26 @@ function Teaser({ t, fresh, bottom, onOpen, onClose }: { t: Copy; fresh: boolean
 }
 
 let pinged = false
-/** A short two-note chime (like a message arriving); waits for the first touch when the browser blocks sound. */
+/** The notification sound the admin chose (/admin/setari); waits for the first touch when the browser blocks sound. */
 function ping() {
   if (pinged || typeof window === 'undefined') return
-  const W = window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext }
-  const Ctx = W.AudioContext ?? W.webkitAudioContext
-  if (!Ctx) return
-  // An iOS-like "note": two bright notes a fifth apart, each a sine with a soft bell overtone, quick attack.
-  const play = (ctx: AudioContext) => {
-    pinged = true
-    const now = ctx.currentTime
-    const master = ctx.createGain()
-    master.gain.value = 0.55
-    master.connect(ctx.destination)
-    // A soft echo, so the ping rings on for a moment (business request 16.10.2026: longer).
-    const echo = ctx.createDelay()
-    echo.delayTime.value = 0.16
-    const feedback = ctx.createGain()
-    feedback.gain.value = 0.3
-    master.connect(echo).connect(feedback).connect(echo)
-    feedback.connect(ctx.destination)
-    for (const [freq, at, len] of [
-      [1318.5, 0, 0.55],
-      [1975.5, 0.12, 1.7],
-    ] as const) {
-      for (const [mult, level] of [
-        [1, 0.5],
-        [2.76, 0.12],
-      ] as const) {
-        const osc = ctx.createOscillator()
-        const gain = ctx.createGain()
-        osc.type = 'sine'
-        osc.frequency.value = freq * mult
-        gain.gain.setValueAtTime(0, now + at)
-        gain.gain.linearRampToValueAtTime(level, now + at + 0.006)
-        gain.gain.exponentialRampToValueAtTime(0.0001, now + at + len)
-        osc.connect(gain).connect(master)
-        osc.start(now + at)
-        osc.stop(now + at + len + 0.05)
-      }
-    }
-  }
+  const choice = (window.__BT_STORE__ as { chatSound?: string } | undefined)?.chatSound
+  const sound: ChatSound = isChatSound(choice) ? choice : 'ping'
+  if (sound === 'off') return
   try {
-    const ctx = new Ctx()
-    if (ctx.state === 'running') return play(ctx)
-    void ctx.resume().then(() => (ctx.state === 'running' ? play(ctx) : undefined))
-    // Still blocked (no touch yet): the ping plays on the first touch, key or click.
+    const ctx = newAudioContext()
+    if (!ctx) return
+    const play = () => {
+      if (pinged) return
+      pinged = true
+      playChatSound(ctx, sound)
+    }
+    if (ctx.state === 'running') return play()
+    void ctx.resume().then(() => (ctx.state === 'running' ? play() : undefined))
+    // Still blocked (no touch yet): the sound plays on the first touch, key or click.
     const later = () => {
       remove()
-      void ctx.resume().then(() => !pinged && play(ctx))
+      void ctx.resume().then(play)
     }
     const remove = () => ['pointerdown', 'keydown', 'touchstart'].forEach((e) => window.removeEventListener(e, later))
     ;['pointerdown', 'keydown', 'touchstart'].forEach((e) => window.addEventListener(e, later, { once: true, passive: true }))
