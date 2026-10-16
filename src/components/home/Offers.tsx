@@ -86,7 +86,7 @@ export async function Offers() {
             {bundleProducts.map((p) => (
               <span key={p.id} className="block">
                 <span className="relative block aspect-square rounded-[16px] bg-mist transition-colors duration-200 group-hover:bg-paper">
-                  <Image src={p.cutout.src} alt="" fill sizes="140px" className={`object-contain p-[14%] transition-transform duration-300 group-hover:scale-[1.03] ${p.cutout.bleed === 'bottom' ? 'object-bottom pb-0' : ''}`} />
+                  <Image src={p.cutout.src} alt="" fill fetchPriority="low" sizes="140px" className={`object-contain p-[14%] transition-transform duration-300 group-hover:scale-[1.03] ${p.cutout.bleed === 'bottom' ? 'object-bottom pb-0' : ''}`} />
                 </span>
                 <span className="mt-2 block text-center text-[14px] font-medium text-white/85 group-hover:text-white">{p.model}</span>
               </span>
@@ -109,7 +109,7 @@ export async function Offers() {
           </h3>
           <p className="mt-4 max-w-[24em] text-[16px] leading-relaxed text-text">{t.amberText}</p>
           <OfferTrigger offer="amber" placement="homepage" label={t.amberLabel} className="group relative mt-auto block aspect-[16/7] w-full cursor-pointer rounded-[16px] bg-mist transition-colors duration-200 hover:bg-mist-2">
-            <Image src={amberProduct.cutout.src} alt="" fill sizes="(min-width: 768px) 480px, 90vw" className="object-contain p-[6%] transition-transform duration-300 group-hover:scale-[1.03]" />
+            <Image src={amberProduct.cutout.src} alt="" fill fetchPriority="low" sizes="(min-width: 768px) 480px, 90vw" className="object-contain p-[6%] transition-transform duration-300 group-hover:scale-[1.03]" />
           </OfferTrigger>
           <OfferTrigger offer="amber" placement="homepage" className="cta sm mt-5 self-start">
             {t.amberCta} <Arrow />

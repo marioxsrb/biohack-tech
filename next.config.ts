@@ -39,6 +39,15 @@ const nextConfig: NextConfig = {
     ]
   },
   // Product pages were renamed (NEUROS Calm / Focus / Amber). Old links keep working.
+  async headers() {
+    return [
+      {
+        // Films and posters in /public. Hashed /_next/static files already ship with an immutable cache.
+        source: '/video/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=2592000, stale-while-revalidate=86400' }],
+      },
+    ]
+  },
   async redirects() {
     return [
       { source: '/products/balancewave', destination: '/products/calm', permanent: true },

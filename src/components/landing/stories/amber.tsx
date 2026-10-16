@@ -23,7 +23,7 @@ export function AmberHero({ name, buy, cta }: { name: string; buy?: ReactNode; c
               src={terasa}
               alt="Femeie pe o terasă, la apus, purtând NEUROS Amber cat eye bej"
               fill
-              loading="eager"
+              preload
               fetchPriority="high"
               quality={85}
               placeholder="blur"
@@ -71,7 +71,7 @@ export function AmberHow() {
           </div>
         </div>
         <div className="relative aspect-[4/3] overflow-hidden rounded-[28px] lg:col-span-7">
-          <Image src={seara} alt="Femeie în pat, seara, citind pe tabletă cu NEUROS Amber" fill placeholder="blur" sizes="(min-width: 1152px) 660px, 100vw" className="object-cover" />
+          <Image src={seara} alt="Femeie în pat, seara, citind pe tabletă cu NEUROS Amber" fill fetchPriority="low" placeholder="blur" sizes="(min-width: 1152px) 660px, 100vw" className="object-cover" />
         </div>
       </div>
     </section>
@@ -84,7 +84,7 @@ export function AmberWhen() {
     <section aria-labelledby="cand" className="lp-wrap">
       <div className="grid items-center gap-y-10 lg:grid-cols-12 lg:gap-x-12">
         <div className="relative aspect-[4/3] overflow-hidden rounded-[28px] lg:order-2 lg:col-span-6">
-          <Image src={birou} alt="Bărbat concentrat la birou, purtând NEUROS Amber" fill placeholder="blur" sizes="(min-width: 1152px) 560px, 100vw" className="object-cover" />
+          <Image src={birou} alt="Bărbat concentrat la birou, purtând NEUROS Amber" fill fetchPriority="low" placeholder="blur" sizes="(min-width: 1152px) 560px, 100vw" className="object-cover" />
         </div>
         <div className="lg:order-1 lg:col-span-6">
           <Kicker>Când îi porți</Kicker>
@@ -114,7 +114,7 @@ export function AmberWhy() {
     <section id="cum" aria-labelledby="cum-title" className="lp-wrap scroll-mt-20 py-[var(--sec)]">
       <div className="grid items-center gap-y-10 lg:grid-cols-12 lg:gap-x-14">
         <div className="relative aspect-[4/5] overflow-hidden rounded-[28px] lg:col-span-5 max-lg:aspect-[4/3]">
-          <Image src={seara} alt="Femeie în pat, seara, citind pe tabletă cu NEUROS Amber" fill placeholder="blur" quality={85} sizes="(min-width: 1152px) 470px, 100vw" className="object-cover" />
+          <Image src={seara} alt="Femeie în pat, seara, citind pe tabletă cu NEUROS Amber" fill fetchPriority="low" placeholder="blur" sizes="(min-width: 1152px) 470px, 100vw" className="object-cover" />
         </div>
         <div className="lg:col-span-7">
           <Kicker>Cum funcționează</Kicker>

@@ -36,7 +36,7 @@ export async function Lineup({ title, headingLevel = 2 }: { title?: string; head
               <span className="relative block aspect-[5/4] border-b border-line">
                 <span aria-hidden className="shade absolute bottom-[4%] left-[18%] h-4 w-[64%] rounded-[50%]" />
                 <span className="lift absolute inset-x-[6%] top-[8%] bottom-[8%]">
-                  <Image src={p.cutout.src} alt="" fill sizes="(min-width: 1024px) 280px, (min-width: 768px) 45vw, 72vw" loading={i < 2 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : 'auto'} className="object-contain object-bottom" />
+                  <Image src={p.cutout.src} alt="" fill sizes="(min-width: 1024px) 280px, (min-width: 768px) 45vw, 72vw" preload={i === 0} loading={i === 0 ? undefined : i < 2 ? 'eager' : 'lazy'} fetchPriority={i === 0 ? 'high' : 'auto'} className="object-contain object-bottom" />
                 </span>
               </span>
               <span className="mt-5 flex flex-col items-start gap-x-4 xl:flex-row xl:items-baseline xl:justify-between">
