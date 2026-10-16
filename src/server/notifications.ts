@@ -118,6 +118,8 @@ const JOB_LABEL: Record<string, string> = {
   'stripe.reconcile': 'Verificarea plății în Stripe',
   'upsell.release': 'Eliberarea cardului păstrat pentru ofertă',
   'ghl.enquiry': 'Trimiterea mesajului în GoHighLevel',
+  'ghl.lead': 'Trimiterea lead-ului în GoHighLevel',
+  'ghl.welcome': 'Trimiterea adresei din popup în GoHighLevel',
   'order.transfer_expiry': 'Anularea transferului expirat',
   'order.abandon_check': 'Verificarea plății nefinalizate',
   'meta.purchase': 'Purchase către Meta (Conversions API)',

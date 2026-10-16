@@ -86,7 +86,9 @@ export const legalPages: LegalPage[] = [
       },
       {
         heading: 'Prețuri',
-        body: [`Prețurile sunt în lei și includ TVA 21%. ${terms.shipping}. Totalul de plată apare înainte să trimiți comanda.`],
+        body: [
+          `Prețurile sunt în lei și includ TVA 21%. Pe biohack-tech.net sunt afișate și încasate în euro sau dolari americani, convertite din lei la cursul Băncii Naționale a României și rotunjite la unitate. ${terms.shipping}. Totalul de plată, în moneda comenzii, apare înainte să trimiți comanda.`,
+        ],
       },
       {
         heading: 'Plată, livrare, retragere și garanție',
@@ -438,7 +440,7 @@ export const legalPages: LegalPage[] = [
     slug: 'plati',
     title: 'Plăți',
     shortTitle: 'Plăți',
-    description: 'Cum plătești la Biohack Tech: ramburs la livrare, card bancar prin Stripe sau transfer bancar. Prețuri în lei, cu TVA inclus.',
+    description: 'Cum plătești la Biohack Tech: ramburs la livrare, card bancar prin Stripe sau transfer bancar. Prețuri în lei (în euro sau dolari pe biohack-tech.net), cu TVA inclus.',
     updated: UPDATED,
     sections: [
       {
@@ -476,7 +478,7 @@ export const legalPages: LegalPage[] = [
       {
         heading: 'Prețuri și factură',
         body: [
-          'Prețurile sunt în lei și includ TVA 21%. Totalul de plată apare înainte să trimiți comanda.',
+          'Prețurile sunt în lei și includ TVA 21%; comenzile în euro sau dolari (biohack-tech.net) se încasează în moneda respectivă. Totalul de plată apare înainte să trimiți comanda.',
           'Factura o primești pe email după confirmarea plății. La ramburs, factura se emite când predăm coletul curierului.',
         ],
       },

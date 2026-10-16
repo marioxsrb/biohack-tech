@@ -19,7 +19,10 @@ export async function POST(req: NextRequest) {
   await ensureStoreSettings()
   let body: Record<string, unknown>
   try {
-    body = await req.json()
+    // A real request is a few kilobytes; anything far larger is refused before parsing.
+    const raw = await req.text()
+    if (raw.length > 16_000) throw new Error('too large')
+    body = JSON.parse(raw)
   } catch {
     return NextResponse.json({ ok: false, message: 'BAD_REQUEST' }, { status: 400 })
   }

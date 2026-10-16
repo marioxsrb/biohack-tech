@@ -133,7 +133,7 @@ Promoții:
 La NEUROS Calm și NEUROS Focus, reducerea se calculează separat pentru fiecare produs. Când comanda are 2 bucăți din același produs primești 10% reducere la acele bucăți, iar de la 3 bucăți primești 20%. Bucățile din produse diferite nu se adună, iar reducerea nu se aplică restului comenzii. Pentru un produs, cele două reduceri nu se cumulează: se aplică doar cea mai mare atinsă. La NEUROS Amber, din fiecare 3 perechi din aceeași comandă, una este gratuită (cea mai ieftină, dacă prețurile diferă). NEUROS Amber nu intră în această reducere și nu primește 10% sau 20%. Reducerile se calculează automat în coș, pe prețurile afișate, și apar separat în comandă și pe factură. Se aplică atât timp cât sunt afișate pe site.
 Promoțiile se aplică la fel indiferent de metoda de plată: card, ramburs sau transfer.
 Prețuri și factură:
-Prețurile sunt în lei și includ TVA 21%. Totalul de plată apare înainte să trimiți comanda.
+Prețurile sunt în lei și includ TVA 21%; comenzile în euro sau dolari (biohack-tech.net) se încasează în moneda respectivă. Totalul de plată apare înainte să trimiți comanda.
 Factura o primești pe email după confirmarea plății. La ramburs, factura se emite când predăm coletul curierului.
 Rambursări:
 Returnăm banii pe aceeași cale prin care ai plătit: pe card sau în contul din care ai făcut transferul. Pentru o comandă plătită ramburs, prin transfer bancar, în contul pe care ni-l indici.

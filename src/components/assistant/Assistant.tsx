@@ -202,7 +202,10 @@ function AssistantChat({ initial }: { initial: Saved }) {
         if (r.height && r.top < window.innerHeight - 4) h = Math.max(h, window.innerHeight - r.top)
       })
       setOffset(h)
-      setConsentShown(!!document.querySelector('.consent-in'))
+      // The cookie banner hides the bubble only where it covers it (phones: full width at the bottom). On wider
+      // screens it sits at the bottom left, so a first visit (banner still open) gets the greeting too.
+      const banner = document.querySelector('.consent-in')?.getBoundingClientRect()
+      setConsentShown(!!banner && banner.height > 0 && banner.right > window.innerWidth - 400)
     }
     const schedule = () => (raf ||= requestAnimationFrame(measure))
     measure()
@@ -522,7 +525,8 @@ function RichText({ text }: { text: string }) {
 
 function inline(s: string): ReactNode[] {
   const out: ReactNode[] = []
-  const re = /\*\*([^*]+)\*\*|\[([^\]]+)\]\(((?:https:\/\/|\/)[^\s)]+)\)|(https:\/\/[^\s)]+[^\s).,!?])/g
+  // A site path is "/x", never "//host" (which a browser would open as another site).
+  const re = /\*\*([^*]+)\*\*|\[([^\]]+)\]\(((?:https:\/\/|\/(?![/\\]))[^\s)]+)\)|(https:\/\/[^\s)]+[^\s).,!?])/g
   let last = 0
   let m: RegExpExecArray | null
   while ((m = re.exec(s))) {
@@ -531,7 +535,7 @@ function inline(s: string): ReactNode[] {
     else {
       const href = m[3] ?? m[4]
       const label = m[2] ?? m[4]
-      const own = href.startsWith('/') || /^https:\/\/(?:[\w-]+\.)?biohack-tech\.ro(?:\/|$)/.test(href)
+      const own = /^\/(?![/\\])/.test(href) || /^https:\/\/(?:[\w-]+\.)?biohack-tech\.(?:ro|net)(?:\/|$)/.test(href)
       out.push(
         <a key={m.index} href={href} {...(!own && { target: '_blank', rel: 'noopener noreferrer' })} className="font-medium text-ink underline underline-offset-4">
           {label}

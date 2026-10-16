@@ -21,7 +21,10 @@ export async function POST(req: NextRequest) {
   if (!rateLimit(`upsell:${clientIp(req.headers)}`, 20, 10 * 60_000)) return NextResponse.json({ state: 'closed', message: 'Prea multe încercări.' }, { status: 429 })
   let body: Record<string, unknown>
   try {
-    body = await req.json()
+    // A real request is a few kilobytes; anything far larger is refused before parsing.
+    const raw = await req.text()
+    if (raw.length > 4_000) throw new Error('too large')
+    body = JSON.parse(raw)
   } catch {
     return NextResponse.json({ state: 'closed' }, { status: 400 })
   }

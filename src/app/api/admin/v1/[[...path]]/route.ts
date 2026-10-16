@@ -19,7 +19,7 @@ import { errText, log } from '@/server/log'
 import { isQueue, orders } from '@/server/orders/repository'
 import { cancelOrder, confirmPayment, markDelivered, markProcessing, markReturnReceived, markReturnRequested, markShipped, recordRefund } from '@/server/orders/service'
 import { CODE_RE, normalizeCode, promoCodes } from '@/server/promo'
-import { rateLimit } from '@/server/rate-limit'
+import { clientIp, rateLimit } from '@/server/rate-limit'
 import { buildReport, period, reportMarkdown } from '@/server/report'
 import { buildSeries, parseSeriesQuery } from '@/server/series'
 import { charts } from '@/server/charts'
@@ -59,10 +59,12 @@ const lei = (v: unknown) => {
 
 /** The whole admin as an API: see GET /api/admin/v1 for the list. */
 async function handle(req: NextRequest, ctx: Ctx, method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE') {
-  if (!rateLimit('admin-api', 600, 60_000)) return bad('rate limit', 429)
+  // Strangers are limited per address, so a flood without a key can never lock the real admin out.
+  if (!rateLimit(`admin-api-ip:${clientIp(req.headers)}`, 120, 60_000)) return bad('rate limit', 429)
   const db = await getDb()
   const w = await who(req, db)
   if (!w) return bad('unauthorized', 401)
+  if (!rateLimit(`admin-api:${w.actor}`, 600, 60_000)) return bad('rate limit', 429)
   if (method !== 'GET' && w.scope !== 'full') return bad('this key is read-only', 403)
   await ensureStoreSettings(0)
   const [resource = '', id = '', action = ''] = (await ctx.params).path ?? []
@@ -71,6 +73,7 @@ async function handle(req: NextRequest, ctx: Ctx, method: 'GET' | 'POST' | 'PUT'
   if (method !== 'GET') {
     try {
       const raw = await req.text()
+      if (raw.length > 256_000) return bad('body too large', 413)
       body = raw ? JSON.parse(raw) : {}
     } catch {
       return bad('body must be JSON', 400)
