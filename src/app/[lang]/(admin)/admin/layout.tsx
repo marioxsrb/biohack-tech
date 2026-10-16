@@ -4,6 +4,7 @@ import { cookies } from 'next/headers'
 import { ADMIN_COOKIE, checkAdminSession } from '@/lib/admin-auth'
 import { getDb } from '@/server/db'
 import { AdminNav } from './AdminNav'
+import { SalesAlerts } from './SalesAlerts'
 
 /** How many conversations wait for the team (new, open or with an unread email answer), only behind a valid session. */
 async function waiting(): Promise<Record<string, number>> {
@@ -30,10 +31,13 @@ export const metadata: Metadata = { title: { default: 'Admin', template: '%s · 
  */
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const badges = await waiting()
+  const signedIn = (await checkAdminSession((await cookies()).get(ADMIN_COOKIE)?.value)) === 'ok'
   return (
     <div className="min-h-dvh bg-mist md:grid md:grid-cols-[232px_1fr]">
       <AdminNav badges={badges} />
       <div className="min-w-0 px-6 pt-6 pb-16 max-md:px-4 md:px-10 md:pt-8">{children}</div>
+      {/* KA-CHING for every new order (only behind a valid session; the feed checks it again). */}
+      {signedIn && <SalesAlerts />}
     </div>
   )
 }

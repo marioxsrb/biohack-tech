@@ -157,5 +157,5 @@ async function storefront(req: NextRequest, pathname: string, search: string) {
 
 // Everything except build assets and images: landing hostnames must be routed on every page path.
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|.*\\.(?:webp|png|jpg|jpeg|svg|ico|woff2?|txt|xml|mp4)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|.*\\.(?:webp|png|jpg|jpeg|svg|ico|woff2?|txt|xml|mp4|mp3)$).*)'],
 }
