@@ -161,7 +161,7 @@ export function describeItems(lead: Pick<Lead, 'productId' | 'variantId' | 'cart
 
 export const lei = (minor: number | null) => (minor === null ? '' : formatLei(minor))
 
-/** The agent's first sentence, per call: the AI disclosure, the reason for the call, and the question. */
+/** The agent's first sentence, per call: the reason for the call, and the question. */
 const COUNT = ['', 'o bucată', 'două bucăți', 'trei bucăți', 'patru bucăți', 'cinci bucăți', 'șase bucăți', 'șapte bucăți', 'opt bucăți', 'nouă bucăți', 'zece bucăți']
 
 /** "NEUROS Calm", "două bucăți de NEUROS Calm și NEUROS Amber": what the cart holds, said out loud. */
@@ -174,7 +174,7 @@ export function cartInWords(items: { name: string; quantity: number }[]) {
 
 export function openingLine(x: { firstName: string; name?: string | null; cart: boolean; productNames: string; items?: { name: string; quantity: number }[]; at?: Date }) {
   // "Bună ziua" until 18:00, "Bună seara" after, in Bucharest time. The company name spelled the Romanian way,
-  // so the Romanian voice does not switch to an English accent. The AI disclosure stays (EU AI Act, art. 50).
+  // so the Romanian voice does not switch to an English accent.
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Bucharest', hour: '2-digit', hourCycle: 'h23' }).format(x.at ?? new Date()))
   // With the person's given name: "Bună ziua, doamna Ana!" (domnule/doamna only when the given name is known
   // for sure, otherwise the name alone; no usable name, the greeting alone). See names.ts.
