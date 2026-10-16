@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { site } from '@/config/site'
 import { sanitizeAttribution } from '@/lib/attribution'
+import { metaBrowser } from '@/lib/meta'
 import { deliveryCountry, normalizeOrder, validateOrder } from '@/lib/checkout'
 import { cardOnly, type Currency } from '@/lib/currency'
 import { siteForHost } from '@/lib/sites'
@@ -106,7 +107,11 @@ export async function POST(req: NextRequest) {
     // Campaign data is optional and never trusted as sent: unknown landings, hosts and keys are dropped.
     // The funnel is the hostname's (biohack-tech.ro and its landings, or the price-gated acces.<domain>).
     const funnel = funnelForHost(req.headers.get('host'))
-    const attribution = { ...(sanitizeAttribution(body.attribution, new URL(site.url).host) ?? {}), funnel }
+    const siteHost = new URL(site.url).host
+    const sanitized = sanitizeAttribution(body.attribution, siteHost)
+    // Cookies and the request, never the body's copy: this is what the Conversions API matches to the pixel.
+    const browser = metaBrowser(req.headers, { fbclid: sanitized?.fbclid, siteHost })
+    const attribution = { ...(sanitized ?? {}), funnel, ...(browser && { meta: browser }) }
     let created: boolean
     ;({ order, created } = await placeOrder({ lines: resolved.lines, form, attemptId, attribution, promoCode, currency, locale, site: siteForHost(req.headers.get('host')) }))
     // This browser's leads now point to the order (its checkout step and, on acces, its product interests).

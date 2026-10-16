@@ -7,7 +7,10 @@
  * cookie policy (src/content/legal.ts). A tool that cannot say which category it belongs to (for
  * example a tag manager that loads other tags) does not go here.
  */
+import { activeMetaPixelId, META_PIXEL_ID } from '@/lib/meta'
 import type { ConsentChoice, OptionalCategory } from './cookies'
+
+export { META_PIXEL_ID }
 
 export type VendorId = 'ga4' | 'clarity' | 'meta'
 
@@ -23,9 +26,6 @@ export type Vendor = {
   excludePaths?: RegExp
   purpose: string
 }
-
-/** BiohackTech's Meta Pixel (Events Manager). */
-export const META_PIXEL_ID = '967887562483664'
 
 const PRIVATE_PAGES = /^\/(checkout|comanda|reluare|dezabonare|retragere|admin)(\/|$)/
 
@@ -51,8 +51,9 @@ export const VENDORS: Vendor[] = [
     id: 'meta',
     name: 'Meta Pixel',
     category: 'marketing',
-    // On only with META_PIXEL_ENABLED=true (inlined at build); the id is public by design.
-    key: process.env.NEXT_PUBLIC_META_PIXEL_ENABLED === 'true' ? process.env.NEXT_PUBLIC_META_PIXEL_ID || META_PIXEL_ID : undefined,
+    // On only with META_PIXEL_ENABLED=true (inlined at build). The id is public; the retired pixel is never used.
+    // No excludePaths: the same pixel runs on the main site, calm/focus/amber, and acces (ConsentManager is in the root layout).
+    key: process.env.NEXT_PUBLIC_META_PIXEL_ENABLED === 'true' ? activeMetaPixelId() : undefined,
     cookies: [/^_fbp$/, /^_fbc$/],
     purpose: 'Măsurarea și afișarea reclamelor Biohack Tech pe Facebook și Instagram.',
   },

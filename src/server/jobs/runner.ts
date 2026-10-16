@@ -9,6 +9,7 @@ import { after } from 'next/server'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { FgoError, fgo } from '@/server/integrations/fgo'
+import { MetaError, sendMetaPurchase } from '@/server/integrations/meta'
 import { GhlError, TAGS, ghl, placedTags, tagsFor } from '@/server/integrations/ghl'
 import { renderEmail, stillDue, type EmailTemplate } from '@/server/integrations/email/templates'
 import { deliver, EmailError } from '@/server/integrations/email/transport'
@@ -33,6 +34,7 @@ import { companyLine } from '@/config/company'
 import { errText, log } from '@/server/log'
 import { marketingStatus } from '@/server/marketing/sync'
 import { orders } from '@/server/orders/repository'
+import { isPaid } from '@/server/orders/state'
 import type { Order } from '@/server/orders/model'
 import { reconcileCardPayment } from '@/server/orders/reconcile'
 import { releaseUpsellCard } from '@/server/orders/upsell'
@@ -407,6 +409,14 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     await orders.event(db, o.id, 'invoice.storno', 'system', s)
   },
 
+  'meta.purchase': async (j) => {
+    const c = getConfig()
+    if (!c.metaCapi) throw new Skip('META_CAPI_ACCESS_TOKEN not set')
+    const o = await orders.byId(await getDb(), j.orderId!)
+    if (!o) throw new Skip('order gone')
+    if (!isPaid(o.paymentStatus)) throw new Skip('not paid')
+    return sendMetaPurchase(c.metaCapi, o, c.siteUrl)
+  },
   'stripe.reconcile': async (j) => reconcileCardPayment(j.orderId!),
   'upsell.release': async (j) => releaseUpsellCard(j.orderId!),
   'ghl.enquiry': async (j) => syncEnquiry(String(j.payload.enquiryId ?? '')),
@@ -448,7 +458,7 @@ export function runDueJobs(limit = 20): Promise<number> {
             continue
           }
           const permanent =
-            e instanceof Permanent || (e instanceof EmailError && !e.retryable) || (e instanceof GhlError && !e.retryable && e.status !== 404 && e.status !== 401)
+            e instanceof Permanent || (e instanceof EmailError && !e.retryable) || (e instanceof GhlError && !e.retryable && e.status !== 404 && e.status !== 401) || (e instanceof MetaError && !e.retryable)
           const dead = await jobs.fail(db, job, errText(e), permanent)
           log[dead ? 'error' : 'warn'](dead ? 'job.failed' : 'job.retry', { job: job.kind, jobId: job.id, orderId: job.orderId, attempt: job.attempts, error: errText(e) })
           // Stopped for good: the team hears about it once (never about its own notifications, which would loop).

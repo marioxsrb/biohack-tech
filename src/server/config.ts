@@ -8,6 +8,7 @@ import 'server-only'
 import { missingCompanyFields } from '@/config/company'
 import { ADMIN_PASSWORD_MIN } from '@/lib/admin-auth'
 import { cashOnDelivery } from '@/config/payments'
+import { activeMetaPixelId } from '@/lib/meta'
 
 export type AppEnv = 'development' | 'staging' | 'production'
 
@@ -89,6 +90,11 @@ export type Config = {
   calling: CallingConfig
   /** ElevenLabs credentials; null until ELEVENLABS_API_KEY, ELEVENLABS_AGENT_ID and ELEVENLABS_PHONE_NUMBER_ID are set. */
   elevenlabs: ElevenLabsConfig | null
+  /**
+   * Meta Conversions API. Null when META_CAPI_ACCESS_TOKEN is absent: Purchase is then not queued.
+   * The pixel id is the live dataset (a leftover override of the retired pixel is ignored).
+   */
+  metaCapi: { pixelId: string; accessToken: string; testEventCode: string | null } | null
 }
 
 export type CallingConfig = {
@@ -308,6 +314,13 @@ function readSmtp(issues: ConfigIssue[], needed: boolean): SmtpConfig | null {
   return { host, port, secure: port === 465, user, password }
 }
 
+/** Conversions API. Absent token means no server Purchase (the browser pixel is unchanged). */
+function readMetaCapi(): Config['metaCapi'] {
+  const accessToken = str('META_CAPI_ACCESS_TOKEN')
+  if (!accessToken) return null
+  return { pixelId: activeMetaPixelId(), accessToken, testEventCode: str('META_CAPI_TEST_EVENT_CODE') ?? null }
+}
+
 /** A feature switch: on only when set to "true". */
 export const flag = (k: string) => str(k) === 'true'
 
@@ -399,6 +412,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
       testRecipients: str('RECOVERY_TEST_RECIPIENTS')?.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean) || null,
     },
     ...readCalling(issues, isolated),
+    metaCapi: readMetaCapi(),
   }
   cached = { config, issues }
   return cached

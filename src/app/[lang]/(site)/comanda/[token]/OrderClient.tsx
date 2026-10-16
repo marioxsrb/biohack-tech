@@ -4,14 +4,18 @@ import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { cartStore } from '@/components/cart/cart-store'
 import { Check, Copy } from '@/components/ui/icons'
-import { canTrack, track, trackFunnel } from '@/lib/analytics'
+import { track, trackFunnel } from '@/lib/analytics'
+import { consentStore } from '@/lib/consent/store'
+import { isConfigured } from '@/lib/consent/vendors'
 import { DRAFT_KEY } from '@/lib/checkout'
+import { purchaseChannels } from '@/lib/meta'
 
 type PurchaseItem = { item_id: string; item_name: string; item_variant?: string; price: number; quantity: number }
 
 /**
  * Once an order is placed: take its lines out of the cart (once per order, so reopening an old order
- * page never empties a new cart), forget the form, report the purchase once (only with analytics or marketing consent).
+ * page never empties a new cart), forget the form, report the purchase once. Meta Purchase waits for a confirmed
+ * payment and for marketing consent: accepting the cookie banner on this page still sends it.
  * A convenience only: payment state never depends on it, and it tolerates unavailable storage.
  */
 export function OrderEffects({
@@ -23,8 +27,11 @@ export function OrderEffects({
 }: {
   orderNumber: string
   clearKeys: string[]
-  /** Only for a confirmed payment (card, or a transfer that arrived). */
-  purchase: { orderNumber: string; value: number; items: PurchaseItem[] } | null
+  /**
+   * A sale the ad platforms can count. `paid` is a confirmed payment: only then does Meta get Purchase
+   * (cash on delivery and an unpaid transfer stay the custom event OrderPlaced until the money arrives).
+   */
+  purchase: { orderNumber: string; value: number; items: PurchaseItem[]; paid: boolean } | null
   /** Cash on delivery or a transfer not yet received: an order, not a payment (Meta custom event OrderPlaced). */
   placed?: { orderNumber: string; value: number; payment: 'cod' | 'transfer' } | null
   funnel?: 'visible_price' | 'gated_price'
@@ -43,24 +50,55 @@ export function OrderEffects({
   }, [orderNumber, clearKeys])
 
   useEffect(() => {
-    // Without consent (or without tools) nothing is sent and nothing is written to the browser.
-    if (!purchase || !canTrack()) return
-    const key = `bt-purchase-${purchase.orderNumber}`
-    try {
-      if (localStorage.getItem(key)) return
-      localStorage.setItem(key, '1')
-    } catch {}
-    track('purchase', { value: purchase.value, items: purchase.items, transaction_id: purchase.orderNumber })
+    if (!purchase) return
+    const read = (key: string) => {
+      try {
+        return !!localStorage.getItem(key)
+      } catch {
+        return false
+      }
+    }
+    const write = (key: string) => {
+      try {
+        localStorage.setItem(key, '1')
+      } catch {}
+    }
+    // Runs again when the visitor accepts marketing on this page. Until then nothing is marked as sent,
+    // so the banner cannot drop the Purchase for good. Analytics and Meta are marked separately.
+    const report = () => {
+      const id = purchase.orderNumber
+      const channels = purchaseChannels({
+        paid: purchase.paid,
+        legacy: read(`bt-purchase-${id}`),
+        gaSent: read(`bt-ga-purchase-${id}`),
+        metaSent: read(`bt-meta-purchase-${id}`),
+        analytics: consentStore.allows('analytics'),
+        marketing: consentStore.allows('marketing'),
+        ga4: isConfigured('ga4'),
+        meta: isConfigured('meta'),
+      })
+      if (!channels.ga4 && !channels.meta) return
+      if (channels.ga4) write(`bt-ga-purchase-${id}`)
+      if (channels.meta) write(`bt-meta-purchase-${id}`)
+      track('purchase', { value: purchase.value, items: purchase.items, transaction_id: id }, channels)
+    }
+    report()
+    return consentStore.subscribe(report)
   }, [purchase])
 
   useEffect(() => {
-    if (!placed || !canTrack()) return
-    const key = `bt-placed-${placed.orderNumber}`
-    try {
-      if (localStorage.getItem(key)) return
-      localStorage.setItem(key, '1')
-    } catch {}
-    trackFunnel('OrderPlaced', { value: placed.value, payment: placed.payment, funnel }, `placed-${placed.orderNumber}`)
+    if (!placed) return
+    const report = () => {
+      if (!consentStore.allows('marketing') || !isConfigured('meta')) return
+      const key = `bt-placed-${placed.orderNumber}`
+      try {
+        if (localStorage.getItem(key)) return
+        localStorage.setItem(key, '1')
+      } catch {}
+      trackFunnel('OrderPlaced', { value: placed.value, payment: placed.payment, funnel }, `placed-${placed.orderNumber}`)
+    }
+    report()
+    return consentStore.subscribe(report)
   }, [placed, funnel])
 
   return null

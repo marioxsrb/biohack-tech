@@ -141,6 +141,9 @@ function Bridge({ amount, apiRef, failed }: { amount: number; apiRef: RefObject<
             // The billing address comes from our form (Stripe's own address field is hidden).
             payment_method_data: { billing_details: { ...billing, address: { ...billing.address, line2: '' } } },
           },
+          // Redirect methods (3-D Secure, bank pages) still leave for return_url. A card that finishes
+          // on this page resolves here, and the checkout then opens the order page itself.
+          redirect: 'if_required',
         })
         if (!error) return null
         // The customer sees Stripe's own words only for problems they can fix (card declined, wrong

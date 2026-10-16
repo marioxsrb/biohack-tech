@@ -15,6 +15,9 @@ describe('card payment: browser and server agree with Stripe', () => {
   it('Payment Element declares setupFutureUsage on_session, like the PaymentIntent', () => {
     expect(read('src/server/integrations/stripe.ts')).toMatch(/setup_future_usage: 'on_session'/)
     expect(read('src/app/[lang]/(checkout)/checkout/CardPayment.tsx')).toMatch(/setupFutureUsage: 'on_session'/)
+    // A card that does not redirect still reaches the order page, where Purchase is sent once the payment is paid.
+    expect(read('src/app/[lang]/(checkout)/checkout/CardPayment.tsx')).toMatch(/redirect: 'if_required'/)
+    expect(read('src/app/[lang]/(checkout)/checkout/CheckoutView.tsx')).toMatch(/router\.push\(orderUrl\)/)
   })
 
   it('internal Stripe errors never reach the customer verbatim; card problems do (localized by Stripe)', () => {
