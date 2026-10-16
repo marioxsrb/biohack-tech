@@ -455,4 +455,18 @@ describe('the agent’s first sentence', () => {
     expect(openingLine({ firstName: 'Alex', name: 'Alex Ionescu', cart: false, productNames: 'NEUROS Focus', at: new Date('2026-10-15T07:00:00Z') })).toMatch(/^Bună ziua, Alex! /)
     expect(openingLine({ firstName: '', name: 'x1@y.ro', cart: false, productNames: 'NEUROS Focus', at: new Date('2026-10-15T07:00:00Z') })).toMatch(/^Bună ziua! /)
   })
+
+  it('domnule/doamna also for given names off the lists, by their Romanian ending; never a guess against a unisex name or a contradiction', async () => {
+    const { addressee } = await import('@/server/calling/names')
+    const say = (n: string) => addressee(n)
+    expect(say('Iustina Calugaroiu')).toBe('doamna Iustina')
+    expect(say('Luciana Manole')).toBe('doamna Luciana')
+    expect(say('Mario')).toBe('domnule Mario')
+    expect(say('Stan Iustina')).toBe('doamna Iustina')
+    expect(say('Luca Pop')).toBe('domnule Luca')
+    expect(say('Carmen Stan')).toBe('doamna Carmen')
+    expect(say('Gabi Pop')).toBe('Gabi')
+    expect(say('Andrea Rossi')).toBe('Andrea')
+    expect(say('Popa Zorel')).not.toMatch(/^(domnule|doamna)/) // -a (Popa) and a consonant (Zorel) disagree: no title
+  })
 })

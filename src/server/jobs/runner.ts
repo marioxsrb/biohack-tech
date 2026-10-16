@@ -112,7 +112,16 @@ async function syncProspect(db: Awaited<ReturnType<typeof getDb>>, c: GhlConfig,
     const p = await prospectFor(db, email, site ? { site } : undefined)
     if (!p) return null
     await ghl.addTags(c, contactId, [siteTag(p.site)])
-    return await ghl.syncLeadOpportunity(c, contactId, { name: p.name === email ? email : `${p.name} · ${email}`, stage: p.stage })
+    const addr = email.trim().toLowerCase()
+    const known = await db.query<{ id: string }>('select ghl_opportunity_id as id from crm_prospects where email = $1', [addr])
+    const id = await ghl.syncLeadOpportunity(c, contactId, { name: p.name === addr ? addr : `${p.name} · ${addr}`, stage: p.stage }, known.rows[0]?.id)
+    if (id && id !== known.rows[0]?.id)
+      await db.query(
+        `insert into crm_prospects (email, ghl_opportunity_id) values ($1, $2)
+         on conflict (email) do update set ghl_opportunity_id = excluded.ghl_opportunity_id, updated_at = now()`,
+        [addr, id],
+      )
+    return id
   } catch (e) {
     log.warn('ghl.prospect_failed', { error: errText(e) })
     return null

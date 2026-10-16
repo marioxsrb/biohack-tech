@@ -227,11 +227,16 @@ export const productContent: Record<ProductId, ProductContent> = {
       { label: 'Modele', value: 'Cat eye, unisex pătrat' },
       { label: 'Culori', value: 'Cat eye: negru, bej. Unisex pătrat: negru, maro' },
       { label: 'Lentile', value: 'Filtru pentru lumina albastră, nuanță chihlimbar' },
+      { label: 'Dioptrie', value: 'Fără dioptrie. Nu se pot face pe rețetă sau cu lentile progresive' },
       { label: 'Ramă', value: 'Ușoară, pentru purtare zilnică' },
       { label: 'Garanție', value: '2 ani' },
     ],
     faqs: [
       { q: 'Când îi port?', a: 'La birou, în fața ecranelor, și seara, când folosești telefonul sau laptopul.' },
+      {
+        q: 'Se pot face cu dioptrie sau cu lentile progresive?',
+        a: 'Din păcate, nu. NEUROS Amber vine doar cu lentilele lui chihlimbar, fără dioptrie, așa că nu le putem face după rețetă și nici cu lentile progresive. Dacă ai întrebări despre cum ți s-ar potrivi, scrie-ne și te ajutăm cu drag.',
+      },
       { q: 'Pot să îi returnez?', a: 'Da, în 14 zile de la primire.' },
     ],
   },
@@ -408,11 +413,16 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       { label: 'Models', value: 'Cat eye, unisex square' },
       { label: 'Colours', value: 'Cat eye: black, beige. Unisex square: black, brown' },
       { label: 'Lenses', value: 'Blue light filter, amber tint' },
+      { label: 'Prescription', value: 'Non-prescription. Not available with prescription or progressive lenses' },
       { label: 'Frame', value: 'Light, for everyday wear' },
       { label: 'Warranty', value: '2 years' },
     ],
     faqs: [
       { q: 'When do I wear them?', a: 'At your desk, in front of screens, and in the evening when you use your phone or laptop.' },
+      {
+        q: 'Can they be made with a prescription or progressive lenses?',
+        a: 'Unfortunately not. NEUROS Amber comes only with its own amber lenses, without a prescription, so we cannot make them to a prescription or with progressive lenses. If you are wondering whether they would suit you, write to us and we will gladly help.',
+      },
       { q: 'Can I return them?', a: 'Yes, within 14 days of delivery.' },
     ],
   },

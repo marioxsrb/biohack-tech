@@ -540,6 +540,19 @@ describe('CRM copy', () => {
     expect(leadOpps()[0].json).toMatchObject({ pipelineId: 'leads1', pipelineStageId: 'ls1', name: 'ion@exemplu.com' })
   })
 
+  it('one opportunity per address, even when GHL search has not indexed the first one yet (a second sync moves it)', async () => {
+    const { welcomeSignup } = await import('@/server/welcome')
+    await reveal()
+    await runDueJobs()
+    await runDueJobs()
+    await db.tx((t) => welcomeSignup(t, ana.email, '/', 'ro', 'ro'))
+    await runDueJobs()
+    // The stub's search never finds anything: only the stored id prevents a second opportunity.
+    expect(leadOpps().filter((c) => c.method === 'POST')).toHaveLength(1)
+    expect(leadOpps().filter((c) => c.method === 'PUT' && c.url.endsWith('/opportunities/opp-1'))).toHaveLength(1)
+    expect((await db.query('select ghl_opportunity_id from crm_prospects where email = $1', [ana.email])).rows).toEqual([{ ghl_opportunity_id: 'opp-1' }])
+  })
+
   it('the stage follows the furthest step: checkout, then unsubscribed (lost); a missing pipeline never fails the lead', async () => {
     const { prospectFor } = await import('@/server/prospects')
     const a = await reveal({ marketingConsent: true })

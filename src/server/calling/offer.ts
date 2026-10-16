@@ -9,7 +9,7 @@
  * recovery email, so the regular sequence never sends a second one on top of it.
  */
 import 'server-only'
-import { addressee, givenName } from './names'
+import { addressee } from './names'
 import { getProduct, resolveLine, variantLabel } from '@/content/catalog'
 import { companyLine } from '@/config/company'
 import { gatedOrigin } from '@/lib/lead'
@@ -178,7 +178,7 @@ export function openingLine(x: { firstName: string; name?: string | null; cart: 
   // With the person's given name: "Bună ziua, doamna Ana!" (domnule/doamna only when the given name is known
   // for sure, otherwise the name alone; no usable name, the greeting alone). See names.ts.
   // Only the given name reaches the voice provider (data minimisation), found among the words when it is known.
-  const who = addressee(givenName(x.name ?? x.firstName))
+  const who = addressee(x.name || x.firstName)
   const hello = `${hour >= 18 || hour < 5 ? 'Bună seara' : 'Bună ziua'}${who ? `, ${who}` : ''}!`
   // The reason comes first, so "Aveți un minut?" has a context: the cart, or the price asked for.
   const why = x.cart

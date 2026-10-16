@@ -414,7 +414,7 @@ export const ghl = {
    * The person's single opportunity in the leads pipeline, created once (found again by contact) and moved to
    * the stage the site computed. Returns null while the pipeline (or the stage) does not exist in GHL.
    */
-  async syncLeadOpportunity(c: GhlConfig, contactId: string, p: { name: string; stage: LeadStageKey; valueRon?: number }) {
+  async syncLeadOpportunity(c: GhlConfig, contactId: string, p: { name: string; stage: LeadStageKey; valueRon?: number }, knownId?: string | null) {
     const pipe = await leadsPipeline(c)
     const stageId = pipe?.stages.get(LEAD_STAGES[p.stage].toLowerCase())
     if (!pipe || !stageId) {
@@ -423,6 +423,15 @@ export const ghl = {
     }
     const status = p.stage === 'ordered' ? 'won' : p.stage === 'unsubscribed' ? 'lost' : 'open'
     const body = { name: p.name.slice(0, 120), pipelineStageId: stageId, status, ...(p.valueRon && { monetaryValue: Math.round(p.valueRon) }) }
+    if (knownId) {
+      try {
+        await call(c, 'PUT', `/opportunities/${knownId}`, body)
+        return knownId
+      } catch (e) {
+        // Deleted in GHL meanwhile: found again or created below.
+        if (!(e instanceof GhlError) || (e.status !== 404 && e.status !== 400)) throw e
+      }
+    }
     const found = await call<{ opportunities: { id: string }[] }>(
       c,
       'GET',

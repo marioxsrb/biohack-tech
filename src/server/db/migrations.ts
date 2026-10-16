@@ -605,4 +605,17 @@ alter table orders add column if not exists site text not null default 'ro';
 alter table leads add column if not exists locale text not null default 'ro'
 `,
   },
+  {
+    // The person's opportunity in the CRM's leads pipeline (one per address), so a second sync moves it instead of
+    // creating another while GHL's search has not indexed the first yet.
+    id: '021_crm_prospects',
+    sql: `
+create table if not exists crm_prospects (
+  email text primary key,
+  ghl_opportunity_id text not null,
+  updated_at timestamptz not null default now()
+);
+alter table crm_prospects enable row level security
+`,
+  },
 ]

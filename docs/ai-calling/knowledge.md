@@ -104,11 +104,14 @@ Specificații:
 - Modele: Cat eye, unisex pătrat
 - Culori: Cat eye: negru, bej. Unisex pătrat: negru, maro
 - Lentile: Filtru pentru lumina albastră, nuanță chihlimbar
+- Dioptrie: Fără dioptrie. Nu se pot face pe rețetă sau cu lentile progresive
 - Ramă: Ușoară, pentru purtare zilnică
 - Garanție: 2 ani
 Întrebări frecvente:
 Î: Când îi port?
 R: La birou, în fața ecranelor, și seara, când folosești telefonul sau laptopul.
+Î: Se pot face cu dioptrie sau cu lentile progresive?
+R: Din păcate, nu. NEUROS Amber vine doar cu lentilele lui chihlimbar, fără dioptrie, așa că nu le putem face după rețetă și nici cu lentile progresive. Dacă ai întrebări despre cum ți s-ar potrivi, scrie-ne și te ajutăm cu drag.
 Î: Pot să îi returnez?
 R: Da, în 14 zile de la primire.
 
