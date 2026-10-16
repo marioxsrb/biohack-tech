@@ -26,7 +26,7 @@ it.each([
   expect(runDueJobs).not.toHaveBeenCalled()
   expect(purgeStaleLeads).not.toHaveBeenCalled()
   const ok = await handler(req(method, 'Bearer s3cret-for-tests-only'))
-  expect([ok.status, await ok.json()]).toEqual([200, { ran: 3, purged: 2 }])
+  expect([ok.status, await ok.json()]).toEqual([200, { ran: 3, purged: 2, inbox: null }]) // no IMAP configured: no inbox sync
   expect(runDueJobs).toHaveBeenCalledWith(50)
   // Leads that never became an order are deleted after the retention period, on every run.
   expect(purgeStaleLeads).toHaveBeenCalledTimes(1)

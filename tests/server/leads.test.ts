@@ -544,7 +544,7 @@ describe('recovery emails', () => {
     expect(recoveryDecision(base, { ...ctx, consentGranted: null })).toMatchObject({ send: false, status: 'ineligible' })
     expect(recoveryDecision(base, { ...ctx, consentGranted: false })).toMatchObject({ send: false, status: 'stopped' })
     expect(recoveryDecision(base, { ...ctx, step: 2 })).toMatchObject({ send: false, reason: 'waiting for email 1', later: expect.any(Date) })
-    expect(recoveryDecision({ ...base, lastActivityAt: new Date(Date.now() - 8 * 86_400_000) }, { ...ctx, step: 2 })).toMatchObject({ send: false, reason: 'step 2 after 0 sent' })
+    expect(recoveryDecision({ ...(base as object), lastActivityAt: new Date(Date.now() - 8 * 86_400_000) } as never, { ...ctx, step: 2 })).toMatchObject({ send: false, reason: 'step 2 after 0 sent' })
     expect(recoveryDecision({ ...(base as object), recoveryStatus: 'stopped' } as never, ctx)).toMatchObject({ send: false })
   })
 })

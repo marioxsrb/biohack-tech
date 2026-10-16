@@ -14,6 +14,7 @@ import { callBlocklist } from '@/server/calling/blocklist'
 import { placeTestCall } from '@/server/calling/test-call'
 import { enquiries, type EnquiryStatus } from '@/server/enquiries'
 import { replies } from '@/server/replies'
+import { imapSource, syncInbox } from '@/server/inbox'
 import { isSupportStatus, supportRequests } from '@/server/assistant/support'
 import { isChatSound, type ChatSound } from '@/lib/chat-sounds'
 import { cancelScheduledCalls, disableCalling, retryCall } from '@/server/calling/admin'
@@ -142,6 +143,7 @@ export async function enquiryStatusAction(f: FormData) {
   const changed = await enquiries.setStatus(id, status)
   log.info('admin.action', { enquiryId: id, action: `enquiry_${status}`, changed })
   revalidatePath('/admin/mesaje')
+  revalidatePath(`/admin/mesaje/${id}`)
 }
 
 /** AI calling, per lead: cancel the waiting attempt, stop calling for good, or queue one more attempt. */
@@ -354,7 +356,28 @@ export async function replyAction(f: FormData) {
   else await supportRequests.update(db, id, { status: resolve ? 'resolved' : 'in_progress' })
   await runDueJobs()
   revalidatePath(kind === 'enquiry' ? '/admin/mesaje' : '/admin/suport')
-  if (kind === 'support') revalidatePath(`/admin/suport/${id}`)
+  revalidatePath(kind === 'enquiry' ? `/admin/mesaje/${id}` : `/admin/suport/${id}`)
+}
+
+/** A contact-form conversation marked urgent (or not): it shows under "Urgente". */
+export async function enquiryUrgentAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id', 40)
+  const changed = await enquiries.setUrgent(id, f.get('urgent') === 'da')
+  log.info('admin.action', { enquiryId: id, action: 'enquiry_urgent', changed })
+  revalidatePath('/admin/mesaje')
+  revalidatePath(`/admin/mesaje/${id}`)
+}
+
+/** Reads the mailbox now (the cron does it every few minutes). */
+export async function syncInboxAction() {
+  await guard()
+  const imap = getConfig().email.imap
+  if (!imap) return
+  const r = await syncInbox(await getDb(), imapSource(imap), { deadline: Date.now() + 20_000 })
+  log.info('admin.action', { action: 'inbox_sync', imported: r.imported, ignored: r.ignored, ok: !r.error })
+  revalidatePath('/admin/mesaje')
+  revalidatePath('/admin/suport')
 }
 
 export async function supportAction(f: FormData) {

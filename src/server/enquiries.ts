@@ -20,6 +20,7 @@ export type Enquiry = EnquiryInput & {
   id: string
   reference: string
   status: EnquiryStatus
+  urgent: boolean
   sourcePage: string | null
   attribution: Attribution | null
   ghlContactId: string | null
@@ -36,6 +37,7 @@ const toEnquiry = (r: Record<string, unknown>): Enquiry => ({
   topic: r.topic as EnquiryTopic,
   message: r.message as string,
   status: r.status as EnquiryStatus,
+  urgent: !!r.urgent,
   sourcePage: (r.source_page as string) ?? null,
   attribution: (r.attribution as Attribution) ?? null,
   ghlContactId: (r.ghl_contact_id as string) ?? null,
@@ -86,13 +88,37 @@ export async function syncEnquiry(enquiryId: string): Promise<string> {
   return 'synced'
 }
 
+export type EnquiryFilter = EnquiryStatus | 'unread' | 'urgent'
+
 export const enquiries = {
-  async list(status?: EnquiryStatus, limit = 200) {
+  /** Newest activity first (a customer's answer brings the conversation up). */
+  async list(filter?: EnquiryFilter, limit = 200) {
     const db = await getDb()
-    const { rows } = status
-      ? await db.query('select * from enquiries where status = $1 order by created_at desc limit $2', [status, limit])
-      : await db.query('select * from enquiries order by created_at desc limit $1', [limit])
+    const where =
+      filter === 'unread'
+        ? `where exists (select 1 from inbound_emails i where i.thread_kind = 'enquiry' and i.thread_id = e.id and i.read_at is null)`
+        : filter === 'urgent'
+          ? `where e.urgent and e.status <> 'resolved'`
+          : filter
+            ? `where e.status = $2`
+            : ''
+    const { rows } = await db.query(
+      `select e.*, greatest(e.created_at, coalesce((select max(received_at) from inbound_emails i where i.thread_kind = 'enquiry' and i.thread_id = e.id), e.created_at)) as last_at
+       from enquiries e ${where} order by last_at desc limit $1`,
+      filter && filter !== 'unread' && filter !== 'urgent' ? [limit, filter] : [limit],
+    )
     return rows.map(toEnquiry)
+  },
+  async byId(id: string) {
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return null
+    const db = await getDb()
+    const { rows } = await db.query('select * from enquiries where id = $1', [id])
+    return rows[0] ? toEnquiry(rows[0]) : null
+  },
+  async setUrgent(id: string, urgent: boolean) {
+    if (!/^[0-9a-f-]{36}$/i.test(id)) return false
+    const db = await getDb()
+    return (await db.query('update enquiries set urgent = $2, updated_at = now() where id = $1 returning id', [id, urgent])).rows.length > 0
   },
   async counts() {
     const db = await getDb()

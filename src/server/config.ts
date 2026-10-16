@@ -45,6 +45,11 @@ export type EmailConfig = {
   replyTo?: string
   fileDir: string
   smtp: SmtpConfig | null
+  /**
+   * The mailbox read for customers' answers (admin inbox), over IMAP with TLS: IMAP_HOST (port IMAP_PORT, 993),
+   * IMAP_USER / IMAP_PASSWORD, defaulting to the SMTP account. Null until IMAP_HOST is set.
+   */
+  imap: { host: string; port: number; user: string; password: string } | null
   /** Where the team's operational notifications go (orders@). Null = no notifications. Needs smtp or file. */
   notifyTo: string | null
   /** The service email the day after delivery (W6 P1). On unless DELIVERY_FOLLOWUP=off. */
@@ -323,6 +328,14 @@ function readSmtp(issues: ConfigIssue[], needed: boolean): SmtpConfig | null {
   return { host, port, secure: port === 465, user, password }
 }
 
+function readImap(smtp: SmtpConfig | null): EmailConfig['imap'] {
+  const host = str('IMAP_HOST')
+  const user = str('IMAP_USER') ?? smtp?.user
+  const password = str('IMAP_PASSWORD') ?? smtp?.password
+  if (!host || !user || !password) return null
+  return { host, port: positiveInt(str('IMAP_PORT')) ?? 993, user, password }
+}
+
 /** Conversions API. Absent token means no server Purchase (the browser pixel is unchanged). */
 function readMetaCapi(): Config['metaCapi'] {
   const accessToken = str('META_CAPI_ACCESS_TOKEN')
@@ -406,6 +419,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
       replyTo: str('EMAIL_REPLY_TO'),
       fileDir: str('EMAIL_FILE_DIR') ?? '.data/emails',
       smtp,
+      imap: readImap(smtp),
       notifyTo,
       deliveryFollowup: str('DELIVERY_FOLLOWUP') !== 'off',
     },

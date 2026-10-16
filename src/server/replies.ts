@@ -10,6 +10,8 @@ import { ENQUIRY_TOPICS, type EnquiryTopic } from '@/lib/enquiry'
 import type { Queryable } from '@/server/db'
 import { emailShell, esc } from '@/server/integrations/email/shell'
 import { jobs } from '@/server/jobs/outbox'
+import { getConfig } from '@/server/config'
+import { messageIdFor } from '@/server/integrations/email/transport'
 
 export type ThreadKind = 'enquiry' | 'support'
 export type Reply = { id: string; body: string; toEmail: string; status: 'pending' | 'sent' | 'failed'; error: string | null; createdBy: string; createdAt: Date; sentAt: Date | null }
@@ -51,9 +53,11 @@ export const replies = {
     if (!to || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return { ok: false as const, reason: 'no email' }
     const id = randomUUID()
     const subject = `Re: ${t.about[0].toUpperCase()}${t.about.slice(1)} (${t.ref})`
+    // The Message-ID the email will carry: the customer's answer names it (In-Reply-To), which attaches it here.
+    const messageId = messageIdFor(`reply-${id}`, getConfig().email.from)
     await q.query(
-      `insert into customer_replies (id, thread_kind, thread_id, to_email, subject, body, created_by) values ($1, $2, $3, $4, $5, $6, $7)`,
-      [id, x.kind, x.threadId, to, subject, body, x.actor.slice(0, 80)],
+      `insert into customer_replies (id, thread_kind, thread_id, to_email, subject, body, created_by, message_id) values ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [id, x.kind, x.threadId, to, subject, body, x.actor.slice(0, 80), messageId],
     )
     await jobs.enqueue(q, { kind: 'email.reply', dedupeKey: `email.reply:${id}`, payload: { replyId: id } })
     return { ok: true as const, id }
@@ -91,7 +95,15 @@ export const replies = {
     const subject = r.subject as string
     const html = emailShell({ subject, content: `<h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:#0b1316">${esc(hello)}</h1>\n${paras.join('\n')}\n${quote}` })
     const text = [hello, '', body, ...(t?.original ? ['', `Mesajul tău (${t.ref}):`, ...t.original.slice(0, 1500).split('\n').map((l) => `> ${l}`)] : []), '', 'Echipa Biohack Tech'].join('\n')
-    return { to: r.to_email as string, subject, html, text }
+    // Threading: an answer to the customer's latest email, naming every message of the conversation.
+    const { rows: ids } = await q.query<{ id: string; at: string; inbound: boolean }>(
+      `select message_id as id, received_at as at, true as inbound from inbound_emails where thread_kind = $1 and thread_id = $2
+       union all select message_id, created_at, false from customer_replies where thread_kind = $1 and thread_id = $2 and message_id is not null and id <> $3
+       order by at`,
+      [r.thread_kind, r.thread_id, replyId],
+    )
+    const inReplyTo = [...ids].reverse().find((x) => x.inbound)?.id
+    return { to: r.to_email as string, subject, html, text, thread: { inReplyTo, references: ids.map((x) => x.id).slice(-20) } }
   },
 
   async mark(q: Queryable, id: string, status: 'sent' | 'failed', error?: string) {

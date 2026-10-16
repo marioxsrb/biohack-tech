@@ -5,6 +5,7 @@ import { getDb } from '@/server/db'
 import { runDueJobs } from '@/server/jobs/runner'
 import { purgeStaleLeads } from '@/server/leads'
 import { errText, log } from '@/server/log'
+import { imapSource, syncInbox } from '@/server/inbox'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -29,7 +30,18 @@ async function run(req: NextRequest) {
   } catch (e) {
     log.error('leads.purge_failed', { error: errText(e) })
   }
-  return NextResponse.json({ ran, purged })
+  // Customers' email answers for the admin inbox (IMAP), after the queue: bounded in time, and a mailbox that does
+  // not answer is recorded and retried next run, never an error for the rest.
+  let inbox: Awaited<ReturnType<typeof syncInbox>> | null = null
+  const imap = getConfig().email?.imap ?? null
+  if (imap) {
+    try {
+      inbox = await syncInbox(await getDb(), imapSource(imap), { deadline: Date.now() + 25_000 })
+    } catch (e) {
+      log.error('inbox.sync_error', { error: errText(e) })
+    }
+  }
+  return NextResponse.json({ ran, purged, inbox: inbox && { imported: inbox.imported, ignored: inbox.ignored, ok: !inbox.error } })
 }
 
 export const GET = run

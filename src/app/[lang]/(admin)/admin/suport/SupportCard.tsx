@@ -1,14 +1,12 @@
 import Link from 'next/link'
 import { SUPPORT_CATEGORIES, SUPPORT_STATUS, type SupportRequest, type SupportStatus } from '@/server/assistant/support'
-import type { Reply } from '@/server/replies'
 import { supportAction } from '../actions'
-import { ReplyThread } from '../ReplyThread'
 
 export const dt = (d: Date) => d.toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 const TONE: Record<SupportStatus, string> = { open: 'bg-cyan-50 text-cyan-700', in_progress: 'bg-[#fff4e0] text-[#8a5300]', resolved: 'bg-mist text-muted' }
 
 /** One support request: what was asked, how to reach the customer, the linked order, and the operator's controls. */
-export function SupportCard({ r, detail = false, replies = [] }: { r: SupportRequest; detail?: boolean; replies?: Reply[] }) {
+export function SupportCard({ r, detail = false, unread = false, children }: { r: SupportRequest; detail?: boolean; unread?: boolean; children?: React.ReactNode }) {
   return (
     <li className="rounded-[16px] bg-paper p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -18,6 +16,7 @@ export function SupportCard({ r, detail = false, replies = [] }: { r: SupportReq
             <span className="text-[14.5px] font-medium text-text">{SUPPORT_CATEGORIES[r.category]}</span>
             <span className={`rounded-full px-2.5 py-0.5 text-[12.5px] font-medium ${TONE[r.status]}`}>{SUPPORT_STATUS[r.status]}</span>
             {r.urgent && <span className="rounded-full bg-[#fdecec] px-2.5 py-0.5 text-[12.5px] font-semibold text-red-deep">Urgent</span>}
+            {unread && <span className="rounded-full bg-red px-2 py-0.5 text-[11.5px] font-semibold text-white">răspuns nou</span>}
           </p>
           <p className="mt-0.5 text-[14px] text-muted">
             {dt(r.createdAt)} · {r.source === 'assistant' ? 'asistentul site-ului' : r.source}
@@ -63,7 +62,7 @@ export function SupportCard({ r, detail = false, replies = [] }: { r: SupportReq
           </button>
         </form>
       </div>
-      <p className="mt-3 text-[15px] leading-relaxed whitespace-pre-wrap text-ink">{r.summary}</p>
+      {detail ? children : <p className="mt-3 text-[15px] leading-relaxed whitespace-pre-wrap text-ink">{r.summary}</p>}
       <form action={supportAction} className="mt-3 flex flex-wrap items-end gap-2">
         <input type="hidden" name="id" value={r.id} />
         <label className="min-w-[240px] flex-1 text-[13px] text-muted">
@@ -72,7 +71,6 @@ export function SupportCard({ r, detail = false, replies = [] }: { r: SupportReq
         </label>
         <button className="btn-secondary sm">Salvează notele</button>
       </form>
-      <ReplyThread kind="support" id={r.id} email={r.email} replies={replies} />
     </li>
   )
 }

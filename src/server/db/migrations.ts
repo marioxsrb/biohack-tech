@@ -640,4 +640,44 @@ create index if not exists customer_replies_thread on customer_replies (thread_k
 alter table customer_replies enable row level security
 `,
   },
+  {
+    // The admin inbox: customers' email answers read from contact@ over IMAP, each attached to its conversation
+    // (Message-ID / In-Reply-To / References, or the conversation reference plus the same sender); the sync's
+    // position per mailbox; the Message-ID of each reply we send (to match the answers); urgent contact messages.
+    id: '023_inbox',
+    sql: `
+create table if not exists inbound_emails (
+  id uuid primary key,
+  message_id text not null unique,
+  thread_kind text not null check (thread_kind in ('enquiry', 'support')),
+  thread_id uuid not null,
+  from_email text not null,
+  from_name text,
+  subject text not null default '',
+  body text not null default '',
+  attachments integer not null default 0,
+  matched_by text not null,
+  received_at timestamptz not null,
+  read_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists inbound_emails_thread on inbound_emails (thread_kind, thread_id, received_at);
+create index if not exists inbound_emails_unread on inbound_emails (read_at) where read_at is null;
+alter table inbound_emails enable row level security;
+create table if not exists imap_state (
+  mailbox text primary key,
+  uid_validity bigint,
+  last_uid bigint not null default 0,
+  last_run_at timestamptz,
+  last_ok_at timestamptz,
+  last_error text,
+  imported integer not null default 0,
+  ignored integer not null default 0
+);
+alter table imap_state enable row level security;
+alter table customer_replies add column if not exists message_id text;
+create unique index if not exists customer_replies_message_id on customer_replies (message_id) where message_id is not null;
+alter table enquiries add column if not exists urgent boolean not null default false
+`,
+  },
 ]

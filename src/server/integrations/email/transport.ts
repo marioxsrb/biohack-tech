@@ -25,6 +25,8 @@ export type OutgoingEmail = {
   /** Defaults to the order's customer through GoHighLevel; required for smtp and file. */
   to?: string
   ghlContactId?: string | null
+  /** A person's reply in an email conversation: threading headers, and not marked as automatic. */
+  thread?: { inReplyTo?: string; references?: string[] }
 }
 
 /** A rejection that retrying cannot fix (the recipient does not exist). Everything else is retried. */
@@ -80,7 +82,10 @@ async function sendSmtp(c: Config, e: OutgoingEmail & { to: string }) {
       text: e.text,
       html: e.html,
       messageId,
-      headers: { 'Auto-Submitted': 'auto-generated' },
+      ...(e.thread?.inReplyTo && { inReplyTo: e.thread.inReplyTo }),
+      ...(e.thread?.references?.length && { references: e.thread.references }),
+      // Written by a person (a reply from the admin): no Auto-Submitted, so the customer's answer is a normal email.
+      headers: e.thread ? {} : { 'Auto-Submitted': 'auto-generated' },
     })
     if (r.rejected?.length) throw new EmailError(`rejected: ${r.response ?? 'recipient refused'}`, false)
     return `smtp:${messageId}`

@@ -15,7 +15,7 @@ const nextConfig: NextConfig = {
     inlineCss: true,
   },
   // Database drivers load native/wasm code at runtime; keep them out of the server bundle.
-  serverExternalPackages: ['pg', '@electric-sql/pglite'],
+  serverExternalPackages: ['pg', '@electric-sql/pglite', 'imapflow', 'mailparser'],
   images: {
     formats: ['image/avif', 'image/webp'],
     qualities: [75, 85],
