@@ -19,6 +19,7 @@ const ENV = {
   NEUROS_BOOK_PDF_URL: 'https://neuros.test/api/carte/partener/pdf',
   NEUROS_BOOK_PDF_SECRET: 's'.repeat(40),
   DIGITAL_LINK_SECRET: 'l'.repeat(40),
+  BOOK_SALES_ENABLED: 'true',
 }
 
 describe.skipIf(!url)('the book on real PostgreSQL', () => {

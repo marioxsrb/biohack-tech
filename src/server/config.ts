@@ -115,6 +115,11 @@ export type Config = {
    * are valid: the book then stays out of the store (content/catalog release), so nobody buys a PDF we cannot hand over.
    */
   digital: DigitalConfig | null
+  /**
+   * The book is sold only when, on top of a working digital delivery, a person switched sales on (BOOK_SALES_ENABLED=true):
+   * delivery can be configured and tested first; the release waits for the fiscal and CRM checks.
+   */
+  bookSales: boolean
 }
 
 export type DigitalConfig = { linkSecret: string; source: { url: string; secret: string } }
@@ -487,6 +492,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     metaCapi: readMetaCapi(),
     apns: isolated ? null : readApns(),
     digital: readDigital(appEnv, issues),
+    bookSales: flag('BOOK_SALES_ENABLED'),
   }
   cached = { config, issues }
   return cached

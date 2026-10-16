@@ -49,7 +49,7 @@ export const storeSettings = () => current
  * The book is in the store only while its PDF can be delivered securely (NEUROS source and link secret configured):
  * released here, on the server and, through the page's script, in the browser.
  */
-const released = () => (getConfig().digital ? [BOOK_ID] : [])
+const released = () => (getConfig().digital && getConfig().bookSales ? [BOOK_ID] : [])
 
 const toOverrides = (s: StoreSettings): CatalogOverrides => ({ prices: s.prices, soldOut: s.soldOut, fx: s.fx, released: released() })
 
@@ -84,7 +84,7 @@ export async function ensureStoreSettings(maxAgeMs = 15_000): Promise<StoreSetti
       applyCatalogOverrides(toOverrides(current))
       // The book's release (its PDF source configured) reaches the existing AI calling agent once: its knowledge and
       // instructions are rebuilt from the catalog (job agent.sync; the agent itself is never recreated).
-      if (getConfig().digital && getConfig().elevenlabs) await jobs.enqueue(db, { kind: 'agent.sync', dedupeKey: 'agent.sync:book-release' }).catch(() => {})
+      if (getConfig().digital && getConfig().bookSales && getConfig().elevenlabs) await jobs.enqueue(db, { kind: 'agent.sync', dedupeKey: 'agent.sync:book-release' }).catch(() => {})
       // Euro and dollar prices need today's rate: a refresh is queued when the last one is 6 hours old.
       if (!current.fx || Date.now() - Date.parse(current.fx.fetchedAt) > 6 * 3_600_000)
         await jobs.enqueue(db, { kind: 'fx.refresh', dedupeKey: `fx.refresh:${Math.floor(Date.now() / (6 * 3_600_000))}` }).catch(() => {})

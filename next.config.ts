@@ -13,7 +13,8 @@ function bookReleased() {
     const u = new URL(url)
     ok = u.protocol === 'https:' || (u.protocol === 'http:' && /^(localhost|127\.0\.0\.1)$/.test(u.hostname) && process.env.APP_ENV !== 'production')
   } catch {}
-  return ok && secret.length >= 32 && link.length >= 32
+  // And a person switched sales on (server/config.ts bookSales): delivery can be ready while the book stays hidden.
+  return ok && secret.length >= 32 && link.length >= 32 && process.env.BOOK_SALES_ENABLED?.trim() === 'true'
 }
 
 const nextConfig: NextConfig = {

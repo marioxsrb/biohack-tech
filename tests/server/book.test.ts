@@ -68,6 +68,7 @@ const ENV = {
   NEUROS_BOOK_PDF_URL: SOURCE_URL,
   NEUROS_BOOK_PDF_SECRET: SOURCE_SECRET,
   DIGITAL_LINK_SECRET: LINK_SECRET,
+  BOOK_SALES_ENABLED: 'true',
 }
 
 type Db = Awaited<ReturnType<typeof freshDb>>
@@ -136,6 +137,14 @@ describe('release: the book is sold only while its PDF can be delivered', () => 
     expect(resolveOrderLines([{ productId: BOOK, quantity: 1 }])).toEqual({ ok: false, reason: 'BAD_LINE' })
     // Its page exists for static generation and answers 404 until then.
     expect(catalog.allSlugs()).toContain('cartea-dianei')
+  })
+
+  it('delivery configured but sales not switched on: hidden, while links and downloads still work for testing', async () => {
+    db = await freshDb({ ...ENV, BOOK_SALES_ENABLED: '' })
+    await ensureStoreSettings(0)
+    expect(getConfig().digital).not.toBeNull()
+    expect(catalog.getProduct(BOOK)).toBeUndefined()
+    expect(resolveOrderLines([{ productId: BOOK, quantity: 1 }])).toEqual({ ok: false, reason: 'BAD_LINE' })
   })
 
   it('a weak secret or a plain-http source keeps it out (no weaker setup is accepted)', async () => {

@@ -27,6 +27,11 @@ export default async function DigitalDeliveryPage() {
       <p className="mt-1 max-w-[760px] text-[15px] text-muted">
         Cartea Dianei L. Palotaș: accesul la PDF și emailurile. Cardul primește PDF-ul imediat după confirmarea Stripe, transferul după ce confirmi plata, rambursul după ce comanda este marcată Livrată. PDF-ul nu este stocat aici: fiecare descărcare autorizată îl aduce de la NEUROS.
       </p>
+      {c.digital && !c.bookSales && (
+        <p className="mt-4 rounded-[12px] bg-cyan-50 px-4 py-3 text-[14.5px] text-cyan-700">
+          Livrarea PDF este configurată, dar vânzarea cărții este oprită (BOOK_SALES_ENABLED): cartea nu apare în magazin până la lansare.
+        </p>
+      )}
       {!c.digital && (
         <p className="mt-4 rounded-[12px] bg-[#fdecec] px-4 py-3 text-[14.5px] text-red-deep">
           Sursa PDF nu este configurată (NEUROS_BOOK_PDF_URL, NEUROS_BOOK_PDF_SECRET, DIGITAL_LINK_SECRET). Cartea nu apare în magazin și nu se pot trimite linkuri.
