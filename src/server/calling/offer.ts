@@ -185,5 +185,5 @@ export function openingLine(x: { firstName: string; name?: string | null; cart: 
   const why = x.cart
     ? `Am văzut că ați adăugat în coș ${x.items?.length ? cartInWords(x.items) : x.productNames || 'produse de pe site'}.`
     : `Am văzut că v-ați interesat de prețul pentru ${x.productNames || 'produsele noastre'} pe site-ul nostru și m-am gândit să vă ajut cu informații.`
-  return `${hello} Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat. ${why} Aveți un minut?`
+  return `${hello} Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. ${why} Aveți un minut?`
 }
