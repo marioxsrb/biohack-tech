@@ -28,7 +28,8 @@ describe('the three-product catalog (NEUROS Flow discontinued 13.10.2026)', () =
       ['ochelari-biohack', 'amber', 'NEUROS Amber', 31500],
     ])
     expect(products.every(isPurchasable)).toBe(true)
-    expect(Object.keys(PRICES_RON).sort()).toEqual(products.map((p) => p.id).sort())
+    // The book is priced too, but stays out of the store until its PDF can be delivered (tests/server/book.test.ts).
+    expect(Object.keys(PRICES_RON).sort()).toEqual([...products.map((p) => p.id), 'carte-diana'].sort())
     for (const p of products) {
       expect(productContent[p.id]).toBeDefined()
       expect(PRODUCT_TAG[p.id]).toMatch(/^bt-cumparat-/)

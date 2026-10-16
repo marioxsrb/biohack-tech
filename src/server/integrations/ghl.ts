@@ -202,6 +202,7 @@ export const BUYER_STAGES = {
   'balance-wave': 'NEUROS Calm',
   'brainlink-pro': 'NEUROS Focus',
   'ochelari-biohack': 'NEUROS Amber',
+  'carte-diana': 'Cartea Diana Palotaș',
   multi: 'Mai multe produse',
 } as const
 /** The customers column for the products bought (catalog ids): one known product, else "Mai multe produse". */
@@ -231,14 +232,27 @@ export const INTEREST_TAG: Record<string, string> = {
   'balance-wave': 'bt-interes-calm',
   'brainlink-pro': 'bt-interes-focus',
   'ochelari-biohack': 'bt-interes-amber',
+  'carte-diana': 'bt-interes-carte',
 }
 
 export const PRODUCT_TAG: Record<string, string> = {
   'balance-wave': 'bt-cumparat-calm',
   'brainlink-pro': 'bt-cumparat-focus',
   'ochelari-biohack': 'bt-cumparat-amber',
+  'carte-diana': 'bt-cumparat-carte',
   // Discontinued 13.10.2026; kept so orders placed before still get their tag on a CRM resync.
   'brain-flow': 'bt-cumparat-brain-flow',
+}
+
+/**
+ * The book's PDF on the contact (tags only; Supabase stays the record): access granted, the email sent, a download
+ * made. Access is removed when it is revoked (cancellation, refund, a person).
+ */
+export const DIGITAL_TAGS = { access: 'bt-carte-pdf-acces', emailed: 'bt-carte-pdf-trimis', downloaded: 'bt-carte-pdf-descarcat' } as const
+export function digitalTags(e: { status: 'active' | 'revoked'; emailsSent: number; downloads: number } | null): { add: string[]; remove: string[] } {
+  if (!e) return { add: [], remove: [] }
+  const add = [...(e.status === 'active' ? [DIGITAL_TAGS.access] : []), ...(e.emailsSent > 0 ? [DIGITAL_TAGS.emailed] : []), ...(e.downloads > 0 ? [DIGITAL_TAGS.downloaded] : [])]
+  return { add, remove: e.status === 'revoked' ? [DIGITAL_TAGS.access] : [] }
 }
 
 const PAYMENT_STATUS_RO: Record<Order['paymentStatus'], string> = {
@@ -445,7 +459,12 @@ export const ghl = {
     const buyers = p.stage === 'ordered' && p.products?.length ? await pipelineByName(c, BUYERS_PIPELINE) : null
     // A customer goes to the customers pipeline; until it exists, to "Comandă plasată" in the leads pipeline.
     const target = buyers ? { pipe: buyers, stage: buyerStage(p.products!) } : { pipe: leads, stage: LEAD_STAGES[p.stage] }
-    const stageId = target.pipe?.stages.get(target.stage.toLowerCase())
+    let stageId = target.pipe?.stages.get(target.stage.toLowerCase())
+    // A product column not created in GHL yet (the book's, added 16.10.2026): "Mai multe produse" until it exists.
+    if (buyers && !stageId && target.stage !== BUYER_STAGES.multi) {
+      log.warn('ghl.buyer_stage_missing', { stage: target.stage, fallback: BUYER_STAGES.multi })
+      stageId = buyers.stages.get(BUYER_STAGES.multi.toLowerCase())
+    }
     if (!target.pipe || !stageId) {
       log.warn('ghl.leads_pipeline_missing', { pipeline: buyers ? BUYERS_PIPELINE : LEADS_PIPELINE, stage: target.stage })
       return null

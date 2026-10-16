@@ -732,4 +732,50 @@ create table if not exists push_deliveries (
 alter table push_deliveries enable row level security
 `,
   },
+  {
+    // The book's digital edition (server/digital): one entitlement per order with the book, granted in the same
+    // transaction as the event that earns it (card or transfer paid, cash on delivery delivered), never twice
+    // (unique per order and product); revoked by a cancellation, a full refund or a person. Every grant, email,
+    // copied link and download attempt is one row of digital_events (the audit and the download history).
+    // The PDF itself is never stored: each authorized download fetches it from NEUROS.
+    id: '025_digital_delivery',
+    sql: `
+create table if not exists digital_entitlements (
+  id uuid primary key,
+  order_id uuid not null references orders(id),
+  product_id text not null,
+  status text not null check (status in ('active', 'revoked')),
+  granted_at timestamptz not null default now(),
+  granted_by text not null,
+  revoked_at timestamptz,
+  revoke_reason text,
+  link_version integer not null default 1,
+  downloads integer not null default 0,
+  last_download_at timestamptz,
+  email_status text not null default 'none' check (email_status in ('none', 'queued', 'sent', 'failed')),
+  emails_sent integer not null default 0,
+  manual_sends integer not null default 0,
+  email_sent_at timestamptz,
+  last_attempt_at timestamptz,
+  last_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (order_id, product_id)
+);
+alter table digital_entitlements enable row level security;
+create table if not exists digital_events (
+  id bigserial primary key,
+  entitlement_id uuid references digital_entitlements(id),
+  order_id uuid not null references orders(id),
+  type text not null,
+  actor text not null,
+  details jsonb not null default '{}',
+  ip_hash text,
+  created_at timestamptz not null default now()
+);
+create index if not exists digital_events_order_idx on digital_events (order_id, id);
+create index if not exists digital_events_downloads_idx on digital_events (entitlement_id, created_at) where type = 'download.ok';
+alter table digital_events enable row level security
+`,
+  },
 ]

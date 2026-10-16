@@ -33,6 +33,7 @@ export type JobKind =
   | 'support.notify'
   | 'fx.refresh'
   | 'meta.purchase'
+  | 'digital.email'
 export type JobStatus = 'pending' | 'running' | 'retry' | 'done' | 'failed' | 'skipped'
 
 export type Job = {

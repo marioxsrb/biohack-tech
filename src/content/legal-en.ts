@@ -83,7 +83,7 @@ export const legalPagesEn: LegalPage[] = [
       {
         heading: 'Prices',
         body: [
-          'Prices are in lei and include 21% VAT. On biohack-tech.net they are shown and charged in euros or US dollars, converted from lei at the National Bank of Romania exchange rate and rounded to the unit. Free delivery. The total to pay, in the order currency, is shown before you submit the order.',
+          'Prices are in lei and include 21% VAT. On biohack-tech.net they are shown and charged in euros or US dollars, converted from lei at the National Bank of Romania exchange rate and rounded to the unit. Free delivery, except for orders that contain Diana L. Palotaș’s book, which pay one delivery fee per order. The total to pay, in the order currency, is shown before you submit the order.',
         ],
       },
       {
@@ -329,6 +329,8 @@ export const legalPagesEn: LegalPage[] = [
         heading: 'Cost',
         body: [
           'Delivery is free, in Romania and abroad. Prices include 21% VAT.',
+          'Exception: an order that contains the book “Știu. Vreau. DE CE NU POT?” by Diana L. Palotaș pays one delivery fee per order, 12.10 lei (10 lei + 21% VAT; in euros or dollars converted like the prices), however many books or other products it contains. The fee is shown separately in the cart and at checkout, before you place the order, and is never discounted.',
+          'The PDF edition of the book is sent by email once your card payment is confirmed, and can also be downloaded straight away from your order page. Download links are personal and expire for security.',
           'For deliveries outside the European Union, customs or import duties may apply in the destination country.',
         ],
       },

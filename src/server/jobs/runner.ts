@@ -10,7 +10,8 @@ import { getConfig, type GhlConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { FgoError, fgo } from '@/server/integrations/fgo'
 import { MetaError, sendMetaPurchase } from '@/server/integrations/meta'
-import { GhlError, TAGS, ghl, placedTags, tagsFor } from '@/server/integrations/ghl'
+import { digitalTags, GhlError, TAGS, ghl, placedTags, tagsFor } from '@/server/integrations/ghl'
+import { entitlements } from '@/server/digital/entitlements'
 import { renderEmail, stillDue, type EmailTemplate } from '@/server/integrations/email/templates'
 import { deliver, EmailError } from '@/server/integrations/email/transport'
 import { NOTIFICATIONS, renderNotification, type NotifyEvent } from '@/server/notifications'
@@ -29,6 +30,7 @@ import { renderCartRecovery } from '@/server/cart-email'
 import { givenName } from '@/server/calling/names'
 import { getProduct } from '@/content/catalog'
 import { priceLines } from '@/lib/promotions'
+import { shippingFor } from '@/lib/shipping'
 import { convertUnit, formatMoney, type Currency } from '@/lib/currency'
 import { promoCodes } from '@/server/promo'
 import { renderWelcome } from '@/server/welcome'
@@ -50,6 +52,7 @@ import { syncEnquiry } from '@/server/enquiries'
 import { expireUnpaidTransfer, markAbandonedIfUnpaid } from '@/server/orders/service'
 import { withdrawals } from '@/server/orders/withdrawal'
 import { renderSupportNotice, supportRequests } from '@/server/assistant/support'
+import { DigitalPermanent, DigitalSkip, runDigitalEmail } from '@/server/digital/delivery'
 import { jobs, type Job } from './outbox'
 
 class Skip extends Error {}
@@ -109,7 +112,10 @@ async function syncCrm(orderId: string) {
   const latest = (await orders.latestKnown(db, o.email)) ?? o
   const m = await marketingStatus(db, o.email, c.siteUrl)
   const contactId = await ghl.upsertContact(c.ghl, latest, await orders.lifetime(db, o.email), m.fields, c.siteUrl, o.ghlContactId ?? latest.ghlContactId ?? (await knownContactId(db, o.email)))
-  await ghl.addTags(c.ghl, contactId, [...tagsFor(o), ...placedTags(o)])
+  // The book's PDF state, from its entitlement (granted, emailed, downloaded; access removed when revoked).
+  const digital = digitalTags(await entitlements.byOrder(db, o.id))
+  await ghl.addTags(c.ghl, contactId, [...tagsFor(o), ...placedTags(o), ...digital.add])
+  if (digital.remove.length) await ghl.removeTags(c.ghl, contactId, digital.remove)
   await mirrorPurchaseTags(c, o)
   // The application sends the recovery email (lead system); the W2 tag is never set, and removed where it was.
   if (m.recoverable || m.hadRecovery) await ghl.removeTags(c.ghl, contactId, [TAGS.recovery])
@@ -306,12 +312,14 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
       const currency: Currency = intl || lead.locale === 'en' ? 'EUR' : 'RON'
       const lines = cartItems.map((l) => ({ ...l, unit: convertUnit(l.unit, currency) }))
       const pricing = priceLines(lines.map((l, i) => ({ key: String(i), productId: l.productId, quantity: l.quantity, unitAmount: l.unit })))
+      const shippingMinor = shippingFor(lines, currency)
       const mail = renderCartRecovery({
         step,
         locale: lead.locale,
         firstName: lead.name ? givenName(lead.name) || null : null,
         items: lines.map((l) => ({ name: l.name, variant: l.variant, quantity: l.quantity, lineMinor: l.unit * l.quantity, image: productImageUrl(origin, l.productId, l.variantId) })),
-        totalMinor: pricing.totalMinor,
+        totalMinor: pricing.totalMinor + shippingMinor,
+        shippingMinor,
         format: (m) => formatMoney(m, currency),
         code: code ? { code: code.code, percent: RECOVERY_PERCENT } : null,
         link: `${base}/api/lead/resume?t=${lead.recoveryToken}${code ? `&cod=${encodeURIComponent(code.code)}` : ''}`,
@@ -549,6 +557,16 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     if (!o) throw new Skip('order gone')
     if (!isPaid(o.paymentStatus)) throw new Skip('not paid')
     return sendMetaPurchase(c.metaCapi, o, c.siteUrl)
+  },
+  // The book's PDF link by email (automatic after a grant, or asked for in /admin); checked again before sending.
+  'digital.email': async (j) => {
+    try {
+      return await runDigitalEmail(j)
+    } catch (e) {
+      if (e instanceof DigitalSkip) throw new Skip(e.message)
+      if (e instanceof DigitalPermanent) throw new Permanent(e.message)
+      throw e
+    }
   },
   'stripe.reconcile': async (j) => reconcileCardPayment(j.orderId!),
   'upsell.release': async (j) => releaseUpsellCard(j.orderId!),

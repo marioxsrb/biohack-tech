@@ -24,6 +24,7 @@ import { cancelScheduledCalls, disableCalling, retryCall } from '@/server/callin
 import { getConfig } from '@/server/config'
 import { CODE_RE, normalizeCode, promoCodes } from '@/server/promo'
 import { products } from '@/content/catalog'
+import { adminCopyLink, adminSendDigital, adminSetAccess } from '@/server/digital/delivery'
 import { cancelOrder, confirmPayment, markDelivered, markProcessing, markReturnReceived, markReturnRequested, markShipped, recordRefund } from '@/server/orders/service'
 
 /**
@@ -446,4 +447,42 @@ export async function supportAction(f: FormData) {
   if (r) await audit(db, adminActor(), 'support.update', { id, ref: r.ref, status: r.status, urgent: r.urgent })
   log.info('admin.action', { supportId: id, action: `support_${status || 'notes'}`, changed: !!r })
   revalidatePath('/admin/suport')
+}
+
+/**
+ * The book's PDF (Admin → Livrare digitală). Each action checks the entitlement itself (server/digital/delivery):
+ * nothing goes to an unpaid, cancelled or refunded order, a cash-on-delivery order before delivery, or a revoked one.
+ */
+const digitalPage = (id: string) => `/admin/livrare-digitala/${id}`
+
+export async function digitalSendAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id', 40)
+  const r = await adminSendDigital(id, adminActor(), f.get('confirm') === 'da')
+  log.info('admin.action', { orderId: id, action: 'digital_send', ok: r.ok })
+  if (r.ok) await runDueJobs()
+  revalidatePath('/admin/livrare-digitala')
+  redirectWith(digitalPage(id), r.message)
+}
+
+export type DigitalLinkState = { ok: boolean; message: string; url?: string } | null
+
+/** A fresh 7-day link, returned to the page only (never in a URL), copied by the browser. */
+export async function digitalLinkAction(_: DigitalLinkState, f: FormData): Promise<DigitalLinkState> {
+  await guard()
+  const id = text(f, 'id', 40)
+  const r = await adminCopyLink(id, adminActor())
+  log.info('admin.action', { orderId: id, action: 'digital_link', ok: r.ok })
+  return r
+}
+
+export async function digitalAccessAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id', 40)
+  const action = f.get('access') === 'restore' ? 'restore' : 'revoke'
+  if (!confirmed(f)) redirectWith(digitalPage(id), 'Bifează confirmarea ca să schimbi accesul.')
+  const r = await adminSetAccess(id, adminActor(), action, text(f, 'reason', 200))
+  log.info('admin.action', { orderId: id, action: `digital_${action}`, ok: r.ok })
+  revalidatePath('/admin/livrare-digitala')
+  redirectWith(digitalPage(id), r.message)
 }

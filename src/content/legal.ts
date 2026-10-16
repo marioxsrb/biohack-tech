@@ -331,6 +331,8 @@ export const legalPages: LegalPage[] = [
         heading: 'Cost',
         body: [
           'Livrarea este gratuită, în România și în străinătate. Prețurile includ TVA 21%.',
+          'Excepție: o comandă care conține cartea „Știu. Vreau. DE CE NU POT?” de Diana L. Palotaș plătește livrarea o singură dată pe comandă, 12,10 lei (10 lei + TVA 21%), indiferent câte cărți sau alte produse conține. Suma apare separat în coș și în checkout, înainte de plasarea comenzii, și nu primește reduceri.',
+          'Versiunea PDF a cărții se trimite pe email: la plata cu cardul, după confirmarea plății (și se poate descărca imediat din pagina comenzii); la transfer bancar, după confirmarea plății; la plata ramburs, după livrarea coletului. Linkurile de descărcare sunt personale și expiră din motive de securitate.',
           'Pentru livrările în afara Uniunii Europene pot apărea taxe vamale sau de import în țara de destinație.',
         ],
       },

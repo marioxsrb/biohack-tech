@@ -22,6 +22,9 @@ import glToate from '@/assets/img/glasses/audience-stil.webp'
 import glBirou from '@/assets/img/glasses/result-focus.webp'
 import glSeara from '@/assets/img/glasses/result-seara.webp'
 
+import carteAutoare from '@/assets/img/carte/diana-palotas.webp'
+import { bookCopy } from './book'
+
 
 export type Story = { title: string; text: string; image: ProductImage }
 
@@ -56,6 +59,21 @@ export type ProductContent = {
 
 const photo = (src: ProductImage['src'], alt: string): ProductImage => ({ src, alt, kind: 'photo' })
 const cut = (src: ProductImage['src'], alt: string): ProductImage => ({ src, alt, kind: 'cutout' })
+
+/** The book's page has its own editorial sections (components/product/BookSections); this keeps the shared fields. */
+function bookContent(locale: Locale): ProductContent {
+  const b = bookCopy(locale)
+  return {
+    seo: b.seo,
+    intro: b.intro,
+    highlights: b.highlights,
+    benefits: b.delivery.steps,
+    scene: { title: b.author.name, text: b.author.bio, image: photo(carteAutoare, b.author.alt) },
+    moments: [],
+    specs: b.specs,
+    faqs: b.faqs,
+  }
+}
 
 export const productContent: Record<ProductId, ProductContent> = {
   'balance-wave': {
@@ -240,6 +258,7 @@ export const productContent: Record<ProductId, ProductContent> = {
       { q: 'Pot să îi returnez?', a: 'Da, în 14 zile de la primire.' },
     ],
   },
+  'carte-diana': bookContent('ro'),
 }
 
 /** The same pages in English, for /en. Same images, same facts, same limits on claims. */
@@ -426,6 +445,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       { q: 'Can I return them?', a: 'Yes, within 14 days of delivery.' },
     ],
   },
+  'carte-diana': bookContent('en'),
 }
 
 /** A product page's content in the visitor's language. */

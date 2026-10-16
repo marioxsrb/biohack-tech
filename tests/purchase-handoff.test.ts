@@ -169,7 +169,7 @@ describe('attribution and promotions survive the handoff', () => {
     const lines = p.cartStore.getSnapshot()
     expect(lines.map((l) => l.productId)).not.toContain('brain-flow')
     const shown = priceLines(
-      lines.map((l) => ({ key: `${l.productId}:${l.variantId ?? ''}`, productId: l.productId, quantity: l.quantity, unitAmount: { 'balance-wave': 638000, 'brainlink-pro': 180000, 'ochelari-biohack': 31500 }[l.productId]! })),
+      lines.map((l) => ({ key: `${l.productId}:${l.variantId ?? ''}`, productId: l.productId, quantity: l.quantity, unitAmount: ({ 'balance-wave': 638000, 'brainlink-pro': 180000, 'ochelari-biohack': 31500 } as Record<string, number>)[l.productId]! })),
     )
     const server = resolveOrderLines(lines)
     expect(server.ok).toBe(true)

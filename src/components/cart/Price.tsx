@@ -23,7 +23,9 @@ export function Price({
 }) {
   const ui = useUi()
   const { unit, fmt } = useMoney()
-  const p = getProduct(productId)!
+  const p = getProduct(productId)
+  // A product not in the store (the book before its release) has no price to show.
+  if (!p) return null
   const variant = getVariant(p, variantId)
   const amount = variant ? unitPrice(p, variant) : p.price
   if (amount === null) return <span className={`${pendingClassName} ${className}`}>{ui.pricePending}</span>

@@ -181,7 +181,7 @@ export function ProductHero({ productId, intro, highlights }: Props) {
                 <AddToCartButton productId={product.id} variantId={variant?.id} quantity={quantity} tone="secondary" className="!min-h-[52px] w-full" onAdded={() => setQuantity(1)} />
               </div>
 
-              <TrustRow className="mt-7" />
+              <TrustRow className="mt-7" productId={product.id} />
             </>
           ) : (
             <div className="mt-6 grid gap-2.5">

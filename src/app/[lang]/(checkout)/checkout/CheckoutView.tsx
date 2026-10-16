@@ -24,6 +24,7 @@ import { site, terms } from '@/config/site'
 import { itemOf, track } from '@/lib/analytics'
 import { CommunicationsConsent } from '@/components/consent/CommunicationsConsent'
 import { priceLines, type PromoCodeRule } from '@/lib/promotions'
+import { shippingFor } from '@/lib/shipping'
 import {
   COUNTIES,
   DRAFT_KEY,
@@ -101,6 +102,7 @@ const COPY = {
     shipAddress: 'Adresa de livrare',
     notes: 'Observații pentru curier',
     freeDelivery: 'Livrare gratuită prin curier, oriunde în lume.',
+    bookDelivery: 'Livrare prin curier. Comanda conține cartea, așa că livrarea se plătește o singură dată, oricâte produse ai în coș. Suma este în rezumatul comenzii.',
     payment: 'Plată',
     method: 'Metoda de plată',
     card: 'Card bancar',
@@ -186,6 +188,7 @@ const COPY = {
     shipAddress: 'Delivery address',
     notes: 'Notes for the courier',
     freeDelivery: 'Free courier delivery, worldwide.',
+    bookDelivery: 'Courier delivery. Your order includes the book, so one delivery fee applies, however many products are in your cart. The amount is in your order summary.',
     payment: 'Payment',
     method: 'Payment method',
     card: 'Card',
@@ -343,7 +346,9 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
   const withCode = useMemo(() => (promo.rule ? priceLines(priced, undefined, money.rule(promo.rule)) : null), [priced, promo.rule, money])
   // A cart change can make an applied code stop fitting (minimum, products): the totals fall back, and the order says why.
   const pricing = withCode && !withCode.code?.problem ? withCode : cartPricing
-  const total = pricing.totalMinor
+  // Free, or the book's flat fee once per order (lib/shipping.ts): never discounted, added after the promotions.
+  const shipping = useMemo(() => shippingFor(priced, currency), [priced, currency])
+  const total = pricing.totalMinor + shipping
   // The summary stays in view only when it fits the window; a taller one scrolls with the page, so its lower part
   // (consents, the pay button) is never out of reach.
   const summaryRef = useRef<HTMLDivElement>(null)
@@ -630,7 +635,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
               <Field name="notes" label={t.notes} optional>
                 <textarea rows={2} {...bind('notes')} />
               </Field>
-              <p className="rounded-[12px] bg-mist px-4 py-3 text-[14.5px] text-text">{t.freeDelivery}</p>
+              <p className="rounded-[12px] bg-mist px-4 py-3 text-[14.5px] text-text">{shipping ? t.bookDelivery : t.freeDelivery}</p>
             </Group>
 
             <Group n={4} title={t.payment}>
@@ -701,7 +706,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
             {anyMethod && <PromoField promo={promo} setPromo={setPromo} lines={lines} email={form.email} locale={locale} t={t} codeProblem={withCode?.code?.problem ? true : false} />}
 
             <div className="mt-4">
-              <Totals pricing={pricing} />
+              <Totals pricing={pricing} shippingMinor={shipping} />
             </div>
             <p className="text-right text-[13px] text-muted">{ui[locale].vat}</p>
             {/* The only product suggestion in the checkout: light, before the payment decision. */}

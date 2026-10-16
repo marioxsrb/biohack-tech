@@ -15,7 +15,7 @@ import { cashOnDelivery } from '@/config/payments'
 import { promoText } from '@/config/promotions'
 import { socialProof } from '@/config/social-proof'
 import { site, terms } from '@/config/site'
-import { getProduct, getVariant, unitPrice, variantLabel, type ProductId } from '@/content/catalog'
+import { getProduct, getVariant, isBook, unitPrice, variantLabel, type ProductId } from '@/content/catalog'
 import { useLocale, useUi } from '@/i18n/LocaleProvider'
 import { useMoney } from '@/i18n/currency'
 import { priceLines, promotionFor } from '@/lib/promotions'
@@ -47,6 +47,8 @@ const COPY = {
     securePay: 'Plată securizată',
     payOnDelivery: 'Plată la livrare',
     promises: 'Cumperi în siguranță',
+    bookDelivery: 'Livrare o dată pe comandă',
+    pdfIncluded: 'PDF inclus',
   },
   en: {
     highlights: 'In short',
@@ -73,6 +75,8 @@ const COPY = {
     securePay: 'Secure payment',
     payOnDelivery: 'Pay on delivery',
     promises: 'Buy with confidence',
+    bookDelivery: 'One delivery fee per order',
+    pdfIncluded: 'PDF included',
   },
 }
 
@@ -296,17 +300,21 @@ export function ContactOrder({ productId, variantId, quantity, className = '' }:
 
 type Icon = ComponentType<SVGProps<SVGSVGElement>>
 
-/** The four store promises, from the stated terms. One line icon each, the label under it. */
-export function TrustRow({ className = '' }: { className?: string }) {
+/**
+ * The four store promises, from the stated terms. One line icon each, the label under it. The book has its own: its
+ * delivery is paid once per order, it has no warranty, and its PDF comes with it.
+ */
+export function TrustRow({ className = '', productId }: { className?: string; productId?: ProductId }) {
   const locale = useLocale()
   const t = COPY[locale]
   const ui = useUi()
+  const book = !!productId && isBook(productId)
   const items: [Icon, string][] = [
     // English pages pay in euro or dollars, by card only.
     cashOnDelivery.enabled && locale === 'ro' ? [Wallet, t.payOnDelivery] : [Lock, t.securePay],
-    [Truck, ui.freeDelivery],
+    book ? [Truck, t.bookDelivery] : [Truck, ui.freeDelivery],
     [Return, ui.returns],
-    [ShieldCheck, ui.warranty],
+    book ? [Check, t.pdfIncluded] : [ShieldCheck, ui.warranty],
   ]
   return (
     <ul aria-label={t.promises} className={`grid grid-cols-4 gap-x-2 ${className}`}>

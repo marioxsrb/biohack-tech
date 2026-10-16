@@ -20,6 +20,7 @@ import type { Attribution } from '@/lib/attribution'
 import { lineRef } from '@/content/catalog'
 import type { OrderForm } from '@/lib/checkout'
 import { priceLines, type PromoCodeRule } from '@/lib/promotions'
+import { shippingFor } from '@/lib/shipping'
 import { normalizeCode, promoCodes, ruleOf, type PromoProblem } from '@/server/promo'
 import { upsellsFor } from '@/lib/upsell'
 import { UPSELL_WINDOW_MINUTES } from '@/config/upsell'
@@ -29,14 +30,11 @@ import { formatOrderNumber, orderDay } from './number'
 import type { Address, Order, OrderSite, OrderStatus, PaymentMethod } from './model'
 import { orders } from './repository'
 import { ensureOrderLead, markLeadsPurchased } from '@/server/leads'
+import { syncEntitlement } from '@/server/digital/entitlements'
+import { autoEmailJob } from '@/server/digital/delivery'
 
 export type Source = 'checkout' | 'stripe.webhook' | 'stripe.reconcile' | 'upsell' | 'admin' | 'system' | 'assistant'
 
-/**
- * Shipping cost in bani. Current rule: free delivery in Romania (stated on the current
- * biohack-tech.ro). A fixed fee or a free-shipping threshold would be decided here.
- */
-export const shippingFor = (): number => 0
 
 type PlaceInput = {
   lines: OrderLine[]
@@ -87,7 +85,8 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
   const lines = input.lines.map((l) => ({ ...l, unitAmount: convertUnit(l.unitAmount, currency) }))
   const method: PaymentMethod = f.paymentMethod === 'transfer' ? 'bank_transfer' : f.paymentMethod === 'cod' ? 'cash_on_delivery' : 'card'
   const cod = method === 'cash_on_delivery'
-  const shipping = shippingFor()
+  // Free, or the book's flat fee once per order (lib/shipping.ts), in the order's currency. Never discounted.
+  const shipping = shippingFor(lines, currency)
 
   try {
     const order = await db.tx(async (t) => {
@@ -230,8 +229,13 @@ async function transition(
     if (r.event === 'payment.confirmed') await markLeadsPurchased(t, orderId)
     // An unpaid card order: its recovery runs through the lead system (application-owned email).
     if (r.event === 'order.abandoned') await ensureOrderLead(t, (await orders.byId(t, orderId))!)
+    // The book's PDF follows the order in the same transaction: granted when it is earned (card or transfer paid,
+    // cash on delivery delivered), revoked by a cancellation or a full refund (server/digital/rules.ts).
+    const digital = await syncEntitlement(t, (await orders.byId(t, orderId))!, r.event)
+    if (digital.granted) await orders.event(t, orderId, 'digital.granted', source, { via: r.event })
+    if (digital.revoked) await orders.event(t, orderId, 'digital.revoked', source, { via: r.event })
     const next = (await orders.byId(t, orderId))!
-    await enqueueAll(t, jobsFor(r.event, next, r.data))
+    await enqueueAll(t, [...jobsFor(r.event, next, r.data), ...(digital.granted ? [autoEmailJob(orderId)] : [])])
     return { changed: true, order: next }
   })
   log.info(result.changed ? 'order.transition' : 'order.transition_skipped', {

@@ -17,13 +17,16 @@ import { convertUnit, formatMoney, type Currency } from '@/lib/currency'
 const money = (ctx: { currency: Currency }, bani: number) => formatMoney(convertUnit(bani, ctx.currency), ctx.currency)
 import { MAX_QTY } from '@/lib/purchase'
 import { priceLines, promotionHints } from '@/lib/promotions'
+import { shippingFor } from '@/lib/shipping'
+import { digitalNote } from '@/server/digital/delivery'
 import type { Config } from '@/server/config'
 import type { Queryable } from '@/server/db'
 import { orders } from '@/server/orders/repository'
 import { CANCEL_TTL_MS, normalizeOrderNumber, orderView, REF_TTL_MS, requestOrderCode, selfCancellable, signToken, verifyOrderCode } from './orders'
 import { isSupportCategory, SUPPORT_CATEGORIES, supportRequests } from './support'
 
-export const PRODUCT_IDS = ['balance-wave', 'brainlink-pro', 'ochelari-biohack'] as const satisfies readonly ProductId[]
+/** Every product the tools accept; one not released yet (the book, before its PDF can be delivered) answers as unavailable. */
+export const PRODUCT_IDS = ['balance-wave', 'brainlink-pro', 'ochelari-biohack', 'carte-diana'] as const satisfies readonly ProductId[]
 
 export type CartInput = { productId: string; variantId?: string; quantity: number }[]
 
@@ -47,9 +50,10 @@ const productId = z.enum(PRODUCT_IDS)
 const variantId = z.string().regex(/^[\w-]{1,60}$/).optional()
 const orderNumber = z.string().min(5).max(40)
 
-/** One product as the chat card shows it; the price only when prices may be shown. */
+/** One product as the chat card shows it; the price only when prices may be shown. Null when it is not in the store. */
 function card(id: ProductId, ctx: ToolContext) {
-  const p = getProduct(id, ctx.locale)!
+  const p = getProduct(id, ctx.locale)
+  if (!p) return null
   const promo = PROMOTIONS.find((x) => (x.products as string[]).includes(p.id))
   return {
     id: p.id,
@@ -76,14 +80,15 @@ export function assistantTools(ctx: ToolContext) {
     show_products: tool({
       description: 'Arată cardurile produselor (imagine, scop, preț dacă e permis). Pentru recomandări și comparații.',
       inputSchema: z.object({ productIds: z.array(productId).min(1).max(3) }),
-      execute: async ({ productIds }) => ({ locked: ctx.locked, products: [...new Set(productIds)].map((id) => card(id, ctx)) }),
+      execute: async ({ productIds }) => ({ locked: ctx.locked, products: [...new Set(productIds)].map((id) => card(id, ctx)).filter((c) => c !== null) }),
     }),
 
     propose_add_to_cart: tool({
       description: 'Propune adăugarea unui produs în coș. Vizitatorul confirmă printr-un buton; nimic nu se adaugă fără clic. La NEUROS Amber fără variantă aleasă, cardul îl lasă să aleagă rama.',
       inputSchema: z.object({ productId, variantId, quantity: z.number().int().min(1).max(MAX_QTY).default(1) }),
       execute: async ({ productId, variantId, quantity }) => {
-        const p = getProduct(productId, ctx.locale)!
+        const p = getProduct(productId, ctx.locale)
+        if (!p) return { status: 'unavailable' as const, productId, name: productId }
         if (ctx.locked) return { status: 'locked' as const, productId, name: p.name, message: 'Pe această pagină coșul se deschide după formularul „Vezi prețul și oferta”. Vizitatorul vede acum butonul formularului (nu un buton de coș).' }
         if (p.soldOut) return { status: 'sold_out' as const, productId, name: p.name }
         // No frame chosen, or one that does not exist: the card lets the visitor pick.
@@ -115,13 +120,15 @@ export function assistantTools(ctx: ToolContext) {
         if (ctx.locked) return { empty: false as const, locked: true as const, items }
         const priced = lines.filter((l) => l.r.unit !== null).map((l) => ({ key: l.key, productId: l.r.product.id, quantity: l.quantity, unitAmount: convertUnit(l.r.unit!, ctx.currency) }))
         const p = priceLines(priced)
+        // Free, or the book's fee once per order (lib/shipping.ts); never discounted.
+        const ship = shippingFor(priced, ctx.currency)
         return {
           empty: false as const,
           items,
           subtotal: formatMoney(p.subtotalMinor, ctx.currency),
           promotions: p.promotions.map((a) => `${promoText(a.label, ctx.locale)}: −${formatMoney(a.amountMinor, ctx.currency)}`),
-          total: formatMoney(p.totalMinor, ctx.currency),
-          shipping: ctx.locale === 'en' ? 'free' : 'gratuită',
+          total: formatMoney(p.totalMinor + ship, ctx.currency),
+          shipping: ship ? `${formatMoney(ship, ctx.currency)} (${ctx.locale === 'en' ? 'once per order: the cart has the book' : 'o dată pe comandă: coșul conține cartea'})` : ctx.locale === 'en' ? 'free' : 'gratuită',
           hints: promotionHints(priced).map((h) => h.text),
         }
       },
@@ -132,7 +139,8 @@ export function assistantTools(ctx: ToolContext) {
       inputSchema: z.object({ page: z.enum(['cart', 'checkout', 'product']), productId: productId.optional() }),
       execute: async ({ page, productId }) => {
         const base = ctx.locale === 'en' ? '/en' : ''
-        if (page === 'product' && productId) return { page, href: `${base}/products/${getProduct(productId)!.slug}`, label: getProduct(productId, ctx.locale)!.name }
+        const p = productId ? getProduct(productId, ctx.locale) : undefined
+        if (page === 'product' && p) return { page, href: `${base}/products/${p.slug}`, label: p.name }
         if (page === 'checkout') return { page, href: `${base}/checkout`, label: ctx.locale === 'en' ? 'Go to checkout' : 'Mergi la finalizarea comenzii' }
         return { page: 'cart' as const, href: `${base}/cart`, label: ctx.locale === 'en' ? 'Open cart' : 'Deschide coșul' }
       },
@@ -169,7 +177,7 @@ export function assistantTools(ctx: ToolContext) {
         }
         ctx.verified.set(r.order.orderNumber, r.order.id)
         // `ref` proves the order on the next turns; the route removes it before the model sees the conversation.
-        return { verified: true as const, ref: signToken('ref', r.order.id, REF_TTL_MS), order: orderView(r.order) }
+        return { verified: true as const, ref: signToken('ref', r.order.id, REF_TTL_MS), order: { ...orderView(r.order), ...(await digitalNote(ctx.db, r.order)) } }
       },
     }),
 
@@ -179,7 +187,7 @@ export function assistantTools(ctx: ToolContext) {
       execute: async ({ orderNumber }) => {
         const o = await verifiedOrder(orderNumber)
         if (!o) return notVerified
-        return { verified: true as const, order: orderView(o) }
+        return { verified: true as const, order: { ...orderView(o), ...(await digitalNote(ctx.db, o)) } }
       },
     }),
 

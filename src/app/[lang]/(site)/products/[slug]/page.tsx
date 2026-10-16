@@ -3,9 +3,10 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ProductHero } from '@/components/product/ProductHero'
 import { ProductSections } from '@/components/product/ProductSections'
+import { BookSections } from '@/components/product/BookSections'
 import { ReviewMarquee } from '@/components/reviews/ReviewMarquee'
 
-import { getProductBySlug, productHref, products } from '@/content/catalog'
+import { allSlugs, getProductBySlug, isBook, productHref } from '@/content/catalog'
 import { getProductContent } from '@/content/product-content'
 import { getLocale } from '@/i18n/server'
 import { localePath } from '@/i18n/locales'
@@ -18,7 +19,8 @@ const COPY = {
 }
 
 export function generateStaticParams() {
-  return products.map((p) => ({ slug: p.slug }))
+  // The book's page too: it answers 404 until the book is released (server/store-settings).
+  return allSlugs().map((slug) => ({ slug }))
 }
 
 export const dynamicParams = false
@@ -62,11 +64,14 @@ export default async function ProductPage({ params }: PageProps<'/[lang]/product
       <VisitBeacon page={product.slug} />
       <ProductViewed productId={product.id} />
       <ReviewMarquee productId={product.id} className="mb-[var(--sec)]" />
-      <ProductSections product={product} content={content} locale={locale} />
+      {/* The book has its own editorial page; the devices keep their product story. */}
+      {isBook(product.id) ? <BookSections product={product} locale={locale} /> : <ProductSections product={product} content={content} locale={locale} />}
 
-      <p className="wrap py-8 text-[13px] leading-relaxed text-muted">
-        {t.note(product.name)}
-      </p>
+      {!isBook(product.id) && (
+        <p className="wrap py-8 text-[13px] leading-relaxed text-muted">
+          {t.note(product.name)}
+        </p>
+      )}
 
       <JsonLd data={productJsonLd(product, content.seo.description, imageUrls, locale)} />
       <JsonLd

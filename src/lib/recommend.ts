@@ -11,7 +11,7 @@
  * Only catalog products with a price are ever suggested.
  */
 import { UPSELL_MAP } from '@/config/upsell'
-import { getProduct, unitPrice, type ProductId } from '@/content/catalog'
+import { getProduct, isBook, unitPrice, type ProductId } from '@/content/catalog'
 import type { Locale } from '@/i18n/locales'
 import { promotionProgress } from './promotions'
 
@@ -47,6 +47,8 @@ export function recommend(lines: RecLine[], placement: Placement, limit = LIMIT[
   const inCart = new Set(lines.map((l) => l.productId))
   const out: Recommendation[] = []
   const push = (r: Recommendation) => {
+    // Not the book after payment: that order ships with its parent, free, and the book has a delivery fee.
+    if (placement === 'post_purchase' && isBook(r.productId)) return
     if (out.length < limit && !out.some((o) => o.productId === r.productId) && getProduct(r.productId)?.price != null) out.push(r)
   }
 
@@ -91,6 +93,9 @@ const REASON_EN: Record<string, string> = {
   'NEUROS Calm te ajută să treci seara spre un somn mai lin, în câteva minute.': 'NEUROS Calm helps you ease into sleep in the evening, in a few minutes.',
   'NEUROS Focus te ajută să-ți aduni atenția, prin jocuri scurte pe tabletă.': 'NEUROS Focus helps you gather your attention, through short games on a tablet.',
   'Încă o pereche și a treia este gratuită.': 'One more pair and the third one is free.',
+  'Cartea Dianei L. Palotaș explică pe înțelesul tuturor ce se întâmplă în creier când știi, vrei și totuși nu poți.': "Diana L. Palotaș's book explains in plain words what happens in the brain when you know, you want, and still can't.",
+  'Cartea are un capitol despre nervul vag. NEUROS Calm aplică lumină roșie în zona lui, câteva minute pe zi.': 'The book has a chapter on the vagus nerve. NEUROS Calm applies red light over it, a few minutes a day.',
+  'Cartea explică EEG-ul pe înțelesul tuturor. NEUROS Focus este o cască EEG cu jocuri pentru atenție.': 'The book explains EEG in plain words. NEUROS Focus is an EEG headband with attention games.',
 }
 
 /** A recommendation's reason in the visitor's language (the engine itself works in Romanian). */

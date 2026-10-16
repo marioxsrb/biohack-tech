@@ -15,6 +15,7 @@ import { companyLine } from '@/config/company'
 import { gatedOrigin } from '@/lib/lead'
 import { formatLei } from '@/lib/money'
 import { priceLines } from '@/lib/promotions'
+import { shippingFor } from '@/lib/shipping'
 import { CALL_CODE, PROMOTIONS } from '@/config/promotions'
 import type { Config } from '@/server/config'
 import type { Queryable } from '@/server/db'
@@ -43,12 +44,12 @@ export function leadItems(lead: Pick<Lead, 'productId' | 'variantId' | 'cart'>) 
   })
 }
 
-/** A checkout's total at today's prices and promotions; null for a price-form lead (there is no cart). */
+/** A checkout's total at today's prices and promotions, with the delivery (the book's fee); null for a price-form lead (there is no cart). */
 export function cartTotal(lead: Pick<Lead, 'productId' | 'variantId' | 'cart'>): number | null {
   if (!hasCart(lead)) return null
   const items = leadItems(lead)
   if (!items.length) return null
-  return priceLines(items.map((l, i) => ({ key: String(i), productId: l.productId, quantity: l.quantity, unitAmount: l.unit }))).totalMinor
+  return priceLines(items.map((l, i) => ({ key: String(i), productId: l.productId, quantity: l.quantity, unitAmount: l.unit }))).totalMinor + shippingFor(items)
 }
 
 /**

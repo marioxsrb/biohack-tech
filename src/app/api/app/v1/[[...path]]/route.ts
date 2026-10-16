@@ -1,4 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
+import { blockFor } from '@/server/digital/delivery'
+import { entitlements, type Entitlement } from '@/server/digital/entitlements'
+import { hasBook } from '@/server/digital/rules'
 import { appDevices, appSessions } from '@/server/app/auth'
 import { getDb } from '@/server/db'
 import { errText, log } from '@/server/log'
@@ -69,7 +72,18 @@ function row(o: Order) {
 }
 
 /** One order, read-only: lines, money, customer, addresses, payment, invoice, shipping and its history. */
-function detail(o: Order, events: { type: string; source: string; created_at: string }[]) {
+/**
+ * The book's PDF (orders with Diana L. Palotaș's book only; null otherwise): access active, waiting for payment or
+ * delivery, blocked or revoked; the email and the downloads. Additive: older app builds ignore it.
+ */
+function digitalOf(o: Order, e: Entitlement | null) {
+  if (!hasBook(o)) return null
+  const block = blockFor(o, e)
+  const status = e?.status === 'revoked' ? 'revoked' : !block && e ? 'active' : block && (block.reason === 'not_paid' || block.reason === 'awaiting_delivery') ? 'waiting' : block ? 'blocked' : 'pending'
+  return { status, reason: block?.text ?? null, emailStatus: e?.emailStatus ?? 'none', emailSentAt: iso(e?.emailSentAt ?? null), downloads: e?.downloads ?? 0 }
+}
+
+function detail(o: Order, events: { type: string; source: string; created_at: string }[], e: Entitlement | null = null) {
   return {
     ...row(o),
     subtotal: o.subtotalMinor / 100,
@@ -101,6 +115,7 @@ function detail(o: Order, events: { type: string; source: string; created_at: st
     source: o.attribution?.utm?.utm_source ?? null,
     funnel: o.attribution?.funnel ?? null,
     history: events.map((e) => ({ type: e.type, source: e.source, at: new Date(e.created_at).toISOString() })),
+    digital: digitalOf(o, e),
   }
 }
 
@@ -153,7 +168,7 @@ async function handle(req: NextRequest, ctx: Ctx, method: 'GET' | 'POST' | 'PATC
       if (b) {
         const o = await orders.byId(db, b)
         if (!o) return bad('not found', 404)
-        return json(detail(o, await orders.events(db, o.id)))
+        return json(detail(o, await orders.events(db, o.id), await entitlements.byOrder(db, o.id)))
       }
       const sp = req.nextUrl.searchParams
       const f = sp.get('filter') ?? 'all'

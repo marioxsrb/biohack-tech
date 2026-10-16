@@ -16,8 +16,10 @@ export type CartEmail = {
   locale: 'ro' | 'en'
   firstName: string | null
   items: CartEmailItem[]
-  /** Today's total with the automatic promotions, before the code; null hides it. */
+  /** Today's total with the automatic promotions and the delivery, before the code; null hides it. */
   totalMinor: number | null
+  /** The cart holds the book: its delivery fee (0 or absent = free delivery, as for every other cart). */
+  shippingMinor?: number
   format: (minor: number) => string
   /** The recovery code and its percentage, when one is active. */
   code: { code: string; percent: number } | null
@@ -96,7 +98,20 @@ const TEXT = '#27343a'
 const MUTED = '#5a6870'
 
 export function renderCartRecovery(x: CartEmail) {
-  const t = COPY[x.locale]
+  // A cart with the book pays its delivery fee once: the email never says "free delivery" for it.
+  const paid = (x.shippingMinor ?? 0) > 0
+  const base = COPY[x.locale]
+  const delivery = paid ? (x.locale === 'en' ? `Delivery: ${x.format(x.shippingMinor!)}` : `Livrare: ${x.format(x.shippingMinor!)}`) : base.trust[0]
+  const t = {
+    ...base,
+    trust: [delivery, ...base.trust.slice(1)],
+    faq: paid
+      ? base.faq.map(([q, a], n) =>
+          n === 0 ? [q, x.locale === 'en' ? `By courier. Your cart has the book, so one delivery fee applies (${x.format(x.shippingMinor!)}), once per order.` : `Prin curier. Coșul conține cartea, așa că livrarea costă ${x.format(x.shippingMinor!)}, o singură dată pe comandă.`] : [q, a],
+        )
+      : base.faq,
+    total: paid ? (x.locale === 'en' ? 'Total, with the cart promotions and delivery' : 'Total, cu promoțiile din coș și livrarea') : base.total,
+  }
   const what = [...new Set(x.items.map((i) => i.name))].join(', ') || (x.locale === 'en' ? 'your products' : 'produsele tale')
   const i = x.step - 1
   const subject = t.subject(what, x.code?.code ?? null)[i]

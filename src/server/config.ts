@@ -108,7 +108,16 @@ export type Config = {
    * APNS_BUNDLE_ID and APNS_PRIVATE_KEY (the key's PEM text; "\n" escapes allowed). Null until all four are set.
    */
   apns: { keyId: string; teamId: string; bundleId: string; privateKey: string } | null
+  /**
+   * The book's digital edition (server/digital). The PDF is never stored here: each authorized download fetches the
+   * original from NEUROS (NEUROS_BOOK_PDF_URL, signed with NEUROS_BOOK_PDF_SECRET, the value NEUROS has as
+   * BIOHACKTECH_BOOK_SECRET), and the customers' links are signed with DIGITAL_LINK_SECRET. Null until all three
+   * are valid: the book then stays out of the store (content/catalog release), so nobody buys a PDF we cannot hand over.
+   */
+  digital: DigitalConfig | null
 }
+
+export type DigitalConfig = { linkSecret: string; source: { url: string; secret: string } }
 
 export type CallingConfig = {
   enabled: boolean
@@ -342,6 +351,30 @@ function readImap(smtp: SmtpConfig | null): EmailConfig['imap'] {
 }
 
 /** Conversions API. Absent token means no server Purchase (the browser pixel is unchanged). */
+function readDigital(appEnv: AppEnv, issues: ConfigIssue[]): DigitalConfig | null {
+  const url = str('NEUROS_BOOK_PDF_URL')
+  const secret = str('NEUROS_BOOK_PDF_SECRET')
+  const linkSecret = str('DIGITAL_LINK_SECRET')
+  if (!url && !secret && !linkSecret) {
+    issues.push({ area: 'digital', level: 'warn', message: 'Cartea digitală nu este configurată (NEUROS_BOOK_PDF_URL, NEUROS_BOOK_PDF_SECRET, DIGITAL_LINK_SECRET): cartea nu apare în magazin.' })
+    return null
+  }
+  const problems: string[] = []
+  let parsed: URL | null = null
+  try {
+    parsed = url ? new URL(url) : null
+  } catch {}
+  const local = parsed?.protocol === 'http:' && /^(localhost|127\.0\.0\.1)$/.test(parsed.hostname) && appEnv !== 'production'
+  if (!parsed || (parsed.protocol !== 'https:' && !local)) problems.push('NEUROS_BOOK_PDF_URL trebuie să fie o adresă https')
+  if (!secret || secret.length < 32) problems.push('NEUROS_BOOK_PDF_SECRET trebuie să aibă cel puțin 32 de caractere')
+  if (!linkSecret || linkSecret.length < 32) problems.push('DIGITAL_LINK_SECRET trebuie să aibă cel puțin 32 de caractere')
+  if (problems.length) {
+    issues.push({ area: 'digital', level: 'error', message: `Cartea digitală este oprită: ${problems.join('; ')}.` })
+    return null
+  }
+  return { linkSecret: linkSecret!, source: { url: parsed!.toString(), secret: secret! } }
+}
+
 function readApns(): Config['apns'] {
   const keyId = str('APNS_KEY_ID')
   const teamId = str('APNS_TEAM_ID')
@@ -453,6 +486,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     ...readCalling(issues, isolated),
     metaCapi: readMetaCapi(),
     apns: isolated ? null : readApns(),
+    digital: readDigital(appEnv, issues),
   }
   cached = { config, issues }
   return cached

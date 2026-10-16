@@ -5,7 +5,8 @@
  */
 import type { ProductId } from './catalog'
 
-type ProductText = { kind: string; purpose: string; tagline: string; chooseLabel?: string }
+/** `name`: only where the Romanian name has Romanian words beyond the brand (the book). */
+type ProductText = { kind: string; purpose: string; tagline: string; chooseLabel?: string; name?: string }
 
 export const productTextEn: Record<ProductId, ProductText> = {
   'balance-wave': {
@@ -24,6 +25,14 @@ export const productTextEn: Record<ProductId, ProductText> = {
     tagline: 'It helps you end the day more calmly. Screen light feels softer, and it supports more rested eyes. Choose from four frames.',
     chooseLabel: 'Choose the frame',
   },
+  // The book is written in Romanian (print and PDF): its title stays the Romanian one; NEUROS's English title is
+  // "I Know. I Want. WHY CAN'T I?" (no English edition is sold).
+  'carte-diana': {
+    name: 'The book „Știu. Vreau. DE CE NU POT?”',
+    kind: 'Book by Diana L. Palotaș, print + PDF, in Romanian',
+    purpose: 'The answer is in the brain',
+    tagline: "You know what to do and you want the change, yet something holds you back. Diana L. Palotaș's book looks for the answer where everything begins: in the brain.",
+  },
 }
 
 /** Option names and values, by their Romanian label. */
@@ -38,6 +47,8 @@ export const optionLabelEn: Record<string, string> = {
 }
 
 const ALT: Record<string, string> = {
+  'Coperta cărții „Știu. Vreau. DE CE NU POT?” de Diana L. Palotaș': "Cover of the book “Știu. Vreau. DE CE NU POT?” (I Know. I Want. WHY CAN'T I?) by Diana L. Palotaș",
+  'Diana L. Palotaș, autoarea cărții „Știu. Vreau. DE CE NU POT?”': 'Diana L. Palotaș, author of the book “Știu. Vreau. DE CE NU POT?”',
   'Cele patru rame NEUROS Amber, așezate pe o masă': 'The four NEUROS Amber frames on a table',
   'Cele patru rame NEUROS Amber, printre ele cat eye negru': 'The four NEUROS Amber frames, the black cat eye among them',
   'Cele patru rame NEUROS Amber: cat eye negru și bej, unisex pătrat negru și maro': 'The four NEUROS Amber frames: cat eye in black and beige, unisex square in black and brown',

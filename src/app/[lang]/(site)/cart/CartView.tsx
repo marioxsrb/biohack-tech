@@ -51,14 +51,14 @@ const useHydrated = () =>
 /** The cart as its own page: every line editable, one clear way forward. */
 export function CartView() {
   const hydrated = useHydrated()
-  const { lines, count, pricing, setQuantity, remove } = useCart()
+  const { lines, count, pricing, shipping, setQuantity, remove } = useCart()
   const { fmt } = useMoney()
   const locale = useLocale()
   const t = COPY[locale]
   const ui = useUi()
 
   useEffect(() => {
-    if (hydrated && lines.length) track('view_cart', { value: pricing.totalMinor, items: lines })
+    if (hydrated && lines.length) track('view_cart', { value: pricing.totalMinor + shipping, items: lines })
     // Once per visit of the page, not on every quantity change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated])
@@ -138,14 +138,14 @@ export function CartView() {
               {t.summary}
             </h2>
             <div className="mt-4">
-              <Totals pricing={pricing} />
+              <Totals pricing={pricing} shippingMinor={shipping} />
             </div>
             <p className="text-right text-[13px] text-muted">{ui.vat}</p>
             <CarryLink href="/checkout" className="cta mt-5 w-full">
               <Lock /> {ui.checkout}
             </CarryLink>
             <p className="mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-[14px] text-text">
-              <span>✓ {ui.freeDelivery} · {ui.returns} · {ui.warranty}</span>
+              <span>✓ {shipping ? ui.bookDelivery : `${ui.freeDelivery} · ${ui.returns} · ${ui.warranty}`}</span>
               <Link href="/products" className="font-medium text-ink underline underline-offset-4">
                 {ui.keepShopping}
               </Link>

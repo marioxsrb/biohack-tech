@@ -54,6 +54,9 @@ import blGeanta from '@/assets/img/brainlink/casca-geanta.webp'
 import blTableta from '@/assets/img/brainlink/pillar-games.webp'
 import blRelaxare from '@/assets/img/brainlink/lifestyle-relaxare.webp'
 
+import carteCoperta from '@/assets/img/carte/coperta.webp'
+import carteAutoare from '@/assets/img/carte/diana-palotas.webp'
+
 
 /**
  * `cutout`: transparent product shot, shown whole on a neutral stage.
@@ -84,7 +87,11 @@ export type ProductOption = {
   values: { id: string; label: string; swatch?: string }[]
 }
 
-export type ProductId = 'ochelari-biohack' | 'balance-wave' | 'brainlink-pro'
+export type ProductId = 'ochelari-biohack' | 'balance-wave' | 'brainlink-pro' | 'carte-diana'
+
+/** Diana L. Palotaș's book: print edition + PDF. The only product with a delivery fee and a digital part. */
+export const BOOK_ID = 'carte-diana' satisfies ProductId
+export const isBook = (productId: string) => productId === BOOK_ID
 
 export type Product = {
   id: ProductId
@@ -92,6 +99,8 @@ export type Product = {
   slug: string
   /** Maker shown above the model name. */
   brand?: 'NEUROS'
+  /** A book's author (the book has no maker brand). */
+  author?: string
   /** The short name: Calm, Focus, Amber. */
   model: string
   /** Full customer-facing name: "NEUROS Calm". */
@@ -122,6 +131,13 @@ export type Product = {
   /** Out of stock (set in /admin/setari): shown, never sold. */
   soldOut?: boolean
 }
+
+/**
+ * Products that stay out of the store (not listed, not found, not sold) until the server releases them. The book is
+ * released only once its PDF can be delivered securely (server/digital: NEUROS source and link secret configured),
+ * so nobody can buy a digital edition the store cannot hand over.
+ */
+const NEEDS_RELEASE: string[] = [BOOK_ID]
 
 const cut = (src: StaticImageData, alt: string, bleed?: 'bottom'): ProductImage => ({ src, alt, kind: 'cutout', bleed })
 const photo = (src: StaticImageData, alt: string): ProductImage => ({ src, alt, kind: 'photo' })
@@ -256,6 +272,23 @@ const catalog: Omit<Product, 'price'>[] = [
     ],
     chooseLabel: 'Alege rama',
   },
+  {
+    // Text from NEUROS (neuros.ro/cartea-dianei) and from the book itself (title page, contents, preface).
+    id: 'carte-diana',
+    slug: 'cartea-dianei',
+    author: 'Diana L. Palotaș',
+    model: 'Știu. Vreau. DE CE NU POT?',
+    name: 'Cartea „Știu. Vreau. DE CE NU POT?”',
+    kind: 'Cartea Dianei L. Palotaș, fizică + PDF',
+    purpose: 'Răspunsul este în creier',
+    tagline: 'Știi ce ai de făcut și îți dorești schimbarea, dar ceva te oprește. Cartea Dianei L. Palotaș caută răspunsul acolo unde începe totul: în creier.',
+    cutout: cut(carteCoperta, 'Coperta cărții „Știu. Vreau. DE CE NU POT?” de Diana L. Palotaș'),
+    lifestyle: photo(carteAutoare, 'Diana L. Palotaș, autoarea cărții „Știu. Vreau. DE CE NU POT?”'),
+    images: [
+      cut(carteCoperta, 'Coperta cărții „Știu. Vreau. DE CE NU POT?” de Diana L. Palotaș'),
+      photo(carteAutoare, 'Diana L. Palotaș, autoarea cărții „Știu. Vreau. DE CE NU POT?”'),
+    ],
+  },
 ]
 
 /**
@@ -265,13 +298,12 @@ const catalog: Omit<Product, 'price'>[] = [
 export const DISCONTINUED_PRODUCTS: Record<string, { name: string }> = { 'brain-flow': { name: 'NEUROS Flow' } }
 export const isDiscontinued = (id: string) => id in DISCONTINUED_PRODUCTS
 
-/** Romanian: the source of truth, and what orders, invoices and the CRM store. */
-export const products: Product[] = catalog.map((p) => priced(p))
+/** Every product, released or not (Romanian, then English): the overrides are applied to these. */
+const allRo: Product[] = catalog.map((p) => priced(p))
 
 const enImage = (i: ProductImage): ProductImage => ({ ...i, alt: altEn(i.alt) })
 
-/** The same products with the English text a visitor reads on /en. Ids, prices and images are identical. */
-const productsEn: Product[] = products.map((p) => ({
+const allEn: Product[] = allRo.map((p) => ({
   ...p,
   ...productTextEn[p.id],
   cutout: enImage(p.cutout),
@@ -281,17 +313,50 @@ const productsEn: Product[] = products.map((p) => ({
   variants: p.variants?.map((v) => ({ ...v, images: v.images.map(enImage) })),
 }))
 
+/**
+ * Released at build time when the deployment has the book's PDF configured (NEXT_PUBLIC_BOOK_RELEASED, computed in
+ * next.config.ts with the same checks as server/config readDigital), so the server, its pre-rendered pages and the
+ * browser agree before any setting loads; the server's own decision (store-settings) then confirms it.
+ */
+let released: string[] = process.env.NEXT_PUBLIC_BOOK_RELEASED === '1' ? [BOOK_ID] : []
+const isListed = (p: Product) => !NEEDS_RELEASE.includes(p.id) || released.includes(p.id)
+
+/** Romanian: the source of truth, and what orders, invoices and the CRM store. Only released products. */
+export const products: Product[] = allRo.filter(isListed)
+
+/** The same products with the English text a visitor reads on /en. Ids, prices and images are identical. */
+const productsEn: Product[] = allEn.filter(isListed)
+
+/** Every product's URL segment, released or not (static generation; an unreleased page answers 404). */
+export const allSlugs = () => allRo.map((p) => p.slug)
+
+/** Whether a product waiting for release (the book) is in the store now. */
+export const isReleased = (productId: string) => !NEEDS_RELEASE.includes(productId) || released.includes(productId)
+
 /** Every product, in the visitor's language (Romanian by default). */
 /**
  * The admin's store settings (server/store-settings.ts): prices and stock that replace config/prices.ts while
  * set. Applied in place on both lists, on the server (from Supabase) and in the browser (from the page, see
  * STORE_SCRIPT), so every price on the site, in the cart and in the order comes from the same numbers.
  */
-export type CatalogOverrides = { prices?: Partial<Record<string, PriceEntry>>; soldOut?: string[]; welcomePopup?: boolean; assistant?: boolean; chatSound?: string; fx?: Partial<Rates> | null }
+export type CatalogOverrides = {
+  prices?: Partial<Record<string, PriceEntry>>
+  soldOut?: string[]
+  /** Products waiting for release that the server released (the book, once its PDF can be delivered). */
+  released?: string[]
+  welcomePopup?: boolean
+  assistant?: boolean
+  chatSound?: string
+  fx?: Partial<Rates> | null
+}
 
 export function applyCatalogOverrides(o: CatalogOverrides) {
   setRates(o.fx)
-  for (const list of [products, productsEn]) {
+  if (o.released) released = o.released.filter((id) => NEEDS_RELEASE.includes(id))
+  // The listed arrays are refilled in place, so every module holding them sees the same products.
+  products.splice(0, products.length, ...allRo.filter(isListed))
+  productsEn.splice(0, productsEn.length, ...allEn.filter(isListed))
+  for (const list of [allRo, allEn]) {
     for (const p of list) {
       const base = catalog.find((c) => c.id === p.id)!
       const entry = o.prices && p.id in o.prices ? o.prices[p.id] : PRICES_RON[p.id as ProductId]

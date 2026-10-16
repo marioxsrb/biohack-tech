@@ -428,7 +428,7 @@ export function renderEmail(t: EmailTemplate, o: Order, ctx: EmailContext) {
   const content = `<h1 style="margin:0 0 16px;font-size:22px;line-height:1.3;color:#0b1316">${esc(lead)}</h1>
 ${all.map((b) => b.html).join('\n')}
 ${cta ? `<p style="margin:22px 0 0"><a href="${esc(cta.url)}" style="display:inline-block;background:#d23b3b;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:13px 22px;border-radius:12px">${esc(cta.label)}</a></p>` : ''}`
-  const html = emailShell({ subject, content, siteUrl: siteOrigin(o.site, ctx.siteUrl), locale: o.locale })
+  const html = emailShell({ subject, content, siteUrl: siteOrigin(o.site, ctx.siteUrl), locale: o.locale, paidDelivery: o.shippingMinor > 0 })
   const text = [lead, '', ...all.map((b) => b.text).filter(Boolean), ...(cta ? ['', `${cta.label}: ${cta.url}`] : []), '', `${site.name} · ${site.email} · ${site.phone}`].join('\n')
   return { subject, html, text }
 }

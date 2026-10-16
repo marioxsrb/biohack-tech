@@ -142,6 +142,12 @@ for (let i = 0; i < 120 && !health?.payments?.card; i++) {
   health = await fetch(`${BASE}/api/health`).then((r) => r.json()).catch(() => null)
 }
 if (!health?.database) die('Baza de date izolată nu a pornit (vezi erorile de mai sus).')
+// The integrations are shown only to a signed-in admin (the health check is minimal for visitors): sign in as this
+// environment's own test admin and read them again.
+const login = await fetch(`${BASE}/api/admin/login`, { method: 'POST', body: new URLSearchParams({ user: 'test', password: adminPassword }), redirect: 'manual' })
+const adminCookie = (login.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).join('; ')
+health = await fetch(`${BASE}/api/health`, { headers: { cookie: adminCookie } }).then((r) => r.json()).catch(() => null)
+if (!health?.integrations) die('Nu am putut citi starea integrărilor ca admin de test.')
 if (!health.payments.card) die(`Plata cu cardul nu este disponibilă în mediul de test (probleme: ${health.errors.join(', ') || 'necunoscute'}).`)
 if (health.integrations.fgo || health.integrations.ghl || health.integrations.email !== 'file') die('Izolarea nu este activă (FGO/GHL pornite). Oprește și raportează.')
 const checkoutHtml = await fetch(`${BASE}/checkout`).then((r) => r.text())

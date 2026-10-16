@@ -22,7 +22,7 @@ const STAGES = ['Așteaptă transferul', 'Ramburs, de pregătit', 'Plată nefina
 const FIELDS = ['customer_type', 'last_order_number', 'last_order_date', 'last_order_value', 'last_order_products', 'last_payment_method',
   'last_payment_status', 'last_order_status', 'lifetime_orders', 'lifetime_value', 'marketing_consent', 'last_order_url', 'recovery_url',
   'unsubscribe_url', 'last_order_source'].map((f) => `contact.bt_${f}`)
-const TAGS = ['bt-client', 'bt-client-firma', 'bt-cumparat-calm', 'bt-cumparat-focus', 'bt-cumparat-amber', 'bt-cumparat-brain-flow',
+const TAGS = ['bt-client', 'bt-client-firma', 'bt-cumparat-calm', 'bt-cumparat-focus', 'bt-cumparat-amber', 'bt-cumparat-carte', 'bt-cumparat-brain-flow',
   'bt-recuperare-eligibil', 'bt-retur-solicitat', 'bt-retur-primit', 'bt-mesaj-contact']
 
 const get = async (path) => {
@@ -44,6 +44,17 @@ if (pipeline) {
   console.log(`      GHL_PIPELINE_ID=${pipeline.id}${process.env.GHL_PIPELINE_ID?.trim() === pipeline.id ? '  (matches .env.local)' : ''}`)
   const gaps = missing(STAGES, pipeline.stages.map((s) => s.name.trim()))
   check('all 8 stages, exact names', gaps.length === 0, gaps.join(', '))
+}
+
+// The customers pipeline (one column per product; the book's since 16.10.2026). Missing columns fall back to
+// "Mai multe produse" in the app, so this only warns what to create in the GHL UI.
+const BUYERS = 'Clienți Biohack Tech'
+const BUYER_STAGES = ['NEUROS Calm', 'NEUROS Focus', 'NEUROS Amber', 'Cartea Diana Palotaș', 'Mai multe produse']
+const buyers = pipelines.body?.pipelines?.find((p) => p.name?.trim() === BUYERS)
+check(`pipeline "${BUYERS}" exists`, !!buyers)
+if (buyers) {
+  const gaps = missing(BUYER_STAGES, buyers.stages.map((s) => s.name.trim()))
+  check(`"${BUYERS}": ${BUYER_STAGES.length} stages, exact names`, gaps.length === 0, gaps.join(', '))
 }
 
 const fields = await get(`/locations/${encodeURIComponent(LOCATION)}/customFields?model=contact`)

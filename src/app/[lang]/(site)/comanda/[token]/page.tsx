@@ -17,6 +17,8 @@ import { orders } from '@/server/orders/repository'
 import { awaitsCollection, isPaid } from '@/server/orders/state'
 import { offersFor } from '@/server/orders/upsell'
 import { CopyButton, OrderEffects, WaitForPayment } from './OrderClient'
+import { DigitalBook } from './DigitalBook'
+import { pageDigital } from '@/server/digital/delivery'
 import { PostPurchaseOffer } from './PostPurchaseOffer'
 
 export const metadata: Metadata = { title: 'Comanda ta', robots: { index: false, follow: false } }
@@ -151,6 +153,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
   const offers = c.stripe ? offersFor(order) : []
   const child = order.kind === 'checkout' ? await orders.childOf(db, order.id) : null
   const parent = order.parentOrderId ? await orders.byId(db, order.parentOrderId) : null
+  // The book's PDF: from the order's own state only (granted by Stripe's webhook, a confirmed transfer or a delivery).
+  const digital = await pageDigital(db, order, c)
   const items = order.items.map((i) => lineKey({ productId: i.productId as never, variantId: i.variantId ?? undefined }))
   const money = (minor: number) => formatMoney(minor, order.currency)
   // Ad platforms count sales in lei. `track` still expects minor units, so the purchase value stays in bani
@@ -184,6 +188,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
             {t.paidText(order.email)}
           </p>
         )}
+        {/* The book's PDF first: what the customer came for, before any optional offer. */}
+        {digital && <DigitalBook state={digital} locale={L} />}
         {parent && (
           <p className="mt-2 text-[15px] text-muted">{t.addedAfter(parent.orderNumber)}</p>
         )}
@@ -214,7 +220,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
         {cardPending && (
           <>
             <p className="sub mt-4">{t.stripeWait}</p>
-            <WaitForPayment />
+            {/* With the book, the PDF section below waits for the confirmation (and refreshes the page) itself. */}
+            {digital?.state !== 'confirming' && <WaitForPayment />}
           </>
         )}
         {cardFailed && (

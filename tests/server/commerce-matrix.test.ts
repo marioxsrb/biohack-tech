@@ -64,8 +64,8 @@ function agreeEverywhere(o: Awaited<ReturnType<typeof buy>>, method: 'card' | 't
 const LEI = (n: number) => n * 100
 
 describe('configured prices', () => {
-  it('only Calm 6.380, Focus 1.800 and Amber 315 lei; NEUROS Flow has no price', () => {
-    expect(PRICES_RON).toEqual({ 'balance-wave': LEI(6380), 'brainlink-pro': LEI(1800), 'ochelari-biohack': LEI(315) })
+  it('only Calm 6.380, Focus 1.800, Amber 315 and the book 119,79 lei; NEUROS Flow has no price', () => {
+    expect(PRICES_RON).toEqual({ 'balance-wave': LEI(6380), 'brainlink-pro': LEI(1800), 'ochelari-biohack': LEI(315), 'carte-diana': 11979 })
   })
 })
 

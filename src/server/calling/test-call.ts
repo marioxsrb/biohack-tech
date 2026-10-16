@@ -14,6 +14,7 @@ import { CALL_CODE, PROMOTIONS } from '@/config/promotions'
 import { romanianE164 } from '@/lib/consent/calling'
 import { formatLei } from '@/lib/money'
 import { priceLines } from '@/lib/promotions'
+import { shippingFor } from '@/lib/shipping'
 import type { Config } from '@/server/config'
 import type { Queryable } from '@/server/db'
 import { elevenlabs } from '@/server/integrations/elevenlabs'
@@ -61,7 +62,7 @@ export function testVariables(id: string, x: TestCallInput) {
     abandonment_type: cart ? 'cos_nefinalizat' : 'oferta_solicitata',
     product_names: names,
     product_quantities: cart ? lines.map((l) => `${l.quantity} × ${l.name}${l.variant ? ` (${l.variant})` : ''}`).join(', ') : '',
-    cart_total: cart ? formatLei(pricing.totalMinor) : '',
+    cart_total: cart ? formatLei(pricing.totalMinor + shippingFor(lines)) : '',
     existing_discounts: cart ? pricing.promotions.map((a) => `${a.label}: −${formatLei(a.amountMinor)}`).join('; ') : promo ? `promoție disponibilă: ${promo.line}` : '',
     recovery_discount_percent: RECOVERY_PERCENT,
     recovery_code: CALL_CODE,

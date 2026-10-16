@@ -5,7 +5,9 @@
  * delivery time or a guarantee. A test keeps docs/ai-calling/agent.json in sync with this file; the script
  * scripts/elevenlabs-agent.mjs sends that JSON to ElevenLabs (create or update).
  */
-import { productsIn, unitPrice, variantLabel } from '@/content/catalog'
+import { BOOK_ID, getProduct, isBook, productsIn, unitPrice, variantLabel } from '@/content/catalog'
+import { bookCopy } from '@/content/book'
+import { BOOK_SHIPPING_RON } from '@/config/prices'
 import { getProductContent } from '@/content/product-content'
 import { legalPages, type LegalBlock } from '@/content/legal'
 import { PROMOTIONS } from '@/config/promotions'
@@ -46,9 +48,13 @@ export function agentKnowledge(siteUrl: string = site.url, opts: { prices: boole
     return [
       `## ${p.name} (${p.kind})`,
       `Pentru ce este: ${p.purpose}. ${p.tagline}`,
-      opts.prices
-        ? `Preț: ${p.price !== null ? `${p.variablePrice ? 'de la ' : ''}${money(p.price)}` : 'nu are încă preț'} (${terms.vat}, ${cur === 'RON' ? terms.shipping.toLowerCase() : 'livrare gratuită oriunde în lume'}).`
-        : `Preț: se vede după formularul „Vezi prețul și oferta” (${terms.shipping.toLowerCase()}).`,
+      isBook(p.id)
+        ? opts.prices
+          ? `Preț: ${p.price !== null ? money(p.price) : 'nu are încă preț'} (${terms.vat}). Livrare: ${money(BOOK_SHIPPING_RON)}, o singură dată pe comandă, oricâte cărți sau alte produse are comanda.`
+          : 'Preț: se vede după formularul „Vezi prețul și oferta”. Livrarea se plătește o singură dată pe comandă (suma apare tot după formular).'
+        : opts.prices
+          ? `Preț: ${p.price !== null ? `${p.variablePrice ? 'de la ' : ''}${money(p.price)}` : 'nu are încă preț'} (${terms.vat}, ${cur === 'RON' ? terms.shipping.toLowerCase() : 'livrare gratuită oriunde în lume'}).`
+          : `Preț: se vede după formularul „Vezi prețul și oferta” (${terms.shipping.toLowerCase()}).`,
       ...(variants.length ? ['Variante:', ...variants] : []),
       ...(promo ? [`Promoție: ${promo.line}`] : []),
       `Pagina produsului: ${siteUrl}/products/${p.slug}`,
@@ -64,21 +70,48 @@ export function agentKnowledge(siteUrl: string = site.url, opts: { prices: boole
       ...c.faqs.flatMap((f) => [`Î: ${f.q}`, `R: ${f.a}`]),
     ].join('\n')
   })
+  const book = getProduct(BOOK_ID)
   return [
     `# Biohack Tech`,
-    `Magazin online din România care vinde dispozitivele NEUROS. Site: ${siteUrl}. Email: ${site.email}. Telefon: ${site.phone}. Răspundem ${terms.responseTime}.`,
+    `Magazin online din România care vinde dispozitivele NEUROS${book ? ' și cartea Dianei L. Palotaș' : ''}. Site: ${siteUrl}. Email: ${site.email}. Telefon: ${site.phone}. Răspundem ${terms.responseTime}.`,
     `Produse vândute acum: ${productsIn('ro').map((p) => p.name).join(', ')}. NEUROS Flow nu se mai vinde.`,
+    ...(book ? [`Livrare: gratuită pentru comenzile fără carte. O comandă care conține cartea plătește livrarea o singură dată${opts.prices ? ` (${money(BOOK_SHIPPING_RON)}, adică 10 lei + TVA)` : ''}, oricâte produse are. Livrarea nu primește reduceri și nu intră în codurile promoționale.`] : []),
     ...products,
+    ...(book ? [bookKnowledge()] : []),
     cur === 'RON'
       ? `## Plată\nMetode: ${[cashOnDelivery.enabled && 'ramburs (plata la livrare, curierului)', 'card bancar online prin Stripe', 'transfer bancar'].filter(Boolean).join(', ')}. Datele cardului se introduc doar pe site, niciodată la telefon.`
       : `## Plată\nÎn ${cur}: doar card bancar online prin Stripe (rambursul și transferul sunt pentru comenzile în lei, cu livrare în România). Datele cardului se introduc doar pe site.`,
     opts.prices ? legalSection('plati', 'Plăți (detalii)') : '',
-    legalSection('politica-livrare', 'Livrare'),
+    // Without prices (acces before the form), the delivery page's amounts (the book's fee) are left out too.
+    opts.prices ? legalSection('politica-livrare', 'Livrare') : legalSection('politica-livrare', 'Livrare').replace(/\d+(?:[.,]\d+)?\s*lei(?:\s*\([^)]*\))?/g, '(suma apare după formular)'),
     legalSection('politica-retur', 'Retur și drept de retragere'),
     legalSection('garantie', 'Garanție și reclamații'),
   ]
     .filter(Boolean)
     .join('\n\n')
+}
+
+/** The book beyond its product card: contents, author, physical + PDF delivery and the PDF's rules by payment method. */
+function bookKnowledge() {
+  const b = bookCopy('ro')
+  return [
+    '## Cartea „Știu. Vreau. DE CE NU POT?”: detalii',
+    `Autoare: ${b.author.name}, ${b.author.role}. ${b.author.bio}`,
+    `Subtitlu: Răspunsul este în creier. Apariție: Sibiu, 2026. Limba: română. Titlul în engleză folosit de NEUROS: ${b.titleEn}. Pe site-ul internațional se vinde aceeași ediție, în română.`,
+    `Despre carte: ${b.about.title} ${b.about.paragraphs.join(' ')}`,
+    'Cuprins (capitolele mari):',
+    ...b.contents.chapters.map((c) => `- ${c.n}. ${c.title}${c.topics ? `: ${c.topics.join(', ')}` : ''}`),
+    b.contents.extra,
+    'Ce primește clientul: cartea fizică, prin curier (1–3 zile lucrătoare până la expediere), și versiunea PDF.',
+    'Când primește PDF-ul (regula nu are excepții):',
+    '- Card: imediat ce Stripe confirmă plata. Butonul „Descarcă versiunea PDF” apare în pagina comenzii și linkul vine și pe email.',
+    '- Transfer bancar: după ce echipa confirmă că banii au ajuns; linkul vine pe email.',
+    '- Ramburs (plata la livrare): după ce coletul este livrat; linkul vine pe email.',
+    '- Niciodată înainte de plată (sau de livrare, la ramburs), niciodată pentru o comandă anulată sau rambursată.',
+    'Descărcare: linkurile expiră din motive de securitate (cel din pagina comenzii după 30 de minute, cel din email după 7 zile). Pagina comenzii dă oricând un link nou. Dacă nu merge, echipa trimite un link nou. PDF-ul nu se trimite niciodată prin chat, telefon sau WhatsApp.',
+    'Reduceri: codurile promoționale valabile se aplică și la carte (nu la livrare). Cartea nu are reducere automată la cantitate și nici ofertă 2+1.',
+    `Retur: cartea fizică se poate returna în ${terms.returnDays} zile de la primire. O comandă anulată sau rambursată pierde accesul la PDF.`,
+  ].join('\n')
 }
 
 export const AGENT_NAME = 'BiohackTech — AI Recovery Agent'
@@ -94,7 +127,10 @@ function coreFacts() {
   return [
     ...products,
     '- NEUROS Flow nu se mai vinde.',
-    `- ${terms.shipping}. ${terms.vat}. Retur în ${terms.returnDays} zile. Garanție ${terms.warrantyYears} ani.`,
+    `- ${terms.shipping}${getProduct(BOOK_ID) ? `, cu o excepție: o comandă cu cartea plătește livrarea o singură dată, ${formatLei(BOOK_SHIPPING_RON)} (10 lei plus TVA), oricâte produse are; livrarea nu primește reduceri` : ''}. ${terms.vat}. Retur în ${terms.returnDays} zile. Garanție ${terms.warrantyYears} ani${getProduct(BOOK_ID) ? ' (la dispozitive)' : ''}.`,
+    ...(getProduct(BOOK_ID)
+      ? ['- Cartea: fizică prin curier + PDF. PDF-ul: la card imediat după confirmarea plății, la transfer după confirmarea plății, la ramburs după livrare; mereu pe email. Codul de zece la sută se aplică și la carte, nu la livrare.']
+      : []),
     `- Plata: ${[cashOnDelivery.enabled && 'ramburs la livrare', 'card online', 'transfer bancar'].filter(Boolean).join(', ')}. Doar pe site, niciodată la telefon.`,
     `- Echipa: ${site.email}, ${site.phone}.`,
   ].join('\n')

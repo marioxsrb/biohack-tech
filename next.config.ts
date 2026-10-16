@@ -1,5 +1,21 @@
 import type { NextConfig } from 'next'
 
+/**
+ * The book is in the store only when its PDF can be delivered: the same checks as server/config.ts readDigital (NEUROS
+ * source over https, both secrets of 32+ characters). Known at build time, so every bundle agrees (content/catalog.ts).
+ */
+function bookReleased() {
+  const url = process.env.NEUROS_BOOK_PDF_URL?.trim() ?? ''
+  const secret = process.env.NEUROS_BOOK_PDF_SECRET?.trim() ?? ''
+  const link = process.env.DIGITAL_LINK_SECRET?.trim() ?? ''
+  let ok = false
+  try {
+    const u = new URL(url)
+    ok = u.protocol === 'https:' || (u.protocol === 'http:' && /^(localhost|127\.0\.0\.1)$/.test(u.hostname) && process.env.APP_ENV !== 'production')
+  } catch {}
+  return ok && secret.length >= 32 && link.length >= 32
+}
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
@@ -7,7 +23,7 @@ const nextConfig: NextConfig = {
   ...(process.env.NEXT_DIST_DIR && { distDir: process.env.NEXT_DIST_DIR }),
   turbopack: { root: process.cwd() },
   // META_PIXEL_ENABLED is a server variable; the browser bundle gets its value at build time.
-  env: { NEXT_PUBLIC_META_PIXEL_ENABLED: process.env.META_PIXEL_ENABLED ?? '' },
+  env: { NEXT_PUBLIC_META_PIXEL_ENABLED: process.env.META_PIXEL_ENABLED ?? '', NEXT_PUBLIC_BOOK_RELEASED: bookReleased() ? '1' : '' },
   // Pages live under app/[lang]; a URL that matches no route at all gets app/global-not-found.tsx.
   experimental: {
     globalNotFound: true,

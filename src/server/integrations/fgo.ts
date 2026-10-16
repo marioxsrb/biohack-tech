@@ -79,7 +79,10 @@ export function invoicePayload(c: FgoConfig, o: Order) {
       NrProduse: i.quantity,
       CotaTVA: c.vatRate,
       PretTotal: lei(i.lineTotalMinor - i.discountMinor),
-    })),
+    })).concat(
+      // Delivery (only orders with the book pay it, once): its own line, never discounted, so the lines still add up.
+      o.shippingMinor > 0 ? [{ Denumire: 'Transport (livrare prin curier)', CodArticol: 'transport', UM: c.unit, NrProduse: 1, CotaTVA: c.vatRate, PretTotal: lei(o.shippingMinor) }] : [],
+    ),
     PlatformaUrl: c.platformUrl,
   }
 }
