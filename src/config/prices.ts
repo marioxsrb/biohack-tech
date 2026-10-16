@@ -23,8 +23,8 @@ export const PRICES_RON: Record<ProductId, PriceEntry> = {
   // NEUROS Amber, all four frames. Approved 26.09.2026: 315 lei.
   'ochelari-biohack': 31500,
   // NEUROS Flow was discontinued on 13.10.2026: no price, so it can never be charged.
-  // Diana L. Palotaș's book, print edition + PDF. NEUROS price (16.10.2026): 99 lei + 21% VAT = 119,79 lei.
-  'carte-diana': 11979,
+  // Diana L. Palotaș's book, print edition + PDF. Set 16.10.2026: 120 lei with 21% VAT (base 99,17 lei + VAT 20,83 lei).
+  'carte-diana': 12000,
 }
 
 /**

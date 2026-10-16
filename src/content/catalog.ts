@@ -54,7 +54,7 @@ import blGeanta from '@/assets/img/brainlink/casca-geanta.webp'
 import blTableta from '@/assets/img/brainlink/pillar-games.webp'
 import blRelaxare from '@/assets/img/brainlink/lifestyle-relaxare.webp'
 
-import carteCoperta from '@/assets/img/carte/coperta.webp'
+import carteCoperta from '@/assets/img/carte/coperta.png'
 import carteAutoare from '@/assets/img/carte/diana-palotas.webp'
 
 

@@ -157,11 +157,11 @@ describe('release: the book is sold only while its PDF can be delivered', () => 
     expect(catalog.getProduct(BOOK)).toBeUndefined()
   })
 
-  it('released: fourth, after NEUROS Calm, Focus and Amber, at 119,79 lei, in both languages', () => {
+  it('released: fourth, after NEUROS Calm, Focus and Amber, at 120 lei, in both languages', () => {
     expect(catalog.products.map((p) => p.id)).toEqual(['balance-wave', 'brainlink-pro', 'ochelari-biohack', BOOK])
     const ro = catalog.getProduct(BOOK)!
     const en = catalog.getProduct(BOOK, 'en')!
-    expect([ro.price, ro.author, ro.model, ro.slug]).toEqual([11979, 'Diana L. Palotaș', 'Știu. Vreau. DE CE NU POT?', 'cartea-dianei'])
+    expect([ro.price, ro.author, ro.model, ro.slug]).toEqual([12000, 'Diana L. Palotaș', 'Știu. Vreau. DE CE NU POT?', 'cartea-dianei'])
     expect(en.kind).toMatch(/in Romanian/)
     expect(catalog.isPurchasable(ro)).toBe(true)
   })
@@ -185,14 +185,14 @@ describe('delivery: free without the book, 10 lei + VAT once per order with it',
 })
 
 describe('orders with the book: one canonical total for Stripe, transfer, COD, FGO, the CRM and the emails', () => {
-  it('book only: 119,79 + 12,10 = 131,89 lei, NEUROS\'s exact total', async () => {
+  it('book only: 120 + 12,10 = 132,10 lei, VAT included', async () => {
     const o = await place([{ productId: BOOK, quantity: 1 }])
-    expect([o.subtotalMinor, o.discountMinor, o.shippingMinor, o.totalMinor]).toEqual([11979, 0, 1210, 13189])
+    expect([o.subtotalMinor, o.discountMinor, o.shippingMinor, o.totalMinor]).toEqual([12000, 0, 1210, 13210])
   })
 
   it('3 books: no quantity discount, no 2+1, delivery once', async () => {
     const o = await place([{ productId: BOOK, quantity: 3 }])
-    expect([o.subtotalMinor, o.discountMinor, o.shippingMinor, o.totalMinor]).toEqual([35937, 0, 1210, 37147])
+    expect([o.subtotalMinor, o.discountMinor, o.shippingMinor, o.totalMinor]).toEqual([36000, 0, 1210, 37210])
     expect(o.promotions).toEqual([])
   })
 
@@ -209,8 +209,8 @@ describe('orders with the book: one canonical total for Stripe, transfer, COD, F
   it('a valid promo code lowers the book, never the delivery', async () => {
     await promoCodes.create(db, { code: 'CARTE10', kind: 'percent', value: 10, products: null, minOrderMinor: 0, maxUses: null, oncePerEmail: false, startsAt: null, endsAt: null, note: '' })
     const o = await place([{ productId: BOOK, quantity: 1 }], 'card', { promoCode: 'CARTE10' })
-    expect(o.discountMinor).toBe(1198)
-    expect([o.shippingMinor, o.totalMinor]).toEqual([1210, 11979 - 1198 + 1210])
+    expect(o.discountMinor).toBe(1200)
+    expect([o.shippingMinor, o.totalMinor]).toEqual([1210, 12000 - 1200 + 1210])
   })
 
   it('cash on delivery collects the total with the delivery; the invoice has its own transport line', async () => {
@@ -232,7 +232,7 @@ describe('orders with the book: one canonical total for Stripe, transfer, COD, F
     const o = await place([{ productId: BOOK, quantity: 2 }], 'card', { currency: 'EUR', locale: 'en', site: 'net' })
     expect(o.currency).toBe('EUR')
     expect(o.shippingMinor).toBe(convertUnit(1210, 'EUR'))
-    expect(o.totalMinor).toBe(2 * convertUnit(11979, 'EUR') + convertUnit(1210, 'EUR'))
+    expect(o.totalMinor).toBe(2 * convertUnit(12000, 'EUR') + convertUnit(1210, 'EUR'))
   })
 })
 
@@ -462,7 +462,7 @@ describe('CRM, assistant, AI caller and the iOS app', () => {
 
   it('the shared knowledge (chat + calls) knows the book, its delivery and the PDF rules; no amounts when prices are hidden', () => {
     const k = agentKnowledge('https://biohack-tech.ro')
-    for (const s of ['Știu. Vreau. DE CE NU POT?', 'Diana L. Palotaș', '119,79 lei', '12,10 lei', 'Ramburs (plata la livrare): după ce coletul este livrat', 'Transfer bancar: după ce echipa confirmă', 'linkurile expiră', 'EEG și QEEG pe înțelesul tuturor'])
+    for (const s of ['Știu. Vreau. DE CE NU POT?', 'Diana L. Palotaș', '120 lei', '12,10 lei', 'Ramburs (plata la livrare): după ce coletul este livrat', 'Transfer bancar: după ce echipa confirmă', 'linkurile expiră', 'EEG și QEEG pe înțelesul tuturor'])
       expect(k).toContain(s)
     const locked = agentKnowledge('https://biohack-tech.ro', { prices: false })
     expect(locked).toContain('Știu. Vreau. DE CE NU POT?')
@@ -476,14 +476,14 @@ describe('CRM, assistant, AI caller and the iOS app', () => {
     const tools = assistantTools({ db, config: getConfig(), locked: false, gated: false, locale: 'ro', currency: 'RON', cart: [{ productId: BOOK, quantity: 2 }], verified: new Map(), onQueued: () => {} })
     const opts = { toolCallId: 't', messages: [], context: {} } as never
     const shown = (await tools.show_products.execute!({ productIds: [BOOK] }, opts)) as { products: { id: string; price?: string }[] }
-    expect(shown.products[0]).toMatchObject({ id: BOOK, price: '119,79 lei' })
+    expect(shown.products[0]).toMatchObject({ id: BOOK, price: '120 lei' })
     const cart = (await tools.cart_summary.execute!({}, opts)) as { total: string; shipping: string }
-    expect(cart.total).toBe('251,68 lei')
+    expect(cart.total).toBe('252,10 lei')
     expect(cart.shipping).toMatch(/^12,10 lei/)
   })
 
   it('the caller\'s cart total includes the delivery for a cart with the book', () => {
-    expect(cartTotal({ productId: null, variantId: null, cart: [{ productId: BOOK, quantity: 1 }] } as never)).toBe(13189)
+    expect(cartTotal({ productId: null, variantId: null, cart: [{ productId: BOOK, quantity: 1 }] } as never)).toBe(13210)
   })
 
   it('iOS API: an order with the book says where its PDF stands (read-only, additive)', async () => {
@@ -495,7 +495,7 @@ describe('CRM, assistant, AI caller and the iOS app', () => {
     const token = (await call('POST', 'auth/login', { username: 'admin', password: process.env.ADMIN_PASSWORD })).token as string
     const o = await place([{ productId: BOOK, quantity: 1 }], 'cod')
     const before = (await call('GET', `orders/${o.id}`, undefined, token)) as { shipping: number; total: number; digital: { status: string } }
-    expect([before.shipping, before.total, before.digital.status]).toEqual([12.1, 131.89, 'waiting'])
+    expect([before.shipping, before.total, before.digital.status]).toEqual([12.1, 132.1, 'waiting'])
     await svc.markShipped(o.id, 'admin', { courier: 'FAN Courier', trackingNumber: 'AWB3' })
     await svc.markDelivered(o.id, 'admin')
     const after = (await call('GET', `orders/${o.id}`, undefined, token)) as { digital: { status: string } }

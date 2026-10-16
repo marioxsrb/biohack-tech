@@ -4,12 +4,12 @@ import { Price } from '@/components/cart/Price'
 import { Faq } from '@/components/ui/Faq'
 import { Check } from '@/components/ui/icons'
 import carteAutoare from '@/assets/img/carte/diana-palotas.webp'
-import carteCoperta from '@/assets/img/carte/coperta.webp'
 import { bookCopy } from '@/content/book'
 import { isPurchasable, type Product } from '@/content/catalog'
 import type { Locale } from '@/i18n/locales'
 import { ui } from '@/i18n/ui'
 import { ShippingFee } from './ShippingFee'
+import { BookCover } from '@/components/book/BookCover'
 
 /** The cover's gold, for the book's page only (the devices keep the store's cyan). */
 const GOLD = 'text-[#a07a2c]'
@@ -164,7 +164,7 @@ export function BookSections({ product, locale }: { product: Product; locale: Lo
         <div className="relative grid items-center gap-10 overflow-hidden rounded-[28px] bg-ink px-[clamp(24px,6vw,72px)] py-[clamp(40px,6vw,72px)] text-white md:grid-cols-12">
           <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(70%_90%_at_0%_100%,rgba(193,154,74,.25),transparent_60%)]" />
           <div className="relative flex justify-center md:col-span-5">
-            <Image src={carteCoperta} alt={product.cutout.alt} placeholder="blur" sizes="280px" className="w-[min(260px,62vw)] rounded-[6px] shadow-[0_40px_80px_-24px_rgba(0,0,0,.7)]" />
+            <BookCover width="clamp(170px, 19vw, 236px)" sizes="(min-width: 768px) 236px, 170px" alt={product.cutout.alt} />
           </div>
           <div className="relative md:col-span-6 md:col-start-7">
             <p className="text-[16px] font-medium text-[#d8b878]">{b.author.name}</p>

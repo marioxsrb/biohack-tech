@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { AddToCartButton } from '@/components/cart/AddToCartButton'
 import { BuyNowButton } from '@/components/cart/BuyNowButton'
 import { Price } from '@/components/cart/Price'
@@ -24,7 +24,15 @@ const COPY = {
   },
 }
 
-type Props = { productId: ProductId; intro: string; highlights: string[] }
+type Props = {
+  productId: ProductId
+  intro: string
+  highlights: string[]
+  /** Replaces the photo gallery (the book shows its cover as an object on a quiet stage). */
+  media?: ReactNode
+  /** Replaces the product name in the heading (the book: its title, set on two lines, and its author). */
+  title?: ReactNode
+}
 
 /**
  * The first screen of a product page: the gallery (about 58%) and everything needed to buy (about 42%),
@@ -34,7 +42,7 @@ type Props = { productId: ProductId; intro: string; highlights: string[] }
  * cash on delivery one click away there), phone and WhatsApp, "Adaugă în coș". Then the store promises.
  * On a phone the same order runs under the gallery.
  */
-export function ProductHero({ productId, intro, highlights }: Props) {
+export function ProductHero({ productId, intro, highlights, media, title }: Props) {
   const locale = useLocale()
   const t = COPY[locale]
   const product = getProduct(productId, locale)!
@@ -110,13 +118,13 @@ export function ProductHero({ productId, intro, highlights }: Props) {
     <>
       <div className="grid grid-cols-1 gap-y-8 md:grid-cols-12 md:gap-x-10 lg:gap-x-14">
         <div className="md:col-span-7">
-          <Gallery key={variant?.id ?? product.id} images={images} label={t.images(product.name)} wide={!!product.variants} />
+          {media ?? <Gallery key={variant?.id ?? product.id} images={images} label={t.images(product.name)} wide={!!product.variants} />}
         </div>
 
         <div className="md:col-span-5 md:pt-2">
           <SocialProof className="mb-4" />
           <p className="text-[16px] font-medium text-cyan-700">{product.purpose}</p>
-          <h1 className="mt-1 text-[clamp(38px,4.2vw,58px)] leading-[0.98] tracking-[-0.045em]">{product.name}</h1>
+          <h1 className="mt-1 text-[clamp(38px,4.2vw,58px)] leading-[0.98] tracking-[-0.045em]">{title ?? product.name}</h1>
           <p className="mt-3 max-w-[30em] text-[17px] leading-snug text-text">{product.tagline}</p>
 
           <Highlights items={highlights} className="mt-5" />

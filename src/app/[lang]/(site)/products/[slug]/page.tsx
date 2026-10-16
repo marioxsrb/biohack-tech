@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import { ProductHero } from '@/components/product/ProductHero'
 import { ProductSections } from '@/components/product/ProductSections'
 import { BookSections } from '@/components/product/BookSections'
+import { BookCover } from '@/components/book/BookCover'
 import { ReviewMarquee } from '@/components/reviews/ReviewMarquee'
 
 import { allSlugs, getProductBySlug, isBook, productHref } from '@/content/catalog'
@@ -57,7 +58,29 @@ export default async function ProductPage({ params }: PageProps<'/[lang]/product
     <>
       <section id="cumpara" className="scroll-mt-[var(--nav-h)] pt-[calc(var(--nav-h)+48px)] pb-[var(--sec)] max-sm:pt-[var(--nav-h)]">
         <div className="wrap">
-          <ProductHero productId={product.id} intro={content.intro} highlights={content.highlights} />
+          <ProductHero
+            productId={product.id}
+            intro={content.intro}
+            highlights={content.highlights}
+            {...(isBook(product.id) && {
+              // The book: its cover as an object on warm paper (the original artwork, shown no larger than it holds),
+              // and its title on two lines with the author, instead of the devices' gallery and name.
+              media: (
+                <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[24px] bg-[#f7f3ec] md:sticky md:top-[calc(var(--nav-h)+24px)] max-md:aspect-[4/5]">
+                  <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(closest-side,rgba(201,164,92,.22),transparent)]" />
+                  <BookCover width="clamp(190px, 21vw, 262px)" sizes="(min-width: 768px) 262px, 190px" alt={product.cutout.alt} priority />
+                </div>
+              ),
+              title: (
+                <>
+                  Știu. Vreau.
+                  <br />
+                  DE CE NU POT?
+                  <span className="mt-4 block text-[18px] leading-snug font-normal tracking-normal text-text">{locale === 'en' ? 'by' : 'de'} Diana L. Palotaș</span>
+                </>
+              ),
+            })}
+          />
         </div>
       </section>
 

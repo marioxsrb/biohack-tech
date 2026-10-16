@@ -1,3 +1,4 @@
+import { BookFeature } from '@/components/home/BookFeature'
 import { VisitBeacon } from '@/components/gate/VisitBeacon'
 import type { Metadata } from 'next'
 import { ContactSection } from '@/components/home/ContactSection'
@@ -56,6 +57,8 @@ export default async function Home() {
       <VisitBeacon page="home" />
       <Hero />
       <Discover />
+      {/* Diana L. Palotaș's book: its own section under the three products, never a tile among them. */}
+      <BookFeature />
       <Why />
       <ReviewMarquee className="pt-[var(--sec)]" />
       <Rhythm />

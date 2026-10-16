@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import cover from '@/assets/img/carte/coperta.webp'
+import cover from '@/assets/img/carte/coperta.png'
 import { Arrow } from '@/components/ui/icons'
 import type { PageDigital } from '@/server/digital/delivery'
 

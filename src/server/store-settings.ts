@@ -8,6 +8,7 @@
  * terms and the AI agent, so they change together with that text, in code.
  */
 import 'server-only'
+import { createHash } from 'node:crypto'
 import { cache } from 'react'
 import { applyCatalogOverrides, BOOK_ID, getProduct, products, type CatalogOverrides } from '@/content/catalog'
 import { getConfig } from '@/server/config'
@@ -44,6 +45,13 @@ let loadedAt = 0
 let loading: Promise<StoreSettings> | null = null
 
 export const storeSettings = () => current
+
+/** What the agent's knowledge depends on in the catalog: the products sold and their prices (a short hash). */
+const catalogKey = () =>
+  createHash('sha256')
+    .update(JSON.stringify(products.map((p) => [p.id, p.price, p.variants?.map((v) => v.price) ?? null])))
+    .digest('hex')
+    .slice(0, 16)
 
 /**
  * The book is in the store only while its PDF can be delivered securely (NEUROS source and link secret configured):
@@ -82,9 +90,9 @@ export async function ensureStoreSettings(maxAgeMs = 15_000): Promise<StoreSetti
       const db = await getDb()
       current = await readStoreSettings(db)
       applyCatalogOverrides(toOverrides(current))
-      // The book's release (its PDF source configured) reaches the existing AI calling agent once: its knowledge and
-      // instructions are rebuilt from the catalog (job agent.sync; the agent itself is never recreated).
-      if (getConfig().digital && getConfig().bookSales && getConfig().elevenlabs) await jobs.enqueue(db, { kind: 'agent.sync', dedupeKey: 'agent.sync:book-release' }).catch(() => {})
+      // The AI calling agent quotes the catalog: when what is sold or its prices change in code (a release, a new price
+      // in config/prices.ts), the existing agent is rebuilt once (job agent.sync, keyed by the catalog; never recreated).
+      if (getConfig().elevenlabs) await jobs.enqueue(db, { kind: 'agent.sync', dedupeKey: `agent.sync:catalog:${catalogKey()}` }).catch(() => {})
       // Euro and dollar prices need today's rate: a refresh is queued when the last one is 6 hours old.
       if (!current.fx || Date.now() - Date.parse(current.fx.fetchedAt) > 6 * 3_600_000)
         await jobs.enqueue(db, { kind: 'fx.refresh', dedupeKey: `fx.refresh:${Math.floor(Date.now() / (6 * 3_600_000))}` }).catch(() => {})

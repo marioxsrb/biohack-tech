@@ -4,7 +4,7 @@ import { AddToCartButton } from '@/components/cart/AddToCartButton'
 import { Price } from '@/components/cart/Price'
 import { PromoNote } from '@/components/cart/PromoNote'
 import { Arrow } from '@/components/ui/icons'
-import { BOOK_ID, getProduct, isBook, productHref, type Product, type ProductId } from '@/content/catalog'
+import { getProduct, productHref, type Product, type ProductId } from '@/content/catalog'
 import { getLocale, getUi } from '@/i18n/server'
 import type { Locale } from '@/i18n/locales'
 import type { Ui } from '@/i18n/ui'
@@ -19,10 +19,6 @@ const SHELF: { id: ProductId; when: Record<Locale, string>; tint: string; wide: 
   { id: 'brainlink-pro', when: { ro: 'Pentru focus · la birou', en: 'For focus · at work' }, tint: '#e5f1f4', wide: false },
   { id: 'ochelari-biohack', when: { ro: 'Pentru seri calme · la ecrane', en: 'For calmer evenings · at screens' }, tint: '#f5ecdc', wide: true, full: true },
 ]
-
-/** With Diana L. Palotaș's book in the store: Amber shares the second row with it (wide and narrow, like the first). */
-const BOOK_TILE: (typeof SHELF)[number] = { id: BOOK_ID, when: { ro: 'Pentru minte · de citit', en: 'For the mind · to read' }, tint: '#f7f3ec', wide: false }
-const shelf = () => (getProduct(BOOK_ID) ? [...SHELF.slice(0, 2), { ...SHELF[2], full: false }, BOOK_TILE] : SHELF)
 
 const COPY = {
   ro: {
@@ -51,7 +47,7 @@ export async function Discover() {
       </div>
 
       <ul className="mt-10 grid gap-5 lg:grid-cols-12">
-        {shelf().map((s) => (
+        {SHELF.map((s) => (
           <Tile key={s.id} p={getProduct(s.id, locale)!} when={s.when[locale]} tint={s.tint} wide={s.wide} full={s.full} view={t.view} ui={ui} />
         ))}
       </ul>
@@ -71,10 +67,9 @@ function Tile({ p, when, tint, wide, full, view, ui }: { p: Product; when: strin
   const head = (
     <>
       <p className="text-[14px] font-semibold tracking-[0.01em] text-cyan-700">{when}</p>
-      <h3 className={`mt-2 text-[clamp(30px,2.8vw,38px)] leading-[1] tracking-[-0.04em] ${isBook(p.id) ? 'whitespace-pre-line' : 'whitespace-nowrap'}`}>
-        {/* The book by its title (its full name, "Cartea „…”", is for the cart and the invoice). */}
+      <h3 className="mt-2 text-[clamp(30px,2.8vw,38px)] leading-[1] tracking-[-0.04em] whitespace-nowrap">
         <Link href={productHref(p)} className="hover:underline hover:decoration-1 hover:underline-offset-4">
-          {isBook(p.id) ? p.model.replace('Vreau. ', 'Vreau.\n') : p.name}
+          {p.name}
         </Link>
       </h3>
       <p className="mt-2 max-w-[22em] text-[15.5px] leading-snug text-text">{p.kind}</p>
