@@ -142,7 +142,7 @@ const catalog: Omit<Product, 'price'>[] = [
     brand: 'NEUROS',
     model: 'Calm',
     name: 'NEUROS Calm',
-    kind: 'Dispozitiv cu lumină roșie, purtat la gât',
+    kind: 'Stimularea nervului vag, a relaxării',
     purpose: 'Pentru relaxare',
     tagline: 'Se poartă la gât. Îți oferă câteva minute de lumină roșie și liniște. Se oprește singur.',
     cutout: cut(bwActiv, 'NEUROS Calm, dispozitivul cu luminile roșii aprinse și cordonul de prindere'),
