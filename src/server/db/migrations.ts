@@ -680,4 +680,56 @@ create unique index if not exists customer_replies_message_id on customer_replie
 alter table enquiries add column if not exists urgent boolean not null default false
 `,
   },
+  {
+    // The private iOS app "BiohackTech Sales" (read-only): its two accounts (password hashed with scrypt), their
+    // sessions (only a hash of the token is kept), their iPhones (APNs token, environment, notification
+    // preferences), and one row per notification and device so a retry never notifies a phone twice.
+    id: '024_mobile_app',
+    sql: `
+create table if not exists app_users (
+  id uuid primary key,
+  email text not null unique,
+  name text not null,
+  password_hash text not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  last_login_at timestamptz
+);
+alter table app_users enable row level security;
+create table if not exists app_sessions (
+  id uuid primary key,
+  user_id uuid not null references app_users(id) on delete cascade,
+  token_hash text not null unique,
+  created_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  last_used_at timestamptz,
+  revoked_at timestamptz,
+  user_agent text
+);
+alter table app_sessions enable row level security;
+create table if not exists app_devices (
+  id uuid primary key,
+  user_id uuid not null references app_users(id) on delete cascade,
+  token text not null unique,
+  environment text not null check (environment in ('sandbox', 'production')),
+  name text,
+  prefs jsonb not null default '{"payments": true, "newOrders": true, "kaching": true}',
+  active boolean not null default true,
+  created_at timestamptz not null default now(),
+  last_seen_at timestamptz not null default now(),
+  disabled_reason text
+);
+alter table app_devices enable row level security;
+create table if not exists push_deliveries (
+  dedupe_key text not null,
+  device_id uuid not null references app_devices(id) on delete cascade,
+  status text not null,
+  apns_id text,
+  error text,
+  created_at timestamptz not null default now(),
+  primary key (dedupe_key, device_id)
+);
+alter table push_deliveries enable row level security
+`,
+  },
 ]

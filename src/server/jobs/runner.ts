@@ -22,6 +22,7 @@ import { marketing } from '@/server/marketing/consent'
 import { CALL_TAGS, INTEREST_TAG, LEAD_TAGS, attributionTags, callOutcomeTag, siteTag } from '@/server/integrations/ghl'
 import { prospectFor } from '@/server/prospects'
 import { replies } from '@/server/replies'
+import { deliverPush, stillTrue, type PushEvent } from '@/server/app/push'
 import { callConsent } from '@/server/calling/consent'
 import { hasCart, leadItems, recoveryCode, recoveryLink, renderRecoveryOffer, RECOVERY_PERCENT } from '@/server/calling/offer'
 import { renderCartRecovery } from '@/server/cart-email'
@@ -387,6 +388,19 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     return `knowledge ${await syncAgentPrices(c.elevenlabs, c.siteUrl)}`
   },
 
+  // The private iOS app's notification: a payment (KA-CHING) or an unpaid order placed (server/app/push.ts).
+  'push.send': async (j) => {
+    const c = getConfig()
+    if (!c.apns) throw new Skip('APNs not configured')
+    const db = await getDb()
+    const o = await orders.byId(db, j.orderId!)
+    if (!o) throw new Skip('order gone')
+    const event = j.payload.event as PushEvent
+    if (event !== 'payment' && event !== 'new_cod' && event !== 'new_transfer') throw new Permanent(`unknown push ${String(event)}`)
+    if (!stillTrue(event, o)) throw new Skip(`no longer true: ${o.status} / ${o.paymentStatus}`)
+    return deliverPush(db, c.apns, j.dedupeKey, event, o)
+  },
+
   // A reply the team wrote in /admin (Mesaje, Suport): sent from our own mailbox, marked in the conversation.
   'email.reply': async (j) => {
     const c = getConfig()
@@ -581,7 +595,7 @@ export function runDueJobs(limit = 20): Promise<number> {
           const dead = await jobs.fail(db, job, errText(e), permanent)
           log[dead ? 'error' : 'warn'](dead ? 'job.failed' : 'job.retry', { job: job.kind, jobId: job.id, orderId: job.orderId, attempt: job.attempts, error: errText(e) })
           // Stopped for good: the team hears about it once (never about its own notifications, which would loop).
-          if (dead && job.orderId && job.kind !== 'notify.send' && job.kind !== 'support.notify' && notificationsOn())
+          if (dead && job.orderId && job.kind !== 'notify.send' && job.kind !== 'support.notify' && job.kind !== 'push.send' && notificationsOn())
             await jobs
               .enqueue(db, { kind: 'notify.send', orderId: job.orderId, dedupeKey: `notify:job_failed:${job.id}`, payload: { event: 'job_failed', jobId: job.id } })
               .catch((err) => log.error('job.failed_alert_error', { jobId: job.id, error: errText(err) }))

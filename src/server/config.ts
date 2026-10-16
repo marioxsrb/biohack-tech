@@ -103,6 +103,11 @@ export type Config = {
    * The pixel id is the live dataset (a leftover override of the retired pixel is ignored).
    */
   metaCapi: { pixelId: string; accessToken: string; testEventCode: string | null } | null
+  /**
+   * Apple Push Notification service for the private iOS app (token auth, .p8 key): APNS_KEY_ID, APNS_TEAM_ID,
+   * APNS_BUNDLE_ID and APNS_PRIVATE_KEY (the key's PEM text; "\n" escapes allowed). Null until all four are set.
+   */
+  apns: { keyId: string; teamId: string; bundleId: string; privateKey: string } | null
 }
 
 export type CallingConfig = {
@@ -337,6 +342,16 @@ function readImap(smtp: SmtpConfig | null): EmailConfig['imap'] {
 }
 
 /** Conversions API. Absent token means no server Purchase (the browser pixel is unchanged). */
+function readApns(): Config['apns'] {
+  const keyId = str('APNS_KEY_ID')
+  const teamId = str('APNS_TEAM_ID')
+  const bundleId = str('APNS_BUNDLE_ID')
+  const raw = str('APNS_PRIVATE_KEY')
+  if (!keyId || !teamId || !bundleId || !raw) return null
+  const privateKey = raw.includes('BEGIN') ? raw.replace(/\\n/g, '\n') : `-----BEGIN PRIVATE KEY-----\n${raw.replace(/\s+/g, '')}\n-----END PRIVATE KEY-----`
+  return { keyId, teamId, bundleId, privateKey }
+}
+
 function readMetaCapi(): Config['metaCapi'] {
   const accessToken = str('META_CAPI_ACCESS_TOKEN')
   if (!accessToken) return null
@@ -437,6 +452,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     },
     ...readCalling(issues, isolated),
     metaCapi: readMetaCapi(),
+    apns: isolated ? null : readApns(),
   }
   cached = { config, issues }
   return cached

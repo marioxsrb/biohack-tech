@@ -121,6 +121,7 @@ const JOB_LABEL: Record<string, string> = {
   'ghl.lead': 'Trimiterea lead-ului în GoHighLevel',
   'ghl.welcome': 'Trimiterea adresei din popup în GoHighLevel',
   'email.reply': 'Răspunsul către client (din admin)',
+  'push.send': 'Notificarea în aplicația iOS',
   'order.transfer_expiry': 'Anularea transferului expirat',
   'order.abandon_check': 'Verificarea plății nefinalizate',
   'meta.purchase': 'Purchase către Meta (Conversions API)',

@@ -599,6 +599,8 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
   const notify = (event: string, runAt?: Date): NewJob[] =>
     notifyOn ? [{ kind: 'notify.send', orderId: o.id, dedupeKey: `notify:${event}:${o.id}`, payload: { event }, ...(runAt && { runAt }) }] : []
   const inDays = (d: number) => new Date(Date.now() + d * 86_400_000)
+  // The private iOS app's notification (server/app/push.ts): run before every other job of the batch.
+  const push = (ev: 'payment' | 'new_cod' | 'new_transfer'): NewJob[] => (c.apns ? [{ kind: 'push.send', orderId: o.id, dedupeKey: `push:${ev}:${o.id}`, payload: { event: ev } }] : [])
   const prepOverdue = () => notify('prep_overdue', inDays(2))
   // An invoice already issued for money that is going back needs a credit note; without FGO_AUTO_STORNO a person does it.
   const stornoByHand = () => (o.fgoInvoiceNumber && !o.fgoStornoNumber && !c.fgo?.autoStorno ? notify('storno_needed') : [])
@@ -613,9 +615,10 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
       // an abandonment (a declined or failed offer is not an abandoned checkout).
       if (o.kind === 'upsell') return [{ kind: 'stripe.reconcile', orderId: o.id, dedupeKey: `reconcile:${o.id}`, runAt: new Date(Date.now() + 10 * 60_000) }]
       // Cash on delivery: confirmed at once. The confirmation email says what to pay the courier.
-      if (o.paymentMethod === 'cash_on_delivery') return [...crm(), ...email('cod_confirmed'), ...notify('new_cod'), ...prepOverdue()]
+      if (o.paymentMethod === 'cash_on_delivery') return [...push('new_cod'), ...crm(), ...email('cod_confirmed'), ...notify('new_cod'), ...prepOverdue()]
       return o.paymentMethod === 'bank_transfer'
         ? [
+            ...push('new_transfer'),
             ...crm(),
             ...email('transfer_instructions'),
             ...notify('new_transfer'),
@@ -637,6 +640,8 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
       return o.parentOrderId ? release(o.parentOrderId) : []
     case 'payment.confirmed':
       return [
+        // Money is in (card confirmed by Stripe, transfer received, collection recorded): KA-CHING on the phones.
+        ...push('payment'),
         // Server Purchase for ROAS. Same event id as the browser pixel (the order number). Skipped when the token is absent.
         ...(c.metaCapi ? [{ kind: 'meta.purchase' as const, orderId: o.id, dedupeKey: `meta.purchase:${o.id}` }] : []),
         ...(o.upsellStatus === 'offered' && o.upsellExpiresAt ? release(o.id, o.upsellExpiresAt) : []),

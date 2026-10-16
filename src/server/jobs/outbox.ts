@@ -21,6 +21,7 @@ export type JobKind =
   | 'ghl.lead'
   | 'ghl.welcome'
   | 'email.reply'
+  | 'push.send'
   | 'lead.recovery'
   | 'call.attempt'
   | 'call.check'
@@ -84,11 +85,12 @@ export const jobs = {
        where id in (
          select id from jobs
          where (status in ('pending','retry') and run_at <= now()) or (status = 'running' and locked_until < now())
-         order by run_at, id limit $1 for update skip locked)
+         order by (kind = 'push.send') desc, run_at, id limit $1 for update skip locked)
        returning *`,
       [limit],
     )
-    return rows.map(toJob).sort((a, b) => a.id - b.id)
+    // Sale notifications first (the phone should ring before the invoice, the CRM or the emails), then in order.
+    return rows.map(toJob).sort((a, b) => Number(b.kind === 'push.send') - Number(a.kind === 'push.send') || a.id - b.id)
   },
 
   done: (q: Queryable, id: number, status: 'done' | 'skipped' = 'done', note?: string) =>

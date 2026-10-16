@@ -15,6 +15,9 @@ import { placeTestCall } from '@/server/calling/test-call'
 import { enquiries, type EnquiryStatus } from '@/server/enquiries'
 import { replies } from '@/server/replies'
 import { imapSource, syncInbox } from '@/server/inbox'
+import { APP_PASSWORD_MIN, appUsers } from '@/server/app/auth'
+import { deliverPush } from '@/server/app/push'
+import { redirect } from 'next/navigation'
 import { isSupportStatus, supportRequests } from '@/server/assistant/support'
 import { isChatSound, type ChatSound } from '@/lib/chat-sounds'
 import { cancelScheduledCalls, disableCalling, retryCall } from '@/server/calling/admin'
@@ -36,6 +39,8 @@ async function guard() {
 }
 
 const text = (f: FormData, k: string, max = 200) => String(f.get(k) ?? '').trim().slice(0, max)
+/** Back to a page with a short message (?mesaj=…) the page shows once. */
+const redirectWith = (path: string, message: string): never => redirect(`${path}?mesaj=${encodeURIComponent(message.slice(0, 200))}`)
 /** Money and cancellations need the ticked confirmation box; without it nothing changes. */
 const confirmed = (f: FormData) => f.get('confirm') === 'da'
 
@@ -367,6 +372,52 @@ export async function enquiryUrgentAction(f: FormData) {
   log.info('admin.action', { enquiryId: id, action: 'enquiry_urgent', changed })
   revalidatePath('/admin/mesaje')
   revalidatePath(`/admin/mesaje/${id}`)
+}
+
+/** The iOS app's accounts (at most two): created here with their password, never shown again. */
+export async function appUserCreateAction(f: FormData) {
+  await guard()
+  const db = await getDb()
+  const r = await appUsers.create(db, { email: text(f, 'email', 160), name: text(f, 'name', 80), password: String(f.get('password') ?? '').slice(0, 200) })
+  if (r.ok) await audit(db, adminActor(), 'app_user.create', { id: r.id, email: text(f, 'email', 160) })
+  log.info('admin.action', { action: 'app_user_create', ok: r.ok })
+  revalidatePath('/admin/aplicatie')
+  if (!r.ok) redirectWith('/admin/aplicatie', r.reason)
+}
+
+export async function appUserPasswordAction(f: FormData) {
+  await guard()
+  const db = await getDb()
+  const id = text(f, 'id', 40)
+  const ok = /^[0-9a-f-]{36}$/i.test(id) && (await appUsers.setPassword(db, id, String(f.get('password') ?? '').slice(0, 200)))
+  if (ok) await audit(db, adminActor(), 'app_user.password', { id })
+  revalidatePath('/admin/aplicatie')
+  if (!ok) redirectWith('/admin/aplicatie', `Parola trebuie să aibă cel puțin ${APP_PASSWORD_MIN} caractere.`)
+}
+
+export async function appUserActiveAction(f: FormData) {
+  await guard()
+  const db = await getDb()
+  const id = text(f, 'id', 40)
+  if (/^[0-9a-f-]{36}$/i.test(id) && (await appUsers.setActive(db, id, f.get('active') === 'da'))) await audit(db, adminActor(), 'app_user.active', { id, active: f.get('active') === 'da' })
+  revalidatePath('/admin/aplicatie')
+}
+
+/** A sample payment notification (KA-CHING) to every registered iPhone: checks APNs, the sound and the devices. */
+export async function appPushTestAction() {
+  await guard()
+  const c = getConfig()
+  if (!c.apns) return redirectWith('/admin/aplicatie', 'APNs nu este configurat (APNS_KEY_ID, APNS_TEAM_ID, APNS_BUNDLE_ID, APNS_PRIVATE_KEY).')
+  const db = await getDb()
+  const sample = { id: '00000000-0000-0000-0000-000000000000', orderNumber: 'TEST', totalMinor: 123400, currency: 'RON', paymentMethod: 'card', kind: 'checkout', status: 'confirmed', paymentStatus: 'paid' } as never
+  let note: string
+  try {
+    note = await deliverPush(db, c.apns, `push:test:${Date.now()}`, 'payment', sample)
+  } catch (e) {
+    note = e instanceof Error ? e.message : String(e)
+  }
+  log.info('admin.action', { action: 'app_push_test', note })
+  redirectWith('/admin/aplicatie', `Notificare de test: ${note}.`)
 }
 
 /** Reads the mailbox now (the cron does it every few minutes). */

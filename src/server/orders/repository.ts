@@ -109,7 +109,7 @@ export const QUEUES = {
     where: `(status = 'cancelled' and payment_status in ('paid', 'partially_refunded'))
       or (fgo_invoice_number is not null and fgo_storno_number is null and (status = 'cancelled' or payment_status = 'refunded'))
       or invoice_status = 'failed' or return_status = 'requested'
-      or exists (select 1 from jobs j where j.order_id = orders.id and j.status in ('failed', 'retry'))`,
+      or exists (select 1 from jobs j where j.order_id = orders.id and j.status in ('failed', 'retry') and j.kind <> 'push.send')`,
   },
   noi: { label: 'Noi (48 h)', where: `created_at >= now() - interval '48 hours' and status <> 'cancelled' and (payment_method <> 'card' or payment_status in ('paid', 'partially_refunded'))` },
   transfer: { label: 'Așteaptă transferul', where: `payment_status = 'awaiting_transfer' and status <> 'cancelled'` },
@@ -123,7 +123,7 @@ export const QUEUES = {
   retururi: { label: 'Retururi', where: `return_status is not null` },
   rambursari: { label: 'Rambursări', where: `payment_status in ('refunded', 'partially_refunded')` },
   anulate: { label: 'Anulate', where: `status = 'cancelled'` },
-  joburi: { label: 'Joburi eșuate', where: `exists (select 1 from jobs j where j.order_id = orders.id and j.status in ('failed', 'retry'))` },
+  joburi: { label: 'Joburi eșuate', where: `exists (select 1 from jobs j where j.order_id = orders.id and j.status in ('failed', 'retry') and j.kind <> 'push.send')` },
   facturi: {
     label: 'Facturi de verificat',
     where: `invoice_status = 'failed' or (fgo_invoice_number is not null and fgo_storno_number is null and (status = 'cancelled' or payment_status = 'refunded'))`,
@@ -131,6 +131,20 @@ export const QUEUES = {
   nefinalizate: { label: 'Card nefinalizat', where: `payment_method = 'card' and status in ('pending', 'abandoned')` },
 } as const
 export type QueueKey = keyof typeof QUEUES
+/** The iOS app's order filters (read-only views; card attempts never paid are only under "all" and "unpaid"). */
+export const APP_FILTERS = {
+  all: `true`,
+  new: `created_at >= now() - interval '48 hours' and status <> 'cancelled' and (payment_method <> 'card' or payment_status in ('paid', 'partially_refunded'))`,
+  paid: `payment_status in ('paid', 'partially_refunded')`,
+  unpaid: `payment_status in ('pending', 'awaiting_transfer', 'awaiting_collection') and status not in ('cancelled')`,
+  shipped: `status = 'shipped'`,
+  delivered: `status = 'delivered'`,
+  cancelled: `status = 'cancelled'`,
+  refunded: `payment_status in ('refunded', 'partially_refunded')`,
+} as const
+export type AppOrderFilter = keyof typeof APP_FILTERS
+export const isAppFilter = (k: string): k is AppOrderFilter => Object.prototype.hasOwnProperty.call(APP_FILTERS, k)
+
 export const isQueue = (k: string): k is QueueKey => Object.prototype.hasOwnProperty.call(QUEUES, k)
 
 export const orders = {
@@ -174,6 +188,18 @@ export const orders = {
     }
     if (opts.queue && QUEUES[opts.queue]) where.push(`(${QUEUES[opts.queue].where})`)
     const { rows } = await q.query(`select * from orders ${where.length ? `where ${where.join(' and ')}` : ''} order by created_at desc limit $1`, params)
+    return withItems(q, rows)
+  },
+
+  /** A page of orders matching a fixed filter (the iOS app), newest first, before a date (the previous page's last). */
+  async page(q: Queryable, filter: AppOrderFilter, opts: { before?: Date; limit?: number } = {}) {
+    const params: unknown[] = [Math.min(Math.max(opts.limit ?? 30, 1), 100)]
+    const where: string[] = [APP_FILTERS[filter]]
+    if (opts.before) {
+      params.push(opts.before)
+      where.push(`created_at < $${params.length}`)
+    }
+    const { rows } = await q.query(`select * from orders where ${where.map((w) => `(${w})`).join(' and ')} order by created_at desc limit $1`, params)
     return withItems(q, rows)
   },
 

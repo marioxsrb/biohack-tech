@@ -97,7 +97,7 @@ const lei = (minor: unknown) => Math.round(n(minor)) / 100
 const pct = (a: number, b: number) => (b > 0 ? Math.round((a / b) * 1000) / 10 : null)
 
 async function totals(q: Queryable, p: Pick<Period, 'from' | 'to'>) {
-  const [visits, leads, orders] = await Promise.all([
+  const [visits, leads, orders, money] = await Promise.all([
     q.query(
       `select coalesce(sum(sessions),0)::int as sessions, coalesce(sum(views),0)::int as views from visit_stats
        where day >= ($1::timestamptz at time zone '${TZ}')::date and day <= (($2::timestamptz - interval '1 second') at time zone '${TZ}')::date`,
@@ -105,6 +105,15 @@ async function totals(q: Queryable, p: Pick<Period, 'from' | 'to'>) {
     ),
     q.query(`select count(*)::int as leads, count(distinct email)::int as people from leads where created_at >= $1 and created_at < $2`, [p.from, p.to]),
     q.query(`select count(*)::int as orders, coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate),0)::bigint as revenue from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2`, [p.from, p.to]),
+    // Of those, the money actually in (paid) and what is still to collect (transfer awaited, cash on delivery).
+    q.query(
+      `select count(*) filter (where o.payment_status in ('paid', 'partially_refunded'))::int as paid_orders,
+              coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate) filter (where o.payment_status in ('paid', 'partially_refunded')),0)::bigint as collected,
+              count(*) filter (where o.payment_status in ('awaiting_transfer', 'awaiting_collection'))::int as pending_orders,
+              coalesce(sum(o.total_minor * o.fx_rate) filter (where o.payment_status in ('awaiting_transfer', 'awaiting_collection')),0)::bigint as pending
+       from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2`,
+      [p.from, p.to],
+    ),
   ])
   const sessions = n(visits.rows[0]?.sessions)
   const orderCount = n(orders.rows[0]?.orders)
@@ -117,7 +126,23 @@ async function totals(q: Queryable, p: Pick<Period, 'from' | 'to'>) {
     revenueLei: lei(orders.rows[0]?.revenue),
     averageOrderLei: orderCount ? Math.round(lei(orders.rows[0]?.revenue) / orderCount) : 0,
     conversionPct: pct(orderCount, sessions),
+    /** Money in (paid orders) vs. still to collect: an unpaid order is never collected revenue. */
+    collectedLei: lei(money.rows[0]?.collected),
+    paidOrders: n(money.rows[0]?.paid_orders),
+    pendingLei: lei(money.rows[0]?.pending),
+    pendingOrders: n(money.rows[0]?.pending_orders),
   }
+}
+
+/** Since the store opened: orders that stand, money in, and what is still to collect (the iOS app's "total"). */
+export async function lifetimeTotals(q: Queryable) {
+  const { rows } = await q.query(
+    `select count(*)::int as orders,
+            coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate) filter (where o.payment_status in ('paid', 'partially_refunded')),0)::bigint as collected,
+            coalesce(sum(o.total_minor * o.fx_rate) filter (where o.payment_status in ('awaiting_transfer', 'awaiting_collection')),0)::bigint as pending
+     from orders o where ${STANDS}`,
+  )
+  return { orders: n(rows[0]?.orders), collectedLei: lei(rows[0]?.collected), pendingLei: lei(rows[0]?.pending) }
 }
 
 export async function buildReport(q: Queryable, p: Period) {
