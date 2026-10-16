@@ -43,8 +43,8 @@ export function AmberLanding({ landing }: { landing: Landing }) {
 
       <Testimonials productId={p.id} />
       <LandingFaq items={landing.faqs} />
-      <Help title="Te ajutăm să alegi rama." text="Scrie-ne ce formă porți de obicei. Îți recomandăm rama potrivită." />
-      <FinalCta title="Trei perechi, una gratuită." cta={CTA} />
+      <Help title="Te ajutăm să alegi rama." text="Scrie-ne ce formă porți de obicei. Îți recomandăm rama care ți se potrivește." />
+      <FinalCta title="Seri mai liniștite. Și o pereche gratuită la trei." cta={CTA} />
     </LandingShell>
   )
 }

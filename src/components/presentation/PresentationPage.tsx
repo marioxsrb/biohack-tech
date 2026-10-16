@@ -28,7 +28,7 @@ export function PresentationPage({ landing }: { landing: Landing }) {
           <CalmMoments />
           <Facts image={p.cutout} rows={rows(p, [])} />
           <Questions landing={landing} />
-          <Contact text="Spune-ne cum arată seara ta. Îți explicăm cum se folosește NEUROS Calm și dacă ți se potrivește." />
+          <Contact text="Spune-ne cum arată seara ta. Îți spunem cum te ajută NEUROS Calm și dacă ți se potrivește." />
         </PresentationShell>
       )
     case 'focus':
@@ -41,7 +41,7 @@ export function PresentationPage({ landing }: { landing: Landing }) {
           <FocusWhere />
           <Facts image={p.cutout} rows={rows(p, [])} />
           <Questions landing={landing} />
-          <Contact text="Spune-ne pentru ce o folosești: muncă, studiu sau relaxare. Îți explicăm cum începi." />
+          <Contact text="Spune-ne unde vrei mai mult focus: la muncă, la studiu sau în momentele de liniște. Îți spunem cum să începi." />
         </PresentationShell>
       )
     case 'amber':
@@ -53,7 +53,7 @@ export function PresentationPage({ landing }: { landing: Landing }) {
           <AmberWhen />
           <Facts image={p.cutout} rows={rows(p)} />
           <Questions landing={landing} />
-          <Contact text="Scrie-ne ce formă porți de obicei. Îți recomandăm rama potrivită." />
+          <Contact text="Scrie-ne ce formă porți de obicei. Îți recomandăm rama care ți se potrivește." />
         </PresentationShell>
       )
   }

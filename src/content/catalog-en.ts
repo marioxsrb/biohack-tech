@@ -9,19 +9,19 @@ type ProductText = { kind: string; purpose: string; tagline: string; chooseLabel
 
 export const productTextEn: Record<ProductId, ProductText> = {
   'balance-wave': {
-    kind: 'Red light device worn around the neck',
-    purpose: 'For relaxation',
-    tagline: 'You wear it around your neck. It gives you a few minutes of red light and quiet. It switches off by itself.',
+    kind: 'Vagus nerve stimulation and relaxation',
+    purpose: 'For calm',
+    tagline: 'It helps you leave the day behind. Many people feel calmer, and sleep comes more easily. A few minutes, then it switches off by itself.',
   },
   'brainlink-pro': {
-    kind: 'EEG headband for attention training',
-    purpose: 'For focus',
-    tagline: 'A light headband with games on a tablet. You control them with your attention. That is how you train your focus.',
+    kind: 'For focus and clarity',
+    purpose: 'For concentration',
+    tagline: 'It helps you gather your attention. Many people feel more focus and more energy for what they have to do. You play on a tablet, with your attention.',
   },
   'ochelari-biohack': {
-    kind: 'Glasses with a blue light filter',
-    purpose: 'For screens',
-    tagline: 'They filter the blue light of screens. Your eyes get a warmer light. Choose from four frames.',
+    kind: 'For calmer evenings',
+    purpose: 'For rested eyes',
+    tagline: 'It helps you end the day more calmly. Screen light feels softer, and many people feel their eyes are more rested. Choose from four frames.',
     chooseLabel: 'Choose the frame',
   },
 }

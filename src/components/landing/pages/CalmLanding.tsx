@@ -37,8 +37,8 @@ export function CalmLanding({ landing }: { landing: Landing }) {
         slug={landing.slug}
         productId={p.id}
         cta={CTA}
-        title="NEUROS Calm, livrat acasă."
-        text="Livrare gratuită, plată la livrare și retur în 14 zile."
+        title="Liniștea, livrată acasă."
+        text="Livrare gratuită, plată la livrare și 14 zile să vezi dacă ți se potrivește."
         details={[
           ['Tehnologie', '660 nm și 810 nm (6 diode pe stânga), pulsat la 14 Hz'],
           ['Ședința', 'Câteva minute, se oprește singur'],
@@ -47,8 +47,8 @@ export function CalmLanding({ landing }: { landing: Landing }) {
 
       <Testimonials productId={p.id} />
       <LandingFaq items={landing.faqs} />
-      <Help title="Vrei să afli dacă ți se potrivește?" text="Spune-ne cum arată seara ta. Îți spunem sincer dacă NEUROS Calm este pentru tine." />
-      <FinalCta title="Începe cu câteva minute, chiar în seara asta." cta={CTA} />
+      <Help title="Vrei să vezi dacă ți se potrivește?" text="Spune-ne cum arată seara ta. Îți spunem sincer dacă NEUROS Calm te poate ajuta." />
+      <FinalCta title="Începe cu câteva minute de calm, chiar în seara asta." cta={CTA} />
     </LandingShell>
   )
 }

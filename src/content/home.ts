@@ -15,11 +15,11 @@ const photo = (src: ProductImage['src'], alt: string): ProductImage => ({ src, a
 
 /** Why Biohack Tech: one photograph and three reasons, each a verified fact. */
 const whyRo = {
-  title: 'De ce să cumperi de la Biohack Tech',
+  title: 'De ce să alegi Biohack Tech',
   image: photo(glSeara, 'Femeie în pat, seara, citind pe tabletă cu ochelarii NEUROS Amber'),
   points: [
-    { title: 'Câteva minute pe zi', text: 'O ședință NEUROS Calm durează câteva minute. NEUROS Amber se poartă ca orice ochelari.' },
-    { title: 'Răspundem la orice întrebare', text: 'Ne scrii sau ne suni și îți răspundem despre produse, comandă și livrare.' },
+    { title: 'Câteva minute, o stare mai bună', text: 'Calm te ajută să te liniștești seara. Focus te ajută să fii mai prezent ziua. Amber face serile la ecran mai blânde.' },
+    { title: 'Îți răspundem cu drag', text: 'Ne scrii sau ne suni. Te ajutăm să alegi ce ți se potrivește, și rămânem aproape după comandă.' },
     { title: 'Livrare gratuită și retur în 14 zile', text: `Livrarea este gratuită în România. Ai ${terms.returnDays} zile să te răzgândești. Primești garanție ${terms.warrantyYears} ani.` },
   ],
 }
@@ -29,14 +29,14 @@ const whyRo = {
  * and uses only (what the product is and how it is used), never an outcome.
  */
 const rhythmRo = {
-  title: 'Înainte și după NEUROS',
-  intro: 'Aceeași zi, cu mai mult calm și mai multă atenție.',
+  title: 'Cum se simte ziua',
+  intro: 'Aceeași zi, cu mai puțin stres, somn mai lin și mai mult focus.',
   without: 'Înainte',
   with: 'Cu NEUROS',
   rows: [
-    { moment: 'Stres', without: 'Stresul se adună toată ziua și îl iei cu tine acasă.', with: 'Cu NEUROS Calm, seara ai un moment de liniște. Te relaxezi mai ușor.' },
-    { moment: 'Concentrare', without: 'Te apuci de o sarcină și atenția fuge la telefon.', with: 'NEUROS Focus îți antrenează atenția. Te ajută să intri mai repede în concentrare.' },
-    { moment: 'Ochi', without: 'Seara, ochii obosesc în lumina albastră a ecranelor.', with: 'Cu NEUROS Amber, lumina ecranelor devine mai blândă. Serile sunt mai liniștite.' },
+    { moment: 'Liniște', without: 'Stresul se adună toată ziua și îl iei cu tine acasă.', with: 'Cu NEUROS Calm, seara ai un moment doar al tău. Mulți utilizatori simt mai mult calm și un somn mai lin.' },
+    { moment: 'Focus', without: 'Te apuci de o sarcină și atenția fuge la telefon.', with: 'NEUROS Focus te ajută să-ți aduni atenția. Mulți utilizatori simt mai mult focus și mai multă energie.' },
+    { moment: 'Seri', without: 'Seara, ochii obosesc în lumina ecranelor.', with: 'Cu NEUROS Amber, lumina ecranelor se simte mai blândă. Serile devin mai liniștite.' },
   ],
   note: 'Fiecare om răspunde în ritmul lui. Sunt produse de wellness. Pentru o afecțiune, cere întâi sfatul medicului.',
 }
@@ -47,11 +47,11 @@ export type FaqItem = { q: string; a: string }
 const homeFaqRo: FaqItem[] = [
   {
     q: 'Cum aleg produsul potrivit?',
-    a: 'Pentru stres, NEUROS Calm. Pentru concentrare, NEUROS Focus. Pentru ochii obosiți de ecrane, NEUROS Amber. Scrie-ne și te ajutăm să alegi.',
+    a: 'Vrei mai mult calm și un somn mai lin: NEUROS Calm. Vrei focus și claritate: NEUROS Focus. Vrei seri mai blânde la ecran: NEUROS Amber. Scrie-ne și te ajutăm să alegi.',
   },
   {
     q: 'Cum se folosesc?',
-    a: 'NEUROS Calm se poartă la gât, câteva minute. NEUROS Focus se conectează prin Bluetooth la o tabletă, unde rulează jocurile. NEUROS Amber se poartă ca orice ochelari.',
+    a: 'NEUROS Calm îl pornești seara, pentru câteva minute de liniște. NEUROS Focus se leagă de o tabletă, iar jocurile te ajută să-ți antrenezi atenția. NEUROS Amber se poartă ca orice ochelari, ziua la birou și seara pe telefon.',
   },
   {
     q: 'Cum funcționează ofertele?',
@@ -67,7 +67,7 @@ const homeFaqRo: FaqItem[] = [
   },
   {
     q: 'Ce fel de produse sunt?',
-    a: 'Sunt produse de wellness, pentru uz zilnic. Dacă ai o afecțiune sau urmezi un tratament, vorbește întâi cu medicul tău.',
+    a: 'Sunt produse de wellness, pentru starea ta de zi cu zi. Te ajută să te simți mai calm și mai prezent. Dacă ai o afecțiune sau urmezi un tratament, vorbește întâi cu medicul tău.',
   },
 ]
 export type FaqGroup = { title: string; items: FaqItem[] }
@@ -78,15 +78,15 @@ const faqRo: FaqGroup[] = [
     items: [
       {
         q: 'Care produs mi se potrivește?',
-        a: 'Pentru stres, NEUROS Calm, cu câteva minute de lumină roșie seara. Pentru concentrare, NEUROS Focus, cu jocuri pe tabletă. Pentru ochii obosiți de ecrane, NEUROS Amber. Scrie-ne mai jos și te ajutăm să alegi.',
+        a: 'Pentru mai mult calm și un somn mai lin, NEUROS Calm, câteva minute seara. Pentru focus și claritate, NEUROS Focus, prin jocuri scurte. Pentru seri mai blânde la ecran, NEUROS Amber. Scrie-ne mai jos și te ajutăm să alegi.',
       },
       {
         q: 'Ce fel de produse sunt?',
-        a: 'Sunt produse de wellness, pentru uz zilnic. Dacă ai o afecțiune sau urmezi un tratament, vorbește întâi cu medicul tău.',
+        a: 'Sunt produse de wellness, pentru starea ta de zi cu zi. Te ajută să te simți mai calm și mai prezent. Dacă ai o afecțiune sau urmezi un tratament, vorbește întâi cu medicul tău.',
       },
       {
         q: 'Cum încep?',
-        a: 'Fiecare produs se folosește simplu, câteva minute pe zi. Pentru orice întrebare despre folosire, ne scrii sau ne suni.',
+        a: 'Fiecare produs intră ușor în zi: câteva minute de liniște, un joc scurt sau ochelarii pe care îi porți. Pentru orice întrebare, ne scrii sau ne suni.',
       },
     ],
   },
@@ -141,24 +141,24 @@ const faqRo: FaqGroup[] = [
 ]
 
 const whyEn: typeof whyRo = {
-  title: 'Why buy from Biohack Tech',
+  title: 'Why choose Biohack Tech',
   image: photo(glSeara, 'Woman in bed in the evening, reading on a tablet with NEUROS Amber glasses'),
   points: [
-    { title: 'A few minutes a day', text: 'A NEUROS Calm session takes a few minutes. You wear NEUROS Amber like any other glasses.' },
-    { title: 'We answer any question', text: 'Write or call us and we answer about the products, your order and delivery.' },
+    { title: 'A few minutes, a better state', text: 'Calm helps you unwind in the evening. Focus helps you stay present through the day. Amber makes evenings at the screen feel softer.' },
+    { title: 'We answer with care', text: 'Write or call us. We help you choose what suits you, and we stay close after you order.' },
     { title: `Free delivery and ${terms.returnDays}-day returns`, text: `Delivery is free, worldwide. You have ${terms.returnDays} days to change your mind. You get a ${terms.warrantyYears}-year warranty.` },
   ],
 }
 
 const rhythmEn: typeof rhythmRo = {
-  title: 'Before and after NEUROS',
-  intro: 'The same day, with more calm and better focus.',
+  title: 'How the day feels',
+  intro: 'The same day, with less stress, easier sleep and more focus.',
   without: 'Before',
   with: 'With NEUROS',
   rows: [
-    { moment: 'Stress', without: 'Stress builds up all day and follows you home.', with: 'With NEUROS Calm you get a quiet moment in the evening. Relaxing comes easier.' },
-    { moment: 'Focus', without: 'You start a task and your attention drifts to your phone.', with: 'NEUROS Focus trains your attention. It helps you get into focus faster.' },
-    { moment: 'Eyes', without: 'In the evening, your eyes tire in the blue light of screens.', with: 'With NEUROS Amber, screen light gets softer. Your evenings feel calmer.' },
+    { moment: 'Calm', without: 'Stress builds up all day and follows you home.', with: 'With NEUROS Calm, the evening is a moment of your own. Many people feel calmer, and sleep comes more easily.' },
+    { moment: 'Focus', without: 'You start a task and your attention drifts to your phone.', with: 'NEUROS Focus helps you gather your attention. Many people feel more focus and more energy.' },
+    { moment: 'Evenings', without: 'In the evening, your eyes tire in the light of screens.', with: 'With NEUROS Amber, screen light feels softer. Evenings become calmer.' },
   ],
   note: 'Everyone responds at their own pace. These are wellness products. If you have a medical condition, ask your doctor first.',
 }
@@ -166,11 +166,11 @@ const rhythmEn: typeof rhythmRo = {
 const homeFaqEn: FaqItem[] = [
   {
     q: 'How do I choose the right product?',
-    a: 'For stress, NEUROS Calm. For focus, NEUROS Focus. For eyes tired from screens, NEUROS Amber. Write to us and we will help you choose.',
+    a: 'You want more calm and easier sleep: NEUROS Calm. You want focus and clarity: NEUROS Focus. You want softer evenings at the screen: NEUROS Amber. Write to us and we will help you choose.',
   },
   {
     q: 'How do I use them?',
-    a: 'You wear NEUROS Calm around your neck for a few minutes. NEUROS Focus connects to a tablet by Bluetooth, where the games run. You wear NEUROS Amber like any other glasses.',
+    a: 'You switch NEUROS Calm on in the evening, for a few quiet minutes. NEUROS Focus connects to a tablet, and the games help you train your attention. You wear NEUROS Amber like any other glasses, at your desk by day and on your phone in the evening.',
   },
   {
     q: 'How do the offers work?',
@@ -186,7 +186,7 @@ const homeFaqEn: FaqItem[] = [
   },
   {
     q: 'What kind of products are these?',
-    a: 'They are wellness products for daily use. If you have a medical condition or follow a treatment, talk to your doctor first.',
+    a: 'They are wellness products for how you feel day to day. They help you feel calmer and more present. If you have a medical condition or follow a treatment, talk to your doctor first.',
   },
 ]
 
@@ -203,12 +203,12 @@ const faqEn: FaqGroup[] = [
     items: [
       {
         q: 'Which product suits me?',
-        a: 'For stress, NEUROS Calm, with a few minutes of red light in the evening. For focus, NEUROS Focus, with games on a tablet. For eyes tired from screens, NEUROS Amber. Write to us below and we will help you choose.',
+        a: 'For more calm and easier sleep, NEUROS Calm, a few minutes in the evening. For focus and clarity, NEUROS Focus, through short games. For softer evenings at the screen, NEUROS Amber. Write to us below and we will help you choose.',
       },
       faqItem(homeFaqEn, 'What kind of products are these?'),
       {
         q: 'How do I start?',
-        a: 'Each product is simple to use, a few minutes a day. For any question about using it, write or call us.',
+        a: 'Each product fits easily into the day: a few quiet minutes, a short game, or glasses you wear. For any question, write or call us.',
       },
     ],
   },

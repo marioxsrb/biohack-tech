@@ -2,8 +2,8 @@ export const site = {
   name: 'Biohack Tech',
   url: (process.env.NEXT_PUBLIC_SITE_URL ?? 'https://biohack-tech.ro').replace(/\/$/, ''),
   description: {
-    ro: 'Dispozitive NEUROS pentru stres, concentrare și ochi obosiți de ecrane: Calm, Focus și Amber. Le folosești acasă. Livrare gratuită în România.',
-    en: 'NEUROS devices for stress, focus and screen-tired eyes: Calm, Focus and Amber. Use them at home. Free worldwide delivery.',
+    ro: 'NEUROS te ajută să te liniștești seara, să treci mai ușor spre somn și să ai mai mult focus ziua. Calm, Focus și Amber. Livrare gratuită în România.',
+    en: 'NEUROS helps you unwind in the evening, ease into sleep and stay focused through the day. Calm, Focus and Amber. Free worldwide delivery.',
   },
   email: 'contact@biohack-tech.ro',
   phone: '+40 757 890 707',

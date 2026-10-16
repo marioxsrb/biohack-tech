@@ -7,14 +7,14 @@ const COPY = {
   ro: {
     kicker: 'Suport Biohack Tech',
     title: 'Vrei ajutor să alegi?',
-    text: `Spune-ne pentru ce îl vrei. Îți recomandăm dispozitivul potrivit. Îți răspundem ${terms.responseTime}.`,
+    text: `Spune-ne ce vrei să simți: mai mult calm, un somn mai lin sau focus. Îți recomandăm produsul potrivit. Îți răspundem ${terms.responseTime}.`,
     write: 'Scrie-ne',
     phone: 'Telefonul este opțional.',
   },
   en: {
     kicker: 'Biohack Tech support',
     title: 'Want help choosing?',
-    text: 'Tell us what you need it for. We will recommend the right device. We reply within 24 hours.',
+    text: 'Tell us what you want to feel: more calm, easier sleep or focus. We will recommend the right product. We reply within 24 hours.',
     write: 'Write to us',
     phone: 'Your phone number is optional.',
   },

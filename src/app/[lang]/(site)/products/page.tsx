@@ -7,16 +7,16 @@ import { settingsForRender } from '@/server/store-settings'
 
 const COPY = {
   ro: {
-    title: 'Dispozitive pentru relaxare, concentrare și ecrane',
+    title: 'Calm, somn mai lin și focus',
     description:
-      'NEUROS Calm cu lumină roșie pentru relaxare, casca EEG NEUROS Focus, și ochelarii NEUROS Amber pentru lumina albastră. Livrare gratuită.',
-    heading: 'Produse',
+      'NEUROS Calm pentru liniște seara, NEUROS Focus pentru concentrare și NEUROS Amber pentru seri mai blânde. Livrare gratuită.',
+    heading: 'Pentru calm, focus și seri liniștite',
   },
   en: {
-    title: 'Devices for relaxation, focus and screens',
+    title: 'Calm, easier sleep and focus',
     description:
-      'NEUROS Calm with red light for relaxation, the NEUROS Focus EEG headband, and NEUROS Amber blue light glasses. Free worldwide delivery.',
-    heading: 'Products',
+      'NEUROS Calm for quiet evenings, NEUROS Focus for concentration and NEUROS Amber for softer evenings. Free worldwide delivery.',
+    heading: 'For calm, focus and quieter evenings',
   },
 }
 

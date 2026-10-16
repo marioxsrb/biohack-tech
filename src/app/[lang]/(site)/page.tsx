@@ -16,15 +16,15 @@ import { settingsForRender } from '@/server/store-settings'
 
 const META = {
   ro: {
-    title: `Dispozitive pentru relaxare și concentrare | ${site.name}`,
+    title: `Mai calm seara, mai clar ziua | ${site.name}`,
     description:
-      'Dispozitive NEUROS pentru stres, concentrare și ochi obosiți de ecrane: Calm cu lumină roșie, casca EEG Focus și ochelarii Amber. Livrare gratuită.',
+      'NEUROS te ajută să te liniștești, să treci mai ușor spre somn și să ai mai mult focus. Calm, Focus și Amber. Livrare gratuită.',
     alt: 'Femeie relaxată pe canapea, purtând NEUROS Calm',
   },
   en: {
-    title: `Devices for relaxation and focus | ${site.name}`,
+    title: `Calmer evenings, clearer days | ${site.name}`,
     description:
-      'NEUROS devices for stress, focus and screen-tired eyes: Calm with red light, the Focus EEG headband and Amber glasses. Free worldwide delivery.',
+      'NEUROS helps you unwind, ease into sleep and stay focused. Calm, Focus and Amber. Free worldwide delivery.',
     alt: 'Relaxed woman on a sofa, wearing NEUROS Calm',
   },
 }
