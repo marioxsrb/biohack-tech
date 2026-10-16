@@ -6,6 +6,7 @@ import { Assistant } from '@/components/assistant/Assistant'
 import { settingsForRender, storeScript } from '@/server/store-settings'
 import { CartProvider } from '@/components/cart/CartProvider'
 import { OfferSheetsProvider } from '@/components/offers/OfferSheets'
+import { ClarityScript } from '@/components/consent/ClarityScript'
 import { ConsentManager } from '@/components/consent/ConsentManager'
 import { GATE_SCRIPT, GateRoot } from '@/components/gate/Gate'
 import { notFound } from 'next/navigation'
@@ -63,6 +64,7 @@ export default async function RootLayout({ children }: LayoutProps<'/[lang]'>) {
         <LocaleProvider locale={locale}>
           {/* First in the tab order, so the cookie choice is reachable before the page. */}
           <ConsentManager />
+          <ClarityScript />
           <GateRoot>
             <CartProvider>
               <OfferSheetsProvider>
