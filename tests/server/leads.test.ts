@@ -76,8 +76,9 @@ function fakeApis() {
       if (url.includes('/opportunities/pipelines'))
         return json({
           pipelines: [
-            { id: 'pipe1', name: 'Comenzi Biohack Tech', stages: [] },
+            { id: 'pipe1', name: 'Comenzi Biohack Tech', stages: ['Așteaptă transferul', 'Plată nefinalizată', 'Plătită, de pregătit', 'În pregătire', 'Expediată', 'Livrată', 'Anulată', 'Rambursată'].map((n, i) => ({ id: `os${i}`, name: n })) },
             { id: 'leads1', name: 'Lead-uri Biohack Tech', stages: ['Lead nou', 'Abonat 10%', 'Checkout început', 'Comandă plasată', 'Dezabonat'].map((n, i) => ({ id: `ls${i}`, name: n })) },
+            { id: 'buyers1', name: 'Clienți Biohack Tech', stages: ['NEUROS Calm', 'NEUROS Focus', 'NEUROS Amber', 'Mai multe produse'].map((n, i) => ({ id: `bs${i}`, name: n })) },
           ],
         })
       if (url.includes('/opportunities/search')) return json({ opportunities: [] })
@@ -568,7 +569,8 @@ describe('recovery link', () => {
 })
 
 describe('CRM copy', () => {
-  const leadOpps = () => ghl.filter((c) => (c.method === 'POST' || c.method === 'PUT') && /\/opportunities\/[^s]*$/.test(c.url))
+  // The person's opportunity (leads / customers pipelines), not the orders' own (stages os…).
+  const leadOpps = () => ghl.filter((c) => (c.method === 'POST' || c.method === 'PUT') && /\/opportunities\/[^s]*$/.test(c.url) && !String(c.json?.pipelineStageId ?? '').startsWith('os'))
   it('contact upsert, lead tags and one opportunity in the leads pipeline (never the order pipeline), no NEUROS recovery tag', async () => {
     await reveal()
     await runDueJobs() // the run the route started in the background
@@ -605,6 +607,33 @@ describe('CRM copy', () => {
     expect(leadOpps().filter((c) => c.method === 'POST')).toHaveLength(1)
     expect(leadOpps().filter((c) => c.method === 'PUT' && c.url.endsWith('/opportunities/opp-1'))).toHaveLength(1)
     expect((await db.query('select ghl_opportunity_id from crm_prospects where email = $1', [ana.email])).rows).toEqual([{ ghl_opportunity_id: 'opp-1' }])
+  })
+
+  it('a purchase moves the same opportunity to the customers pipeline, under what was bought; a cancellation brings it back', async () => {
+    const step = await (await lead(post('/api/lead', MAIN, { action: 'checkout', ...ana, cart: [{ productId: 'balance-wave', quantity: 1 }] }))).json()
+    await runDueJobs()
+    await runDueJobs()
+    expect(leadOpps().at(-1)!.json).toMatchObject({ pipelineId: 'leads1', pipelineStageId: 'ls2' }) // Checkout început
+    const vid = (await leads.byId(db, step.leadId))!.visitorId
+    const buy = (lines: { productId: string; variantId?: string; quantity: number }[], attemptId: string) =>
+      checkout(post('/api/checkout', MAIN, { lines, order: { ...person, email: ana.email, paymentMethod: 'transfer' }, acceptedTerms: true, attemptId }, { bt_vid: vid }))
+    const o1 = (await orders.byToken(db, (await (await buy([{ productId: 'balance-wave', quantity: 1 }], 'buy-1')).json()).token))!
+    await runDueJobs()
+    await runDueJobs()
+    const moved = leadOpps().at(-1)!
+    expect(moved.method).toBe('PUT')
+    expect(moved.url).toMatch(/\/opportunities\/opp-1$/) // the same opportunity, not a new one
+    expect(moved.json).toMatchObject({ pipelineId: 'buyers1', pipelineStageId: 'bs0', status: 'open', monetaryValue: Math.round(o1.totalMinor / 100) })
+    // A second product: "Mai multe produse".
+    await buy([{ productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 1 }], 'buy-2')
+    await runDueJobs()
+    await runDueJobs()
+    expect(leadOpps().at(-1)!.json).toMatchObject({ pipelineId: 'buyers1', pipelineStageId: 'bs3' })
+    // Both cancelled: back to the leads pipeline, where they stopped.
+    for (const { id } of (await db.query<{ id: string }>('select id from orders')).rows) await svc.cancelOrder(id, 'admin', 'test')
+    await runDueJobs()
+    await runDueJobs()
+    expect(leadOpps().at(-1)!.json).toMatchObject({ pipelineId: 'leads1' })
   })
 
   it('the stage follows the furthest step: checkout, then unsubscribed (lost); a missing pipeline never fails the lead', async () => {
