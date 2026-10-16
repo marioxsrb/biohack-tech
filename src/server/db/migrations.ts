@@ -778,4 +778,10 @@ create index if not exists digital_events_downloads_idx on digital_events (entit
 alter table digital_events enable row level security
 `,
   },
+  {
+    // The iOS app signs in with the web admin's own password (no separate accounts): each session keeps a keyed
+    // fingerprint of the password it was opened with, so a new ADMIN_PASSWORD ends every app session.
+    id: '026_app_admin_sessions',
+    sql: `alter table app_sessions add column if not exists pw_tag text`,
+  },
 ]

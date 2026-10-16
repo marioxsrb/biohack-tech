@@ -487,14 +487,12 @@ describe('CRM, assistant, AI caller and the iOS app', () => {
   })
 
   it('iOS API: an order with the book says where its PDF stands (read-only, additive)', async () => {
-    const { appUsers } = await import('@/server/app/auth')
     const route = await import('@/app/api/app/v1/[[...path]]/route')
-    await appUsers.create(db, { email: 'mario@exemplu.ro', name: 'Mario', password: 'o-parola-lunga-123' })
     const call = async (method: 'GET' | 'POST', p: string, body?: unknown, token?: string) => {
       const res = await route[method](new NextRequest(`https://biohack-tech.ro/api/app/v1/${p}`, { method, headers: { 'content-type': 'application/json', 'x-forwarded-for': ip(), ...(token && { authorization: `Bearer ${token}` }) }, ...(body ? { body: JSON.stringify(body) } : {}) }), { params: Promise.resolve({ path: p.split('/') }) })
       return (await res.json()) as Record<string, unknown>
     }
-    const token = (await call('POST', 'auth/login', { email: 'mario@exemplu.ro', password: 'o-parola-lunga-123' })).token as string
+    const token = (await call('POST', 'auth/login', { username: 'admin', password: process.env.ADMIN_PASSWORD })).token as string
     const o = await place([{ productId: BOOK, quantity: 1 }], 'cod')
     const before = (await call('GET', `orders/${o.id}`, undefined, token)) as { shipping: number; total: number; digital: { status: string } }
     expect([before.shipping, before.total, before.digital.status]).toEqual([12.1, 131.89, 'waiting'])

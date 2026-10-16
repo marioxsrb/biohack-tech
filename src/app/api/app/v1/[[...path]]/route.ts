@@ -7,7 +7,7 @@ import { getDb } from '@/server/db'
 import { errText, log } from '@/server/log'
 import { orders, isAppFilter } from '@/server/orders/repository'
 import type { Order } from '@/server/orders/model'
-import { clientIp, rateLimit } from '@/server/rate-limit'
+import { clientIp, rateLimit, rateLimited } from '@/server/rate-limit'
 import { buildReport, lifetimeTotals, period } from '@/server/report'
 
 export const runtime = 'nodejs'
@@ -15,12 +15,12 @@ export const dynamic = 'force-dynamic'
 
 /**
  * The API of the private iOS app "BiohackTech Sales". Every call except the login needs `Authorization: Bearer
- * <session token>` from one of the (at most two) app accounts made in /admin. Orders and statistics are READ-ONLY:
+ * <session token>` from a login with the web admin's password (user name "admin"; server/app/auth.ts). Orders and statistics are READ-ONLY:
  * no route here changes an order, a payment, an invoice or a setting. The only writes are the caller's own session
  * (login, logout) and own iPhone (push token, notification preferences). Numbers come from the same report as the
  * admin dashboard (server/report.ts); an unpaid order is never counted as collected money.
  *
- *   POST   auth/login          { email, password } → { token, user }
+ *   POST   auth/login          { username: "admin", password } → { token, user }
  *   POST   auth/logout
  *   GET    me                  the account and its iPhones
  *   GET    summary?period=     home: totals, collected vs. to collect, trend, best sellers, latest orders
@@ -127,11 +127,13 @@ async function handle(req: NextRequest, ctx: Ctx, method: 'GET' | 'POST' | 'PATC
     if (a === 'auth' && b === 'login' && method === 'POST') {
       if (!rateLimit(`app-login:${ip}`, 10, 15 * 60_000)) return bad('too many attempts', 429)
       const x = await body(req)
-      const email = typeof x?.email === 'string' ? x.email.slice(0, 160) : ''
+      const username = typeof x?.username === 'string' ? x.username.slice(0, 64) : ''
       const password = typeof x?.password === 'string' ? x.password.slice(0, 200) : ''
-      if (!email || !password) return bad('email and password required', 400)
-      if (!rateLimit(`app-login-user:${email.toLowerCase()}`, 10, 60 * 60_000)) return bad('too many attempts', 429)
-      const r = await appSessions.login(db, email, password, req.headers.get('user-agent'))
+      if (!username || !password) return bad('username and password required', 400)
+      // One account, so one budget of wrong passwords for it across every address: spread-out guessing stops too.
+      if (rateLimited('app-login-admin-failed', 30)) return bad('too many attempts', 429)
+      const r = await appSessions.login(db, username, password, req.headers.get('user-agent'))
+      if (!r) rateLimit('app-login-admin-failed', 30, 60 * 60_000)
       log.info('app.login', { ok: !!r })
       if (!r) return bad('invalid credentials', 401)
       return json({ token: r.token, user: { id: r.user.id, name: r.user.name, email: r.user.email } })

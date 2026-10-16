@@ -1,20 +1,22 @@
 /**
- * Accounts of the private iOS app "BiohackTech Sales": at most two people, each with their own password (scrypt),
- * created in /admin. A login returns an opaque session token (the app keeps it in the Keychain); only its SHA-256
- * is stored, so a database copy never holds a usable session. Sessions last 90 days and can be revoked.
- * Everything the app reads is read-only; nothing here can change an order.
+ * Sign-in of the private iOS app "BiohackTech Sales": one account, the web admin's. The user name is always "admin"
+ * and the password is checked on the server against ADMIN_PASSWORD with the web admin's own check (lib/admin-auth),
+ * which this file does not change; the password is never stored, copied or sent anywhere. A login opens an app-only
+ * session: an opaque token (the app keeps it in the Keychain), of which only a SHA-256 is stored, plus a keyed
+ * fingerprint of the password it was opened with (HMAC with ADMIN_SESSION_SECRET) so a new ADMIN_PASSWORD ends every
+ * app session. The session reads (orders, stats) and registers its own iPhone; it is never accepted by /admin or
+ * /api/admin, so it can do nothing administrative. Sessions last 90 days and can be revoked from /admin.
  */
 import 'server-only'
-import { createHash, randomBytes, randomUUID, scrypt as scryptCb, timingSafeEqual } from 'node:crypto'
-import { promisify } from 'node:util'
+import { createHash, createHmac, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto'
+import { checkAdminCredentials } from '@/lib/admin-auth'
 import type { Queryable } from '@/server/db'
 
-const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number, opts: { N: number; r: number; p: number }) => Promise<Buffer>
-
-export const APP_MAX_USERS = 2
-export const APP_PASSWORD_MIN = 12
+export const APP_USERNAME = 'admin'
 const SESSION_DAYS = 90
-const PARAMS = { N: 2 ** 15, r: 8, p: 1 }
+
+/** The single principal the app's sessions and iPhones belong to (a row with no password: the password is ADMIN_PASSWORD). */
+export const ADMIN_PRINCIPAL_ID = '00000000-0000-4000-8000-00000000ad01'
 
 export type AppUser = { id: string; email: string; name: string; active: boolean; createdAt: Date; lastLoginAt: Date | null }
 
@@ -27,100 +29,80 @@ const toUser = (r: Record<string, unknown>): AppUser => ({
   lastLoginAt: r.last_login_at ? new Date(r.last_login_at as string) : null,
 })
 
-export async function hashPassword(pw: string) {
-  const salt = randomBytes(16)
-  const key = await scrypt(pw, salt, 32, { ...PARAMS, maxmem: 64 * 1024 * 1024 } as never)
-  return `scrypt$${PARAMS.N}$${PARAMS.r}$${PARAMS.p}$${salt.toString('base64')}$${key.toString('base64')}`
-}
-
-export async function verifyPassword(pw: string, stored: string) {
-  const [alg, n, r, p, salt, key] = stored.split('$')
-  if (alg !== 'scrypt' || !salt || !key) return false
-  const want = Buffer.from(key, 'base64')
-  const got = await scrypt(pw, Buffer.from(salt, 'base64'), want.length, { N: Number(n), r: Number(r), p: Number(p), maxmem: 64 * 1024 * 1024 } as never)
-  return got.length === want.length && timingSafeEqual(got, want)
-}
-
 const sha = (s: string) => createHash('sha256').update(s).digest('hex')
-const normEmail = (e: string) => e.trim().toLowerCase()
+function same(a: string, b: string) {
+  const x = Buffer.from(a)
+  const y = Buffer.from(b)
+  return x.length === y.length && timingSafeEqual(x, y)
+}
 
-/** Burns the same time as a real check when the address is unknown (no account enumeration by timing). */
-const DUMMY = 'scrypt$32768$8$1$AAAAAAAAAAAAAAAAAAAAAA==$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA='
+/**
+ * A fingerprint of the current ADMIN_PASSWORD for the sessions (not the password, and useless without the server's
+ * ADMIN_SESSION_SECRET). Without that secret (local development) a slow scrypt of the password stands in.
+ */
+export function passwordTag(env: Record<string, string | undefined> = process.env) {
+  const pw = env.ADMIN_PASSWORD ?? ''
+  if (env.ADMIN_SESSION_SECRET) return createHmac('sha256', env.ADMIN_SESSION_SECRET).update(`bt-app-session:${pw}`).digest('hex')
+  return scryptSync(pw, 'bt-app-session-tag', 32).toString('hex')
+}
 
-export const appUsers = {
-  async list(q: Queryable): Promise<AppUser[]> {
-    return (await q.query('select * from app_users order by created_at')).rows.map(toUser)
-  },
-
-  /** Adds an account (refused past two, or for an address already used, or a short password). */
-  async create(q: Queryable, x: { email: string; name: string; password: string }) {
-    const email = normEmail(x.email)
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { ok: false as const, reason: 'Adresa de email nu este validă.' }
-    if (x.password.length < APP_PASSWORD_MIN) return { ok: false as const, reason: `Parola trebuie să aibă cel puțin ${APP_PASSWORD_MIN} caractere.` }
-    const { rows } = await q.query<{ n: number }>('select count(*)::int as n from app_users where active')
-    if ((rows[0]?.n ?? 0) >= APP_MAX_USERS) return { ok: false as const, reason: `Aplicația are deja ${APP_MAX_USERS} conturi active.` }
-    const id = randomUUID()
-    const r = await q.query('insert into app_users (id, email, name, password_hash) values ($1, $2, $3, $4) on conflict (email) do nothing returning id', [
-      id,
-      email,
-      x.name.trim().slice(0, 80) || email,
-      await hashPassword(x.password),
-    ])
-    return r.rows.length ? { ok: true as const, id } : { ok: false as const, reason: 'Există deja un cont cu această adresă.' }
-  },
-
-  async setPassword(q: Queryable, id: string, password: string) {
-    if (password.length < APP_PASSWORD_MIN) return false
-    const r = await q.query('update app_users set password_hash = $2 where id = $1 returning id', [id, await hashPassword(password)])
-    // A new password signs every phone out.
-    if (r.rows.length) await q.query('update app_sessions set revoked_at = now() where user_id = $1 and revoked_at is null', [id])
-    return r.rows.length > 0
-  },
-
-  /** Deactivates an account: its sessions end and its phones stop receiving notifications. */
-  async setActive(q: Queryable, id: string, active: boolean) {
-    const r = await q.query('update app_users set active = $2 where id = $1 returning id', [id, active])
-    if (!active) {
-      await q.query('update app_sessions set revoked_at = now() where user_id = $1 and revoked_at is null', [id])
-      await q.query(`update app_devices set active = false, disabled_reason = 'account disabled' where user_id = $1`, [id])
-    }
-    return r.rows.length > 0
-  },
+async function ensurePrincipal(q: Queryable) {
+  await q.query(
+    `insert into app_users (id, email, name, password_hash) values ($1, 'admin', 'Admin', 'none: the web admin password (ADMIN_PASSWORD) is checked')
+     on conflict (id) do update set active = true`,
+    [ADMIN_PRINCIPAL_ID],
+  )
 }
 
 export const appSessions = {
-  /** Email + password → a new session token, or null. The same work whether the address exists or not. */
-  async login(q: Queryable, email: string, password: string, userAgent: string | null) {
-    const { rows } = await q.query('select * from app_users where email = $1', [normEmail(email)])
-    const row = rows[0]
-    const ok = await verifyPassword(password, (row?.password_hash as string) ?? DUMMY)
-    if (!row || !ok || !row.active) return null
+  /** "admin" + the web admin's password → a new app session, or null. The same checks whatever is wrong. */
+  async login(q: Queryable, username: string, password: string, userAgent: string | null, env: Record<string, string | undefined> = process.env) {
+    const userOk = same(username.trim().toLowerCase(), APP_USERNAME)
+    // The web admin's own check (its configured user name, ADMIN_PASSWORD, minimum length), unchanged.
+    const passOk = checkAdminCredentials(env.ADMIN_USER || 'admin', password, env) === 'ok'
+    if (!userOk || !passOk) return null
+    await ensurePrincipal(q)
     const token = randomBytes(32).toString('base64url')
-    await q.query(`insert into app_sessions (id, user_id, token_hash, expires_at, user_agent) values ($1, $2, $3, now() + interval '${SESSION_DAYS} days', $4)`, [
-      randomUUID(),
-      row.id,
-      sha(token),
-      userAgent?.slice(0, 200) ?? null,
-    ])
-    await q.query('update app_users set last_login_at = now() where id = $1', [row.id])
-    return { token, user: toUser(row) }
+    await q.query(
+      `insert into app_sessions (id, user_id, token_hash, expires_at, user_agent, pw_tag) values ($1, $2, $3, now() + interval '${SESSION_DAYS} days', $4, $5)`,
+      [randomUUID(), ADMIN_PRINCIPAL_ID, sha(token), userAgent?.slice(0, 200) ?? null, passwordTag(env)],
+    )
+    const { rows } = await q.query('update app_users set last_login_at = now() where id = $1 returning *', [ADMIN_PRINCIPAL_ID])
+    return { token, user: toUser(rows[0]) }
   },
 
-  /** The session's user, if the token is valid, not expired, not revoked and the account is active. */
-  async verify(q: Queryable, token: string | null | undefined) {
+  /** The session, if the token is valid, unexpired, not revoked and opened with the current ADMIN_PASSWORD. */
+  async verify(q: Queryable, token: string | null | undefined, env: Record<string, string | undefined> = process.env) {
     if (!token || token.length < 30 || token.length > 100) return null
     const { rows } = await q.query(
-      `select u.*, s.id as session_id from app_sessions s join app_users u on u.id = s.user_id
-       where s.token_hash = $1 and s.revoked_at is null and s.expires_at > now() and u.active`,
-      [sha(token)],
+      `select u.*, s.id as session_id, s.pw_tag from app_sessions s join app_users u on u.id = s.user_id
+       where s.token_hash = $1 and s.revoked_at is null and s.expires_at > now() and u.active and s.user_id = $2`,
+      [sha(token), ADMIN_PRINCIPAL_ID],
     )
-    if (!rows[0]) return null
-    await q.query('update app_sessions set last_used_at = now() where id = $1', [rows[0].session_id])
-    return { user: toUser(rows[0]), sessionId: rows[0].session_id as string }
+    const r = rows[0]
+    if (!r) return null
+    if (!r.pw_tag || !same(r.pw_tag as string, passwordTag(env))) {
+      // The admin password changed since this session opened: it ends for good.
+      await q.query('update app_sessions set revoked_at = now() where id = $1', [r.session_id])
+      return null
+    }
+    await q.query('update app_sessions set last_used_at = now() where id = $1', [r.session_id])
+    return { user: toUser(r), sessionId: r.session_id as string }
   },
 
   async revoke(q: Queryable, sessionId: string) {
     await q.query('update app_sessions set revoked_at = now() where id = $1 and revoked_at is null', [sessionId])
+  },
+
+  /** /admin: sign every iPhone out (their sessions end and they stop receiving notifications). */
+  async revokeAll(q: Queryable) {
+    await q.query('update app_sessions set revoked_at = now() where revoked_at is null')
+    await q.query(`update app_devices set active = false, disabled_reason = 'signed out from /admin' where active`)
+  },
+
+  async active(q: Queryable) {
+    const { rows } = await q.query<{ n: number }>('select count(*)::int as n from app_sessions where revoked_at is null and expires_at > now()')
+    return rows[0]?.n ?? 0
   },
 }
 

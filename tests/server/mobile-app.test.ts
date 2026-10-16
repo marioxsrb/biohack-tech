@@ -1,5 +1,6 @@
 /**
- * The private iOS app's backend: two accounts with their own passwords, sessions kept as hashes, a read-only API
+ * The private iOS app's backend: one sign-in, user "admin" with the web admin's password (ADMIN_PASSWORD, checked on
+ * the server, never stored), app-only sessions kept as hashes that end when that password changes, a read-only API
  * (orders, summary, stats; nothing can change an order), iPhone registration, and the sale notifications: KA-CHING
  * only when money is in (card confirmed by Stripe, transfer received, collection recorded), an ordinary one for an
  * unpaid order placed, one per event and phone whatever the retries, dead tokens removed, APNs failures retried.
@@ -23,7 +24,10 @@ vi.mock('@/server/app/apns', async (orig) => ({
 const { freshDb, person, TEST_ENV, lines } = await import('./helpers')
 const svc = await import('@/server/orders/service')
 const { runDueJobs } = await import('@/server/jobs/runner')
-const { appUsers, appDevices } = await import('@/server/app/auth')
+const { appSessions, appDevices } = await import('@/server/app/auth')
+const { checkAdminSession } = await import('@/lib/admin-auth')
+const { resetConfig } = await import('@/server/config')
+const adminApi = await import('@/app/api/admin/v1/[[...path]]/route')
 const { pushPayload } = await import('@/server/app/push')
 const route = await import('@/app/api/app/v1/[[...path]]/route')
 
@@ -50,37 +54,84 @@ const call = async (method: 'GET' | 'POST' | 'PATCH' | 'DELETE', path: string, o
   const res = await route[method](req, { params: Promise.resolve({ path: p.split('/').filter(Boolean) }) })
   return { status: res.status, json: (await res.json()) as Record<string, unknown> }
 }
-const account = async (email = 'mario@exemplu.ro') => {
-  await appUsers.create(db, { email, name: 'Mario', password: 'o-parola-lunga-123' })
-  return ((await call('POST', 'auth/login', { body: { email, password: 'o-parola-lunga-123' } })).json.token as string)
-}
+/** A phone signing in: "admin" + the web admin's password (TEST_ENV.ADMIN_PASSWORD). */
+const account = async () => (await call('POST', 'auth/login', { body: { username: 'admin', password: ENV.ADMIN_PASSWORD } })).json.token as string
 const place = async (paymentMethod: 'cod' | 'transfer' | 'card', attemptId: string) =>
   (await svc.placeOrder({ lines: lines([{ productId: 'brainlink-pro', quantity: 1 }]), form: { ...person, paymentMethod }, attemptId } as never)).order
 
-describe('accounts and sessions', () => {
-  it('own password per account, at most two; a wrong or unknown login is refused the same way; only a hash of the token is kept', async () => {
-    expect((await appUsers.create(db, { email: 'a@x.ro', name: 'A', password: 'scurta' })).ok).toBe(false)
-    expect((await appUsers.create(db, { email: 'a@x.ro', name: 'A', password: 'o-parola-lunga-123' })).ok).toBe(true)
-    expect((await appUsers.create(db, { email: 'b@x.ro', name: 'B', password: 'o-parola-lunga-456' })).ok).toBe(true)
-    expect(await appUsers.create(db, { email: 'c@x.ro', name: 'C', password: 'o-parola-lunga-789' })).toMatchObject({ ok: false })
-    expect((await call('POST', 'auth/login', { body: { email: 'a@x.ro', password: 'gresita-gresita' } })).status).toBe(401)
-    expect((await call('POST', 'auth/login', { body: { email: 'nimeni@x.ro', password: 'o-parola-lunga-123' } })).status).toBe(401)
-    const ok = await call('POST', 'auth/login', { body: { email: 'A@X.ro', password: 'o-parola-lunga-123' } })
+describe('sign-in with the admin password', () => {
+  it('"admin" + ADMIN_PASSWORD opens an app session; any other user name or password is refused the same way; the password is never stored', async () => {
+    for (const body of [
+      { username: 'admin', password: 'gresita-gresita' },
+      { username: 'mario@exemplu.ro', password: ENV.ADMIN_PASSWORD },
+      { username: 'administrator', password: ENV.ADMIN_PASSWORD },
+      { email: 'admin', password: ENV.ADMIN_PASSWORD }, // the old body shape
+    ]) {
+      const r = await call('POST', 'auth/login', { body })
+      expect(r.status).toBeGreaterThanOrEqual(400)
+      expect(r.json.token).toBeUndefined()
+    }
+    expect((await call('POST', 'auth/login', { body: { username: 'admin', password: 'gresita-gresita' } })).json).toEqual({ error: 'invalid credentials' })
+    const ok = await call('POST', 'auth/login', { body: { username: ' Admin ', password: ENV.ADMIN_PASSWORD } })
     expect(ok.status).toBe(200)
     const token = ok.json.token as string
-    expect(JSON.stringify((await db.query('select * from app_sessions')).rows)).not.toContain(token)
-    expect((await call('GET', 'me', { token })).json).toMatchObject({ user: { email: 'a@x.ro', name: 'A' } })
+    expect(ok.json.user).toMatchObject({ name: 'Admin', email: 'admin' })
+    expect(JSON.stringify(ok.json)).not.toContain(ENV.ADMIN_PASSWORD)
+    const stored = JSON.stringify([(await db.query('select * from app_sessions')).rows, (await db.query('select * from app_users')).rows])
+    expect(stored).not.toContain(token)
+    expect(stored).not.toContain(ENV.ADMIN_PASSWORD)
+    expect((await call('GET', 'me', { token })).json).toMatchObject({ user: { name: 'Admin' } })
+    expect(JSON.stringify((await call('GET', 'me', { token })).json)).not.toContain(ENV.ADMIN_PASSWORD)
     await call('POST', 'auth/logout', { token })
     expect((await call('GET', 'me', { token })).status).toBe(401)
   })
 
-  it('a new password or a deactivated account ends its sessions and stops its phones', async () => {
+  it('a new ADMIN_PASSWORD ends every app session (and the old password no longer signs in); the new one does', async () => {
+    const token = await account()
+    expect((await call('GET', 'me', { token })).status).toBe(200)
+    vi.stubEnv('ADMIN_PASSWORD', 'o-alta-parola-de-admin')
+    resetConfig()
+    try {
+      expect((await call('GET', 'me', { token })).status).toBe(401)
+      expect((await call('POST', 'auth/login', { body: { username: 'admin', password: ENV.ADMIN_PASSWORD } })).status).toBe(401)
+      const fresh = (await call('POST', 'auth/login', { body: { username: 'admin', password: 'o-alta-parola-de-admin' } })).json.token as string
+      expect((await call('GET', 'me', { token: fresh })).status).toBe(200)
+    } finally {
+      vi.stubEnv('ADMIN_PASSWORD', ENV.ADMIN_PASSWORD)
+      resetConfig()
+    }
+    // Back to the old password: the revoked session stays ended.
+    expect((await call('GET', 'me', { token })).status).toBe(401)
+  })
+
+  it('an expired session is refused; signing every phone out from /admin ends sessions and stops notifications', async () => {
     const token = await account()
     await call('POST', 'devices', { token, body: { token: TOKEN_A, environment: 'production', name: 'iPhone Mario' } })
-    const [u] = await appUsers.list(db)
-    await appUsers.setActive(db, u.id, false)
-    expect((await call('GET', 'me', { token })).status).toBe(401)
+    expect(await appDevices.targets(db)).toHaveLength(1)
+    await db.query("update app_sessions set expires_at = now() - interval '1 minute'")
+    expect((await call('GET', 'summary', { token })).status).toBe(401)
+    const t2 = await account()
+    await appSessions.revokeAll(db)
+    expect((await call('GET', 'me', { token: t2 })).status).toBe(401)
     expect(await appDevices.targets(db)).toEqual([])
+    expect(await appSessions.active(db)).toBe(0)
+  })
+
+  it('the app session is never an admin session: refused by /api/admin and as the admin cookie', async () => {
+    const token = await account()
+    const req = (headers: Record<string, string>) => new NextRequest('https://biohack-tech.ro/api/admin/v1/orders', { headers })
+    const ctx = { params: Promise.resolve({ path: ['orders'] }) }
+    expect((await adminApi.GET(req({ authorization: `Bearer ${token}` }), ctx)).status).toBe(401)
+    expect((await adminApi.GET(req({ cookie: `bt_admin=${token}` }), ctx)).status).toBe(401)
+    expect(await checkAdminSession(token)).not.toBe('ok')
+  })
+
+  it('repeated wrong passwords from one address are stopped (429), even with the right one after', async () => {
+    const headers = { 'x-forwarded-for': '10.9.9.9', 'content-type': 'application/json' }
+    const tryLogin = async (password: string) =>
+      (await route.POST(new NextRequest('https://biohack-tech.ro/api/app/v1/auth/login', { method: 'POST', headers, body: JSON.stringify({ username: 'admin', password }) }), { params: Promise.resolve({ path: ['auth', 'login'] }) })).status
+    for (let i = 0; i < 10; i++) expect(await tryLogin(`gresita-${i}-gresita`)).toBe(401)
+    expect(await tryLogin(ENV.ADMIN_PASSWORD)).toBe(429)
   })
 })
 
@@ -124,9 +175,9 @@ describe('read-only API', () => {
 describe('sale notifications', () => {
   const register = async (token: string, device: string, prefs?: Record<string, boolean>) => (await call('POST', 'devices', { token, body: { token: device, environment: 'production', name: 'iPhone', prefs } })).json.id as string
 
-  it('KA-CHING on both iPhones when a transfer is received; once, whatever the retries; ordinary notification for the unpaid order placed', async () => {
-    const t1 = await account('mario@exemplu.ro')
-    const t2 = await account('prieten@exemplu.ro')
+  it('KA-CHING on both signed-in iPhones when a transfer is received; once, whatever the retries; ordinary notification for the unpaid order placed', async () => {
+    const t1 = await account()
+    const t2 = await account()
     await register(t1, TOKEN_A)
     await register(t2, TOKEN_B)
     const o = await place('transfer', 'n-1')
@@ -173,8 +224,8 @@ describe('sale notifications', () => {
   })
 
   it('preferences per iPhone: no sound, or no new-order notifications; a dead token is removed; a temporary failure retries only the missing phone', async () => {
-    const t1 = await account('mario@exemplu.ro')
-    const t2 = await account('prieten@exemplu.ro')
+    const t1 = await account()
+    const t2 = await account()
     const a = await register(t1, TOKEN_A)
     await register(t2, TOKEN_B)
     await call('PATCH', `devices/${a}`, { token: t1, body: { prefs: { kaching: false, newOrders: false } } })
@@ -224,5 +275,16 @@ describe('APNs token auth', () => {
     expect(verify('sha256', Buffer.from(`${h}.${b}`), { key: createPublicKey(key), dsaEncoding: 'ieee-p1363' }, Buffer.from(s, 'base64url'))).toBe(true)
     expect(apnsJwt(c, t0 + 49 * 60_000)).toBe(jwt)
     expect(apnsJwt(c, t0 + 51 * 60_000)).not.toBe(jwt)
+  })
+})
+
+// Last in the file: it uses up the account-wide budget of wrong passwords (the limiter lives for the whole file).
+describe('sign-in limit for the one account', () => {
+  it('wrong passwords spread over many addresses still stop at 30 an hour, then even the right password waits', async () => {
+    const statuses: number[] = []
+    for (let i = 0; i < 31; i++) statuses.push((await call('POST', 'auth/login', { body: { username: 'admin', password: `ghicit-${i}-ghicit` } })).status)
+    expect(statuses).toContain(429)
+    expect(statuses.filter((s) => s !== 401 && s !== 429)).toEqual([])
+    expect((await call('POST', 'auth/login', { body: { username: 'admin', password: ENV.ADMIN_PASSWORD } })).status).toBe(429)
   })
 })

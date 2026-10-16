@@ -15,4 +15,10 @@ export function rateLimit(key: string, max: number, windowMs: number): boolean {
   return h.n <= max
 }
 
+/** Whether `key` has already used its `max` hits in the current window (does not count as a hit). */
+export function rateLimited(key: string, max: number): boolean {
+  const h = hits.get(key)
+  return !!h && h.reset >= Date.now() && h.n >= max
+}
+
 export const clientIp = (headers: Headers) => headers.get('x-forwarded-for')?.split(',')[0]?.trim() || headers.get('x-real-ip') || 'unknown'

@@ -15,7 +15,7 @@ import { placeTestCall } from '@/server/calling/test-call'
 import { enquiries, type EnquiryStatus } from '@/server/enquiries'
 import { replies } from '@/server/replies'
 import { imapSource, syncInbox } from '@/server/inbox'
-import { APP_PASSWORD_MIN, appUsers } from '@/server/app/auth'
+import { appSessions } from '@/server/app/auth'
 import { deliverPush } from '@/server/app/push'
 import { redirect } from 'next/navigation'
 import { isSupportStatus, supportRequests } from '@/server/assistant/support'
@@ -375,33 +375,15 @@ export async function enquiryUrgentAction(f: FormData) {
   revalidatePath(`/admin/mesaje/${id}`)
 }
 
-/** The iOS app's accounts (at most two): created here with their password, never shown again. */
-export async function appUserCreateAction(f: FormData) {
+/** Signs every iPhone out of the iOS app (their sessions end; they sign in again with the admin password). */
+export async function appSignOutAllAction() {
   await guard()
   const db = await getDb()
-  const r = await appUsers.create(db, { email: text(f, 'email', 160), name: text(f, 'name', 80), password: String(f.get('password') ?? '').slice(0, 200) })
-  if (r.ok) await audit(db, adminActor(), 'app_user.create', { id: r.id, email: text(f, 'email', 160) })
-  log.info('admin.action', { action: 'app_user_create', ok: r.ok })
+  await appSessions.revokeAll(db)
+  await audit(db, adminActor(), 'app.sign_out_all', {})
+  log.info('admin.action', { action: 'app_sign_out_all' })
   revalidatePath('/admin/aplicatie')
-  if (!r.ok) redirectWith('/admin/aplicatie', r.reason)
-}
-
-export async function appUserPasswordAction(f: FormData) {
-  await guard()
-  const db = await getDb()
-  const id = text(f, 'id', 40)
-  const ok = /^[0-9a-f-]{36}$/i.test(id) && (await appUsers.setPassword(db, id, String(f.get('password') ?? '').slice(0, 200)))
-  if (ok) await audit(db, adminActor(), 'app_user.password', { id })
-  revalidatePath('/admin/aplicatie')
-  if (!ok) redirectWith('/admin/aplicatie', `Parola trebuie să aibă cel puțin ${APP_PASSWORD_MIN} caractere.`)
-}
-
-export async function appUserActiveAction(f: FormData) {
-  await guard()
-  const db = await getDb()
-  const id = text(f, 'id', 40)
-  if (/^[0-9a-f-]{36}$/i.test(id) && (await appUsers.setActive(db, id, f.get('active') === 'da'))) await audit(db, adminActor(), 'app_user.active', { id, active: f.get('active') === 'da' })
-  revalidatePath('/admin/aplicatie')
+  redirectWith('/admin/aplicatie', 'Toate telefoanele au fost deconectate.')
 }
 
 /** A sample payment notification (KA-CHING) to every registered iPhone: checks APNs, the sound and the devices. */
