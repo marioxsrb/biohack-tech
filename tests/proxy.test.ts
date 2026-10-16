@@ -168,4 +168,30 @@ describe('proxy', () => {
       expect(getRewrittenUrl(forged)).toBe('https://biohack-tech.ro/ro')
     })
   })
+
+  it('a private link never keeps its token in the address: cookie (HttpOnly), 303 to the token-free page, only the needed parameters', async () => {
+    const token = 'AbCdEfGhIjKlMnOpQrStUvWx12'
+    const order = await run(`https://biohack-tech.ro/comanda/${token}?payment_intent=pi_1&payment_intent_client_secret=pi_1_secret_x&redirect_status=failed`, 'biohack-tech.ro')
+    expect(order.status).toBe(303)
+    expect(order.headers.get('location')).toBe('https://biohack-tech.ro/comanda?redirect_status=failed')
+    const cookie = order.headers.get('set-cookie') ?? ''
+    expect(cookie).toMatch(new RegExp(`bt_tok_comanda=${token}`))
+    expect(cookie).toMatch(/HttpOnly/i)
+    expect(cookie).toMatch(/Secure/i)
+    expect(cookie).toMatch(/SameSite=lax/i)
+    expect(order.headers.get('referrer-policy')).toBe('no-referrer')
+    expect(order.headers.get('location')).not.toContain(token)
+    // English, the international site and the landing hosts: same treatment, same host.
+    const en = await run(`https://www.biohack-tech.net/en/reluare/${token}`, 'www.biohack-tech.net')
+    expect(en.headers.get('location')).toBe('https://www.biohack-tech.net/en/reluare')
+    const unsub = await run(`https://biohack-tech.ro/dezabonare/${token}?gata=1`, 'biohack-tech.ro')
+    expect(unsub.headers.get('location')).toBe('https://biohack-tech.ro/dezabonare?gata=1')
+    const landing = await run(`https://calm.biohack-tech.ro/comanda/${token}`, 'calm.biohack-tech.ro')
+    expect(landing.headers.get('location')).toBe('https://calm.biohack-tech.ro/comanda')
+    // The token-free page is served on the landing host (not sent away to the main site).
+    const page = await run('https://calm.biohack-tech.ro/comanda', 'calm.biohack-tech.ro')
+    expect(getRewrittenUrl(page)).toBe('https://calm.biohack-tech.ro/ro/comanda')
+    // Not a token: an ordinary path.
+    expect((await run('https://biohack-tech.ro/comanda/abc', 'biohack-tech.ro')).status).not.toBe(303)
+  })
 })

@@ -404,6 +404,14 @@ export async function applyCallResult(q: Queryable, c: Config, call: Call, r: Ca
   if (!lead) return true
   // A refusal of further contact stops every commercial contact: calls (this number) and marketing email.
   if (optedOut) await optOut(q, c, call, lead)
+  // "Not interested" on the phone: the reminder emails for this abandonment stop too (no contradicting follow-up).
+  // Marketing consent itself is unchanged; only a refusal of contact (above) withdraws it.
+  else if (r.outcome === 'not_interested')
+    await q.query(
+      `update leads set recovery_status = 'stopped', recovery_reason = 'not interested (AI call)', updated_at = now()
+       where email = $1 and stage in ('lead', 'checkout_started') and recovery_status <> 'stopped'`,
+      [lead.email],
+    )
   let status = 'completed'
   if (optedOut || r.outcome === 'not_interested' || r.outcome === 'no_time' || r.outcome === 'invalid_number') status = 'stopped'
   else if (RETRYABLE.includes(r.outcome)) {

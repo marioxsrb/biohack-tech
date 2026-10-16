@@ -448,9 +448,10 @@ export function recoveryDecision(
   if (ctx.notTestRecipient) return { send: false, reason: 'recovery email in test mode', abandonment, status: 'disabled' }
   if (ctx.consentGranted === null) return { send: false, reason: 'no marketing consent', abandonment, status: 'ineligible' }
   if (!ctx.consentGranted) return { send: false, reason: 'consent withdrawn', abandonment, status: 'stopped' }
-  // The last email of a cart waits for the second when that one was moved by new activity (not lost), for a week at most.
-  if (ctx.step === 3 && lead.recoverySent === 1 && ctx.now.getTime() - lead.lastActivityAt.getTime() < 7 * 86_400_000)
-    return { send: false, reason: 'waiting for the second email', abandonment, later: new Date(ctx.now.getTime() + 12 * 3_600_000) }
+  // A later email waits for the one before it when that one was moved (new activity, an AI call under way): never
+  // lost, never out of order, for a week at most.
+  if (ctx.step >= 2 && lead.recoverySent < ctx.step - 1 && ctx.now.getTime() - lead.lastActivityAt.getTime() < 7 * 86_400_000)
+    return { send: false, reason: `waiting for email ${lead.recoverySent + 1}`, abandonment, later: new Date(ctx.now.getTime() + 12 * 3_600_000) }
   if (lead.recoverySent !== ctx.step - 1) return { send: false, reason: `step ${ctx.step} after ${lead.recoverySent} sent`, abandonment }
   if (ctx.step === 3 && lead.stage !== 'checkout_started') return { send: false, reason: 'the third email is for abandoned carts', abandonment }
   const spacing = ctx.step === 2 ? ctx.secondHours : ctx.step === 3 && ctx.thirdHours && ctx.secondHours ? ctx.thirdHours - ctx.secondHours : undefined

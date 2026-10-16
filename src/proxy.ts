@@ -5,6 +5,7 @@ import { DISCONTINUED_PATH, isGatedHostname, isLandingSlug, landingForHost, pres
 import { GATE_COOKIE } from '@/lib/lead'
 import { defaultLocale, splitLocale } from '@/i18n/locales'
 import { isIntlHost } from '@/lib/sites'
+import { PRIVATE_PAGES, privateLink, tokenFreeUrl } from '@/lib/private-links'
 
 /**
  * Two jobs, before anything renders:
@@ -66,6 +67,17 @@ export async function proxy(req: NextRequest) {
   const retired = retiredLandingRedirect(req.headers.get('host'), site.url, `${pathname}${search}`)
   if (retired) return NextResponse.redirect(retired, 308)
   if (NOT_A_PAGE.test(pathname)) return NextResponse.next()
+  // 0b. A private link (order, cart recovery, unsubscribe): the token goes into an HttpOnly cookie and the page
+  // opens at an address without it, so no analytics or ad tool, and no Referer, ever carries it (lib/private-links).
+  const link = privateLink(pathname)
+  if (link) {
+    const res = NextResponse.redirect(new URL(tokenFreeUrl(link, req.nextUrl.searchParams), req.url), 303)
+    const p = PRIVATE_PAGES[link.page]
+    res.cookies.set(p.cookie, link.token, { httpOnly: true, secure: req.nextUrl.protocol === 'https:', sameSite: 'lax', path: '/', maxAge: p.days * 86_400 })
+    res.headers.set('Referrer-Policy', 'no-referrer')
+    res.headers.set('Cache-Control', 'no-store')
+    return noindex(res)
+  }
   // A discontinued product's pages, on any host and in any language: 410 Gone, never another product.
   const bare = splitLocale(pathname)
   if (DISCONTINUED_PATH.test(bare.path)) return gone(bare.locale)

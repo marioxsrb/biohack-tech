@@ -71,7 +71,7 @@ describe('Conversions API', () => {
       event_name: 'Purchase',
       event_id: paid.orderNumber,
       action_source: 'website',
-      event_source_url: `https://calm.biohack-tech.ro/comanda/${paid.publicToken}`,
+      event_source_url: 'https://calm.biohack-tech.ro/comanda',
       custom_data: {
         currency: 'RON',
         value: 6380,
@@ -82,6 +82,8 @@ describe('Conversions API', () => {
       },
     })
     expect(body.data[0].custom_data.value).not.toBe(paid.totalMinor)
+    // The order's access token never reaches Meta, anywhere in the event.
+    expect(JSON.stringify(body)).not.toContain(paid.publicToken)
     const user = body.data[0].user_data
     expect(user).toMatchObject({
       em: [hash('ana@exemplu.ro')],

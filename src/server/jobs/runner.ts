@@ -263,8 +263,11 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     // An AI call for this lead is about to happen: its email (with the personal code) is the first recovery
     // email, so the regular first email waits until after it (and is skipped when the call's email went out).
     if (step === 1) {
+      // Also while the call is ringing or under way (its job is done, the conversation is not): never an email mid-call.
       const { rows } = await db.query(
-        `select 1 from jobs where kind = 'call.attempt' and payload->>'leadId' = $1 and status in ('pending', 'retry', 'running') and run_at <= now() + interval '15 minutes' limit 1`,
+        `select 1 from jobs where kind = 'call.attempt' and payload->>'leadId' = $1 and status in ('pending', 'retry', 'running') and run_at <= now() + interval '15 minutes'
+         union all select 1 from calls where lead_id::text = $1 and status in ('scheduled', 'dialing') and created_at > now() - interval '30 minutes'
+         limit 1`,
         [lead.id],
       )
       if (rows.length && lead.recoverySent === 0) {
@@ -359,6 +362,12 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
       const mail = renderRecoveryOffer({ firstName: lead.name?.split(' ')[0] ?? null, items: leadItems(lead), cart: hasCart(lead), code: code.code, link: recoveryLink(lead, code.code, c), unsubscribeUrl: `${c.siteUrl}/dezabonare/${token}` })
       const ref = await deliver(c, { ...mail, to: lead.email, name: `call-offer-request-${call.id}` })
       await calls.update(db, call.id, { email_status: 'sent_on_request' })
+      // It is the lead's first recovery email: the regular sequence skips its own first one (one email with the code).
+      await db.query(
+        `update leads set recovery_sent = greatest(recovery_sent, 1), last_recovery_at = now(), recovery_status = case when recovery_status = 'stopped' then recovery_status else 'sent' end,
+           recovery_reason = 'call offer (asked)', updated_at = now() where id = $1`,
+        [lead.id],
+      )
       return ref
     }
     // The recovery link restores the context (an unlocked price on acces, or the cart of a checkout).

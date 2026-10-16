@@ -470,3 +470,83 @@ describe('the agent’s first sentence', () => {
     expect(say('Popa Zorel')).not.toMatch(/^(domnule|doamna)/) // -a (Popa) and a consonant (Zorel) disagree: no title
   })
 })
+
+describe('one abandonment, one coordinated sequence (AI call, its code email, the three cart emails)', () => {
+  const endCall = async (providerCallId: string | null, outcome: string) => {
+    const body = JSON.stringify({ type: 'post_call_transcription', data: { agent_id: 'agent_test', conversation_id: providerCallId, status: 'done', metadata: { call_duration_secs: 70 }, analysis: { data_collection_results: { outcome: { value: outcome } } } } })
+    await webhook(new NextRequest('https://biohack-tech.ro/api/webhooks/elevenlabs', { method: 'POST', headers: { 'elevenlabs-signature': signWebhook(body, SECRET) }, body }))
+  }
+  const toAna = () => sent.filter((m) => m.to === ana.email).map((m) => m.subject)
+  const days = (d: number) => db.query(`update leads set last_activity_at = now() - ($1 || ' hours')::interval, last_recovery_at = now() - interval '23 hours'`, [String(d * 24 + 1)])
+
+  it('the call’s code email replaces the first cart email; then the second and third, a day apart; never the same email twice', async () => {
+    await marketing.grant(db, { email: ana.email, source: 'checkout' })
+    const leadId = await checkout([{ productId: 'balance-wave', quantity: 1 }])
+    await quiet(40)
+    await later()
+    expect(dials()).toHaveLength(1)
+    expect(toAna()).toEqual(['Codul tău de 10% pentru NEUROS Calm'])
+    const call = (await calls.forLeads(db, [leadId]))[0]
+    await endCall(call.providerCallId, 'more_info')
+    await later()
+    expect(toAna()).toEqual(['Codul tău de 10% pentru NEUROS Calm']) // no "cart" email on top of the code email
+    await days(1)
+    await later()
+    await later()
+    await days(2)
+    await later()
+    await later()
+    expect(toAna()).toEqual(['Codul tău de 10% pentru NEUROS Calm', 'Ai întrebări despre NEUROS Calm? Suntem aici', 'Ultima amintire: codul tău BIOHACK10 pentru NEUROS Calm'])
+    await days(5)
+    await later()
+    expect(toAna()).toHaveLength(3)
+  })
+
+  it('no email while the call is ringing or under way; the first cart email after it', async () => {
+    await db.query("update promo_codes set active = false where code = 'BIOHACK10'") // no code email before the call
+    await marketing.grant(db, { email: ana.email, source: 'checkout' })
+    const leadId = await checkout([{ productId: 'balance-wave', quantity: 1 }])
+    await quiet(40)
+    await later()
+    expect(dials()).toHaveLength(1)
+    expect((await calls.forLeads(db, [leadId]))[0].status).toBe('dialing')
+    await later()
+    expect(toAna()).toEqual([])
+    await endCall((await calls.forLeads(db, [leadId]))[0].providerCallId, 'no_time')
+    await db.query(`update jobs set run_at = now() where kind = 'lead.recovery'`)
+    await later()
+    expect(toAna()).toEqual(['Produsele tale te așteaptă în coș'])
+  })
+
+  it('"not interested" on the phone stops the reminder emails for this abandonment (consent itself unchanged)', async () => {
+    await marketing.grant(db, { email: ana.email, source: 'checkout' })
+    const leadId = await checkout([{ productId: 'balance-wave', quantity: 1 }])
+    await quiet(40)
+    await later()
+    await endCall((await calls.forLeads(db, [leadId]))[0].providerCallId, 'not_interested')
+    await later()
+    await days(1)
+    await later()
+    await days(2)
+    await later()
+    expect(toAna()).toEqual(['Codul tău de 10% pentru NEUROS Calm'])
+    expect((await leads.byId(db, leadId))!).toMatchObject({ recoveryStatus: 'stopped', recoveryReason: 'not interested (AI call)' })
+    expect((await marketing.state(db, ana.email))!.granted).toBe(true)
+  })
+
+  it('a purchase or an unsubscribe stops everything that is still planned', async () => {
+    await marketing.grant(db, { email: ana.email, source: 'checkout' })
+    const leadId = await checkout([{ productId: 'balance-wave', quantity: 1 }], { callConsent: false })
+    await quiet(40)
+    await later()
+    expect(toAna()).toEqual(['Produsele tale te așteaptă în coș'])
+    const { withdrawMarketing } = await import('@/server/marketing/unsubscribe')
+    await withdrawMarketing(ana.email, 'unsubscribe_link', '/dezabonare')
+    await days(1)
+    await later()
+    await days(2)
+    await later()
+    expect(toAna()).toHaveLength(1)
+    expect((await leads.byId(db, leadId))!.recoveryStatus).toBe('stopped')
+  })
+})

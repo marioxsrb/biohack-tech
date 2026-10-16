@@ -43,7 +43,7 @@ const LANDING_PASSTHROUGH = [
   /^\/checkout\/?$/,
   /^\/cart\/?$/,
   /^\/products(\/[\w-]+)?\/?$/,
-  /^\/comanda\/[\w-]+\/?$/,
+  /^\/comanda(\/[\w-]+)?\/?$/,
   /^\/api\/(checkout|consent|contact)(\/|$)/,
   /^\/_next\//,
   /^\/(terms-of-service|privacy-policy|politica-cookies|politica-livrare|politica-retur|garantie|plati)\/?$/,
@@ -112,9 +112,9 @@ export function isGatedHostname(hostHeader: string | null | undefined, base = la
 
 /** Served on the gated hostname even with the gate off: order, recovery and unsubscribe links already sent, legal pages, files. */
 const GATED_PASSTHROUGH = [
-  /^\/comanda\/[\w-]+\/?$/,
-  /^\/reluare\/[\w-]+\/?$/,
-  /^\/dezabonare\/[\w-]+\/?$/,
+  /^\/comanda(\/[\w-]+)?\/?$/,
+  /^\/reluare(\/[\w-]+)?\/?$/,
+  /^\/dezabonare(\/[\w-]+)?\/?$/,
   /^\/_next\//,
   /^\/(terms-of-service|privacy-policy|politica-cookies|politica-livrare|politica-retur|garantie|plati)\/?$/,
   /^\/retragere(\/confirmare)?\/?$/,

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from '@/components/ui/Link'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useSearchParams } from 'next/navigation'
 import { cloneElement, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactElement, type ReactNode } from 'react'
 import { useCart, type ResolvedLine } from '@/components/cart/CartProvider'
 import { cartStore } from '@/components/cart/cart-store'
@@ -326,7 +326,6 @@ function readDraft(methods: Methods, preferred?: PaymentMethod, locale: Locale =
 }
 
 function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines: ResolvedLine[]; methods: Methods; stripeKey: string | null; preferred?: PaymentMethod }) {
-  const router = useRouter()
   const locale: Locale = useLocale()
   const t = COPY[locale]
   const { pricing: cartPricing, currency } = useCart()
@@ -481,9 +480,11 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
       // The server answers in the checkout's language (it gets `locale`).
       if (!res.ok) throw new Error(data.message ?? t.failed)
 
+      // The order link carries its token: a full page load lets the server move it into a cookie and open the
+      // order at /comanda, before any analytics or ad tool can read the address (lib/private-links.ts).
       const orderUrl = localePath(locale, `/comanda/${data.token}`)
       if (data.method === 'transfer' || data.method === 'cod' || data.paid || data.submitted) {
-        router.push(orderUrl)
+        window.location.assign(orderUrl)
         return
       }
       // Stripe confirms the payment. Redirect methods leave for the order page; a card that finishes here
@@ -495,7 +496,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
         address: { line1: form.address, city: form.city, state: form.county, postal_code: form.postalCode, country: form.country },
       })
       if (failure) throw new Error(failure)
-      router.push(orderUrl)
+      window.location.assign(orderUrl)
     } catch (err) {
       setServerError(err instanceof Error && err.message ? err.message : t.offline)
       setSending(false)

@@ -73,7 +73,8 @@ export function metaPurchaseBody(order: Order, siteUrl: string, testEventCode?: 
         event_name: 'Purchase',
         event_time: Math.floor((order.paidAt ?? new Date(now)).getTime() / 1000),
         event_id: order.orderNumber,
-        event_source_url: `${origin}/comanda/${order.publicToken}`,
+        // The order page's public address: never its token (lib/private-links.ts).
+        event_source_url: `${origin}${order.locale === 'en' ? '/en' : ''}/comanda`,
         action_source: 'website',
         user_data,
         custom_data: {

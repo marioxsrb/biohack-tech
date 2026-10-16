@@ -11,5 +11,5 @@ export async function unsubscribeAction(f: FormData) {
   const token = String(f.get('token') ?? '')
   const email = await marketing.emailForToken(await getDb(), token)
   if (email && (await withdrawMarketing(email, 'unsubscribe_link', '/dezabonare'))) kickJobs()
-  redirect(`/dezabonare/${encodeURIComponent(token)}?gata=1`)
+  redirect('/dezabonare?gata=1')
 }
