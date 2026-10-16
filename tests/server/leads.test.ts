@@ -1,6 +1,6 @@
 /**
  * Conversion engine: leads from the price-gated funnel (acces.<domain>) and the checkout's contact step, their
- * link to orders, abandonment, the two recovery emails (consent, suppression, sequence, no duplicates), the
+ * link to orders, abandonment, the recovery emails (two for the price form, three designed ones for a cart; consent, suppression, sequence, no duplicates), the
  * CRM copy (contact and tags only), retention and the funnel comparison. SMTP is a fake nodemailer transport,
  * GoHighLevel and Stripe are stubbed at the HTTP boundary, the database is an embedded PostgreSQL (PGlite).
  */
@@ -269,7 +269,7 @@ describe('leads → orders → purchases', () => {
 describe('unpaid card orders (application-owned recovery)', () => {
   const card = (cookies: Record<string, string>, attemptId: string, host = GATED) =>
     checkout(post('/api/checkout', host, { lines: [{ productId: 'balance-wave', quantity: 1 }], order: { ...person, email: 'ana@exemplu.ro', paymentMethod: 'card' }, acceptedTerms: true, attemptId }, cookies))
-  const recoveries = () => sent.filter((m) => m.to === 'ana@exemplu.ro' && /așteaptă|oferta|ajuta/.test(m.subject))
+  const recoveries = () => sent.filter((m) => m.to === 'ana@exemplu.ro' && /așteaptă|oferta|ajuta|coș|întrebări|amintire/i.test(m.subject))
   const abandonedOrder = async (id: string) => {
     await svc.markAbandonedIfUnpaid(id)
     await db.query(`update leads set last_activity_at = now() - interval '40 minutes'`)
@@ -285,10 +285,10 @@ describe('unpaid card orders (application-owned recovery)', () => {
     expect(recoveries()).toEqual([]) // the order is still within its payment window
     await abandonedOrder(o.id)
     await later()
-    expect(recoveries().map((m) => m.subject)).toEqual(['Comanda ta NEUROS Calm te așteaptă'])
+    expect(recoveries().map((m) => m.subject)).toEqual(['Produsele tale te așteaptă în coș'])
     const l = (await leads.byId(db, step.leadId))!
     expect(l).toMatchObject({ orderId: o.id, abandonment: 'checkout_abandoned', recoverySent: 1 })
-    expect(recoveries()[0].text).toContain(`https://acces.biohack-tech.ro/api/lead/resume?t=${l.recoveryToken}`)
+    expect(recoveries()[0].text).toContain(`https://acces.biohack-tech.ro/api/lead/resume?t=${l.recoveryToken}&cod=BIOHACK10`)
     const { recoveryCart } = await import('@/server/marketing/recovery')
     expect(await recoveryCart(l.recoveryToken!)).toEqual([{ productId: 'balance-wave', quantity: 1 }])
   })
@@ -384,6 +384,59 @@ describe('recovery emails', () => {
     expect((await leads.byId(db, data.leadId))!).toMatchObject({ recoveryStatus: 'sent', recoverySent: 2 })
   })
 
+  it('an abandoned cart: three designed emails about a day apart, with the cart, today’s total, the code and the button; then nothing more', async () => {
+    await marketing.grant(db, { email: 'ana@exemplu.ro', source: 'checkout' })
+    const { leadId } = await (await lead(post('/api/lead', MAIN, { action: 'checkout', ...ana, cart: [{ productId: 'balance-wave', quantity: 2 }, { productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 1 }] }))).json()
+    const l = (await leads.byId(db, leadId))!
+    // The third email is planned for an abandoned cart (the price form keeps two).
+    expect((await jobKinds(leadId)).map((j) => j.dedupe_key)).toEqual(expect.arrayContaining([`lead.recovery:${leadId}:checkout_started:3`]))
+    await quiet(leadId, 40)
+    await later()
+    expect(recoveries().map((m) => m.subject)).toEqual(['Produsele tale te așteaptă în coș'])
+    const [m1] = recoveries()
+    expect(m1.html).toContain('NEUROS Calm')
+    expect(m1.html).toContain('NEUROS Amber')
+    expect(m1.html).toMatch(/Cantitate: 2/)
+    expect(m1.html).toMatch(/https:\/\/biohack-tech\.ro\/_next\/image\?url=/) // the product photos
+    expect(m1.html).toContain('BIOHACK10')
+    expect(m1.html).toContain('Finalizează comanda')
+    expect(m1.text).toMatch(/Total, cu promoțiile din coș: [\d.]+ lei/)
+    expect(m1.text).toContain(`https://biohack-tech.ro/api/lead/resume?t=${l.recoveryToken}&cod=BIOHACK10`)
+    expect(m1.text).toMatch(/https:\/\/biohack-tech\.ro\/dezabonare\/[\w-]+/)
+    expect(`${m1.subject} ${m1.text}`).not.toMatch(/ultima șansă|expiră|grăbește/i)
+    // A day later: the second (questions answered); a late queue never sends it right after the first.
+    await later()
+    expect(recoveries().length).toBe(1)
+    await db.query(`update leads set last_activity_at = now() - interval '25 hours', last_recovery_at = now() - interval '23 hours'`)
+    await later()
+    await later()
+    expect(recoveries().map((m) => m.subject)[1]).toBe('Ai întrebări despre NEUROS Calm, NEUROS Amber? Suntem aici')
+    expect(recoveries()[1].text).toMatch(/Livrare: Gratuită/)
+    // Another day: the third and last.
+    await db.query(`update leads set last_activity_at = now() - interval '49 hours', last_recovery_at = now() - interval '23 hours'`)
+    await later()
+    await later()
+    expect(recoveries().map((m) => m.subject)[2]).toBe('Ultima amintire: codul tău BIOHACK10 pentru NEUROS Calm, NEUROS Amber')
+    expect((await leads.byId(db, leadId))!).toMatchObject({ recoveryStatus: 'sent', recoverySent: 3 })
+    await db.query(`update leads set last_recovery_at = now() - interval '5 days'`)
+    await later()
+    expect(recoveries().length).toBe(3)
+  })
+
+  it('the cart sequence in English, in euros, from biohack-tech.net; without an active code, no code box', async () => {
+    await db.query("update promo_codes set active = false where code = 'BIOHACK10'")
+    await marketing.grant(db, { email: 'ana@exemplu.ro', source: 'checkout' })
+    const { leadId } = await (await lead(post('/api/lead', 'www.biohack-tech.net', { action: 'checkout', locale: 'en', ...ana, cart: [{ productId: 'brainlink-pro', quantity: 1 }] }))).json()
+    await quiet(leadId, 40)
+    await later()
+    const m = sent.find((x) => x.to === 'ana@exemplu.ro' && x.subject === 'Your cart is waiting for you')!
+    expect(m.text).toMatch(/1 × NEUROS Focus: €[\d,]+/)
+    expect(m.text).toContain('https://www.biohack-tech.net/api/lead/resume?t=')
+    expect(m.text).not.toContain('cod=')
+    expect(m.html).not.toContain('YOUR CODE')
+    expect(m.html).toContain('Complete my order')
+  })
+
   it('one sequence per person: three products and a checkout give one recovery email, for the checkout', async () => {
     const first = await reveal({ marketingConsent: true })
     for (const productId of ['brainlink-pro', 'ochelari-biohack'])
@@ -391,7 +444,7 @@ describe('recovery emails', () => {
     await lead(post('/api/lead', GATED, { action: 'checkout', ...ana, cart: [{ productId: 'balance-wave', quantity: 1 }] }, { bt_vid: first.vid, bt_gate2: first.gate }))
     await db.query(`update leads set last_activity_at = now() - interval '40 minutes'`)
     await later()
-    expect(recoveries().map((m) => m.subject)).toEqual(['Comanda ta NEUROS Calm te așteaptă'])
+    expect(recoveries().map((m) => m.subject)).toEqual(['Produsele tale te așteaptă în coș'])
     // Even later (step 2 time): only the checkout's second email, nothing for the product interests.
     await db.query(`update leads set last_activity_at = now() - interval '25 hours', last_recovery_at = last_recovery_at - interval '23 hours'`)
     await later()

@@ -22,7 +22,12 @@ import { marketing } from '@/server/marketing/consent'
 import { CALL_TAGS, INTEREST_TAG, LEAD_TAGS, attributionTags, callOutcomeTag, siteTag } from '@/server/integrations/ghl'
 import { prospectFor } from '@/server/prospects'
 import { callConsent } from '@/server/calling/consent'
-import { hasCart, leadItems, recoveryLink, renderRecoveryOffer } from '@/server/calling/offer'
+import { hasCart, leadItems, recoveryCode, recoveryLink, renderRecoveryOffer, RECOVERY_PERCENT } from '@/server/calling/offer'
+import { renderCartRecovery } from '@/server/cart-email'
+import { givenName } from '@/server/calling/names'
+import { getProduct } from '@/content/catalog'
+import { priceLines } from '@/lib/promotions'
+import { convertUnit, formatMoney, type Currency } from '@/lib/currency'
 import { promoCodes } from '@/server/promo'
 import { renderWelcome } from '@/server/welcome'
 import { syncAgentPrices } from '@/server/calling/agent-sync'
@@ -58,6 +63,15 @@ async function knownContactId(db: Awaited<ReturnType<typeof getDb>>, email: stri
     [email.trim().toLowerCase()],
   )
   return rows[0]?.id ?? null
+}
+
+/** The product's photo (the chosen frame's, for Amber) for an email, resized by the site's image service. */
+function productImageUrl(origin: string, productId: string, variantId?: string | null) {
+  const p = getProduct(productId)
+  const img = (variantId && p?.variants?.find((v) => v.id === variantId)?.images[0]) || p?.cutout
+  // A built image is { src: '/_next/static/media/…' }; outside a Next build (tests) it can be a plain path.
+  const src = typeof img?.src === 'string' ? (img.src as string) : img?.src.src
+  return src?.startsWith('/') ? `${origin}/_next/image?url=${encodeURIComponent(src)}&w=384&q=75` : null
 }
 
 /** A calling step's result, in the queue's terms. */
@@ -244,7 +258,7 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const db = await getDb()
     const lead = await leads.byId(db, String(j.payload.leadId ?? ''))
     if (!lead) throw new Skip('lead gone')
-    const step = Number(j.payload.step) === 2 ? 2 : 1
+    const step = Number(j.payload.step) === 3 ? 3 : Number(j.payload.step) === 2 ? 2 : 1
     // An AI call for this lead is about to happen: its email (with the personal code) is the first recovery
     // email, so the regular first email waits until after it (and is skipped when the call's email went out).
     if (step === 1) {
@@ -260,7 +274,7 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const own = c.email.transport === 'smtp' || c.email.transport === 'file'
     const facts = await recoveryFacts(db, lead)
     const now = new Date()
-    const d = recoveryDecision(lead, { stage: String(j.payload.stage), step, now, features: c.features, firstMinutes: c.recovery.firstMinutes, secondHours: c.recovery.secondHours, abandonAfterMinutes: c.abandonAfterMinutes, ...facts, canSend: own, notTestRecipient: !!c.recovery.testRecipients && !c.recovery.testRecipients.includes(lead.email.toLowerCase()) })
+    const d = recoveryDecision(lead, { stage: String(j.payload.stage), step, now, features: c.features, firstMinutes: c.recovery.firstMinutes, secondHours: c.recovery.secondHours, thirdHours: c.recovery.thirdHours, abandonAfterMinutes: c.abandonAfterMinutes, ...facts, canSend: own, notTestRecipient: !!c.recovery.testRecipients && !c.recovery.testRecipients.includes(lead.email.toLowerCase()) })
     if (!d.send) {
       const patch: Record<string, unknown> = {}
       if (d.abandonment && !lead.abandonment) patch.abandonment = d.abandonment
@@ -274,6 +288,33 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     // The site the visitor used: acces.<domain>, the international biohack-tech.net, or the main site.
     const intl = isIntlHost(lead.landingHost)
     const base = lead.funnel === 'gated_price' ? gatedOrigin(c.siteUrl) : intl ? siteOrigin('net', c.siteUrl) : c.siteUrl
+    const origin = intl ? siteOrigin('net', c.siteUrl) : c.siteUrl
+    const unsubscribeUrl = `${origin}${lead.locale === 'en' ? '/en' : ''}/dezabonare/${token}`
+    // An abandoned cart: the designed three-email sequence, with the cart, today's prices and the recovery code.
+    const cartItems = d.abandonment === 'checkout_abandoned' && hasCart(lead) ? leadItems(lead) : []
+    if (cartItems.length) {
+      await ensureStoreSettings()
+      const code = await recoveryCode(db)
+      const currency: Currency = intl || lead.locale === 'en' ? 'EUR' : 'RON'
+      const lines = cartItems.map((l) => ({ ...l, unit: convertUnit(l.unit, currency) }))
+      const pricing = priceLines(lines.map((l, i) => ({ key: String(i), productId: l.productId, quantity: l.quantity, unitAmount: l.unit })))
+      const mail = renderCartRecovery({
+        step,
+        locale: lead.locale,
+        firstName: lead.name ? givenName(lead.name) || null : null,
+        items: lines.map((l) => ({ name: l.name, variant: l.variant, quantity: l.quantity, lineMinor: l.unit * l.quantity, image: productImageUrl(origin, l.productId, l.variantId) })),
+        totalMinor: pricing.totalMinor,
+        format: (m) => formatMoney(m, currency),
+        code: code ? { code: code.code, percent: RECOVERY_PERCENT } : null,
+        link: `${base}/api/lead/resume?t=${lead.recoveryToken}${code ? `&cod=${encodeURIComponent(code.code)}` : ''}`,
+        siteUrl: origin,
+        unsubscribeUrl,
+      })
+      const ref = await deliver(c, { ...mail, to: lead.email, name: `lead-recovery-${lead.id}-${step}` })
+      await leads.update(db, lead.id, { abandonment: lead.abandonment ?? d.abandonment, recovery_status: 'sent', recovery_reason: `step ${step}`, recovery_sent: step, last_recovery_at: now })
+      return ref
+    }
+    if (step === 3) throw new Skip('the third email is for abandoned carts')
     const mail = renderLeadRecovery({
       locale: lead.locale,
       siteUrl: intl ? siteOrigin('net', c.siteUrl) : c.siteUrl,
@@ -282,7 +323,7 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
       products: interestOf(lead),
       abandonment: d.abandonment,
       link: `${base}/api/lead/resume?t=${lead.recoveryToken}`,
-      unsubscribeUrl: `${intl ? siteOrigin('net', c.siteUrl) : c.siteUrl}${lead.locale === 'en' ? '/en' : ''}/dezabonare/${token}`,
+      unsubscribeUrl,
     })
     const ref = await deliver(c, { ...mail, to: lead.email, name: `lead-recovery-${lead.id}-${step}` })
     await leads.update(db, lead.id, { abandonment: lead.abandonment ?? d.abandonment, recovery_status: 'sent', recovery_reason: `step ${step}`, recovery_sent: step, last_recovery_at: now })

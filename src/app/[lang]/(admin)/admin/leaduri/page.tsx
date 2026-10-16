@@ -102,7 +102,7 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
       <h1 className="mt-2 text-[34px] tracking-[-0.03em]">Leaduri</h1>
       <p className="mt-2 max-w-[60em] text-[14.5px] text-muted">
         Funnel cu preț după formular: {c.features.priceGate ? 'activ' : 'oprit'} · captare în checkout: {c.features.abandonedCheckout ? 'activă' : 'oprită'} · emailuri de recuperare:{' '}
-        {c.features.recoveryEmail ? `active (${c.recovery.firstMinutes} min, ${c.recovery.secondHours} h)` : 'oprite'}. Recuperarea pleacă doar cu acord de marketing și se oprește la comandă,
+        {c.features.recoveryEmail ? `active (${c.recovery.firstMinutes} min, ${c.recovery.secondHours} h; coș abandonat și ${c.recovery.thirdHours} h)` : 'oprite'}. Recuperarea pleacă doar cu acord de marketing și se oprește la comandă,
         dezabonare sau retragerea acordului. Apeluri AI: {c.calling.enabled ? (c.calling.dryRun ? 'active în dry run (nu se sună nimeni)' : 'ACTIVE') : 'oprite'}
         {c.calling.testMode ? ` · MOD TEST (${c.calling.testDelayMinutes} min)` : ''}
         {c.calling.testNumbers ? ` · doar numerele de test (${c.calling.testNumbers.length})` : ''} · întârziere coș {c.calling.delays.cart} min, ofertă {c.calling.delays.price_reveal} min · ElevenLabs {c.elevenlabs ? 'configurat' : 'neconfigurat'}. Se sună doar cu acordul separat pentru

@@ -270,6 +270,9 @@ function leadJobs(lead: Lead, c = getConfig()): NewJob[] {
       { kind: 'lead.recovery', dedupeKey: `lead.recovery:${lead.id}:${lead.stage}:1`, payload: { leadId: lead.id, stage: lead.stage, step: 1 }, runAt: new Date(base + c.recovery.firstMinutes * 60_000) },
       { kind: 'lead.recovery', dedupeKey: `lead.recovery:${lead.id}:${lead.stage}:2`, payload: { leadId: lead.id, stage: lead.stage, step: 2 }, runAt: new Date(base + c.recovery.secondHours * 3_600_000) },
     )
+    // An abandoned cart: a third, last email (the price form keeps two).
+    if (lead.stage === 'checkout_started')
+      list.push({ kind: 'lead.recovery', dedupeKey: `lead.recovery:${lead.id}:${lead.stage}:3`, payload: { leadId: lead.id, stage: lead.stage, step: 3 }, runAt: new Date(base + c.recovery.thirdHours * 3_600_000) })
   }
   return list
 }
@@ -406,6 +409,8 @@ export function recoveryDecision(
     firstMinutes: number
     /** The second email waits at least half this long after the first, even if the queue ran late. */
     secondHours?: number
+    /** The third (abandoned carts only) waits at least half the time between the second and the third after the second. */
+    thirdHours?: number
     /** An order of this address placed after the lead (any method), or the lead's own order, paid or committed. */
     converted: boolean
     /** A checkout of the same person started after this lead (the product interest went on to the checkout). */
@@ -443,10 +448,15 @@ export function recoveryDecision(
   if (ctx.notTestRecipient) return { send: false, reason: 'recovery email in test mode', abandonment, status: 'disabled' }
   if (ctx.consentGranted === null) return { send: false, reason: 'no marketing consent', abandonment, status: 'ineligible' }
   if (!ctx.consentGranted) return { send: false, reason: 'consent withdrawn', abandonment, status: 'stopped' }
+  // The last email of a cart waits for the second when that one was moved by new activity (not lost), for a week at most.
+  if (ctx.step === 3 && lead.recoverySent === 1 && ctx.now.getTime() - lead.lastActivityAt.getTime() < 7 * 86_400_000)
+    return { send: false, reason: 'waiting for the second email', abandonment, later: new Date(ctx.now.getTime() + 12 * 3_600_000) }
   if (lead.recoverySent !== ctx.step - 1) return { send: false, reason: `step ${ctx.step} after ${lead.recoverySent} sent`, abandonment }
-  if (ctx.step === 2 && lead.lastRecoveryAt && ctx.secondHours) {
-    const gap = (ctx.secondHours * 3_600_000) / 2
-    if (ctx.now.getTime() - lead.lastRecoveryAt.getTime() < gap) return { send: false, reason: 'too soon after the first email', abandonment, later: new Date(lead.lastRecoveryAt.getTime() + gap) }
+  if (ctx.step === 3 && lead.stage !== 'checkout_started') return { send: false, reason: 'the third email is for abandoned carts', abandonment }
+  const spacing = ctx.step === 2 ? ctx.secondHours : ctx.step === 3 && ctx.thirdHours && ctx.secondHours ? ctx.thirdHours - ctx.secondHours : undefined
+  if (ctx.step >= 2 && lead.lastRecoveryAt && spacing && spacing > 0) {
+    const gap = (spacing * 3_600_000) / 2
+    if (ctx.now.getTime() - lead.lastRecoveryAt.getTime() < gap) return { send: false, reason: 'too soon after the previous email', abandonment, later: new Date(lead.lastRecoveryAt.getTime() + gap) }
   }
   if (!ctx.canSend) return { send: false, reason: 'no own email transport', abandonment, status: 'ineligible' }
   return { send: true, abandonment }

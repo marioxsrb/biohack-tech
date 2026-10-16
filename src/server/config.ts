@@ -80,8 +80,11 @@ export type Config = {
    *   recoveryEmail      recovery emails (still only with marketing consent; off: leads are kept, nothing is sent)
    */
   features: { priceGate: boolean; abandonedCheckout: boolean; recoveryEmail: boolean }
-  /** When the first and second recovery emails go out after the last activity (defaults 30 min, 24 h). */
-  recovery: { firstMinutes: number; secondHours: number; testRecipients: string[] | null }
+  /**
+   * When the recovery emails go out after the last activity (defaults 30 min, 24 h); an abandoned cart also gets
+   * a third, last one (default 48 h), so the sequence is about a day apart.
+   */
+  recovery: { firstMinutes: number; secondHours: number; thirdHours: number; testRecipients: string[] | null }
   /**
    * AI calling (an ElevenLabs agent calls leads who explicitly agreed to it). Off by default, and in dry run
    * (no real call, everything else recorded) unless AI_CALLING_DRY_RUN=false. Independent of lead capture,
@@ -414,6 +417,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     recovery: {
       firstMinutes: positiveInt(str('RECOVERY_FIRST_MINUTES')) ?? 30,
       secondHours: positiveInt(str('RECOVERY_SECOND_HOURS')) ?? 24,
+      thirdHours: positiveInt(str('RECOVERY_THIRD_HOURS')) ?? 48,
       // Test mode for the activation: when set, recovery emails go only to these addresses (others: as if off).
       testRecipients: str('RECOVERY_TEST_RECIPIENTS')?.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean) || null,
     },
