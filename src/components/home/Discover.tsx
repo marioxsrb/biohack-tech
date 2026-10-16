@@ -15,20 +15,20 @@ import type { Ui } from '@/i18n/ui'
  * when it is used, what it is, the price, the offer, and one next step.
  */
 const SHELF: { id: ProductId; when: Record<Locale, string>; tint: string; wide: boolean; full?: boolean }[] = [
-  { id: 'balance-wave', when: { ro: 'Pentru stres · seara', en: 'For stress · evenings' }, tint: '#f4e9e6', wide: true },
-  { id: 'brainlink-pro', when: { ro: 'Pentru concentrare · la birou', en: 'For focus · at work' }, tint: '#e5f1f4', wide: false },
-  { id: 'ochelari-biohack', when: { ro: 'Pentru ochi · la ecrane', en: 'For your eyes · at screens' }, tint: '#f5ecdc', wide: true, full: true },
+  { id: 'balance-wave', when: { ro: 'Pentru liniște · seara', en: 'For calm · evenings' }, tint: '#f4e9e6', wide: true },
+  { id: 'brainlink-pro', when: { ro: 'Pentru focus · la birou', en: 'For focus · at work' }, tint: '#e5f1f4', wide: false },
+  { id: 'ochelari-biohack', when: { ro: 'Pentru seri calme · la ecrane', en: 'For calmer evenings · at screens' }, tint: '#f5ecdc', wide: true, full: true },
 ]
 
 const COPY = {
   ro: {
     title: 'Produsele NEUROS',
-    intro: 'Livrare gratuită în România. Până la 20% reducere când iei mai multe.',
+    intro: 'Pentru mai mult calm, somn mai lin și focus. Livrare gratuită în România. Până la 20% reducere când iei mai multe.',
     view: (name: string) => `${name}: vezi produsul`,
   },
   en: {
     title: 'NEUROS products',
-    intro: 'Free worldwide delivery. Up to 20% off when you buy more than one.',
+    intro: 'For more calm, easier sleep and focus. Free worldwide delivery. Up to 20% off when you buy more than one.',
     view: (name: string) => `${name}: view the product`,
   },
 }

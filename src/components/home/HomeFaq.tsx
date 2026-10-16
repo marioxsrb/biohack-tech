@@ -5,8 +5,8 @@ import { homeContent } from '@/content/home'
 import { getLocale } from '@/i18n/server'
 
 const COPY = {
-  ro: { title: 'Întrebări frecvente', intro: 'Ce ne întreabă clienții înainte să comande.', all: 'Toate întrebările' },
-  en: { title: 'Frequently asked questions', intro: 'What customers ask us before they order.', all: 'All questions' },
+  ro: { title: 'Întrebări frecvente', intro: 'Ca să alegi mai ușor ce ți se potrivește.', all: 'Toate întrebările' },
+  en: { title: 'Frequently asked questions', intro: 'So you can choose what suits you more easily.', all: 'All questions' },
 }
 
 /** Only the questions that decide a purchase. The rest live on /intrebari-frecvente. */

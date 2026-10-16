@@ -39,8 +39,8 @@ export function FocusLanding({ landing }: { landing: Landing }) {
         slug={landing.slug}
         productId={p.id}
         cta={CTA}
-        title="NEUROS Focus, gata de joc."
-        text="Casca ajunge la tine acasă. Aplicația Neuros Game o instalezi pe tableta ta."
+        title="Focusul, gata de folosit."
+        text="Casca ajunge acasă. Aplicația Neuros Game o pui pe tableta ta, și începi cu un joc scurt."
         details={[
           ['Senzori', '3 senzori EEG'],
           ['Aplicație', 'Neuros Game: peste 10 jocuri și meditații ghidate'],
@@ -52,8 +52,8 @@ export function FocusLanding({ landing }: { landing: Landing }) {
       />
       <Testimonials productId={p.id} />
       <LandingFaq items={landing.faqs} />
-      <Help title="Vrei să afli dacă ți se potrivește?" text="Spune-ne pentru ce o folosești: muncă, studiu sau relaxare. Îți spunem cum să începi." />
-      <FinalCta title="Pui casca. Deschizi primul joc." cta={CTA} />
+      <Help title="Vrei să vezi dacă ți se potrivește?" text="Spune-ne unde vrei mai mult focus: la muncă, la studiu sau în momentele de liniște. Îți spunem cum să începi." />
+      <FinalCta title="Pui casca. Câteva minute te ajută să fii mai prezent." cta={CTA} />
     </LandingShell>
   )
 }

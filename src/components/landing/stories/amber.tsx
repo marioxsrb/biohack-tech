@@ -32,18 +32,18 @@ export function AmberHero({ name, buy, cta }: { name: string; buy?: ReactNode; c
             />
           </div>
           <div className="lg:col-span-5">
-            <Kicker>{name} · ochelari pentru lumina albastră</Kicker>
+            <Kicker>{name} · pentru seri liniștite</Kicker>
             <h1 id="lp-title" className="mt-4 text-[clamp(40px,4.8vw,68px)] leading-[0.98] tracking-[-0.045em]">
-              Ecranele, într-o lumină mai caldă.
+              Ecranele, într-o lumină mai blândă.
             </h1>
             <p className="mt-5 max-w-[26em] text-[clamp(17px,1.3vw,19px)] leading-snug text-[var(--lp-muted)]">
-              Ochii tăi petrec ore întregi în lumina ecranelor. Lentilele chihlimbar filtrează lumina albastră. Patru rame, același filtru.
+              Te ajută să termini ziua mai calm. Lumina se simte mai blândă, și susține ochi mai odihniți. Patru rame, același confort.
             </p>
             {buy}
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
               {cta}
               <a href="#cum" className="tlink">
-                Ce face lentila <Arrow />
+                Cum te ajută <Arrow />
               </a>
             </div>
           </div>
@@ -60,14 +60,14 @@ export function AmberHow() {
       <div aria-hidden className="absolute inset-0 -z-10 bg-[radial-gradient(55%_80%_at_75%_50%,rgb(240_179_90/0.16),transparent_70%)]" />
       <div className="lp-wrap grid items-center gap-y-10 lg:grid-cols-12 lg:gap-x-12">
         <div className="on-dark lg:col-span-5">
-          <p className="text-[13px] font-semibold tracking-[0.14em] text-[#f0b35a] uppercase">Cum funcționează</p>
+          <p className="text-[13px] font-semibold tracking-[0.14em] text-[#f0b35a] uppercase">Cum te ajută</p>
           <h2 id="cum-title" className="mt-3 text-[clamp(32px,3.6vw,48px)] leading-[1.02] tracking-[-0.04em] !text-white">
-            Lentila chihlimbar filtrează lumina albastră.
+            O lumină mai blândă, pentru seri mai calme.
           </h2>
           <div className="mt-5 max-w-[28em] space-y-4 text-[17px] leading-relaxed text-white/80">
-            <p>Monitorul, telefonul și becurile LED emit lumină albastră.</p>
-            <p>Lentilele chihlimbar o filtrează. Lumina ecranelor devine mai blândă.</p>
-            <p>Rama este ușoară. Îi porți toată ziua.</p>
+            <p>Te ajută să stai la ecran cu ochi mai odihniți, ziua și seara.</p>
+            <p>Monitorul, telefonul și becurile LED emit lumină albastră. Lentilele chihlimbar o filtrează, iar lumina devine mai blândă.</p>
+            <p>Rama este ușoară. O porți toată ziua.</p>
           </div>
         </div>
         <div className="relative aspect-[4/3] overflow-hidden rounded-[28px] lg:col-span-7">
@@ -93,8 +93,8 @@ export function AmberWhen() {
           </Title>
           <ul className="mt-8 divide-y divide-[var(--lp-line)] border-y border-[var(--lp-line)]">
             {[
-              ['La birou', 'În fața monitorului, ore în șir.'],
-              ['Seara', 'Când citești pe tabletă sau stai pe telefon. Lumina ecranului devine mai blândă înainte de somn.'],
+              ['La birou', 'Ore lungi la monitor, cu ochi mai odihniți.'],
+              ['Seara', 'Pe telefon sau pe tabletă. Lumina se simte mai blândă, iar seara se așază mai ușor.'],
             ].map(([t, d]) => (
               <li key={t} className="grid gap-1 py-4 sm:grid-cols-[200px_1fr] sm:gap-6">
                 <span className="text-[17px] font-medium">{t}</span>
@@ -117,17 +117,17 @@ export function AmberWhy() {
           <Image src={seara} alt="Femeie în pat, seara, citind pe tabletă cu NEUROS Amber" fill fetchPriority="low" placeholder="blur" sizes="(min-width: 1152px) 470px, 100vw" className="object-cover" />
         </div>
         <div className="lg:col-span-7">
-          <Kicker>Cum funcționează</Kicker>
+          <Kicker>Cum te ajută</Kicker>
           <Title id="cum-title" className="mt-3 max-w-[14em]">
-            Lentila chihlimbar filtrează lumina albastră.
+            O lumină mai blândă, pentru seri mai calme.
           </Title>
           <p className="mt-5 max-w-[30em] text-[17.5px] leading-relaxed text-[var(--lp-muted)]">
-            Monitorul, telefonul și becurile LED emit lumină albastră. Lentilele chihlimbar o filtrează, iar lumina ecranelor devine mai blândă. Rama este ușoară: îi porți toată ziua.
+            Te ajută să stai pe telefon sau la laptop cu o seară mai liniștită. Monitorul, telefonul și becurile LED emit lumină albastră. Lentilele chihlimbar o filtrează, iar lumina devine mai blândă. Rama e ușoară: o porți toată ziua.
           </p>
           <ul className="mt-9 divide-y divide-[var(--lp-line)] border-y border-[var(--lp-line)]">
             {[
-              ['La birou', 'În fața monitorului, ore în șir.'],
-              ['Seara', 'Pe telefon sau pe tabletă. Lumina ecranului devine mai blândă înainte de somn.'],
+              ['La birou', 'Ore lungi la monitor, cu ochi mai odihniți.'],
+              ['Seara', 'Pe telefon sau pe tabletă. Lumina se simte mai blândă, iar seara se așază mai ușor.'],
             ].map(([t, d]) => (
               <li key={t} className="grid gap-1 py-4 sm:grid-cols-[160px_1fr] sm:gap-6">
                 <span className="text-[17px] font-medium text-[var(--lp-ink)]">{t}</span>

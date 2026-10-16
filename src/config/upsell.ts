@@ -16,16 +16,16 @@ export type UpsellCandidate = { productId: ProductId; reason: string }
 
 export const UPSELL_MAP: Record<ProductId, UpsellCandidate[]> = {
   'balance-wave': [
-    { productId: 'ochelari-biohack', reason: 'Seara, după ședința cu NEUROS Calm, ochelarii NEUROS Amber filtrează lumina albastră a ecranelor.' },
-    { productId: 'brainlink-pro', reason: 'NEUROS Focus completează relaxarea cu antrenamentul atenției, prin jocuri pe tabletă.' },
+    { productId: 'ochelari-biohack', reason: 'După calm, NEUROS Amber face lumina ecranelor mai blândă, ca seara să se așeze mai ușor.' },
+    { productId: 'brainlink-pro', reason: 'NEUROS Focus te ajută să ai mai multă concentrare ziua, după ce seara te-ai liniștit.' },
   ],
   'brainlink-pro': [
-    { productId: 'ochelari-biohack', reason: 'Pentru orele de lucru la ecran dintre sesiunile cu NEUROS Focus.' },
-    { productId: 'balance-wave', reason: 'NEUROS Calm completează antrenamentul atenției cu câteva minute de relaxare.' },
+    { productId: 'ochelari-biohack', reason: 'Între sesiunile de focus, NEUROS Amber te ajută să stai la ecran cu o lumină mai blândă.' },
+    { productId: 'balance-wave', reason: 'NEUROS Calm te ajută să lași ziua în urmă, în câteva minute de liniște.' },
   ],
   'ochelari-biohack': [
-    { productId: 'balance-wave', reason: 'Câteva minute de relaxare seara, cu NEUROS Calm purtat la gât.' },
-    { productId: 'brainlink-pro', reason: 'Antrenează-ți atenția prin jocuri pe tabletă, cu NEUROS Focus.' },
+    { productId: 'balance-wave', reason: 'NEUROS Calm te ajută să treci seara spre un somn mai lin, în câteva minute.' },
+    { productId: 'brainlink-pro', reason: 'NEUROS Focus te ajută să-ți aduni atenția, prin jocuri scurte pe tabletă.' },
   ],
 }
 

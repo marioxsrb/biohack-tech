@@ -84,14 +84,12 @@ export function recommend(lines: RecLine[], placement: Placement, limit = LIMIT[
 
 /** English for the reasons above (config/upsell.ts and the offer lines), keyed by the Romanian text. */
 const REASON_EN: Record<string, string> = {
-  'Seara, după ședința cu NEUROS Calm, ochelarii NEUROS Amber filtrează lumina albastră a ecranelor.': 'In the evening, after your NEUROS Calm session, NEUROS Amber glasses filter the blue light of screens.',
-  'NEUROS Focus completează relaxarea cu antrenamentul atenției, prin jocuri pe tabletă.': 'NEUROS Focus adds attention training to your relaxation, with games on a tablet.',
-  'Pentru orele de lucru la ecran dintre sesiunile cu NEUROS Focus.': 'For your hours at the screen between NEUROS Focus sessions.',
-  'NEUROS Calm completează antrenamentul atenției cu câteva minute de relaxare.': 'NEUROS Calm adds a few minutes of relaxation to your attention training.',
-  'Câteva minute de relaxare seara, cu NEUROS Calm purtat la gât.': 'A few minutes of relaxation in the evening, with NEUROS Calm worn around your neck.',
-  'Antrenează-ți atenția prin jocuri pe tabletă, cu NEUROS Focus.': 'Train your attention with games on a tablet, with NEUROS Focus.',
-  'NEUROS Calm adaugă câteva minute de relaxare, purtat la gât.': 'NEUROS Calm adds a few minutes of relaxation, worn around your neck.',
-  'NEUROS Focus adaugă antrenamentul atenției, prin jocuri pe tabletă.': 'NEUROS Focus adds attention training, with games on a tablet.',
+  'După calm, NEUROS Amber face lumina ecranelor mai blândă, ca seara să se așeze mai ușor.': 'After Calm, NEUROS Amber makes screen light softer, so the evening settles more easily.',
+  'NEUROS Focus te ajută să ai mai multă concentrare ziua, după ce seara te-ai liniștit.': 'NEUROS Focus helps you concentrate more through the day, after you have unwound in the evening.',
+  'Între sesiunile de focus, NEUROS Amber te ajută să stai la ecran cu o lumină mai blândă.': 'Between focus sessions, NEUROS Amber helps you stay at the screen in a softer light.',
+  'NEUROS Calm te ajută să lași ziua în urmă, în câteva minute de liniște.': 'NEUROS Calm helps you leave the day behind, in a few quiet minutes.',
+  'NEUROS Calm te ajută să treci seara spre un somn mai lin, în câteva minute.': 'NEUROS Calm helps you ease into sleep in the evening, in a few minutes.',
+  'NEUROS Focus te ajută să-ți aduni atenția, prin jocuri scurte pe tabletă.': 'NEUROS Focus helps you gather your attention, through short games on a tablet.',
   'Încă o pereche și a treia este gratuită.': 'One more pair and the third one is free.',
 }
 

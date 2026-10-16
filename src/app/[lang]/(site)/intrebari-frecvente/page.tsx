@@ -9,12 +9,12 @@ import { pageMetadata } from '@/lib/seo'
 const COPY = {
   ro: {
     title: 'Întrebări frecvente',
-    description: 'Răspunsuri despre produsele NEUROS, oferte, plată, livrare, retur și garanție la Biohack Tech.',
+    description: 'Răspunsuri despre cum te ajută produsele NEUROS, plus oferte, plată, livrare și retur la Biohack Tech.',
     lead: 'Ai altă întrebare? Scrie-ne și îți răspundem în cel mult 24 de ore.',
   },
   en: {
     title: 'Frequently asked questions',
-    description: 'Answers about NEUROS products, offers, payment, delivery, returns and warranty at Biohack Tech.',
+    description: 'Answers about how NEUROS products help you, plus offers, payment, delivery and returns at Biohack Tech.',
     lead: 'Have another question? Write to us and we will reply within 24 hours.',
   },
 }

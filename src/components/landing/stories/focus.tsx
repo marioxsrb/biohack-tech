@@ -20,18 +20,18 @@ export function FocusHero({ name, buy, cta }: { name: string; buy?: ReactNode; c
     <section id="lp-hero" aria-labelledby="lp-title" className="lp-wrap pt-28 pb-[var(--sec)] max-sm:pt-24">
       <div className="grid items-center gap-y-12 lg:grid-cols-12 lg:gap-x-12">
         <div className="lg:col-span-5">
-          <Kicker>{name} · cască EEG pentru concentrare</Kicker>
+          <Kicker>{name} · pentru concentrare</Kicker>
           <h1 id="lp-title" className="mt-4 text-[clamp(40px,5vw,72px)] leading-[0.98] tracking-[-0.045em]">
-            Atenția ta, antrenată prin joc.
+            Mai mult focus. Mai puțină risipire.
           </h1>
           <p className="mt-5 max-w-[28em] text-[clamp(17px,1.3vw,19px)] leading-snug text-[var(--lp-muted)]">
-            Atenția se risipește ușor printre notificări. Pui casca și deschizi un joc pe tabletă. Jocul înaintează cât timp ești atent.
+            Te ajută să-ți aduni atenția, printr-un joc scurt. Susține focusul și energia, la muncă și la studiu.
           </p>
           {buy}
           <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
             {cta}
             <a href="#cum" className="tlink">
-              Cum funcționează <Arrow />
+              Cum te ajută <Arrow />
             </a>
           </div>
         </div>
@@ -68,10 +68,10 @@ export function FocusVideo() {
         <div className="lg:col-span-5">
           <Kicker>Vezi cum arată</Kicker>
           <Title id="video-title" className="mt-3 max-w-[12em]">
-            NEUROS Focus, în 20 de secunde.
+            Focusul, în 20 de secunde.
           </Title>
           <p className="mt-5 max-w-[28em] text-[17px] leading-relaxed text-[var(--lp-muted)]">
-            Casca pe cap, tableta în mână. Undele cerebrale apar pe ecran în timp real. Jocul merge mai departe cât timp ești atent.
+            Pui casca, ții tableta. Jocul merge mai departe cât timp ești atent. Așa se simte concentrarea.
           </p>
         </div>
         <div className="lg:col-span-6 lg:col-start-7">
@@ -86,9 +86,9 @@ export function FocusVideo() {
 export function FocusHow() {
   return (
     <section id="cum" aria-labelledby="cum-title" className="lp-wrap scroll-mt-10 pt-[calc(var(--sec)*0.6)]">
-      <Kicker>Cum funcționează</Kicker>
+      <Kicker>Cum te ajută</Kicker>
       <Title id="cum-title" className="mt-3 max-w-[14em]">
-        Casca citește atenția. Aplicația o transformă în joc.
+        Casca simte atenția. Jocul te ajută s-o ții.
       </Title>
       <div className="mt-10 grid items-center gap-y-10 lg:grid-cols-12 lg:gap-x-12">
         <div className="relative aspect-[16/9] overflow-hidden rounded-[28px] bg-[#f6f6f6] lg:col-span-7">
@@ -96,9 +96,9 @@ export function FocusHow() {
         </div>
         <ol className="space-y-6 lg:col-span-5">
           {[
-            ['Semnalul', 'Creierul produce semnale electrice foarte slabe. Cei trei senzori ai căștii le citesc.'],
-            ['Aplicația', 'Neuros Game transformă semnalul într-un joc, în timp real.'],
-            ['Jocul', 'Când ești atent, jocul înaintează. Pas cu pas, înveți să ajungi mai ușor în starea potrivită.'],
+            ['Semnalul', 'Creierul produce semnale electrice foarte slabe. Cei trei senzori EEG ai căștii le citesc și le trimit prin Bluetooth.'],
+            ['Aplicația', 'Neuros Game transformă semnalul într-un joc, pe loc. Sunt peste 10 jocuri și meditații ghidate.'],
+            ['Jocul', 'Când ești atent, jocul înaintează. Pas cu pas, înveți să revii mai ușor la ce faci.'],
           ].map(([t, d], i) => (
             <li key={t} className="grid grid-cols-[44px_1fr] gap-x-4">
               <span aria-hidden className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--lp-accent)] text-[15px] font-semibold text-white tabular-nums">
@@ -134,12 +134,12 @@ export function FocusWhere() {
           <h2 id="unde" className="mt-3 text-[clamp(32px,3.6vw,48px)] leading-[1.02] tracking-[-0.04em] !text-white">
             La muncă, la studiu, înainte de o sarcină grea.
           </h2>
-          <p className="mt-4 text-[17px] leading-relaxed text-white/80">O sesiune scurtă te poate ajuta să intri mai repede în concentrare.</p>
+          <p className="mt-4 text-[17px] leading-relaxed text-white/80">O sesiune scurtă te ajută să intri mai ușor în concentrare. Susține claritatea.</p>
           <div className="mt-auto pt-10">
             <div className="relative aspect-[16/10] overflow-hidden rounded-[20px]">
               <Image src={meditatie} alt="Femeie meditând în grădină, purtând NEUROS Focus" fill fetchPriority="low" placeholder="blur" sizes="(min-width: 1152px) 440px, 100vw" className="object-cover" />
             </div>
-            <p className="mt-3 text-[15.5px] text-white/75">Și la meditație. Vezi în timp real cât de relaxat ești.</p>
+            <p className="mt-3 text-[15.5px] text-white/75">Și la meditație. Vezi pe loc cât de relaxat ești, și te ajută să rămâi acolo.</p>
           </div>
         </div>
       </div>
