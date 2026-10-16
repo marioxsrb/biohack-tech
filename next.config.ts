@@ -36,11 +36,6 @@ const nextConfig: NextConfig = {
       { source: '/:path*', headers: base },
       { source: privatePages, headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }] },
       { source: '/:page(comanda|reluare|dezabonare|retragere)/:path*', headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }] },
-    ]
-  },
-  // Product pages were renamed (NEUROS Calm / Focus / Amber). Old links keep working.
-  async headers() {
-    return [
       {
         // Films and posters in /public. Hashed /_next/static files already ship with an immutable cache.
         source: '/video/:path*',
@@ -48,6 +43,7 @@ const nextConfig: NextConfig = {
       },
     ]
   },
+  // Product pages were renamed (NEUROS Calm / Focus / Amber). Old links keep working.
   async redirects() {
     return [
       { source: '/products/balancewave', destination: '/products/calm', permanent: true },
