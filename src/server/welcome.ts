@@ -23,6 +23,8 @@ export async function welcomeSignup(t: Queryable, email: string, page: string | 
   // An address that unsubscribed before chose so: signing up again here is a new, explicit consent.
   if (!state?.granted) await marketing.grant(t, { email: addr, source: 'popup', page: page ?? undefined, version: locale === 'en' ? 'welcome-en-2026-10-16' : 'welcome-2026-10-15' })
   await jobs.enqueue(t, { kind: 'email.welcome', dedupeKey: `email.welcome:${addr}`, payload: { email: addr, locale, site } })
+  // The address in the CRM (contact, lead tags, leads pipeline) for the team's follow-up and remarketing.
+  await jobs.enqueue(t, { kind: 'ghl.welcome', dedupeKey: `ghl.welcome:${addr}`, payload: { email: addr, site } })
   return { created: true }
 }
 

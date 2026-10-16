@@ -6,7 +6,7 @@
  */
 import 'server-only'
 import { after } from 'next/server'
-import { getConfig } from '@/server/config'
+import { getConfig, type GhlConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { FgoError, fgo } from '@/server/integrations/fgo'
 import { MetaError, sendMetaPurchase } from '@/server/integrations/meta'
@@ -19,7 +19,8 @@ import { renderLeadRecovery } from '@/server/leads-email'
 import { gatedOrigin } from '@/lib/lead'
 import { isIntlHost, siteOrigin } from '@/lib/sites'
 import { marketing } from '@/server/marketing/consent'
-import { CALL_TAGS, INTEREST_TAG, LEAD_TAGS, attributionTags, callOutcomeTag } from '@/server/integrations/ghl'
+import { CALL_TAGS, INTEREST_TAG, LEAD_TAGS, attributionTags, callOutcomeTag, siteTag } from '@/server/integrations/ghl'
+import { prospectFor } from '@/server/prospects'
 import { callConsent } from '@/server/calling/consent'
 import { hasCart, leadItems, recoveryLink, renderRecoveryOffer } from '@/server/calling/offer'
 import { promoCodes } from '@/server/promo'
@@ -102,6 +103,22 @@ async function syncCrm(orderId: string) {
   return contactId
 }
 
+/**
+ * The address's opportunity in the leads pipeline, at the stage our database says. Never fails the job that
+ * called it (the contact and tags are what matter most); a missing pipeline is logged by the client.
+ */
+async function syncProspect(db: Awaited<ReturnType<typeof getDb>>, c: GhlConfig, email: string, contactId: string, site?: 'ro' | 'net') {
+  try {
+    const p = await prospectFor(db, email, site ? { site } : undefined)
+    if (!p) return null
+    await ghl.addTags(c, contactId, [siteTag(p.site)])
+    return await ghl.syncLeadOpportunity(c, contactId, { name: p.name === email ? email : `${p.name} · ${email}`, stage: p.stage })
+  } catch (e) {
+    log.warn('ghl.prospect_failed', { error: errText(e) })
+    return null
+  }
+}
+
 const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
   'ghl.sync': async (j) => void (await syncCrm(j.orderId!)),
 
@@ -112,7 +129,10 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const db = await getDb()
     const email = String(j.payload.email ?? '')
     // Only addresses the CRM has (or gets) through an order or a lead; matched by email, so never a duplicate.
-    const { rows } = await db.query('select 1 from orders where email = $1 and ghl_contact_id is not null union all select 1 from leads where email = $1 limit 1', [email])
+    const { rows } = await db.query(
+      'select 1 from orders where email = $1 and ghl_contact_id is not null union all select 1 from leads where email = $1 union all select 1 from welcome_signups where email = $1 limit 1',
+      [email],
+    )
     if (!rows.length) {
       // An order placed a moment ago reaches the CRM on its own job: wait for it instead of losing the update.
       const pending = await db.query('select 1 from orders where email = $1 limit 1', [email])
@@ -127,6 +147,7 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const callable = await callConsent.grantedForEmail(db, email)
     if (callable) await ghl.addTags(c.ghl, contactId, [TAGS.callConsent])
     else await ghl.removeTags(c.ghl, contactId, [TAGS.callConsent])
+    await syncProspect(db, c.ghl, email, contactId)
     return `${m.fields.consent ? 'consent' : 'no consent'}, calls ${callable ? 'yes' : 'no'}`
   },
 
@@ -191,6 +212,20 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
       ...products.map((p) => INTEREST_TAG[p]).filter(Boolean),
       ...attributionTags(lead.attribution),
     ])
+    await syncProspect(db, c.ghl, lead.email, contactId)
+    return contactId
+  },
+
+  // A 10% popup address in the CRM: contact (email only), lead tags and the leads pipeline. Never an order workflow.
+  'ghl.welcome': async (j) => {
+    const c = getConfig()
+    if (!c.ghl) throw new Skip('ghl not configured')
+    const db = await getDb()
+    const email = String(j.payload.email ?? '').trim().toLowerCase()
+    if (!email) throw new Permanent('no email')
+    const contactId = await ghl.upsertLeadContact(c.ghl, { name: null, email, phone: null, funnel: 'popup' }, await knownContactId(db, email))
+    await ghl.addTags(c.ghl, contactId, [LEAD_TAGS.lead, LEAD_TAGS.popup])
+    await syncProspect(db, c.ghl, email, contactId, j.payload.site === 'net' ? 'net' : 'ro')
     return contactId
   },
 

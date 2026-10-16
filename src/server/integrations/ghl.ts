@@ -171,7 +171,26 @@ export const LEAD_TAGS = {
   visible: 'bt-lead-site',
   checkout: 'bt-lead-checkout',
   converted: 'bt-lead-convertit',
+  /** Left the address in the website's 10% popup. */
+  popup: 'bt-lead-popup-10',
 }
+/** Which website the person came through: bt-site-ro (biohack-tech.ro and its landings) or bt-site-net (international). */
+export const siteTag = (site: 'ro' | 'net') => (site === 'net' ? 'bt-site-net' : 'bt-site-ro')
+
+/**
+ * The leads pipeline (one opportunity per person, never per order): where each person who left an address stands,
+ * for the team's follow-up and remarketing. Separate from the order pipeline, so no order workflow (W1-W7) can
+ * start from it. Create it in GHL with exactly these names; the site finds it by name.
+ */
+export const LEADS_PIPELINE = 'Lead-uri Biohack Tech'
+export const LEAD_STAGES = {
+  lead: 'Lead nou',
+  popup: 'Abonat 10%',
+  checkout: 'Checkout început',
+  ordered: 'Comandă plasată',
+  unsubscribed: 'Dezabonat',
+} as const
+export type LeadStageKey = keyof typeof LEAD_STAGES
 /**
  * AI call results on the contact (tags only: no opportunity, no workflow trigger the app relies on). One tag
  * per outcome, e.g. bt-apel-ai-interested; follow-up and refusal have their own, so the team can filter.
@@ -313,6 +332,20 @@ async function stageIds(c: GhlConfig): Promise<Map<string, string>> {
   return ids
 }
 
+let leadsPipelineCache: { at: number; key: string; id: string; stages: Map<string, string> } | null = null
+
+/** The leads pipeline and its stages, by name (cached 10 minutes); null while it is not created in GHL. */
+async function leadsPipeline(c: GhlConfig) {
+  if (leadsPipelineCache && leadsPipelineCache.key === c.locationId && Date.now() - leadsPipelineCache.at < 10 * 60_000) return leadsPipelineCache
+  const r = await call<{ pipelines: { id: string; name: string; stages: { id: string; name: string }[] }[] }>(c, 'GET', `/opportunities/pipelines?locationId=${encodeURIComponent(c.locationId)}`)
+  const p = r.pipelines.find((x) => x.name.trim().toLowerCase() === LEADS_PIPELINE.toLowerCase())
+  if (!p) return null
+  leadsPipelineCache = { at: Date.now(), key: c.locationId, id: p.id, stages: new Map(p.stages.map((s) => [s.name.trim().toLowerCase(), s.id])) }
+  return leadsPipelineCache
+}
+/** Test helper. */
+export const resetLeadsPipelineCache = () => void (leadsPipelineCache = null)
+
 export const ghl = {
   /**
    * The contact for an address, oldest first. The NEUROS location allows duplicate contacts, so GHL's own
@@ -375,6 +408,33 @@ export const ghl = {
       },
       knownId,
     )
+  },
+
+  /**
+   * The person's single opportunity in the leads pipeline, created once (found again by contact) and moved to
+   * the stage the site computed. Returns null while the pipeline (or the stage) does not exist in GHL.
+   */
+  async syncLeadOpportunity(c: GhlConfig, contactId: string, p: { name: string; stage: LeadStageKey; valueRon?: number }) {
+    const pipe = await leadsPipeline(c)
+    const stageId = pipe?.stages.get(LEAD_STAGES[p.stage].toLowerCase())
+    if (!pipe || !stageId) {
+      log.warn('ghl.leads_pipeline_missing', { pipeline: LEADS_PIPELINE, stage: LEAD_STAGES[p.stage] })
+      return null
+    }
+    const status = p.stage === 'ordered' ? 'won' : p.stage === 'unsubscribed' ? 'lost' : 'open'
+    const body = { name: p.name.slice(0, 120), pipelineStageId: stageId, status, ...(p.valueRon && { monetaryValue: Math.round(p.valueRon) }) }
+    const found = await call<{ opportunities: { id: string }[] }>(
+      c,
+      'GET',
+      `/opportunities/search?location_id=${encodeURIComponent(c.locationId)}&pipeline_id=${encodeURIComponent(pipe.id)}&contact_id=${encodeURIComponent(contactId)}&limit=1`,
+    )
+    const id = found.opportunities?.[0]?.id
+    if (id) {
+      await call(c, 'PUT', `/opportunities/${id}`, body)
+      return id
+    }
+    const r = await call<{ opportunity: { id: string } }>(c, 'POST', '/opportunities/', { ...body, pipelineId: pipe.id, locationId: c.locationId, contactId })
+    return r.opportunity.id
   },
 
   async addTags(c: GhlConfig, contactId: string, tags: string[]) {

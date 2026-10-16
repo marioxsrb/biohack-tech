@@ -19,6 +19,7 @@ export type JobKind =
   | 'upsell.release'
   | 'ghl.enquiry'
   | 'ghl.lead'
+  | 'ghl.welcome'
   | 'lead.recovery'
   | 'call.attempt'
   | 'call.check'

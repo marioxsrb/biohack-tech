@@ -73,7 +73,13 @@ function fakeApis() {
       if (url.includes('/contacts/search')) return json({ contacts: [] })
       if (url.includes('/contacts/upsert')) return json({ contact: { id: 'contact-1' } })
       if (url.includes('/tags')) return json({ tags: [] })
-      if (url.includes('/opportunities/pipelines')) return json({ pipelines: [{ id: 'pipe1', stages: [] }] })
+      if (url.includes('/opportunities/pipelines'))
+        return json({
+          pipelines: [
+            { id: 'pipe1', name: 'Comenzi Biohack Tech', stages: [] },
+            { id: 'leads1', name: 'Lead-uri Biohack Tech', stages: ['Lead nou', 'Abonat 10%', 'Checkout început', 'Comandă plasată', 'Dezabonat'].map((n, i) => ({ id: `ls${i}`, name: n })) },
+          ],
+        })
       if (url.includes('/opportunities/search')) return json({ opportunities: [] })
       if (url.includes('/opportunities/')) return json({ opportunity: { id: 'opp-1' } }, 201)
       return json({})
@@ -508,16 +514,43 @@ describe('recovery link', () => {
 })
 
 describe('CRM copy', () => {
-  it('contact upsert and lead tags only: no opportunity for a lead, no NEUROS recovery tag', async () => {
+  const leadOpps = () => ghl.filter((c) => (c.method === 'POST' || c.method === 'PUT') && /\/opportunities\/[^s]*$/.test(c.url))
+  it('contact upsert, lead tags and one opportunity in the leads pipeline (never the order pipeline), no NEUROS recovery tag', async () => {
     await reveal()
+    await runDueJobs() // the run the route started in the background
     await runDueJobs()
     expect(ghl.some((c) => c.url.includes('/contacts/upsert') && c.json?.email === 'ana@exemplu.ro')).toBe(true)
     const tags = ghl.filter((c) => c.url.endsWith('/tags')).flatMap((c) => c.json?.tags as string[])
-    // Interest, funnel and campaign as bt- tags; the contact's own source is left alone (no NEUROS data overwritten).
-    expect(tags.sort()).toEqual(['bt-campanie-acces-test', 'bt-interes-calm', 'bt-lead', 'bt-lead-acces', 'bt-sursa-facebook'])
+    // Interest, funnel, site and campaign as bt- tags; the contact's own source is left alone (no NEUROS data overwritten).
+    expect(tags.sort()).toEqual(['bt-campanie-acces-test', 'bt-interes-calm', 'bt-lead', 'bt-lead-acces', 'bt-site-ro', 'bt-sursa-facebook'])
     expect(ghl.find((c) => c.url.includes('/contacts/upsert'))!.json).not.toHaveProperty('source')
-    expect(ghl.filter((c) => c.url.includes('/opportunities'))).toEqual([])
+    expect(leadOpps()).toHaveLength(1)
+    expect(leadOpps()[0].json).toMatchObject({ pipelineId: 'leads1', pipelineStageId: 'ls0', status: 'open', contactId: 'contact-1', name: 'Ana Popescu · ana@exemplu.ro' })
+    expect(ghl.some((c) => c.json?.pipelineId === 'pipe1')).toBe(false)
     expect(tags).not.toContain('bt-recuperare-eligibil')
+  })
+
+  it('the 10% popup: the address reaches the CRM with its own tags, in "Abonat 10%"; .net is tagged as such', async () => {
+    const { welcomeSignup } = await import('@/server/welcome')
+    await db.tx((t) => welcomeSignup(t, 'ion@exemplu.com', '/en', 'en', 'net'))
+    await runDueJobs()
+    await runDueJobs()
+    const tags = ghl.filter((c) => c.url.endsWith('/tags')).flatMap((c) => c.json?.tags as string[])
+    expect(tags.sort()).toEqual(['bt-lead', 'bt-lead-popup-10', 'bt-site-net'])
+    expect(leadOpps()[0].json).toMatchObject({ pipelineId: 'leads1', pipelineStageId: 'ls1', name: 'ion@exemplu.com' })
+  })
+
+  it('the stage follows the furthest step: checkout, then unsubscribed (lost); a missing pipeline never fails the lead', async () => {
+    const { prospectFor } = await import('@/server/prospects')
+    const a = await reveal({ marketingConsent: true })
+    expect(await prospectFor(db, ana.email)).toMatchObject({ stage: 'lead', site: 'ro' })
+    await db.query("update leads set stage = 'checkout_started' where id = $1", [a.data.leadId])
+    expect((await prospectFor(db, ana.email))?.stage).toBe('checkout')
+    await marketing.withdraw(db, { email: ana.email, source: 'unsubscribe_link' })
+    expect((await prospectFor(db, ana.email))?.stage).toBe('unsubscribed')
+    await db.query("update leads set stage = 'ordered' where id = $1", [a.data.leadId])
+    expect((await prospectFor(db, ana.email))?.stage).toBe('ordered')
+    expect(await prospectFor(db, 'nobody@exemplu.ro')).toBeNull()
   })
 })
 

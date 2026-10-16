@@ -20,12 +20,35 @@ const nextConfig: NextConfig = {
     formats: ['image/avif', 'image/webp'],
     qualities: [75, 85],
   },
+  // Security headers (HSTS comes from Vercel). No page may be framed by another site (clickjacking on the
+  // checkout); private links (order, recovery, unsubscribe) never leave in a Referer.
+  async headers() {
+    const base = [
+      { key: 'X-Content-Type-Options', value: 'nosniff' },
+      { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+      { key: 'Content-Security-Policy', value: "frame-ancestors 'self'; base-uri 'self'; object-src 'none'" },
+      { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+      // Stripe's wallets (Apple Pay, Google Pay) run in its own frame and need the Payment Request API.
+      { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(self "https://js.stripe.com")' },
+    ]
+    const privatePages = '/:lang(en)?/:page(comanda|reluare|dezabonare|retragere)/:path*'
+    return [
+      { source: '/:path*', headers: base },
+      { source: privatePages, headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }] },
+      { source: '/:page(comanda|reluare|dezabonare|retragere)/:path*', headers: [{ key: 'Referrer-Policy', value: 'no-referrer' }] },
+    ]
+  },
   // Product pages were renamed (NEUROS Calm / Focus / Amber). Old links keep working.
   async redirects() {
     return [
       { source: '/products/balancewave', destination: '/products/calm', permanent: true },
       { source: '/products/brainlink', destination: '/products/focus', permanent: true },
       { source: '/products/glasses', destination: '/products/amber', permanent: true },
+      { source: '/en/products/balancewave', destination: '/en/products/calm', permanent: true },
+      { source: '/en/products/brainlink', destination: '/en/products/focus', permanent: true },
+      { source: '/en/products/glasses', destination: '/en/products/amber', permanent: true },
+      // Browsers ask for /favicon.ico on their own; the site's icon is the SVG.
+      { source: '/favicon.ico', destination: '/icon.svg', permanent: true },
     ]
   },
 }

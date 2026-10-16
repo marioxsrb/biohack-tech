@@ -139,7 +139,7 @@ async function storefront(req: NextRequest, pathname: string, search: string) {
 
   const res = serve(req, locale, path, search)
   // Main-site copies of the landings (/lp/<slug>) are for previews and local work, not for search.
-  if (path.startsWith('/lp/')) res.headers.set('X-Robots-Tag', 'noindex, nofollow')
+  if (/^\/(en\/)?lp\//.test(path)) res.headers.set('X-Robots-Tag', 'noindex, nofollow')
   return res
 }
 

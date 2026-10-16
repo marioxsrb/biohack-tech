@@ -82,7 +82,9 @@ export const legalPagesEn: LegalPage[] = [
       },
       {
         heading: 'Prices',
-        body: ['Prices are in lei and include 21% VAT. Free delivery. The total to pay is shown before you submit the order.'],
+        body: [
+          'Prices are in lei and include 21% VAT. On biohack-tech.net they are shown and charged in euros or US dollars, converted from lei at the National Bank of Romania exchange rate and rounded to the unit. Free delivery. The total to pay, in the order currency, is shown before you submit the order.',
+        ],
       },
       {
         heading: 'Payment, delivery, withdrawal and warranty',
@@ -436,7 +438,7 @@ export const legalPagesEn: LegalPage[] = [
     slug: 'plati',
     title: 'Payments',
     shortTitle: 'Payments',
-    description: 'How to pay at Biohack Tech: cash on delivery, bank card via Stripe or bank transfer. Prices in lei, VAT included.',
+    description: 'How to pay at Biohack Tech: cash on delivery, bank card via Stripe or bank transfer. Prices in lei (euros or dollars on biohack-tech.net), VAT included.',
     updated: UPDATED,
     sections: [
       {
@@ -474,7 +476,7 @@ export const legalPagesEn: LegalPage[] = [
       {
         heading: 'Prices and invoice',
         body: [
-          'Prices are in lei and include 21% VAT. The total to pay is shown before you submit the order.',
+          'Prices are in lei and include 21% VAT; orders in euros or dollars (biohack-tech.net) are charged in that currency. The total to pay is shown before you submit the order.',
           'You receive the invoice by email after payment confirmation. For cash on delivery, the invoice is issued when we hand the parcel to the courier.',
         ],
       },

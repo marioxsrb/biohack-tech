@@ -30,7 +30,10 @@ export type Vendor = {
   purpose: string
 }
 
-const PRIVATE_PAGES = /^\/(checkout|comanda|reluare|dezabonare|retragere|admin)(\/|$)/
+const PRIVATE_PAGES = /^\/(en\/)?(checkout|comanda|reluare|dezabonare|retragere|admin)(\/|$)/
+
+/** The page address without the secret part of private links (order, recovery, unsubscribe), for analytics. */
+export const safeHref = (href: string) => href.replace(/(\/(?:en\/)?(?:comanda|reluare|dezabonare|retragere)\/)[^/?#]+/, '$1token')
 
 /** Biohack Tech's Clarity project. NEXT_PUBLIC_CLARITY_ID overrides it (letters and digits only). */
 export const DEFAULT_CLARITY_ID = 'ok5pjeez4o'
@@ -140,7 +143,8 @@ export function startVendor(v: Vendor) {
     // Analytics only: advertising storage and signals stay denied.
     w.gtag('consent', 'default', { analytics_storage: 'granted', ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' })
     w.gtag('js', new Date())
-    w.gtag('config', v.key)
+    // The order, recovery and unsubscribe links work like passwords: Google gets the address without them.
+    w.gtag('config', v.key, location.href ? { page_location: safeHref(location.href) } : {})
     addScript(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(v.key)}`)
   }
   if (v.id === 'meta') {

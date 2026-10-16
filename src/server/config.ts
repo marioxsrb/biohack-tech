@@ -125,6 +125,11 @@ export type CallingConfig = {
   timezone: string
   /** Controlled testing: when set, only these numbers (E.164) can be called. */
   testNumbers: string[] | null
+  /**
+   * At most this many calls are placed per calendar day (AI_CALLING_DAILY_MAX, default 80): a brake if someone
+   * submits other people's numbers through the checkout form. The rest wait for the next day's window.
+   */
+  dailyMax: number
 }
 
 export type ElevenLabsConfig = {
@@ -257,6 +262,7 @@ function readCalling(issues: ConfigIssue[], isolated: boolean): { calling: Calli
     days: days && Number(days[1]) <= Number(days[2]) ? Array.from({ length: Number(days[2]) - Number(days[1]) + 1 }, (_, i) => Number(days[1]) + i) : [1, 2, 3, 4, 5],
     timezone: str('AI_CALLING_TIMEZONE') ?? 'Europe/Bucharest',
     testNumbers: str('AI_CALLING_TEST_NUMBERS')?.split(',').map((n) => n.trim()).filter(Boolean) || null,
+    dailyMax: positiveInt(str('AI_CALLING_DAILY_MAX')) ?? 80,
   }
   const apiKey = isolated ? undefined : str('ELEVENLABS_API_KEY')
   const agentId = str('ELEVENLABS_AGENT_ID')

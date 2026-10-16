@@ -224,7 +224,8 @@ describe('placing calls', () => {
     expect(JSON.stringify(await db.query('select * from calls'))).not.toMatch(/must never be stored/)
     expect((await leads.byId(db, leadId))!).toMatchObject({ callStatus: 'completed', callOutcome: 'more_info' })
     expect(ghl.filter((c) => c.url.endsWith('/tags')).flatMap((c) => c.json?.tags as string[])).toEqual(expect.arrayContaining(['bt-apel-ai', 'bt-apel-ai-more-info', 'bt-interes-calm']))
-    expect(ghl.some((c) => c.url.includes('/opportunities'))).toBe(false)
+    // No opportunity is written for a call (the lead's own pipeline entry comes from its lead sync, not the call).
+    expect(ghl.some((c) => c.url.includes('/opportunities') && c.json !== null)).toBe(false)
     // Asked for during the call: the code and the link, once (a requested message, not marketing).
     const link = sent.find((m) => m.subject === 'Codul tău de 10% pentru NEUROS Calm')!
     expect(link.to).toBe('ana@exemplu.ro')
@@ -465,6 +466,11 @@ describe('calling window and decision', () => {
     expect(callDecision(lead, { ...ok, otherCall: true })).toMatchObject({ call: false, reason: 'another call for this person' })
     expect(callDecision(lead, { ...ok, talkedBefore: true })).toMatchObject({ call: false, reason: 'already talked to the agent', status: 'stopped' })
     expect(callDecision({ ...(lead as object), lastActivityAt: new Date() } as never, ok)).toMatchObject({ call: false, reason: 'still active', later: expect.any(Date) })
+    // The daily brake: once the day's calls are placed, the rest wait (not lost) for a later window.
+    expect(callDecision(lead, { ...ok, placedToday: calling.dailyMax - 1 })).toEqual({ call: true, phone: PHONE })
+    const capped = callDecision(lead, { ...ok, placedToday: calling.dailyMax })
+    expect(capped).toMatchObject({ call: false, reason: `daily limit of ${calling.dailyMax} calls reached` })
+    expect((capped as { later: Date }).later.getTime()).toBeGreaterThan(Date.now() + 12 * 3_600_000)
   })
 })
 

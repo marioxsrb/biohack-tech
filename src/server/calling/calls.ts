@@ -174,6 +174,8 @@ export type CallFacts = {
   talkedBefore: boolean
   /** The number is on the do-not-call list (/admin/apeluri). */
   blocked?: boolean
+  /** Calls placed today (calling time zone), for the daily brake. */
+  placedToday?: number
 }
 
 export type CallCheck = { call: true; phone: string } | { call: false; reason: string; status?: 'stopped' | 'disabled'; later?: Date }
@@ -201,14 +203,18 @@ export function callDecision(lead: Lead, ctx: { attempt: number; now: Date; call
   const quietUntil = lead.lastActivityAt.getTime() + firstCallDelay(lead, c, ctx.phone) * 60_000
   if (ctx.attempt === 1 && ctx.now.getTime() < quietUntil) return { call: false, reason: 'still active', later: nextCallingWindow(new Date(quietUntil), c) }
   if (!inCallingWindow(ctx.now, c)) return { call: false, reason: 'outside calling hours', later: nextCallingWindow(ctx.now, c) }
+  if ((ctx.placedToday ?? 0) >= c.dailyMax) {
+    // 13 hours on lands past today's window (at most 13 hours long), so the next window is tomorrow's.
+    return { call: false, reason: `daily limit of ${c.dailyMax} calls reached`, later: nextCallingWindow(new Date(ctx.now.getTime() + 13 * 3_600_000), c) }
+  }
   return { call: true, phone: ctx.phone }
 }
 
-export async function callFacts(q: Queryable, lead: Lead, calling?: Pick<CallingConfig, 'testMode' | 'testNumbers'>): Promise<CallFacts> {
+export async function callFacts(q: Queryable, lead: Lead, calling?: Pick<CallingConfig, 'testMode' | 'testNumbers'> & Partial<Pick<CallingConfig, 'timezone'>>): Promise<CallFacts> {
   const phone = romanianE164(lead.phone)
   // Test mode, a listed number: one person per email (marioxsrb+a@…, +b@…), so both scenarios can be tested on one phone.
   const samePhone = phone && !(calling?.testMode && calling.testNumbers?.includes(phone)) ? phone : ''
-  const [consent, mkt, conv, sup, other, talked, blocked] = await Promise.all([
+  const [consent, mkt, conv, sup, other, talked, blocked, today] = await Promise.all([
     phone ? callConsent.state(q, phone) : null,
     marketing.state(q, lead.email),
     q.query(
@@ -232,6 +238,7 @@ export async function callFacts(q: Queryable, lead: Lead, calling?: Pick<Calling
       [samePhone, lead.email, TALKED],
     ),
     callBlocklist.has(q, phone),
+    q.query<{ n: number }>(`select count(*)::int as n from calls where (created_at at time zone $1)::date = (now() at time zone $1)::date and status <> 'cancelled'`, [calling?.timezone ?? 'Europe/Bucharest']),
   ])
   return {
     phone,
@@ -242,6 +249,7 @@ export async function callFacts(q: Queryable, lead: Lead, calling?: Pick<Calling
     otherCall: other.rows.length > 0,
     talkedBefore: talked.rows.length > 0,
     blocked,
+    placedToday: today.rows[0]?.n ?? 0,
   }
 }
 

@@ -64,6 +64,8 @@ const checkoutLead = (host: string, box: boolean) =>
   lead(post('/api/lead', host, { action: 'checkout', ...ana, marketingConsent: box, callConsent: box, cart: [{ productId: 'balance-wave', quantity: 1 }] }))
 
 async function flush() {
+  // First lets a run the route started in the background finish (it shares the runner).
+  await runDueJobs()
   await db.query("update jobs set run_at = now() where status in ('pending','retry')")
   await runDueJobs()
 }

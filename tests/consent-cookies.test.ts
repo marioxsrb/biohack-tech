@@ -156,6 +156,9 @@ describe('script blocking', () => {
     const { vendorsToLoad } = await load()
     expect(vendorsToLoad(ALL, '/checkout', vendors).map((v) => v.id)).toEqual(['ga4', 'meta'])
     expect(vendorsToLoad(ALL, '/en/checkout', vendors).map((v) => v.id)).toEqual(['ga4', 'meta'])
+    const real = (await import('@/lib/consent/vendors')).VENDORS.find((v) => v.id === 'clarity')!
+    for (const p of ['/checkout', '/comanda/abc', '/en/comanda/abc', '/en/checkout', '/reluare/x']) expect(real.excludePaths!.test(p)).toBe(true)
+    expect(real.excludePaths!.test('/en/products/calm')).toBe(false)
   })
 
   it('Clarity defaults to the Biohack Tech project and stays off admin and other private pages', async () => {
@@ -178,6 +181,13 @@ describe('script blocking', () => {
     const rejected = await load()
     expect(rejected.clarityProjectId()).toBe('ok5pjeez4o')
     vi.unstubAllEnvs()
+  })
+
+  it('analytics never receive the secret part of order, recovery and unsubscribe links', async () => {
+    const { safeHref } = await import('@/lib/consent/vendors')
+    expect(safeHref('https://biohack-tech.ro/comanda/Abc_123-xyz?x=1')).toBe('https://biohack-tech.ro/comanda/token?x=1')
+    expect(safeHref('https://www.biohack-tech.net/en/reluare/Abc_123')).toBe('https://www.biohack-tech.net/en/reluare/token')
+    expect(safeHref('https://biohack-tech.ro/products/calm')).toBe('https://biohack-tech.ro/products/calm')
   })
 
   it('only configured tools can load (no id, no script)', async () => {
