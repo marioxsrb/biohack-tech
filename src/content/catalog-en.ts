@@ -9,7 +9,7 @@ type ProductText = { kind: string; purpose: string; tagline: string; chooseLabel
 
 export const productTextEn: Record<ProductId, ProductText> = {
   'balance-wave': {
-    kind: 'Red light device worn around the neck',
+    kind: 'Vagus nerve stimulation and relaxation',
     purpose: 'For relaxation',
     tagline: 'You wear it around your neck. It gives you a few minutes of red light and quiet. It switches off by itself.',
   },

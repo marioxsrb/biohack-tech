@@ -4,7 +4,7 @@ Magazin online din România care vinde dispozitivele NEUROS. Site: https://bioha
 
 Produse vândute acum: NEUROS Calm, NEUROS Focus, NEUROS Amber. NEUROS Flow nu se mai vinde.
 
-## NEUROS Calm (Dispozitiv cu lumină roșie, purtat la gât)
+## NEUROS Calm (Stimularea nervului vag, a relaxării)
 Pentru ce este: Pentru relaxare. Se poartă la gât. Îți oferă câteva minute de lumină roșie și liniște. Se oprește singur.
 Preț: 6.380 lei (TVA 21% inclus, livrare gratuită în românia).
 Promoție: Iei 2 bucăți din același produs: 10% reducere la ele. Iei 3: 20%. Reducerea apare în coș.
