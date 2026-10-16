@@ -191,6 +191,24 @@ export const LEAD_STAGES = {
   unsubscribed: 'Dezabonat',
 } as const
 export type LeadStageKey = keyof typeof LEAD_STAGES
+
+/**
+ * The customers pipeline: once a person's order stands, their opportunity moves here from the leads pipeline, into
+ * the column of what they bought (one product, or "Mai multe produse"). A cancelled or refunded order moves them
+ * back. The order pipeline (Comenzi) still follows each order's delivery.
+ */
+export const BUYERS_PIPELINE = 'Clienți Biohack Tech'
+export const BUYER_STAGES = {
+  'balance-wave': 'NEUROS Calm',
+  'brainlink-pro': 'NEUROS Focus',
+  'ochelari-biohack': 'NEUROS Amber',
+  multi: 'Mai multe produse',
+} as const
+/** The customers column for the products bought (catalog ids): one known product, else "Mai multe produse". */
+export const buyerStage = (products: string[]) => {
+  const distinct = [...new Set(products)]
+  return distinct.length === 1 && distinct[0] in BUYER_STAGES ? BUYER_STAGES[distinct[0] as keyof typeof BUYER_STAGES] : BUYER_STAGES.multi
+}
 /**
  * AI call results on the contact (tags only: no opportunity, no workflow trigger the app relies on). One tag
  * per outcome, e.g. bt-apel-ai-interested; follow-up and refusal have their own, so the team can filter.
@@ -332,19 +350,22 @@ async function stageIds(c: GhlConfig): Promise<Map<string, string>> {
   return ids
 }
 
-let leadsPipelineCache: { at: number; key: string; id: string; stages: Map<string, string> } | null = null
+const namedPipelines = new Map<string, { at: number; id: string; stages: Map<string, string> } | null>()
 
-/** The leads pipeline and its stages, by name (cached 10 minutes); null while it is not created in GHL. */
-async function leadsPipeline(c: GhlConfig) {
-  if (leadsPipelineCache && leadsPipelineCache.key === c.locationId && Date.now() - leadsPipelineCache.at < 10 * 60_000) return leadsPipelineCache
+/** A pipeline and its stages, by name (cached 10 minutes); null while it is not created in GHL. */
+async function pipelineByName(c: GhlConfig, name: string) {
+  const key = `${c.locationId}:${name}`
+  const hit = namedPipelines.get(key)
+  if (hit && Date.now() - hit.at < 10 * 60_000) return hit
   const r = await call<{ pipelines: { id: string; name: string; stages: { id: string; name: string }[] }[] }>(c, 'GET', `/opportunities/pipelines?locationId=${encodeURIComponent(c.locationId)}`)
-  const p = r.pipelines.find((x) => x.name.trim().toLowerCase() === LEADS_PIPELINE.toLowerCase())
+  const p = r.pipelines.find((x) => x.name.trim().toLowerCase() === name.toLowerCase())
   if (!p) return null
-  leadsPipelineCache = { at: Date.now(), key: c.locationId, id: p.id, stages: new Map(p.stages.map((s) => [s.name.trim().toLowerCase(), s.id])) }
-  return leadsPipelineCache
+  const entry = { at: Date.now(), id: p.id, stages: new Map(p.stages.map((s) => [s.name.trim().toLowerCase(), s.id])) }
+  namedPipelines.set(key, entry)
+  return entry
 }
 /** Test helper. */
-export const resetLeadsPipelineCache = () => void (leadsPipelineCache = null)
+export const resetLeadsPipelineCache = () => namedPipelines.clear()
 
 export const ghl = {
   /**
@@ -414,15 +435,23 @@ export const ghl = {
    * The person's single opportunity in the leads pipeline, created once (found again by contact) and moved to
    * the stage the site computed. Returns null while the pipeline (or the stage) does not exist in GHL.
    */
-  async syncLeadOpportunity(c: GhlConfig, contactId: string, p: { name: string; stage: LeadStageKey; valueRon?: number }, knownId?: string | null) {
-    const pipe = await leadsPipeline(c)
-    const stageId = pipe?.stages.get(LEAD_STAGES[p.stage].toLowerCase())
-    if (!pipe || !stageId) {
-      log.warn('ghl.leads_pipeline_missing', { pipeline: LEADS_PIPELINE, stage: LEAD_STAGES[p.stage] })
+  /**
+   * The person's single opportunity: in the leads pipeline at the stage the site computed, or, once they bought,
+   * in the customers pipeline under what they bought (the same opportunity moves between the two). Created once
+   * (found again by contact in either pipeline); null while the pipeline or the stage does not exist in GHL.
+   */
+  async syncLeadOpportunity(c: GhlConfig, contactId: string, p: { name: string; stage: LeadStageKey; products?: string[]; valueRon?: number }, knownId?: string | null) {
+    const leads = await pipelineByName(c, LEADS_PIPELINE)
+    const buyers = p.stage === 'ordered' && p.products?.length ? await pipelineByName(c, BUYERS_PIPELINE) : null
+    // A customer goes to the customers pipeline; until it exists, to "Comandă plasată" in the leads pipeline.
+    const target = buyers ? { pipe: buyers, stage: buyerStage(p.products!) } : { pipe: leads, stage: LEAD_STAGES[p.stage] }
+    const stageId = target.pipe?.stages.get(target.stage.toLowerCase())
+    if (!target.pipe || !stageId) {
+      log.warn('ghl.leads_pipeline_missing', { pipeline: buyers ? BUYERS_PIPELINE : LEADS_PIPELINE, stage: target.stage })
       return null
     }
-    const status = p.stage === 'ordered' ? 'won' : p.stage === 'unsubscribed' ? 'lost' : 'open'
-    const body = { name: p.name.slice(0, 120), pipelineStageId: stageId, status, ...(p.valueRon && { monetaryValue: Math.round(p.valueRon) }) }
+    // Everyone stays visible on the boards (GHL hides won and lost by default).
+    const body = { name: p.name.slice(0, 120), pipelineId: target.pipe.id, pipelineStageId: stageId, status: 'open', ...(p.valueRon && { monetaryValue: Math.round(p.valueRon) }) }
     if (knownId) {
       try {
         await call(c, 'PUT', `/opportunities/${knownId}`, body)
@@ -432,17 +461,20 @@ export const ghl = {
         if (!(e instanceof GhlError) || (e.status !== 404 && e.status !== 400)) throw e
       }
     }
-    const found = await call<{ opportunities: { id: string }[] }>(
-      c,
-      'GET',
-      `/opportunities/search?location_id=${encodeURIComponent(c.locationId)}&pipeline_id=${encodeURIComponent(pipe.id)}&contact_id=${encodeURIComponent(contactId)}&limit=1`,
-    )
-    const id = found.opportunities?.[0]?.id
-    if (id) {
-      await call(c, 'PUT', `/opportunities/${id}`, body)
-      return id
+    for (const pipe of [leads, buyers ?? (await pipelineByName(c, BUYERS_PIPELINE))]) {
+      if (!pipe) continue
+      const found = await call<{ opportunities: { id: string }[] }>(
+        c,
+        'GET',
+        `/opportunities/search?location_id=${encodeURIComponent(c.locationId)}&pipeline_id=${encodeURIComponent(pipe.id)}&contact_id=${encodeURIComponent(contactId)}&limit=1`,
+      )
+      const id = found.opportunities?.[0]?.id
+      if (id) {
+        await call(c, 'PUT', `/opportunities/${id}`, body)
+        return id
+      }
     }
-    const r = await call<{ opportunity: { id: string } }>(c, 'POST', '/opportunities/', { ...body, pipelineId: pipe.id, locationId: c.locationId, contactId })
+    const r = await call<{ opportunity: { id: string } }>(c, 'POST', '/opportunities/', { ...body, locationId: c.locationId, contactId })
     return r.opportunity.id
   },
 

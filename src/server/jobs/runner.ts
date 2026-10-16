@@ -113,6 +113,9 @@ async function syncCrm(orderId: string) {
   // The application sends the recovery email (lead system); the W2 tag is never set, and removed where it was.
   if (m.recoverable || m.hadRecovery) await ghl.removeTags(c.ghl, contactId, [TAGS.recovery])
   const parentNumber = o.parentOrderId ? (await orders.byId(db, o.parentOrderId))?.orderNumber : null
+  // The person's place in the leads / customers pipelines follows their orders (bought, cancelled, refunded);
+  // first, so a problem with the order pipeline never holds it.
+  await syncProspect(db, c.ghl, o.email, contactId)
   const oppId = await ghl.syncOpportunity(c.ghl, o, contactId, o.ghlOpportunityId, parentNumber)
   if (contactId !== o.ghlContactId || oppId !== o.ghlOpportunityId) await orders.update(db, o.id, { ghl_contact_id: contactId, ghl_opportunity_id: oppId })
   return contactId
@@ -129,7 +132,7 @@ async function syncProspect(db: Awaited<ReturnType<typeof getDb>>, c: GhlConfig,
     await ghl.addTags(c, contactId, [siteTag(p.site)])
     const addr = email.trim().toLowerCase()
     const known = await db.query<{ id: string }>('select ghl_opportunity_id as id from crm_prospects where email = $1', [addr])
-    const id = await ghl.syncLeadOpportunity(c, contactId, { name: p.name === addr ? addr : `${p.name} · ${addr}`, stage: p.stage }, known.rows[0]?.id)
+    const id = await ghl.syncLeadOpportunity(c, contactId, { name: p.name === addr ? addr : `${p.name} · ${addr}`, stage: p.stage, products: p.products, valueRon: p.valueRon }, known.rows[0]?.id)
     if (id && id !== known.rows[0]?.id)
       await db.query(
         `insert into crm_prospects (email, ghl_opportunity_id) values ($1, $2)
