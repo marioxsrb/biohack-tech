@@ -52,6 +52,7 @@ const item = { item_id: 'balance-wave', item_name: 'NEUROS Calm', price: 6380, q
 
 beforeEach(() => {
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
 })
 
 describe('stored choice', () => {
@@ -98,13 +99,17 @@ describe('script blocking', () => {
 
   it('accepts analytics only: GA4 and Clarity may start, Meta may not; events reach GA4 only', async () => {
     const win = fakeBrowser()
-    const { vendorsToLoad, startVendor, consentStore, track } = await load()
+    const { vendorsToLoad, startVendor, consentStore, track, claritySnippet } = await load()
     const choice = { analytics: true, marketing: false }
     consentStore.save(choice)
     const allowed = vendorsToLoad(choice, '/', vendors)
     expect(allowed.map((v) => v.id)).toEqual(['ga4', 'clarity'])
     allowed.forEach(startVendor)
-    expect(scripts.map((s) => s.src)).toEqual(['https://www.googletagmanager.com/gtag/js?id=G-TEST', 'https://www.clarity.ms/tag/clar1'])
+    // GA4 still starts here. Clarity's tag is the root layout's next/script, so it is not injected twice.
+    expect(scripts.map((s) => s.src)).toEqual(['https://www.googletagmanager.com/gtag/js?id=G-TEST'])
+    expect(claritySnippet('clar1')).toBe(
+      `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","clar1");window.clarity('consentv2',{ad_Storage:'denied',analytics_Storage:'granted'});`,
+    )
     track('add_to_cart', { value: 638000, items: [item] })
     const events = (win.dataLayer as IArguments[]).map((a) => [...a])
     expect(events).toContainEqual(['event', 'add_to_cart', expect.objectContaining({ currency: 'RON', value: 6380 })])
@@ -150,9 +155,32 @@ describe('script blocking', () => {
     fakeBrowser()
     const { vendorsToLoad } = await load()
     expect(vendorsToLoad(ALL, '/checkout', vendors).map((v) => v.id)).toEqual(['ga4', 'meta'])
+    expect(vendorsToLoad(ALL, '/en/checkout', vendors).map((v) => v.id)).toEqual(['ga4', 'meta'])
     const real = (await import('@/lib/consent/vendors')).VENDORS.find((v) => v.id === 'clarity')!
     for (const p of ['/checkout', '/comanda/abc', '/en/comanda/abc', '/en/checkout', '/reluare/x']) expect(real.excludePaths!.test(p)).toBe(true)
     expect(real.excludePaths!.test('/en/products/calm')).toBe(false)
+  })
+
+  it('Clarity defaults to the Biohack Tech project and stays off admin and other private pages', async () => {
+    fakeBrowser()
+    vi.stubEnv('NEXT_PUBLIC_CLARITY_ID', '')
+    const { vendorsToLoad, VENDORS, clarityProjectId } = await load()
+    expect(clarityProjectId()).toBe('ok5pjeez4o')
+    expect(VENDORS.find((v) => v.id === 'clarity')?.key).toBe('ok5pjeez4o')
+    const on = (path: string, choice: { analytics: boolean; marketing: boolean } | null = ALL) => vendorsToLoad(choice, path).map((v) => v.id)
+    expect(on('/')).toContain('clarity')
+    expect(on('/en/products/calm')).toContain('clarity')
+    const blocked = ['/admin', '/admin/comenzi', '/en/admin', '/en/admin/login', '/ro/admin', '/checkout', '/en/checkout', '/comanda/x', '/reluare/tok', '/dezabonare/tok', '/retragere']
+    expect(blocked.filter((path) => on(path).includes('clarity'))).toEqual([])
+    expect(on('/', { analytics: false, marketing: true })).not.toContain('clarity')
+    expect(on('/', null)).toEqual([])
+    vi.stubEnv('NEXT_PUBLIC_CLARITY_ID', 'abc123')
+    const overridden = await load()
+    expect(overridden.VENDORS.find((v) => v.id === 'clarity')?.key).toBe('abc123')
+    vi.stubEnv('NEXT_PUBLIC_CLARITY_ID', 'not an id')
+    const rejected = await load()
+    expect(rejected.clarityProjectId()).toBe('ok5pjeez4o')
+    vi.unstubAllEnvs()
   })
 
   it('analytics never receive the secret part of order, recovery and unsubscribe links', async () => {

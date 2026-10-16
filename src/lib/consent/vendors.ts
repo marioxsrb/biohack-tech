@@ -1,13 +1,16 @@
 /**
- * Optional third-party tools. None is in the page's HTML: a tool's script is added to the page only
- * after the visitor allows its category, and only if its id is configured (NEXT_PUBLIC_*). With no ids
- * set, the site loads nothing optional and asks nothing.
+ * Optional third-party tools. None is in the page's HTML until the visitor allows its category.
+ * GA4 and the Meta Pixel are injected here, and only if their id is configured (NEXT_PUBLIC_*).
+ * Clarity's project id defaults to the Biohack Tech project, so the cookie banner is shown.
+ * Its snippet is loaded once from the root layout with next/script (ClarityScript), under the
+ * same rule as the other tools, and never on private pages (including /admin).
  *
  * To add a tool: one entry here (category, cookies it sets, how to start it) and one line in the
  * cookie policy (src/content/legal.ts). A tool that cannot say which category it belongs to (for
  * example a tag manager that loads other tags) does not go here.
  */
 import { activeMetaPixelId, META_PIXEL_ID } from '@/lib/meta'
+import { splitLocale } from '@/i18n/locales'
 import type { ConsentChoice, OptionalCategory } from './cookies'
 
 export { META_PIXEL_ID }
@@ -32,6 +35,24 @@ const PRIVATE_PAGES = /^\/(en\/)?(checkout|comanda|reluare|dezabonare|retragere|
 /** The page address without the secret part of private links (order, recovery, unsubscribe), for analytics. */
 export const safeHref = (href: string) => href.replace(/(\/(?:en\/)?(?:comanda|reluare|dezabonare|retragere)\/)[^/?#]+/, '$1token')
 
+/** Biohack Tech's Clarity project. NEXT_PUBLIC_CLARITY_ID overrides it (letters and digits only). */
+export const DEFAULT_CLARITY_ID = 'ok5pjeez4o'
+
+export function clarityProjectId(raw: string | undefined = process.env.NEXT_PUBLIC_CLARITY_ID): string {
+  const id = raw?.trim()
+  return id && /^[A-Za-z0-9]+$/.test(id) ? id : DEFAULT_CLARITY_ID
+}
+
+/**
+ * The official Clarity bootstrap, then the current consent signal. Analytics storage follows the
+ * visitor's analytics choice (the tag is only inserted after that choice). Ad storage stays denied:
+ * Clarity is not the ads pixel, and the older `clarity('consent')` would grant both.
+ */
+export function claritySnippet(projectId: string): string {
+  const id = clarityProjectId(projectId)
+  return `(function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);})(window,document,"clarity","script","${id}");window.clarity('consentv2',{ad_Storage:'denied',analytics_Storage:'granted'});`
+}
+
 export const VENDORS: Vendor[] = [
   {
     id: 'ga4',
@@ -45,7 +66,7 @@ export const VENDORS: Vendor[] = [
     id: 'clarity',
     name: 'Microsoft Clarity',
     category: 'analytics',
-    key: process.env.NEXT_PUBLIC_CLARITY_ID,
+    key: clarityProjectId(),
     cookies: [/^_clck$/, /^_clsk$/],
     excludePaths: PRIVATE_PAGES,
     purpose: 'Cum sunt folosite paginile (clicuri, derulare), ca să le facem mai clare.',
@@ -67,7 +88,10 @@ export const configuredVendors = (list: Vendor[] = VENDORS) => list.filter((v) =
 /** Which tools may run, for a choice and a page. No choice means none. */
 export function vendorsToLoad(choice: ConsentChoice | null, path: string, list: Vendor[] = VENDORS): Vendor[] {
   if (!choice) return []
-  return configuredVendors(list).filter((v) => choice[v.category] && !v.excludePaths?.test(path))
+  // Public URLs keep /en (and a typed /ro). Exclusions are written against the path without it,
+  // so /en/admin is the same admin area as /admin.
+  const bare = splitLocale(path).path
+  return configuredVendors(list).filter((v) => choice[v.category] && !v.excludePaths?.test(bare))
 }
 
 type W = Window & {
@@ -75,7 +99,6 @@ type W = Window & {
   gtag?: (...a: unknown[]) => void
   fbq?: ((...a: unknown[]) => void) & { queue?: unknown[]; loaded?: boolean; version?: string; callMethod?: (...a: unknown[]) => void; push?: unknown; disablePushState?: boolean; allowDuplicatePageViews?: boolean }
   _fbq?: unknown
-  clarity?: ((...a: unknown[]) => void) & { q?: unknown[] }
 }
 
 const loaded = new Set<VendorId>()
@@ -101,9 +124,13 @@ function addScript(src: string) {
   document.head.appendChild(s)
 }
 
-/** Starts a tool once per page load. Called only by the consent manager, after consent. */
+/**
+ * Starts a tool once per page load. Called only by the consent manager, after consent.
+ * Clarity is not started here: ClarityScript loads its snippet once, and a second tag would
+ * record the session twice. Meta's pixel and the Conversions API are untouched.
+ */
 export function startVendor(v: Vendor) {
-  if (loaded.has(v.id) || !v.key) return
+  if (v.id === 'clarity' || loaded.has(v.id) || !v.key) return
   loaded.add(v.id)
   const w = window as W
   if (v.id === 'ga4') {
@@ -119,11 +146,6 @@ export function startVendor(v: Vendor) {
     // The order, recovery and unsubscribe links work like passwords: Google gets the address without them.
     w.gtag('config', v.key, location.href ? { page_location: safeHref(location.href) } : {})
     addScript(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(v.key)}`)
-  }
-  if (v.id === 'clarity') {
-    const q = ((...a: unknown[]) => void (q.q = q.q ?? []).push(a)) as NonNullable<W['clarity']>
-    w.clarity = w.clarity ?? q
-    addScript(`https://www.clarity.ms/tag/${encodeURIComponent(v.key)}`)
   }
   if (v.id === 'meta') {
     if (!w.fbq) {
