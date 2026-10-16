@@ -189,7 +189,7 @@ describe('sale notifications', () => {
     await runDueJobs()
     await runDueJobs()
     expect(apnsSent).toHaveLength(2)
-    expect(apnsSent.every((m) => m.payload.event === 'payment' && m.payload.aps.sound === 'kaching.caf' && m.payload.orderId === o.id)).toBe(true)
+    expect(apnsSent.every((m) => m.payload.event === 'payment' && m.payload.aps.sound === 'kaching_register.caf' && m.payload.orderId === o.id)).toBe(true)
     // Minimal lock screen: order number and amount, no customer name or address.
     expect(apnsSent[0].payload.aps.alert.body).toContain(o.orderNumber)
     expect(JSON.stringify(apnsSent[0].payload)).not.toMatch(/Popescu|Lalelelor|ana@exemplu/i)
@@ -236,7 +236,7 @@ describe('sale notifications', () => {
     apnsAnswer = (tok) => (tok === TOKEN_B ? { ok: false, status: 503, reason: 'ServiceUnavailable', dead: false, retry: true } : { ok: true, apnsId: 'x' })
     await svc.confirmPayment(o.id, 'admin')
     await runDueJobs()
-    expect(apnsSent.map((m) => [m.token[0], m.payload.aps.sound])).toEqual(expect.arrayContaining([['a', 'default'], ['b', 'kaching.caf']]))
+    expect(apnsSent.map((m) => [m.token[0], m.payload.aps.sound])).toEqual(expect.arrayContaining([['a', 'default'], ['b', 'kaching_register.caf']]))
     apnsSent = []
     apnsAnswer = () => ({ ok: true, apnsId: 'y' })
     await db.query("update jobs set run_at = now() where kind = 'push.send' and status = 'retry'")
@@ -257,7 +257,7 @@ describe('sale notifications', () => {
     expect((await call('POST', 'devices', { token: t, body: { token: 'nu-e-token', environment: 'production' } })).status).toBe(400)
     expect((await call('POST', 'devices', { token: t, body: { token: TOKEN_A, environment: 'altceva' } })).status).toBe(400)
     const p = pushPayload('payment', { id: 'o1', orderNumber: 'BHT-1', totalMinor: 162000, currency: 'RON', paymentMethod: 'card', kind: 'checkout' } as never, { payments: true, newOrders: true, kaching: true })
-    expect(p).toMatchObject({ orderId: 'o1', event: 'payment', aps: { sound: 'kaching.caf', category: 'PAYMENT', alert: { title: 'Plată încasată', body: '1.620 lei · card · BHT-1' } } })
+    expect(p).toMatchObject({ orderId: 'o1', event: 'payment', aps: { sound: 'kaching_register.caf', category: 'PAYMENT', alert: { title: 'Plată încasată', body: '1.620 lei · card · BHT-1' } } })
   })
 })
 

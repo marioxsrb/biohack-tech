@@ -18,7 +18,7 @@ import { appDevices, type DevicePrefs } from './auth'
 import { sendApns, type ApnsMessage, type ApnsResult } from './apns'
 
 export type PushEvent = 'payment' | 'new_cod' | 'new_transfer'
-export const KACHING_SOUND = 'kaching.caf'
+export const KACHING_SOUND = 'kaching_register.caf' // the file in the iOS app's bundle (Cash Register sound)
 
 const METHOD: Record<Order['paymentMethod'], string> = { card: 'card', bank_transfer: 'transfer bancar', cash_on_delivery: 'ramburs' }
 
