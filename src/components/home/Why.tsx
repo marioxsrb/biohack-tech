@@ -9,7 +9,7 @@ export async function Why() {
     <section aria-labelledby="why-title" className="wrap pt-[var(--sec)]">
       <div className="grid items-center gap-y-10 lg:grid-cols-12 lg:gap-x-12">
         <div className="relative aspect-[4/3] overflow-hidden rounded-[28px] lg:col-span-6 max-sm:-mx-[var(--gut)] max-sm:rounded-none">
-          <Image src={why.image.src} alt={why.image.alt} fill placeholder="blur" sizes="(min-width: 1152px) 560px, (min-width: 1024px) 50vw, 100vw" className="object-cover object-[50%_40%]" />
+          <Image src={why.image.src} alt={why.image.alt} fill placeholder="blur" fetchPriority="low" sizes="(min-width: 1152px) 560px, (min-width: 1024px) 50vw, 100vw" className="object-cover object-[50%_40%]" />
         </div>
         <div className="lg:col-span-6">
           <h2 id="why-title" className="max-w-[13em] text-[clamp(32px,3.6vw,48px)] leading-[1.02] tracking-[-0.04em]">

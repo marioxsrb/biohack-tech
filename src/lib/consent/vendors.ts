@@ -90,12 +90,23 @@ export function whenLoaded(id: VendorId, fn: () => void) {
   waiting.set(id, [...(waiting.get(id) ?? []), fn])
 }
 
+/**
+ * Inserts a vendor script after consent. The call is queued for idle (the same moment as next/script
+ * `lazyOnload`) so fbevents.js, gtag and Clarity do not run during hydration. The stubs and the queued
+ * events, including Meta PageView, are already in place: the script flushes them when it arrives.
+ * Without requestIdleCallback the script is inserted immediately, which is what the unit tests see.
+ */
 function addScript(src: string) {
-  const s = document.createElement('script')
-  s.async = true
-  s.src = src
-  s.dataset.consent = 'granted'
-  document.head.appendChild(s)
+  const insert = () => {
+    const s = document.createElement('script')
+    s.async = true
+    s.src = src
+    s.dataset.consent = 'granted'
+    document.head.appendChild(s)
+  }
+  const ric = (window as Window & { requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number }).requestIdleCallback
+  if (typeof ric === 'function') ric(insert, { timeout: 1500 })
+  else insert()
 }
 
 /** Starts a tool once per page load. Called only by the consent manager, after consent. */

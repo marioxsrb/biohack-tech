@@ -26,7 +26,7 @@ export function CalmHero({ name, buy, cta }: { name: string; buy?: ReactNode; ct
           src={somn}
           alt="Femeie în pat, seara, cu ochii închiși, purtând NEUROS Calm la gât"
           fill
-          loading="eager"
+          preload
           fetchPriority="high"
           quality={85}
           placeholder="blur"
@@ -80,6 +80,7 @@ export function CalmHow() {
             src={nervVag}
             alt="Ilustrație: nervul vag pornește din creier și ajunge la inimă, plămâni și digestie"
             fill
+            fetchPriority="low"
             placeholder="blur"
             sizes="(min-width: 768px) 520px, 100vw"
             className="object-cover"
@@ -96,7 +97,7 @@ export function CalmUse() {
     <section aria-labelledby="folosire" className="lp-wrap pt-[var(--sec)]">
       <div className="grid items-center gap-y-10 md:grid-cols-12 md:gap-x-12">
         <div className="relative aspect-square overflow-hidden rounded-[32px] bg-[var(--lp-panel)] md:col-span-6">
-          <Image src={spate} alt="NEUROS Calm văzut din spate, cu butonul de pornire" fill sizes="(min-width: 768px) 520px, 100vw" className="object-contain p-[16%]" />
+          <Image src={spate} alt="NEUROS Calm văzut din spate, cu butonul de pornire" fill fetchPriority="low" sizes="(min-width: 768px) 520px, 100vw" className="object-contain p-[16%]" />
         </div>
         <div className="md:col-span-6">
           <Kicker>Cum îl folosești</Kicker>
@@ -137,13 +138,13 @@ export function CalmMoments() {
       <div className="mt-10 grid gap-5 md:grid-cols-5">
         <figure className="md:col-span-3">
           <div className="relative aspect-[4/3] overflow-hidden rounded-[24px]">
-            <Image src={canapea} alt="Femeie relaxată pe canapea, purtând NEUROS Calm" fill placeholder="blur" sizes="(min-width: 768px) 680px, 100vw" className="object-cover" />
+            <Image src={canapea} alt="Femeie relaxată pe canapea, purtând NEUROS Calm" fill fetchPriority="low" placeholder="blur" sizes="(min-width: 768px) 680px, 100vw" className="object-cover" />
           </div>
           <figcaption className="mt-3 text-[15.5px] text-[var(--lp-muted)]">Seara, o ședință scurtă te poate ajuta să te liniștești înainte de somn.</figcaption>
         </figure>
         <figure className="md:col-span-2 md:pt-24">
           <div className="relative aspect-[4/5] overflow-hidden rounded-[24px]">
-            <Image src={birou} alt="Femeie la birou, cu ochii închiși, lângă NEUROS Calm" fill placeholder="blur" sizes="(min-width: 768px) 440px, 100vw" className="object-cover" />
+            <Image src={birou} alt="Femeie la birou, cu ochii închiși, lângă NEUROS Calm" fill fetchPriority="low" placeholder="blur" sizes="(min-width: 768px) 440px, 100vw" className="object-cover" />
           </div>
           <figcaption className="mt-3 text-[15.5px] text-[var(--lp-muted)]">La birou, câteva minute între două sarcini.</figcaption>
         </figure>

@@ -41,17 +41,17 @@ export function FocusHero({ name, buy, cta }: { name: string; buy?: ReactNode; c
               src={studio}
               alt="NEUROS Focus, casca, fotografiată în studio"
               fill
-              loading="eager"
+              preload
               fetchPriority="high"
               quality={85}
               placeholder="blur"
-              sizes="(min-width: 1152px) 660px, 100vw"
+              sizes="(min-width: 1152px) 660px, calc(100vw - 40px)"
               className="object-cover"
             />
           </div>
           <div className="absolute -bottom-10 -left-6 w-[44%] overflow-hidden rounded-[22px] shadow-[0_30px_60px_-30px_rgba(8,17,19,.55)] ring-4 ring-[var(--lp-bg)] max-sm:left-3 max-sm:-bottom-8 max-sm:w-[46%]">
             <div className="relative aspect-[4/3]">
-              <Image src={tableta} alt="Tânăr pe canapea, purtând NEUROS Focus și jucând pe tabletă" fill placeholder="blur" sizes="300px" className="object-cover object-[65%_50%]" />
+              <Image src={tableta} alt="Tânăr pe canapea, purtând NEUROS Focus și jucând pe tabletă" fill fetchPriority="low" placeholder="blur" sizes="(max-width: 640px) 46vw, 300px" className="object-cover object-[65%_50%]" />
             </div>
           </div>
         </div>
@@ -75,7 +75,7 @@ export function FocusVideo() {
           </p>
         </div>
         <div className="lg:col-span-6 lg:col-start-7">
-          <PresentationVideo src="/video/neuros-focus.mp4" poster="/video/neuros-focus-poster.jpg" label="Video de prezentare NEUROS Focus" />
+          <PresentationVideo src="/video/neuros-focus-720.mp4" poster="/video/neuros-focus-poster.webp" label="Video de prezentare NEUROS Focus" />
         </div>
       </div>
     </section>
@@ -92,7 +92,7 @@ export function FocusHow() {
       </Title>
       <div className="mt-10 grid items-center gap-y-10 lg:grid-cols-12 lg:gap-x-12">
         <div className="relative aspect-[16/9] overflow-hidden rounded-[28px] bg-[#f6f6f6] lg:col-span-7">
-          <Image src={componente} alt="NEUROS Focus în interior: carcasa, placa electronică, bateria și difuzorul" fill sizes="(min-width: 1152px) 660px, 100vw" className="object-contain p-[4%]" />
+          <Image src={componente} alt="NEUROS Focus în interior: carcasa, placa electronică, bateria și difuzorul" fill fetchPriority="low" sizes="(min-width: 1152px) 660px, 100vw" className="object-contain p-[4%]" />
         </div>
         <ol className="space-y-6 lg:col-span-5">
           {[
@@ -126,7 +126,7 @@ export function FocusWhere() {
       <div className="lp-wrap grid gap-y-10 lg:grid-cols-12 lg:gap-x-12">
         <div className="lg:col-span-7">
           <div className="relative aspect-[4/3] overflow-hidden rounded-[28px]">
-            <Image src={birou} alt="Bărbat la birou, concentrat, purtând NEUROS Focus" fill placeholder="blur" sizes="(min-width: 1152px) 660px, 100vw" className="object-cover" />
+            <Image src={birou} alt="Bărbat la birou, concentrat, purtând NEUROS Focus" fill fetchPriority="low" placeholder="blur" sizes="(min-width: 1152px) 660px, 100vw" className="object-cover" />
           </div>
         </div>
         <div className="on-dark flex flex-col lg:col-span-5">
@@ -137,7 +137,7 @@ export function FocusWhere() {
           <p className="mt-4 text-[17px] leading-relaxed text-white/80">O sesiune scurtă te poate ajuta să intri mai repede în concentrare.</p>
           <div className="mt-auto pt-10">
             <div className="relative aspect-[16/10] overflow-hidden rounded-[20px]">
-              <Image src={meditatie} alt="Femeie meditând în grădină, purtând NEUROS Focus" fill placeholder="blur" sizes="(min-width: 1152px) 440px, 100vw" className="object-cover" />
+              <Image src={meditatie} alt="Femeie meditând în grădină, purtând NEUROS Focus" fill fetchPriority="low" placeholder="blur" sizes="(min-width: 1152px) 440px, 100vw" className="object-cover" />
             </div>
             <p className="mt-3 text-[15.5px] text-white/75">Și la meditație. Vezi în timp real cât de relaxat ești.</p>
           </div>

@@ -6,13 +6,13 @@ import { Arrow } from '@/components/ui/icons'
 import { getProduct, variantLabel, type ProductId } from '@/content/catalog'
 
 /**
- * One product film per frame, in public/video/amber/<variant id>(-720).mp4 with a .jpg poster (its first
+ * One product film per frame, in public/video/amber/<variant id>(-720).mp4 with a .webp poster (its first
  * frame). Each film is one full turn of the frame floating in mid-air: front, three-quarter and side are
  * generated between real photographs of that frame, the rear between its side photograph and the
  * mirror of it, and the second half is the mirror of the first. It is re-timed so the turn runs at a
  * constant speed, and starts and ends on the front view, where the next frame takes over.
  */
-const film = (id: string) => ({ hd: `/video/amber/${id}.mp4`, sd: `/video/amber/${id}-720.mp4`, poster: `/video/amber/${id}.jpg` })
+const film = (id: string) => ({ hd: `/video/amber/${id}.mp4`, sd: `/video/amber/${id}-720.mp4`, poster: `/video/amber/${id}.webp` })
 
 /** The crossfade from one frame's film to the next (ms). */
 const FADE = 1200
@@ -57,8 +57,8 @@ export function AmberShowcase({ productId }: { productId: ProductId }) {
     const el = stageRef.current
     if (!el) return
     const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.35 })
-    // Nothing is fetched until the stage is close (it must not compete with the hero).
-    const soon = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: '400px 0px' })
+    // Nothing is fetched until the stage is about to enter the screen (it must not compete with the hero).
+    const soon = new IntersectionObserver(([e]) => e.isIntersecting && setNear(true), { rootMargin: '80px 0px' })
     io.observe(el)
     soon.observe(el)
     return () => {
@@ -75,7 +75,11 @@ export function AmberShowcase({ productId }: { productId: ProductId }) {
       if (!v) return
       v.defaultPlaybackRate = SPEED
       v.playbackRate = SPEED
-      if (i === at && running) v.play().catch(() => setPlaying(false))
+      if (i === at && running) {
+        // Sources are attached only once the stage is on screen; load() picks them up before play().
+        if (v.networkState === HTMLMediaElement.NETWORK_EMPTY && v.querySelector('source')) v.load()
+        v.play().catch(() => setPlaying(false))
+      }
       else v.pause()
     })
   }, [at, running])
@@ -175,8 +179,10 @@ export function AmberShowcase({ productId }: { productId: ProductId }) {
       >
         {frames.map((f, i) => {
           const on = i === at
-          // Only the film on stage and the one after it are fetched.
-          const load = near && (on || i === (at + 1) % frames.length || i === prev)
+          const upcoming = i === (at + 1) % frames.length
+          // The file is fetched only while the stage is on screen: the film playing, and the next one so the
+          // crossfade does not wait. A poster is enough until then.
+          const load = inView && (on || upcoming || i === prev)
           return (
             <video
               key={f.variant.id}
@@ -185,15 +191,19 @@ export function AmberShowcase({ productId }: { productId: ProductId }) {
               }}
               aria-hidden={!on}
               className={`amber-film ${on ? 'is-on' : ''}`}
-              poster={near || on ? f.film.poster : undefined}
+              poster={on || (near && upcoming) ? f.film.poster : undefined}
               preload={load ? 'auto' : 'none'}
               muted
               playsInline
               disablePictureInPicture
               onEnded={() => running && show(at + 1)}
             >
-              <source src={f.film.sd} type="video/mp4" media="(max-width: 767px)" />
-              <source src={f.film.hd} type="video/mp4" />
+              {load && (
+                <>
+                  <source src={f.film.sd} type="video/mp4" media="(max-width: 767px)" />
+                  <source src={f.film.hd} type="video/mp4" />
+                </>
+              )}
             </video>
           )
         })}

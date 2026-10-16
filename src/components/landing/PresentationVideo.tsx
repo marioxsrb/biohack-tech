@@ -10,10 +10,22 @@ export function PresentationVideo({ src, poster, label }: { src: string; poster:
   const ref = useRef<HTMLVideoElement>(null)
   const [playing, setPlaying] = useState(false)
   const [muted, setMuted] = useState(true)
+  // The file stays off the network until the frame is close. preload=metadata was still pulling the whole film.
+  const [armed, setArmed] = useState(false)
 
   useEffect(() => {
     const v = ref.current
-    if (!v || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    if (!v) return
+    const io = new IntersectionObserver(([e]) => {
+      if (e.isIntersecting) setArmed(true)
+    }, { rootMargin: '160px 0px', threshold: 0 })
+    io.observe(v)
+    return () => io.disconnect()
+  }, [])
+
+  useEffect(() => {
+    const v = ref.current
+    if (!v || !armed || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     let userPaused = false
     const onPause = () => {
       if (v.dataset.auto !== '1') userPaused = true
@@ -38,11 +50,16 @@ export function PresentationVideo({ src, poster, label }: { src: string; poster:
       v.removeEventListener('pause', onPause)
       v.removeEventListener('play', onPlay)
     }
-  }, [])
+  }, [armed])
 
   const toggle = () => {
     const v = ref.current
     if (!v) return
+    if (!armed) setArmed(true)
+    if (!v.getAttribute('src')) {
+      v.src = src
+      v.load()
+    }
     if (v.paused) v.play().catch(() => {})
     else v.pause()
   }
@@ -59,12 +76,12 @@ export function PresentationVideo({ src, poster, label }: { src: string; poster:
     <div className="relative mx-auto w-full max-w-[360px] overflow-hidden rounded-[36px] bg-[var(--lp-ink)] shadow-[0_40px_80px_-40px_rgba(8,17,19,.6)] ring-[6px] ring-white">
       <video
         ref={ref}
-        src={src}
+        src={armed ? src : undefined}
         poster={poster}
         muted
         loop
         playsInline
-        preload="metadata"
+        preload="none"
         aria-label={label}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}

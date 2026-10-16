@@ -29,7 +29,7 @@ export async function Hero() {
         src={hero}
         alt={t.alt}
         fill
-        loading="eager"
+        preload
         fetchPriority="high"
         quality={85}
         placeholder="blur"

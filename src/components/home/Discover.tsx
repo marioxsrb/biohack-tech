@@ -102,6 +102,7 @@ function Tile({ p, when, tint, wide, full, view, ui }: { p: Product; when: strin
       src={p.cutout.src}
       alt={p.cutout.alt}
       fill
+      fetchPriority="low"
       sizes={wide ? '(min-width: 1152px) 360px, (min-width: 640px) 50vw, 90vw' : '(min-width: 1152px) 440px, (min-width: 1024px) 40vw, 90vw'}
       className={`object-contain transition-transform duration-500 ease-[var(--ease-brand)] group-hover:scale-[1.04] ${p.cutout.bleed === 'bottom' ? 'object-bottom' : ''}`}
     />

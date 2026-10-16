@@ -110,7 +110,7 @@ function Card({ k, r, active, dimmed, copy, showProduct, onActivate }: { k: stri
         </span>
         {showProduct && product && (
           <span aria-hidden className="relative h-12 w-12 flex-none overflow-hidden rounded-[14px] bg-white/[0.08] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.1)]">
-            <Image src={product.cutout.src} alt="" fill sizes="48px" className="object-contain p-1.5" />
+            <Image src={product.cutout.src} alt="" fill fetchPriority="low" sizes="48px" className="object-contain p-1.5" />
           </span>
         )}
       </figcaption>
