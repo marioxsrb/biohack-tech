@@ -1,12 +1,14 @@
 import Link from 'next/link'
 import { SUPPORT_CATEGORIES, SUPPORT_STATUS, type SupportRequest, type SupportStatus } from '@/server/assistant/support'
+import type { Reply } from '@/server/replies'
 import { supportAction } from '../actions'
+import { ReplyThread } from '../ReplyThread'
 
 export const dt = (d: Date) => d.toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 const TONE: Record<SupportStatus, string> = { open: 'bg-cyan-50 text-cyan-700', in_progress: 'bg-[#fff4e0] text-[#8a5300]', resolved: 'bg-mist text-muted' }
 
 /** One support request: what was asked, how to reach the customer, the linked order, and the operator's controls. */
-export function SupportCard({ r, detail = false }: { r: SupportRequest; detail?: boolean }) {
+export function SupportCard({ r, detail = false, replies = [] }: { r: SupportRequest; detail?: boolean; replies?: Reply[] }) {
   return (
     <li className="rounded-[16px] bg-paper p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -70,6 +72,7 @@ export function SupportCard({ r, detail = false }: { r: SupportRequest; detail?:
         </label>
         <button className="btn-secondary sm">Salvează notele</button>
       </form>
+      <ReplyThread kind="support" id={r.id} email={r.email} replies={replies} />
     </li>
   )
 }

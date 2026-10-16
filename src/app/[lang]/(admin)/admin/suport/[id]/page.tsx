@@ -4,6 +4,7 @@ import { connection } from 'next/server'
 import { getDb } from '@/server/db'
 import { supportRequests } from '@/server/assistant/support'
 import { orders } from '@/server/orders/repository'
+import { replies } from '@/server/replies'
 import { dt, SupportCard } from '../SupportCard'
 
 /** One support request (the link in the team's email), with the linked order's audit trail. */
@@ -14,6 +15,7 @@ export default async function SupportRequestPage({ params }: PageProps<'/[lang]/
   const r = await supportRequests.byId(db, id)
   if (!r) notFound()
   const events = r.orderId ? await orders.events(db, r.orderId) : []
+  const thread = await replies.forThread(db, 'support', r.id)
   return (
     <>
       <Link href="/admin/suport" className="text-[14px] text-muted underline underline-offset-4">
@@ -21,7 +23,7 @@ export default async function SupportRequestPage({ params }: PageProps<'/[lang]/
       </Link>
       <h1 className="mt-2 text-[34px] tracking-[-0.03em]">Cererea {r.ref}</h1>
       <ul className="mt-6">
-        <SupportCard r={r} detail />
+        <SupportCard r={r} detail replies={thread} />
       </ul>
       {r.orderId && (
         <section className="mt-6 rounded-[16px] bg-paper p-5">

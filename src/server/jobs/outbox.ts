@@ -20,6 +20,7 @@ export type JobKind =
   | 'ghl.enquiry'
   | 'ghl.lead'
   | 'ghl.welcome'
+  | 'email.reply'
   | 'lead.recovery'
   | 'call.attempt'
   | 'call.check'

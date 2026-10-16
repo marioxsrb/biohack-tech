@@ -11,8 +11,8 @@ const GROUPS: { title: string; items: { href: string; label: string }[] }[] = [
       { href: '/admin/comenzi', label: 'Comenzi' },
       { href: '/admin/leaduri', label: 'Leaduri' },
       { href: '/admin/apeluri', label: 'Apeluri AI: test și „nu suna”' },
-      { href: '/admin/suport', label: 'Suport (asistent)' },
-      { href: '/admin/mesaje', label: 'Mesaje' },
+      { href: '/admin/mesaje', label: 'Mesaje (formular)' },
+      { href: '/admin/suport', label: 'Suport (chat)' },
     ],
   },
   {
@@ -26,7 +26,7 @@ const GROUPS: { title: string; items: { href: string; label: string }[] }[] = [
 ]
 
 /** The side menu; the current page is marked (an order's page belongs to "Comenzi"). */
-export function AdminNav() {
+export function AdminNav({ badges = {} }: { badges?: Record<string, number> }) {
   const path = usePathname().replace(/^\/en(?=\/)/, '')
   const active = (href: string) => (href === '/admin' ? path === '/admin' : path.startsWith(href) || (href === '/admin/comenzi' && path.startsWith('/admin/orders')))
   return (
@@ -52,6 +52,11 @@ export function AdminNav() {
                 className={`block rounded-[10px] px-3 py-2 text-[14.5px] whitespace-nowrap transition-colors ${active(i.href) ? 'bg-white text-ink font-semibold' : 'text-white/80 hover:bg-white/10 hover:text-white'}`}
               >
                 {i.label}
+                {!!badges[i.href] && (
+                  <span className="ml-2 inline-flex min-w-5 items-center justify-center rounded-full bg-red px-1.5 text-[12px] font-semibold text-white" aria-label={`${badges[i.href]} noi`}>
+                    {badges[i.href]}
+                  </span>
+                )}
               </Link>
             ))}
           </div>

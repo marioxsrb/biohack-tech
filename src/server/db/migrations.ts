@@ -618,4 +618,26 @@ create table if not exists crm_prospects (
 alter table crm_prospects enable row level security
 `,
   },
+  {
+    // Replies the team writes in /admin to a contact-form message or a chat support request: the conversation's
+    // history, and the email sent from our own mailbox (queued; failures visible).
+    id: '022_customer_replies',
+    sql: `
+create table if not exists customer_replies (
+  id uuid primary key,
+  thread_kind text not null check (thread_kind in ('enquiry', 'support')),
+  thread_id uuid not null,
+  to_email text not null,
+  subject text not null,
+  body text not null,
+  status text not null default 'pending' check (status in ('pending', 'sent', 'failed')),
+  error text,
+  created_by text not null,
+  created_at timestamptz not null default now(),
+  sent_at timestamptz
+);
+create index if not exists customer_replies_thread on customer_replies (thread_kind, thread_id, created_at);
+alter table customer_replies enable row level security
+`,
+  },
 ]

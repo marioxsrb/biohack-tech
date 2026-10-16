@@ -3,6 +3,7 @@ import { connection } from 'next/server'
 import { getDb } from '@/server/db'
 import { supportRequests } from '@/server/assistant/support'
 import { assistantUsage, dailyLimit } from '@/server/assistant/usage'
+import { replies } from '@/server/replies'
 import { SupportCard } from './SupportCard'
 
 const FILTERS = { open: 'Deschise', urgent: 'Urgente', orders: 'Legate de comenzi', resolved: 'Istoric (rezolvate)', all: 'Toate' } as const
@@ -15,12 +16,13 @@ export default async function SupportPage({ searchParams }: PageProps<'/[lang]/a
   const filter: Filter = raw in FILTERS ? (raw as Filter) : 'open'
   const db = await getDb()
   const [list, counts, usage] = await Promise.all([supportRequests.list(db, { filter }), supportRequests.counts(db), assistantUsage.recent(db, 7)])
+  const thread = await replies.forThreads(db, 'support', list.map((r) => r.id))
   const badge: Partial<Record<Filter, number>> = { open: counts.open, urgent: counts.urgent, orders: counts.orders }
 
   return (
     <>
       <h1 className="mt-2 text-[34px] tracking-[-0.03em]">Suport</h1>
-      <p className="mt-1 text-[15px] text-muted">Cererile trimise de asistentul de chat: anulări, retururi, livrare, plăți, întrebări, „vreau să vorbesc cu cineva”. Fiecare cerere nouă vine și pe email la echipă.</p>
+      <p className="mt-1 text-[15px] text-muted">Cererile trimise de asistentul de chat: anulări, retururi, livrare, plăți, întrebări, „vreau să vorbesc cu cineva”. Fiecare cerere nouă vine și pe email la echipă. Poți răspunde clientului direct de aici, pe email.</p>
       <nav aria-label="Filtru" className="mt-4 flex flex-wrap gap-2 text-[14px]">
         {(Object.keys(FILTERS) as Filter[]).map((k) => (
           <Link key={k} href={k === 'open' ? '/admin/suport' : `/admin/suport?f=${k}`} aria-current={filter === k ? 'page' : undefined} className={`rounded-full px-3.5 py-1.5 ${filter === k ? 'bg-ink text-white' : 'bg-paper text-ink'}`}>
@@ -31,7 +33,7 @@ export default async function SupportPage({ searchParams }: PageProps<'/[lang]/a
       </nav>
       <ul className="mt-6 space-y-4">
         {list.map((r) => (
-          <SupportCard key={r.id} r={r} />
+          <SupportCard key={r.id} r={r} replies={thread.get(r.id) ?? []} />
         ))}
         {!list.length && <li className="rounded-[16px] bg-paper px-5 py-10 text-center text-muted">Nicio cerere aici.</li>}
       </ul>

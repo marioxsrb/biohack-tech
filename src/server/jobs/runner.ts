@@ -21,6 +21,7 @@ import { isIntlHost, siteOrigin } from '@/lib/sites'
 import { marketing } from '@/server/marketing/consent'
 import { CALL_TAGS, INTEREST_TAG, LEAD_TAGS, attributionTags, callOutcomeTag, siteTag } from '@/server/integrations/ghl'
 import { prospectFor } from '@/server/prospects'
+import { replies } from '@/server/replies'
 import { callConsent } from '@/server/calling/consent'
 import { hasCart, leadItems, recoveryCode, recoveryLink, renderRecoveryOffer, RECOVERY_PERCENT } from '@/server/calling/offer'
 import { renderCartRecovery } from '@/server/cart-email'
@@ -372,6 +373,27 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     if (!c.elevenlabs) throw new Skip('ElevenLabs not configured')
     await ensureStoreSettings(0)
     return `knowledge ${await syncAgentPrices(c.elevenlabs, c.siteUrl)}`
+  },
+
+  // A reply the team wrote in /admin (Mesaje, Suport): sent from our own mailbox, marked in the conversation.
+  'email.reply': async (j) => {
+    const c = getConfig()
+    const db = await getDb()
+    const id = String(j.payload.replyId ?? '')
+    const mail = await replies.render(db, id)
+    if (!mail) throw new Skip('reply gone')
+    if (c.email.transport !== 'smtp' && c.email.transport !== 'file') {
+      await replies.mark(db, id, 'failed', 'fără căsuța noastră de email (EMAIL_TRANSPORT)')
+      throw new Skip('no own email transport')
+    }
+    try {
+      const ref = await deliver(c, { ...mail, name: `reply-${id}` })
+      await replies.mark(db, id, 'sent')
+      return ref
+    } catch (e) {
+      await replies.mark(db, id, 'failed', errText(e))
+      throw e
+    }
   },
 
   // The website popup's code (LONGEVITY10), once per address; still only with the marketing consent in force.

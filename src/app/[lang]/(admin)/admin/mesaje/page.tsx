@@ -2,17 +2,21 @@ import Link from 'next/link'
 import { connection } from 'next/server'
 import { ENQUIRY_TOPICS } from '@/lib/enquiry'
 import { ENQUIRY_STATUS, enquiries, type EnquiryStatus } from '@/server/enquiries'
+import { getDb } from '@/server/db'
+import { replies } from '@/server/replies'
 import { enquiryStatusAction } from '../actions'
+import { ReplyThread } from '../ReplyThread'
 
 const dt = (d: Date) => d.toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 const TONE: Record<EnquiryStatus, string> = { new: 'bg-cyan-50 text-cyan-700', in_progress: 'bg-[#fff4e0] text-[#8a5300]', resolved: 'bg-mist text-muted' }
 
-/** Contact-form messages: newest first, filter by status, move them along. Not a CRM: replies go by email/phone. */
+/** Contact-form messages: newest first, filter by status, reply by email from here, move them along. */
 export default async function MessagesPage({ searchParams }: PageProps<'/[lang]/admin/mesaje'>) {
   await connection()
   const raw = String((await searchParams).status ?? '')
   const status = raw in ENQUIRY_STATUS ? (raw as EnquiryStatus) : undefined
   const [list, counts] = await Promise.all([enquiries.list(status), enquiries.counts()])
+  const thread = await replies.forThreads(await getDb(), 'enquiry', list.map((e) => e.id))
 
   return (
     <>
@@ -69,6 +73,7 @@ export default async function MessagesPage({ searchParams }: PageProps<'/[lang]/
               </form>
             </div>
             <p className="mt-3 text-[15px] leading-relaxed whitespace-pre-wrap text-ink">{e.message}</p>
+            <ReplyThread kind="enquiry" id={e.id} email={e.email} replies={thread.get(e.id) ?? []} />
           </li>
         ))}
         {!list.length && <li className="rounded-[16px] bg-paper px-5 py-10 text-center text-muted">Niciun mesaj{status ? ` cu starea „${ENQUIRY_STATUS[status]}”` : ''}.</li>}

@@ -13,6 +13,7 @@ import { audit, ensureStoreSettings, readStoreSettings, saveStoreSettings, type 
 import { callBlocklist } from '@/server/calling/blocklist'
 import { placeTestCall } from '@/server/calling/test-call'
 import { enquiries, type EnquiryStatus } from '@/server/enquiries'
+import { replies } from '@/server/replies'
 import { isSupportStatus, supportRequests } from '@/server/assistant/support'
 import { isChatSound, type ChatSound } from '@/lib/chat-sounds'
 import { cancelScheduledCalls, disableCalling, retryCall } from '@/server/calling/admin'
@@ -334,6 +335,28 @@ export async function testCallAction(_: TestCallState, f: FormData): Promise<Tes
 }
 
 /** A support request from the website assistant: status, urgency and resolution notes (each change audited). */
+/**
+ * A reply to a customer from Mesaje or Suport: stored with the conversation, emailed from our own mailbox, and
+ * the conversation moves to "în lucru" (or "rezolvat", when ticked).
+ */
+export async function replyAction(f: FormData) {
+  await guard()
+  const kind = text(f, 'kind', 10)
+  const id = text(f, 'id', 40)
+  if (kind !== 'enquiry' && kind !== 'support') return
+  const db = await getDb()
+  const r = await replies.create(db, { kind, threadId: id, body: String(f.get('body') ?? ''), actor: adminActor() })
+  log.info('admin.action', { thread: `${kind}:${id}`, action: 'reply', ok: r.ok, ...(!r.ok && { reason: r.reason }) })
+  if (!r.ok) return
+  await audit(db, adminActor(), 'customer.reply', { kind, id, replyId: r.id })
+  const resolve = f.get('resolve') === 'da'
+  if (kind === 'enquiry') await enquiries.setStatus(id, resolve ? 'resolved' : 'in_progress')
+  else await supportRequests.update(db, id, { status: resolve ? 'resolved' : 'in_progress' })
+  await runDueJobs()
+  revalidatePath(kind === 'enquiry' ? '/admin/mesaje' : '/admin/suport')
+  if (kind === 'support') revalidatePath(`/admin/suport/${id}`)
+}
+
 export async function supportAction(f: FormData) {
   await guard()
   const id = text(f, 'id', 40)
