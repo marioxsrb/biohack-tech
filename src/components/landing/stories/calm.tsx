@@ -44,7 +44,7 @@ export function CalmHero({ name, buy, cta }: { name: string; buy?: ReactNode; ct
           Câteva minute de liniște, doar pentru tine.
         </h1>
         <p className="mt-5 max-w-[30em] text-[clamp(17px,1.4vw,20px)] leading-snug text-white/85">
-          Te ajută să lași stresul zilei în urmă. Mulți utilizatori simt mai mult calm și un somn mai lin. Pornești și te relaxezi.
+          Te ajută să lași stresul zilei în urmă. Susține calmul și un somn mai lin. Pornești și te relaxezi.
         </p>
         {buy}
         <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -140,7 +140,7 @@ export function CalmMoments() {
           <div className="relative aspect-[4/3] overflow-hidden rounded-[24px]">
             <Image src={canapea} alt="Femeie relaxată pe canapea, purtând NEUROS Calm" fill fetchPriority="low" placeholder="blur" sizes="(min-width: 768px) 680px, 100vw" className="object-cover" />
           </div>
-          <figcaption className="mt-3 text-[15.5px] text-[var(--lp-muted)]">Seara, câteva minute te ajută să te liniștești. Mulți utilizatori simt că trec mai ușor spre somn.</figcaption>
+          <figcaption className="mt-3 text-[15.5px] text-[var(--lp-muted)]">Seara, câteva minute te ajută să te liniștești. Te ajută să treci mai ușor spre somn.</figcaption>
         </figure>
         <figure className="md:col-span-2 md:pt-24">
           <div className="relative aspect-[4/5] overflow-hidden rounded-[24px]">

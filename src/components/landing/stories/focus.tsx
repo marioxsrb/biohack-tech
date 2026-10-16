@@ -25,7 +25,7 @@ export function FocusHero({ name, buy, cta }: { name: string; buy?: ReactNode; c
             Mai mult focus. Mai puțină risipire.
           </h1>
           <p className="mt-5 max-w-[28em] text-[clamp(17px,1.3vw,19px)] leading-snug text-[var(--lp-muted)]">
-            Te ajută să-ți aduni atenția, printr-un joc scurt. Mulți utilizatori simt mai mult focus și mai multă energie, la muncă și la studiu.
+            Te ajută să-ți aduni atenția, printr-un joc scurt. Susține focusul și energia, la muncă și la studiu.
           </p>
           {buy}
           <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">
@@ -134,7 +134,7 @@ export function FocusWhere() {
           <h2 id="unde" className="mt-3 text-[clamp(32px,3.6vw,48px)] leading-[1.02] tracking-[-0.04em] !text-white">
             La muncă, la studiu, înainte de o sarcină grea.
           </h2>
-          <p className="mt-4 text-[17px] leading-relaxed text-white/80">O sesiune scurtă te ajută să intri mai ușor în concentrare. Mulți utilizatori simt mai multă claritate.</p>
+          <p className="mt-4 text-[17px] leading-relaxed text-white/80">O sesiune scurtă te ajută să intri mai ușor în concentrare. Susține claritatea.</p>
           <div className="mt-auto pt-10">
             <div className="relative aspect-[16/10] overflow-hidden rounded-[20px]">
               <Image src={meditatie} alt="Femeie meditând în grădină, purtând NEUROS Focus" fill fetchPriority="low" placeholder="blur" sizes="(min-width: 1152px) 440px, 100vw" className="object-cover" />

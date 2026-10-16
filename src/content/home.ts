@@ -34,8 +34,8 @@ const rhythmRo = {
   without: 'Înainte',
   with: 'Cu NEUROS',
   rows: [
-    { moment: 'Liniște', without: 'Stresul se adună toată ziua și îl iei cu tine acasă.', with: 'Cu NEUROS Calm, seara ai un moment doar al tău. Mulți utilizatori simt mai mult calm și un somn mai lin.' },
-    { moment: 'Focus', without: 'Te apuci de o sarcină și atenția fuge la telefon.', with: 'NEUROS Focus te ajută să-ți aduni atenția. Mulți utilizatori simt mai mult focus și mai multă energie.' },
+    { moment: 'Liniște', without: 'Stresul se adună toată ziua și îl iei cu tine acasă.', with: 'Cu NEUROS Calm, seara ai un moment doar al tău. Te ajută să te liniștești și susține un somn mai lin.' },
+    { moment: 'Focus', without: 'Te apuci de o sarcină și atenția fuge la telefon.', with: 'NEUROS Focus te ajută să-ți aduni atenția. Susține focusul și energia.' },
     { moment: 'Seri', without: 'Seara, ochii obosesc în lumina ecranelor.', with: 'Cu NEUROS Amber, lumina ecranelor se simte mai blândă. Serile devin mai liniștite.' },
   ],
   note: 'Fiecare om răspunde în ritmul lui. Sunt produse de wellness. Pentru o afecțiune, cere întâi sfatul medicului.',
@@ -156,8 +156,8 @@ const rhythmEn: typeof rhythmRo = {
   without: 'Before',
   with: 'With NEUROS',
   rows: [
-    { moment: 'Calm', without: 'Stress builds up all day and follows you home.', with: 'With NEUROS Calm, the evening is a moment of your own. Many people feel calmer, and sleep comes more easily.' },
-    { moment: 'Focus', without: 'You start a task and your attention drifts to your phone.', with: 'NEUROS Focus helps you gather your attention. Many people feel more focus and more energy.' },
+    { moment: 'Calm', without: 'Stress builds up all day and follows you home.', with: 'With NEUROS Calm, the evening is a moment of your own. It supports a calmer state and easier sleep.' },
+    { moment: 'Focus', without: 'You start a task and your attention drifts to your phone.', with: 'NEUROS Focus helps you gather your attention. It supports focus and energy.' },
     { moment: 'Evenings', without: 'In the evening, your eyes tire in the light of screens.', with: 'With NEUROS Amber, screen light feels softer. Evenings become calmer.' },
   ],
   note: 'Everyone responds at their own pace. These are wellness products. If you have a medical condition, ask your doctor first.',

@@ -11,17 +11,17 @@ export const productTextEn: Record<ProductId, ProductText> = {
   'balance-wave': {
     kind: 'Vagus nerve stimulation and relaxation',
     purpose: 'For calm',
-    tagline: 'It helps you leave the day behind. Many people feel calmer, and sleep comes more easily. A few minutes, then it switches off by itself.',
+    tagline: 'It helps you leave the day behind. It supports a calmer state and easier sleep. A few minutes, then it switches off by itself.',
   },
   'brainlink-pro': {
     kind: 'For focus and clarity',
     purpose: 'For concentration',
-    tagline: 'It helps you gather your attention. Many people feel more focus and more energy for what they have to do. You play on a tablet, with your attention.',
+    tagline: 'It helps you gather your attention. It supports focus and energy for what you have to do. You play on a tablet, with your attention.',
   },
   'ochelari-biohack': {
     kind: 'For calmer evenings',
     purpose: 'For rested eyes',
-    tagline: 'It helps you end the day more calmly. Screen light feels softer, and many people feel their eyes are more rested. Choose from four frames.',
+    tagline: 'It helps you end the day more calmly. Screen light feels softer, and it supports more rested eyes. Choose from four frames.',
     chooseLabel: 'Choose the frame',
   },
 }

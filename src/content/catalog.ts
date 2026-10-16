@@ -144,7 +144,7 @@ const catalog: Omit<Product, 'price'>[] = [
     name: 'NEUROS Calm',
     kind: 'Stimularea nervului vag, a relaxării',
     purpose: 'Pentru calm',
-    tagline: 'Te ajută să lași ziua în urmă. Mulți utilizatori simt mai mult calm și un somn mai lin. Câteva minute, apoi se oprește singur.',
+    tagline: 'Te ajută să lași ziua în urmă. Susține calmul și un somn mai lin. Câteva minute, apoi se oprește singur.',
     cutout: cut(bwActiv, 'NEUROS Calm, dispozitivul cu luminile roșii aprinse și cordonul de prindere'),
     lifestyle: photo(bwCanapea, 'Femeie relaxată pe canapea, purtând NEUROS Calm la gât'),
     images: [
@@ -163,7 +163,7 @@ const catalog: Omit<Product, 'price'>[] = [
     name: 'NEUROS Focus',
     kind: 'Pentru focus și claritate',
     purpose: 'Pentru concentrare',
-    tagline: 'Te ajută să-ți aduni atenția. Mulți utilizatori simt mai mult focus și mai multă energie pentru ce au de făcut. Joci pe tabletă, cu atenția ta.',
+    tagline: 'Te ajută să-ți aduni atenția. Susține focusul și energia pentru ce ai de făcut. Joci pe tabletă, cu atenția ta.',
     cutout: cut(blCasca, 'NEUROS Focus, casca văzută din unghi'),
     lifestyle: photo(blTableta, 'Tânăr pe canapea, purtând NEUROS Focus și jucând pe tabletă'),
     images: [
@@ -182,7 +182,7 @@ const catalog: Omit<Product, 'price'>[] = [
     name: 'NEUROS Amber',
     kind: 'Pentru seri mai liniștite',
     purpose: 'Pentru ochi odihniți',
-    tagline: 'Te ajută să termini ziua mai calm. Lumina ecranelor se simte mai blândă, iar mulți utilizatori simt ochi mai odihniți. Alegi din patru rame.',
+    tagline: 'Te ajută să termini ziua mai calm. Lumina ecranelor se simte mai blândă, și susține ochi mai odihniți. Alegi din patru rame.',
     cutout: cut(glCatNegru1, 'NEUROS Amber cat eye, ramă neagră, lentile chihlimbar'),
     lifestyle: photo(glTerasa, 'Femeie pe o terasă, purtând NEUROS Amber cat eye bej'),
     images: [photo(glToate, 'Cele patru rame NEUROS Amber, așezate pe o masă')],

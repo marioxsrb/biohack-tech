@@ -2,7 +2,7 @@
 
 Textele pe care le citește clientul pornesc de la ce simte și ce primește: mai calm, somn mai lin, focus, energie, mai puțin stres. Detaliile tehnice (nanometri, EEG, Bluetooth, diode) au rămas, mutate în „cum te ajută” și în specificații, ca suport pentru beneficiu.
 
-Formulările de rezultat sunt la intensitatea „te ajută să”, „susține”, „mulți utilizatori simt”. Fără promisiuni de vindecare și fără garanții de rezultat. Numele produselor, prețurile, checkout-ul, textele legale și tracking-ul nu s-au schimbat.
+Formulările de rezultat sunt la intensitatea „te ajută să” și „susține”. Fără „mulți utilizatori simt”: site-ul nu publică ce spun utilizatorii fără sursă. Fără promisiuni de vindecare și fără garanții de rezultat. Numele produselor, prețurile, checkout-ul, textele legale și tracking-ul nu s-au schimbat.
 
 Engleza (`/en` și biohack-tech.net) urmărește același sens. `acces.` folosește aceleași pagini ca magazinul, deci primește același copy. NEUROS Flow (Brain Flow) nu mai are pagină de client.
 
@@ -32,10 +32,10 @@ Hero-ul și linia din footer au rămas „Mai calm seara. / Mai atent ziua.” S
 | De ce, EN | Why buy from Biohack Tech. A few minutes a day… We answer any question… | Why choose Biohack Tech. A few minutes, a better state. Calm helps you unwind in the evening. Focus helps you stay present through the day. Amber makes evenings at the screen feel softer. We answer with care… |
 | Ritmul zilei, titlu | Înainte și după NEUROS | Cum se simte ziua |
 | Ritmul zilei, intro | Aceeași zi, cu mai mult calm și mai multă atenție. | Aceeași zi, cu mai puțin stres, somn mai lin și mai mult focus. |
-| Rând Calm | Stres. Cu NEUROS Calm, seara ai un moment de liniște. Te relaxezi mai ușor. | Liniște. Cu NEUROS Calm, seara ai un moment doar al tău. Mulți utilizatori simt mai mult calm și un somn mai lin. |
-| Rând Focus | Concentrare. NEUROS Focus îți antrenează atenția. Te ajută să intri mai repede în concentrare. | Focus. NEUROS Focus te ajută să-ți aduni atenția. Mulți utilizatori simt mai mult focus și mai multă energie. |
+| Rând Calm | Stres. Cu NEUROS Calm, seara ai un moment de liniște. Te relaxezi mai ușor. | Liniște. Cu NEUROS Calm, seara ai un moment doar al tău. Te ajută să te liniștești și susține un somn mai lin. |
+| Rând Focus | Concentrare. NEUROS Focus îți antrenează atenția. Te ajută să intri mai repede în concentrare. | Focus. NEUROS Focus te ajută să-ți aduni atenția. Susține focusul și energia. |
 | Rând Amber | Ochi. Seara, ochii obosesc în lumina albastră a ecranelor. Cu NEUROS Amber, lumina ecranelor devine mai blândă. Serile sunt mai liniștite. | Seri. Seara, ochii obosesc în lumina ecranelor. Cu NEUROS Amber, lumina ecranelor se simte mai blândă. Serile devin mai liniștite. |
-| Ritmul zilei, EN | Before and after NEUROS. The same day, with more calm and better focus. | How the day feels. The same day, with less stress, easier sleep and more focus. Rows: Calm / Focus / Evenings, with the same hedges („many people feel”). |
+| Ritmul zilei, EN | Before and after NEUROS. The same day, with more calm and better focus. | How the day feels. The same day, with less stress, easier sleep and more focus. Rows: Calm / Focus / Evenings, with the same hedges („it helps”, „it supports”). |
 | Întrebări, intro | Ce ne întreabă clienții înainte să comande. | Ca să alegi mai ușor ce ți se potrivește. |
 | Cum aleg | Pentru stres, NEUROS Calm. Pentru concentrare, NEUROS Focus. Pentru ochii obosiți de ecrane, NEUROS Amber. | Vrei mai mult calm și un somn mai lin: NEUROS Calm. Vrei focus și claritate: NEUROS Focus. Vrei seri mai blânde la ecran: NEUROS Amber. |
 | Cum se folosesc | NEUROS Calm se poartă la gât, câteva minute. NEUROS Focus se conectează prin Bluetooth la o tabletă, unde rulează jocurile. NEUROS Amber se poartă ca orice ochelari. | NEUROS Calm îl pornești seara, pentru câteva minute de liniște. NEUROS Focus se leagă de o tabletă, iar jocurile te ajută să-ți antrenezi atenția. NEUROS Amber se poartă ca orice ochelari, ziua la birou și seara pe telefon. |
@@ -62,14 +62,14 @@ Descrierile scurte de pe carduri sunt cele din catalog, mai jos.
 | --- | --- | --- |
 | Calm, descriere scurtă | Dispozitiv cu lumină roșie, purtat la gât | Stimularea nervului vag, a relaxării |
 | Calm, scop | Pentru relaxare | Pentru calm |
-| Calm, tagline | Se poartă la gât. Îți oferă câteva minute de lumină roșie și liniște. Se oprește singur. | Te ajută să lași ziua în urmă. Mulți utilizatori simt mai mult calm și un somn mai lin. Câteva minute, apoi se oprește singur. |
-| Calm, EN | Red light device worn around the neck. For relaxation. You wear it around your neck. It gives you a few minutes of red light and quiet. | Vagus nerve stimulation and relaxation. For calm. It helps you leave the day behind. Many people feel calmer, and sleep comes more easily. |
+| Calm, tagline | Se poartă la gât. Îți oferă câteva minute de lumină roșie și liniște. Se oprește singur. | Te ajută să lași ziua în urmă. Susține calmul și un somn mai lin. Câteva minute, apoi se oprește singur. |
+| Calm, EN | Red light device worn around the neck. For relaxation. You wear it around your neck. It gives you a few minutes of red light and quiet. | Vagus nerve stimulation and relaxation. For calm. It helps you leave the day behind. It supports a calmer state and easier sleep. |
 | Focus, descriere scurtă | Cască EEG pentru antrenamentul atenției | Pentru focus și claritate |
-| Focus, tagline | O cască ușoară, cu jocuri pe tabletă. Le controlezi cu atenția ta. Așa îți antrenezi concentrarea. | Te ajută să-ți aduni atenția. Mulți utilizatori simt mai mult focus și mai multă energie pentru ce au de făcut. Joci pe tabletă, cu atenția ta. |
-| Focus, EN | EEG headband for attention training. For focus. A light headband with games on a tablet… | For focus and clarity. For concentration. It helps you gather your attention. Many people feel more focus and more energy… |
+| Focus, tagline | O cască ușoară, cu jocuri pe tabletă. Le controlezi cu atenția ta. Așa îți antrenezi concentrarea. | Te ajută să-ți aduni atenția. Susține focusul și energia pentru ce ai de făcut. Joci pe tabletă, cu atenția ta. |
+| Focus, EN | EEG headband for attention training. For focus. A light headband with games on a tablet… | For focus and clarity. For concentration. It helps you gather your attention. It supports focus and energy… |
 | Amber, descriere scurtă | Ochelari cu filtru pentru lumina albastră | Pentru seri mai liniștite |
 | Amber, scop | Pentru ecrane | Pentru ochi odihniți |
-| Amber, tagline | Filtrează lumina albastră a ecranelor. Ochii tăi primesc o lumină mai blândă. Alegi din patru rame. | Te ajută să termini ziua mai calm. Lumina ecranelor se simte mai blândă, iar mulți utilizatori simt ochi mai odihniți. Alegi din patru rame. |
+| Amber, tagline | Filtrează lumina albastră a ecranelor. Ochii tăi primesc o lumină mai blândă. Alegi din patru rame. | Te ajută să termini ziua mai calm. Lumina ecranelor se simte mai blândă, și susține ochi mai odihniți. Alegi din patru rame. |
 | Amber, EN | Glasses with a blue light filter. For screens. They filter the blue light of screens… | For calmer evenings. For rested eyes. It helps you end the day more calmly. Screen light feels softer… |
 
 Scopul Focus a rămas „Pentru concentrare” / „For concentration”.
@@ -81,19 +81,19 @@ Specificațiile (660 nm, 810 nm, 14 Hz, oprire automată, garanție) au rămas n
 | Unde | Înainte | Acum |
 | --- | --- | --- |
 | Meta titlu | NEUROS Calm, dispozitiv cu lumină roșie pentru relaxare | NEUROS Calm, pentru liniște și somn mai lin |
-| Meta descriere | NEUROS Calm se poartă la gât și aplică lumină roșie și infraroșie în zona nervului vag. Câteva minute de relaxare, acasă. | NEUROS Calm te ajută să lași stresul zilei în urmă. Mulți utilizatori simt mai mult calm și un somn mai lin. Câteva minute, acasă. |
-| Intro | Stresul zilei se adună în corp. NEUROS Calm aplică lumină pe gât. Pe partea stângă, 6 diode de 810 nm luminează zona nervului vag. O ședință durează câteva minute. | Te ajută să treci din agitația zilei într-o stare mai calmă. Mulți utilizatori simt mai puțin stres și un somn mai lin. O ședință ține câteva minute. |
-| Puncte deasupra prețului | 6 diode de 810 nm pe zona nervului vag. Lumină roșie de 660 nm pe restul gâtului. Ședințe de câteva minute, cu oprire automată. Lumină pulsată la 14 Hz. | Te ajută să te liniștești în câteva minute. Mulți utilizatori simt un somn mai lin. Susține calmul, seara sau într-o pauză. Pornești și te relaxezi. Se oprește singur. |
+| Meta descriere | NEUROS Calm se poartă la gât și aplică lumină roșie și infraroșie în zona nervului vag. Câteva minute de relaxare, acasă. | NEUROS Calm te ajută să lași stresul zilei în urmă. Susține calmul și un somn mai lin. Câteva minute, acasă. |
+| Intro | Stresul zilei se adună în corp. NEUROS Calm aplică lumină pe gât. Pe partea stângă, 6 diode de 810 nm luminează zona nervului vag. O ședință durează câteva minute. | Te ajută să treci din agitația zilei într-o stare mai calmă. Susține mai puțin stres și un somn mai lin. O ședință ține câteva minute. |
+| Puncte deasupra prețului | 6 diode de 810 nm pe zona nervului vag. Lumină roșie de 660 nm pe restul gâtului. Ședințe de câteva minute, cu oprire automată. Lumină pulsată la 14 Hz. | Te ajută să te liniștești în câteva minute. Susține un somn mai lin. Susține calmul, seara sau într-o pauză. Pornești și te relaxezi. Se oprește singur. |
 | Beneficii | Relaxare în câteva minute. Se oprește singur. Retur în 14 zile. | Mai puțin stres. Somn mai lin. Un moment al tău. |
-| Scenă | Un moment doar pentru tine. Îl așezi la gât și îl pornești. Apoi te relaxezi. | Un moment în care te liniștești. Îl așezi, îl pornești și lași corpul să se așeze. Mulți utilizatori simt o liniște caldă, chiar din primele minute. |
+| Scenă | Un moment doar pentru tine. Îl așezi la gât și îl pornești. Apoi te relaxezi. | Un moment în care te liniștești. Îl așezi, îl pornești și lași corpul să se așeze. Susține o liniște caldă, chiar din primele minute. |
 | Pași | Îl așezi la gât. Îl pornești dintr-un singur buton. Te relaxezi. Se oprește singur. | Îl așezi confortabil la gât. Apeși un singur buton. Te relaxezi. Se oprește singur. |
 | Cum funcționează, titlu | De ce la gât? | Cum susține calmul |
 | Cum funcționează | Explicația pornea de la nervul vag și de la diode. | Pornește cu „Te ajută în trecerea din alertă spre repaus”, apoi nervul vag, 6 diode de 810 nm, lumină roșie de 660 nm, 14 Hz, fotobiomodulare. |
-| Moment | Seara, înainte de somn. O ședință scurtă seara te poate ajuta să treci mai ușor spre somn. | Seara, spre un somn mai lin. O ședință scurtă înainte de culcare te ajută să te liniștești. Mulți utilizatori simt că trec mai ușor spre somn. |
+| Moment | Seara, înainte de somn. O ședință scurtă seara te poate ajuta să treci mai ușor spre somn. | Seara, spre un somn mai lin. O ședință scurtă înainte de culcare te ajută să te liniștești. Te ajută să treci mai ușor spre somn. |
 | FAQ lucru | Da. Poți citi, medita sau lucra ușor în timpul ședinței. | Da. Poți citi, medita sau lucra ușor, în timp ce te relaxezi. |
 | FAQ start | Ședința se oprește singură după câteva minute. Pentru întrebări despre folosire, ne scrii sau ne suni. | Câteva minute de liniște, apoi se oprește singur. Dacă vrei să știi cum ți se potrivește, ne scrii sau ne suni. |
 | FAQ tip produs | NEUROS Calm este un produs de wellness. Pentru o afecțiune, vorbește întâi cu medicul tău. | Un produs de wellness, pentru calm în fiecare zi. Susține relaxarea. Pentru o afecțiune, vorbește întâi cu medicul tău. |
-| EN | Red light device for the neck and vagus nerve. Intro cu 6 diodes at 810 nm. | For calm and easier sleep. Same benefits, with „helps you” and „many people feel”. Diodele rămân în „How it supports calm”. |
+| EN | Red light device for the neck and vagus nerve. Intro cu 6 diodes at 810 nm. | For calm and easier sleep. Same benefits, with „helps you” and „supports”. Diodele rămân în „How it supports calm”. |
 
 ## Pagina NEUROS Focus
 
@@ -102,15 +102,15 @@ Specificațiile (3 senzori EEG, Neuros Game, Bluetooth, baterie, CE, FCC, BrainL
 | Unde | Înainte | Acum |
 | --- | --- | --- |
 | Meta titlu | NEUROS Focus, cască EEG pentru concentrare | NEUROS Focus, pentru concentrare și claritate |
-| Meta descriere | NEUROS Focus este o cască EEG ușoară, cu peste 10 jocuri pe tabletă controlate prin atenție. Îți antrenezi concentrarea acasă. | NEUROS Focus te ajută să-ți aduni atenția. Mulți utilizatori simt mai mult focus și mai multă energie la muncă și la studiu. |
-| Intro | Atenția se risipește ușor printre notificări. Pui casca și deschizi aplicația Neuros Game pe tabletă. Jocurile răspund la cât de atent ești. | Te ajută să-ți aduni atenția când mintea fuge. Mulți utilizatori simt mai mult focus și o stare mai clară. Jocurile de pe tabletă răspund la cât de prezent ești. |
-| Puncte deasupra prețului | 3 senzori EEG, conectare Bluetooth la tabletă. Peste 10 jocuri și meditații ghidate. Până la 4 ore pe o încărcare. Neuros Game salvează fiecare sesiune. | Te ajută să intri mai ușor în concentrare. Mulți utilizatori simt mai mult focus. Susține și calmul, prin meditații ghidate. Îți vezi progresul, sesiune cu sesiune. |
+| Meta descriere | NEUROS Focus este o cască EEG ușoară, cu peste 10 jocuri pe tabletă controlate prin atenție. Îți antrenezi concentrarea acasă. | NEUROS Focus te ajută să-ți aduni atenția. Susține focusul și energia la muncă și la studiu. |
+| Intro | Atenția se risipește ușor printre notificări. Pui casca și deschizi aplicația Neuros Game pe tabletă. Jocurile răspund la cât de atent ești. | Te ajută să-ți aduni atenția când mintea fuge. Susține focusul și o stare mai clară. Jocurile de pe tabletă răspund la cât de prezent ești. |
+| Puncte deasupra prețului | 3 senzori EEG, conectare Bluetooth la tabletă. Peste 10 jocuri și meditații ghidate. Până la 4 ore pe o încărcare. Neuros Game salvează fiecare sesiune. | Te ajută să intri mai ușor în concentrare. Susține focusul. Susține și calmul, prin meditații ghidate. Îți vezi progresul, sesiune cu sesiune. |
 | Beneficii | Antrenezi concentrarea. Și calmul. Îți vezi progresul. | Focus mai clar. Mai multă energie. Și liniște. |
 | Scenă | Focus, când ai nevoie de el. Antrenamentul te poate ajuta să intri mai repede în concentrare. | Claritate, când ai nevoie de ea. O sesiune scurtă te ajută să intri în focus. La muncă, la studiu, oriunde ai nevoie să fii prezent. |
 | Pași | O conectezi la tabletă, prin Bluetooth. | O legi de tabletă. |
 | Cum funcționează, titlu | Cum știe casca? | Cum îți citește atenția |
 | Cum funcționează | Semnal, joc, stări, biofeedback. | Pornește cu beneficiul (observi când ești atent), apoi cei 3 senzori EEG, Bluetooth, peste 10 jocuri, bateria de până la 4 ore, biofeedback. |
-| Moment | Și pentru momentele de liniște. Casca îți arată în timp real cât de relaxat ești. | Și pentru liniștea de după. Te ajută să vezi, pe loc, cât de relaxat ești. Mulți utilizatori simt că meditația e mai ușor de urmărit. |
+| Moment | Și pentru momentele de liniște. Casca îți arată în timp real cât de relaxat ești. | Și pentru liniștea de după. Te ajută să vezi, pe loc, cât de relaxat ești. Te ajută să urmărești meditația mai ușor. |
 | FAQ | Aplicația rulează pe tabletă. Casca citește stări. | Jocurile îți antrenează atenția. Casca te ajută să recunoști concentrarea și relaxarea. Gândurile rămân ale tale. |
 | EN | EEG headband for focus and neurofeedback. | For concentration and clarity. Same move: feeling first, EEG and battery inside „How it reads your attention”. |
 
@@ -121,14 +121,14 @@ Specificațiile (modele, culori, filtru, fără dioptrie, ramă, garanție) și 
 | Unde | Înainte | Acum |
 | --- | --- | --- |
 | Meta titlu | NEUROS Amber, ochelari pentru lumina albastră | NEUROS Amber, pentru seri mai liniștite |
-| Meta descriere | Ochelari NEUROS Amber cu lentile chihlimbar, care filtrează lumina albastră a ecranelor. Cat eye sau unisex pătrat, în trei culori. | NEUROS Amber te ajută să termini ziua mai calm. Lumina ecranelor se simte mai blândă, iar mulți utilizatori simt ochi mai odihniți. Patru rame. |
-| Intro | Ochii tăi petrec ore întregi în lumina ecranelor. Lentilele chihlimbar filtrează lumina albastră de la monitor, telefon și becuri LED. Rama este ușoară, pentru toată ziua. | Te ajută să stai la ecran cu o lumină mai blândă. Mulți utilizatori simt ochi mai odihniți și seri mai liniștite. Rama e ușoară, pentru toată ziua. |
-| Puncte deasupra prețului | Lentile chihlimbar care filtrează lumina albastră. Pentru monitor, telefon și becuri LED. Ramă ușoară. Cat eye sau unisex pătrat. | Te ajută să termini ziua mai calm. Lumina ecranelor se simte mai blândă. Mulți utilizatori simt ochi mai odihniți. Patru rame, pe care le porți cu plăcere. |
+| Meta descriere | Ochelari NEUROS Amber cu lentile chihlimbar, care filtrează lumina albastră a ecranelor. Cat eye sau unisex pătrat, în trei culori. | NEUROS Amber te ajută să termini ziua mai calm. Lumina ecranelor se simte mai blândă, și susține ochi mai odihniți. Patru rame. |
+| Intro | Ochii tăi petrec ore întregi în lumina ecranelor. Lentilele chihlimbar filtrează lumina albastră de la monitor, telefon și becuri LED. Rama este ușoară, pentru toată ziua. | Te ajută să stai la ecran cu o lumină mai blândă. Susține ochi mai odihniți și seri mai liniștite. Rama e ușoară, pentru toată ziua. |
+| Puncte deasupra prețului | Lentile chihlimbar care filtrează lumina albastră. Pentru monitor, telefon și becuri LED. Ramă ușoară. Cat eye sau unisex pătrat. | Te ajută să termini ziua mai calm. Lumina ecranelor se simte mai blândă. Susține ochi mai odihniți. Patru rame, pe care le porți cu plăcere. |
 | Beneficii | Mai puțină lumină albastră. Seri mai liniștite. Patru rame. | Ochi mai odihniți. Seri mai liniștite. Un stil al tău. |
 | Scenă | Același filtru în toate. | Aceeași liniște în toate, seară de seară. |
 | Rame | Patru rame. Același filtru. Lentilele sunt aceleași în toate modelele. | Patru rame. Aceeași liniște. În toate modelele, lumina ecranelor se simte mai blândă. |
 | La birou | Filtrul reduce lumina albastră a monitorului. | Te ajută să treci prin orele de ecran cu ochi mai odihniți. Filtrul ține lumina albastră mai departe. |
-| Seara | Lumina ecranelor devine mai blândă înainte de somn. | Lumina ecranelor devine mai blândă. Mulți utilizatori simt că seara se așază mai ușor. |
+| Seara | Lumina ecranelor devine mai blândă înainte de somn. | Lumina ecranelor devine mai blândă. Te ajută ca seara să se așeze mai ușor. |
 | Când îi port | La birou, în fața ecranelor, și seara, când folosești telefonul sau laptopul. | Ziua, la birou, când vrei ochi mai odihniți. Seara, pe telefon sau laptop, când vrei o lumină mai blândă. |
 | EN | Blue light glasses with amber lenses. | For calmer evenings. Filter facts stay in the specifications. |
 
@@ -148,24 +148,24 @@ Specificațiile (modele, culori, filtru, fără dioptrie, ramă, garanție) și 
 | Unde | Înainte | Acum |
 | --- | --- | --- |
 | Meta titlu | NEUROS Calm: lumină roșie pentru relaxare, purtată la gât | NEUROS Calm: liniște seara și somn mai lin |
-| Meta descriere | NEUROS Calm se poartă la gât și aplică lumină roșie și infraroșie în zona nervului vag. | NEUROS Calm te ajută să te relaxezi în câteva minute. Mulți utilizatori simt mai puțin stres și un somn mai lin. |
+| Meta descriere | NEUROS Calm se poartă la gât și aplică lumină roșie și infraroșie în zona nervului vag. | NEUROS Calm te ajută să te relaxezi în câteva minute. Susține mai puțin stres și un somn mai lin. |
 | Kicker | lumină roșie pentru relaxare | pentru liniște |
 | Titlu | Seara, câteva minute doar pentru tine. | Câteva minute de liniște, doar pentru tine. |
-| Subtitlu | Stresul zilei se adună în corp. NEUROS Calm se poartă la gât și aplică lumină roșie și infraroșie în zona nervului vag. Îl pornești și te relaxezi. | Te ajută să lași stresul zilei în urmă. Mulți utilizatori simt mai mult calm și un somn mai lin. Pornești și te relaxezi. |
+| Subtitlu | Stresul zilei se adună în corp. NEUROS Calm se poartă la gât și aplică lumină roșie și infraroșie în zona nervului vag. Îl pornești și te relaxezi. | Te ajută să lași stresul zilei în urmă. Susține calmul și un somn mai lin. Pornești și te relaxezi. |
 | Link | Cum funcționează | Cum te ajută |
 | Secțiune | Cum funcționează. De ce la gât? Textul începea cu nervul vag și cu „cel mai puternic dispozitiv”. | Cum te ajută. De ce la gât? Prima frază este beneficiul. Diodele de 810 nm, 660 nm, 14 Hz și fotobiomodularea rămân aici. |
 | Pași, titlu | Trei pași, câteva minute. | Trei pași. Apoi, liniște. |
 | Pas 1 | Diodele de 810 nm stau pe partea stângă, în zona nervului vag. | Stă confortabil. Tu doar te așezi. |
 | Pas 2 | Dintr-un singur buton, pe spatele dispozitivului. | Un singur buton, pe spate. |
 | Momente, titlu | Seara, pe canapea. În pauza de la birou. | Seara pe canapea. Și în pauza de la birou. |
-| Seara | O ședință scurtă te poate ajuta să te liniștești înainte de somn. | Câteva minute te ajută să te liniștești. Mulți utilizatori simt că trec mai ușor spre somn. |
+| Seara | O ședință scurtă te poate ajuta să te liniștești înainte de somn. | Câteva minute te ajută să te liniștești. Te ajută să treci mai ușor spre somn. |
 | Birou | Câteva minute între două sarcini. | O pauză scurtă te ajută să lași stresul jos, între două sarcini. |
 | Bloc comandă | NEUROS Calm, livrat acasă. Livrare gratuită, plată la livrare și retur în 14 zile. | Liniștea, livrată acasă. Livrare gratuită, plată la livrare și 14 zile să vezi dacă ți se potrivește. |
 | Ajutor | Vrei să afli dacă ți se potrivește? Îți spunem sincer dacă NEUROS Calm este pentru tine. | Vrei să vezi dacă ți se potrivește? Îți spunem sincer dacă NEUROS Calm te poate ajuta. |
 | Închidere | Începe cu câteva minute, chiar în seara asta. | Începe cu câteva minute de calm, chiar în seara asta. |
 | FAQ ședință | Câteva minute. | Câteva minute de liniște. |
 | FAQ lucru | În timpul ședinței poți citi, medita sau lucra ușor. | Poți citi, medita sau lucra ușor, în timp ce te relaxezi. |
-| FAQ tip | NEUROS Calm este un produs de wellness. | Un produs de wellness, care susține relaxarea. Mulți utilizatori simt mai mult calm. |
+| FAQ tip | NEUROS Calm este un produs de wellness. | Un produs de wellness, care susține relaxarea și calmul. |
 
 Rândul tehnic din blocul de comandă (660 nm și 810 nm, pulsat la 14 Hz) a rămas. Returul în 14 zile și garanția de 2 ani au rămas.
 
@@ -174,14 +174,14 @@ Rândul tehnic din blocul de comandă (660 nm și 810 nm, pulsat la 14 Hz) a ră
 | Unde | Înainte | Acum |
 | --- | --- | --- |
 | Meta titlu | NEUROS Focus: cască EEG pentru concentrare, prin joc | NEUROS Focus: mai multă concentrare, prin joc |
-| Meta descriere | NEUROS Focus este o cască EEG ușoară, cu peste 10 jocuri pe tabletă controlate prin atenție. | NEUROS Focus te ajută să-ți aduni atenția. Mulți utilizatori simt mai mult focus și mai multă energie. Jocuri scurte pe tabletă. |
+| Meta descriere | NEUROS Focus este o cască EEG ușoară, cu peste 10 jocuri pe tabletă controlate prin atenție. | NEUROS Focus te ajută să-ți aduni atenția. Susține focusul și energia. Jocuri scurte pe tabletă. |
 | Kicker | cască EEG pentru concentrare | pentru concentrare |
 | Titlu | Atenția ta, antrenată prin joc. | Mai mult focus. Mai puțină risipire. |
-| Subtitlu | Atenția se risipește ușor printre notificări. Pui casca și deschizi un joc pe tabletă. Jocul înaintează cât timp ești atent. | Te ajută să-ți aduni atenția, printr-un joc scurt. Mulți utilizatori simt mai mult focus și mai multă energie, la muncă și la studiu. |
+| Subtitlu | Atenția se risipește ușor printre notificări. Pui casca și deschizi un joc pe tabletă. Jocul înaintează cât timp ești atent. | Te ajută să-ți aduni atenția, printr-un joc scurt. Susține focusul și energia, la muncă și la studiu. |
 | Video | NEUROS Focus, în 20 de secunde. Undele cerebrale apar pe ecran în timp real. | Focusul, în 20 de secunde. Pui casca, ții tableta. Jocul merge mai departe cât timp ești atent. Așa se simte concentrarea. |
 | Cum te ajută | Cum funcționează. Casca citește atenția. Aplicația o transformă în joc. | Cum te ajută. Casca simte atenția. Jocul te ajută s-o ții. |
 | Pașii tehnici | Trei senzori citesc semnalul. Neuros Game face jocul. | Aceiași pași, cu EEG, Bluetooth și cele peste 10 jocuri, jos în secțiune. |
-| Unde | O sesiune scurtă te poate ajuta să intri mai repede în concentrare. | O sesiune scurtă te ajută să intri mai ușor în concentrare. Mulți utilizatori simt mai multă claritate. |
+| Unde | O sesiune scurtă te poate ajuta să intri mai repede în concentrare. | O sesiune scurtă te ajută să intri mai ușor în concentrare. Susține claritatea. |
 | Meditație | Vezi în timp real cât de relaxat ești. | Vezi pe loc cât de relaxat ești, și te ajută să rămâi acolo. |
 | Bloc comandă | NEUROS Focus, gata de joc. Casca ajunge la tine acasă. Aplicația Neuros Game o instalezi pe tableta ta. | Focusul, gata de folosit. Casca ajunge acasă. Aplicația Neuros Game o pui pe tableta ta, și începi cu un joc scurt. |
 | Ajutor | Spune-ne pentru ce o folosești: muncă, studiu sau relaxare. | Spune-ne unde vrei mai mult focus: la muncă, la studiu sau în momentele de liniște. |
@@ -198,7 +198,7 @@ Lista de specificații din blocul de comandă (senzori, aplicație, tabletă, ba
 | Meta descriere | Ochelari NEUROS Amber cu lentile chihlimbar, care filtrează lumina albastră a ecranelor. Patru rame. La trei perechi, una este gratuită. | NEUROS Amber te ajută să termini ziua mai calm. Lumina ecranelor se simte mai blândă. Patru rame. La trei perechi, una este gratuită. |
 | Kicker | ochelari pentru lumina albastră | pentru seri liniștite |
 | Titlu | Ecranele, într-o lumină mai caldă. | Ecranele, într-o lumină mai blândă. |
-| Subtitlu | Ochii tăi petrec ore întregi în lumina ecranelor. Lentilele chihlimbar filtrează lumina albastră. Patru rame, același filtru. | Te ajută să termini ziua mai calm. Lumina se simte mai blândă, iar mulți utilizatori simt ochi mai odihniți. Patru rame, același confort. |
+| Subtitlu | Ochii tăi petrec ore întregi în lumina ecranelor. Lentilele chihlimbar filtrează lumina albastră. Patru rame, același filtru. | Te ajută să termini ziua mai calm. Lumina se simte mai blândă, și susține ochi mai odihniți. Patru rame, același confort. |
 | Link | Ce face lentila | Cum te ajută |
 | Cum te ajută | Lentila chihlimbar filtrează lumina albastră. Apoi monitorul, telefonul și LED-urile. | O lumină mai blândă, pentru seri mai calme. Beneficiul e primul. Filtrul chihlimbar, monitorul, telefonul și LED-urile rămân în aceeași secțiune. |
 | La birou | În fața monitorului, ore în șir. | Ore lungi la monitor, cu ochi mai odihniți. |

@@ -61,23 +61,23 @@ export const productContent: Record<ProductId, ProductContent> = {
   'balance-wave': {
     seo: {
       title: 'NEUROS Calm, pentru liniște și somn mai lin',
-      description: 'NEUROS Calm te ajută să lași stresul zilei în urmă. Mulți utilizatori simt mai mult calm și un somn mai lin. Câteva minute, acasă. Livrare gratuită în România.',
+      description: 'NEUROS Calm te ajută să lași stresul zilei în urmă. Susține calmul și un somn mai lin. Câteva minute, acasă. Livrare gratuită în România.',
     },
-    intro: 'Te ajută să treci din agitația zilei într-o stare mai calmă. Mulți utilizatori simt mai puțin stres și un somn mai lin. O ședință ține câteva minute.',
+    intro: 'Te ajută să treci din agitația zilei într-o stare mai calmă. Susține mai puțin stres și un somn mai lin. O ședință ține câteva minute.',
     highlights: [
       'Te ajută să te liniștești în câteva minute',
-      'Mulți utilizatori simt un somn mai lin',
+      'Susține un somn mai lin',
       'Susține calmul, seara sau într-o pauză',
       'Pornești și te relaxezi. Se oprește singur',
     ],
     benefits: [
       { title: 'Mai puțin stres', text: 'Te ajută să lași ziua în urmă, în câteva minute.' },
-      { title: 'Somn mai lin', text: 'Mulți utilizatori simt că adorm mai ușor după o ședință seara.' },
+      { title: 'Somn mai lin', text: 'Te ajută să adormi mai ușor după o ședință seara.' },
       { title: 'Un moment al tău', text: 'Pornești, respiri, te relaxezi. Se oprește singur.' },
     ],
     scene: {
       title: 'Un moment în care te liniștești.',
-      text: 'Îl așezi, îl pornești și lași corpul să se așeze. Mulți utilizatori simt o liniște caldă, chiar din primele minute.',
+      text: 'Îl așezi, îl pornești și lași corpul să se așeze. Susține o liniște caldă, chiar din primele minute.',
       image: photo(bwCalm, 'Femeie relaxată pe canapea, purtând NEUROS Calm la gât'),
     },
     use: {
@@ -98,7 +98,7 @@ export const productContent: Record<ProductId, ProductContent> = {
     moments: [
       {
         title: 'Seara, spre un somn mai lin.',
-        text: 'O ședință scurtă înainte de culcare te ajută să te liniștești. Mulți utilizatori simt că trec mai ușor spre somn.',
+        text: 'O ședință scurtă înainte de culcare te ajută să te liniștești. Te ajută să treci mai ușor spre somn.',
         image: photo(bwSomn, 'Femeie în pat, seara, purtând NEUROS Calm'),
       },
     ],
@@ -120,18 +120,18 @@ export const productContent: Record<ProductId, ProductContent> = {
   'brainlink-pro': {
     seo: {
       title: 'NEUROS Focus, pentru concentrare și claritate',
-      description: 'NEUROS Focus te ajută să-ți aduni atenția. Mulți utilizatori simt mai mult focus și mai multă energie la muncă și la studiu. Livrare gratuită.',
+      description: 'NEUROS Focus te ajută să-ți aduni atenția. Susține focusul și energia la muncă și la studiu. Livrare gratuită.',
     },
-    intro: 'Te ajută să-ți aduni atenția când mintea fuge. Mulți utilizatori simt mai mult focus și o stare mai clară. Jocurile de pe tabletă răspund la cât de prezent ești.',
+    intro: 'Te ajută să-ți aduni atenția când mintea fuge. Susține focusul și o stare mai clară. Jocurile de pe tabletă răspund la cât de prezent ești.',
     highlights: [
       'Te ajută să intri mai ușor în concentrare',
-      'Mulți utilizatori simt mai mult focus',
+      'Susține focusul',
       'Susține și calmul, prin meditații ghidate',
       'Îți vezi progresul, sesiune cu sesiune',
     ],
     benefits: [
       { title: 'Focus mai clar', text: 'Te ajută să rămâi la ce ai de făcut, prin jocuri scurte.' },
-      { title: 'Mai multă energie', text: 'Mulți utilizatori simt că au mai multă energie pentru muncă și studiu.' },
+      { title: 'Mai multă energie', text: 'Susține energia pentru muncă și studiu.' },
       { title: 'Și liniște', text: 'Meditațiile ghidate te ajută să simți calmul, pe loc.' },
     ],
     scene: {
@@ -164,7 +164,7 @@ export const productContent: Record<ProductId, ProductContent> = {
     moments: [
       {
         title: 'Și pentru liniștea de după.',
-        text: 'Te ajută să vezi, pe loc, cât de relaxat ești. Mulți utilizatori simt că meditația e mai ușor de urmărit.',
+        text: 'Te ajută să vezi, pe loc, cât de relaxat ești. Te ajută să urmărești meditația mai ușor.',
         image: photo(blMeditatie, 'Femeie meditând în grădină, purtând NEUROS Focus'),
       },
     ],
@@ -187,13 +187,13 @@ export const productContent: Record<ProductId, ProductContent> = {
   'ochelari-biohack': {
     seo: {
       title: 'NEUROS Amber, pentru seri mai liniștite',
-      description: 'NEUROS Amber te ajută să termini ziua mai calm. Lumina ecranelor se simte mai blândă, iar mulți utilizatori simt ochi mai odihniți. Patru rame. Livrare gratuită.',
+      description: 'NEUROS Amber te ajută să termini ziua mai calm. Lumina ecranelor se simte mai blândă, și susține ochi mai odihniți. Patru rame. Livrare gratuită.',
     },
-    intro: 'Te ajută să stai la ecran cu o lumină mai blândă. Mulți utilizatori simt ochi mai odihniți și seri mai liniștite. Rama e ușoară, pentru toată ziua.',
+    intro: 'Te ajută să stai la ecran cu o lumină mai blândă. Susține ochi mai odihniți și seri mai liniștite. Rama e ușoară, pentru toată ziua.',
     highlights: [
       'Te ajută să termini ziua mai calm',
       'Lumina ecranelor se simte mai blândă',
-      'Mulți utilizatori simt ochi mai odihniți',
+      'Susține ochi mai odihniți',
       'Patru rame, pe care le porți cu plăcere',
     ],
     benefits: [
@@ -219,7 +219,7 @@ export const productContent: Record<ProductId, ProductContent> = {
       },
       {
         title: 'Și seara, cu telefonul în mână.',
-        text: 'Lumina ecranelor devine mai blândă. Mulți utilizatori simt că seara se așază mai ușor.',
+        text: 'Lumina ecranelor devine mai blândă. Te ajută ca seara să se așeze mai ușor.',
         image: photo(glSeara, 'Femeie în pat, seara, citind pe tabletă cu NEUROS Amber'),
       },
     ],
@@ -247,23 +247,23 @@ export const productContentEn: Record<ProductId, ProductContent> = {
   'balance-wave': {
     seo: {
       title: 'NEUROS Calm, for calm and easier sleep',
-      description: 'NEUROS Calm helps you leave the stress of the day behind. Many people feel calmer, and sleep comes more easily. A few minutes at home. Free worldwide delivery.',
+      description: 'NEUROS Calm helps you leave the stress of the day behind. It supports a calmer state and easier sleep. A few minutes at home. Free worldwide delivery.',
     },
-    intro: 'It helps you move from the rush of the day into a calmer state. Many people feel less stress, and sleep comes more easily. A session takes a few minutes.',
+    intro: 'It helps you move from the rush of the day into a calmer state. It supports less stress and easier sleep. A session takes a few minutes.',
     highlights: [
       'Helps you unwind in a few minutes',
-      'Many people feel sleep comes more easily',
+      'It supports easier sleep',
       'Supports calm, in the evening or on a break',
       'Switch it on and relax. It stops by itself',
     ],
     benefits: [
       { title: 'Less stress', text: 'It helps you leave the day behind, in a few minutes.' },
-      { title: 'Easier sleep', text: 'Many people feel they fall asleep more easily after an evening session.' },
+      { title: 'Easier sleep', text: 'It helps you fall asleep more easily after an evening session.' },
       { title: 'A moment of your own', text: 'Switch it on, breathe, relax. It stops by itself.' },
     ],
     scene: {
       title: 'A moment to unwind.',
-      text: 'Place it, switch it on, and let your body settle. Many people feel a warm quiet, even in the first minutes.',
+      text: 'Place it, switch it on, and let your body settle. It supports a warm quiet, even in the first minutes.',
       image: photo(bwCalm, 'Relaxed woman on a sofa, wearing NEUROS Calm around her neck'),
     },
     use: {
@@ -284,7 +284,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
     moments: [
       {
         title: 'In the evening, towards easier sleep.',
-        text: 'A short session before bed helps you unwind. Many people feel they ease into sleep more easily.',
+        text: 'A short session before bed helps you unwind. It helps you ease into sleep.',
         image: photo(bwSomn, 'Woman in bed in the evening, wearing NEUROS Calm'),
       },
     ],
@@ -306,18 +306,18 @@ export const productContentEn: Record<ProductId, ProductContent> = {
   'brainlink-pro': {
     seo: {
       title: 'NEUROS Focus, for concentration and clarity',
-      description: 'NEUROS Focus helps you gather your attention. Many people feel more focus and more energy at work and while studying. Free worldwide delivery.',
+      description: 'NEUROS Focus helps you gather your attention. It supports focus and energy at work and while studying. Free worldwide delivery.',
     },
-    intro: 'It helps you gather your attention when your mind wanders. Many people feel more focus and a clearer state. The games on your tablet respond to how present you are.',
+    intro: 'It helps you gather your attention when your mind wanders. It supports focus and a clearer state. The games on your tablet respond to how present you are.',
     highlights: [
       'Helps you get into focus more easily',
-      'Many people feel more focus',
+      'It supports focus',
       'Also supports calm, with guided meditations',
       'See your progress, session by session',
     ],
     benefits: [
       { title: 'Clearer focus', text: 'It helps you stay with what you are doing, through short games.' },
-      { title: 'More energy', text: 'Many people feel they have more energy for work and study.' },
+      { title: 'More energy', text: 'It supports energy for work and study.' },
       { title: 'And quiet', text: 'Guided meditations help you feel the calm, right away.' },
     ],
     scene: {
@@ -350,7 +350,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
     moments: [
       {
         title: 'And for the quiet afterwards.',
-        text: 'It helps you see, right away, how relaxed you are. Many people feel meditation is easier to follow.',
+        text: 'It helps you see, right away, how relaxed you are. It helps you follow the meditation more easily.',
         image: photo(blMeditatie, 'Woman meditating in a garden, wearing NEUROS Focus'),
       },
     ],
@@ -373,13 +373,13 @@ export const productContentEn: Record<ProductId, ProductContent> = {
   'ochelari-biohack': {
     seo: {
       title: 'NEUROS Amber, for calmer evenings',
-      description: 'NEUROS Amber helps you end the day more calmly. Screen light feels softer, and many people feel their eyes are more rested. Four frames. Free worldwide delivery.',
+      description: 'NEUROS Amber helps you end the day more calmly. Screen light feels softer, and it supports more rested eyes. Four frames. Free worldwide delivery.',
     },
-    intro: 'It helps you stay at a screen in a softer light. Many people feel their eyes are more rested, and their evenings calmer. The frame is light enough for all day.',
+    intro: 'It helps you stay at a screen in a softer light. It supports more rested eyes and calmer evenings. The frame is light enough for all day.',
     highlights: [
       'Helps you end the day more calmly',
       'Screen light feels softer',
-      'Many people feel their eyes are more rested',
+      'It supports more rested eyes',
       'Four frames you enjoy wearing',
     ],
     benefits: [
@@ -405,7 +405,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       },
       {
         title: 'And in the evening, phone in hand.',
-        text: 'Screen light becomes softer. Many people feel the evening settles more easily.',
+        text: 'Screen light becomes softer. It helps the evening settle more easily.',
         image: photo(glSeara, 'Woman in bed in the evening, reading on a tablet with NEUROS Amber'),
       },
     ],

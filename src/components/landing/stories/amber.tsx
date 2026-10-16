@@ -37,7 +37,7 @@ export function AmberHero({ name, buy, cta }: { name: string; buy?: ReactNode; c
               Ecranele, într-o lumină mai blândă.
             </h1>
             <p className="mt-5 max-w-[26em] text-[clamp(17px,1.3vw,19px)] leading-snug text-[var(--lp-muted)]">
-              Te ajută să termini ziua mai calm. Lumina se simte mai blândă, iar mulți utilizatori simt ochi mai odihniți. Patru rame, același confort.
+              Te ajută să termini ziua mai calm. Lumina se simte mai blândă, și susține ochi mai odihniți. Patru rame, același confort.
             </p>
             {buy}
             <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3">

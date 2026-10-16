@@ -4,29 +4,29 @@ Magazin online din România care vinde dispozitivele NEUROS. Site: https://bioha
 
 Produse vândute acum: NEUROS Calm, NEUROS Focus, NEUROS Amber. NEUROS Flow nu se mai vinde.
 
-## NEUROS Calm (Dispozitiv cu lumină roșie, purtat la gât)
-Pentru ce este: Pentru relaxare. Se poartă la gât. Îți oferă câteva minute de lumină roșie și liniște. Se oprește singur.
+## NEUROS Calm (Stimularea nervului vag, a relaxării)
+Pentru ce este: Pentru calm. Te ajută să lași ziua în urmă. Susține calmul și un somn mai lin. Câteva minute, apoi se oprește singur.
 Preț: 6.380 lei (TVA 21% inclus, livrare gratuită în românia).
 Promoție: Iei 2 bucăți din același produs: 10% reducere la ele. Iei 3: 20%. Reducerea apare în coș.
 Pagina produsului: https://biohack-tech.ro/products/calm
-Pe scurt: Stresul zilei se adună în corp. NEUROS Calm aplică lumină pe gât. Pe partea stângă, 6 diode de 810 nm luminează zona nervului vag. O ședință durează câteva minute.
+Pe scurt: Te ajută să treci din agitația zilei într-o stare mai calmă. Susține mai puțin stres și un somn mai lin. O ședință ține câteva minute.
 Ce oferă:
-- 6 diode de 810 nm pe zona nervului vag
-- Lumină roșie de 660 nm pe restul gâtului
-- Ședințe de câteva minute, cu oprire automată
-- Lumină pulsată la 14 Hz
-- Relaxare în câteva minute: O ședință durează câteva minute.
-- Se oprește singur: Îl pornești și te relaxezi.
-- Retur în 14 zile: Dacă nu ți se potrivește, ai 14 zile să îl returnezi.
+- Te ajută să te liniștești în câteva minute
+- Susține un somn mai lin
+- Susține calmul, seara sau într-o pauză
+- Pornești și te relaxezi. Se oprește singur
+- Mai puțin stres: Te ajută să lași ziua în urmă, în câteva minute.
+- Somn mai lin: Te ajută să adormi mai ușor după o ședință seara.
+- Un moment al tău: Pornești, respiri, te relaxezi. Se oprește singur.
 Cum se folosește:
-1. Îl așezi la gât.
-2. Îl pornești dintr-un singur buton.
+1. Îl așezi confortabil la gât.
+2. Apeși un singur buton.
 3. Te relaxezi. Se oprește singur.
 Cum funcționează:
-Pe acolo trece nervul vag, cel mai lung nerv din corp. Leagă creierul de inimă, plămâni și digestie.
-Nervul vag are un rol în trecerea corpului din alertă în repaus.
-Este cel mai puternic dispozitiv de acest fel de pe piață. Pe partea stângă a gâtului, 6 diode emit lumină infraroșie de 810 nm, care pătrunde mai adânc, spre nervul vag. Pe restul gâtului, lumină roșie de 660 nm.
-Lumina pulsează de 14 ori pe secundă, ritmul undelor cerebrale SMR, asociat cu o stare calmă și echilibrată. Metoda se numește fotobiomodulare.
+Te ajută în trecerea din alertă spre repaus. Pe gât trece nervul vag, un nerv lung care leagă creierul de inimă, plămâni și digestie.
+Nervul vag are un rol în felul în care corpul se liniștește.
+Pe partea stângă, 6 diode de 810 nm luminează zona nervului vag. Lumina infraroșie pătrunde mai adânc. Pe restul gâtului, lumină roșie de 660 nm. Este cel mai puternic dispozitiv de acest fel de pe piață.
+Lumina pulsează de 14 ori pe secundă, ritmul undelor cerebrale SMR, asociat cu o stare calmă. Metoda se numește fotobiomodulare.
 Specificații:
 - Tehnologie: Fotobiomodulare duală: 660 nm și 810 nm
 - Partea stângă: 6 diode de 810 nm, în zona nervului vag
@@ -36,35 +36,35 @@ Specificații:
 - Garanție: 2 ani
 Întrebări frecvente:
 Î: Pot să lucrez în timp ce îl port?
-R: Da. Poți citi, medita sau lucra ușor în timpul ședinței.
+R: Da. Poți citi, medita sau lucra ușor, în timp ce te relaxezi.
 Î: Cum încep?
-R: Îl încarci, îl așezi la gât și îl pornești. Ședința se oprește singură după câteva minute. Pentru întrebări despre folosire, ne scrii sau ne suni.
+R: Îl încarci, îl așezi la gât și apeși butonul. Câteva minute de liniște, apoi se oprește singur. Dacă vrei să știi cum ți se potrivește, ne scrii sau ne suni.
 Î: Ce fel de produs este?
-R: NEUROS Calm este un produs de wellness. Pentru o afecțiune, vorbește întâi cu medicul tău.
+R: Un produs de wellness, pentru calm în fiecare zi. Susține relaxarea. Pentru o afecțiune, vorbește întâi cu medicul tău.
 
-## NEUROS Focus (Cască EEG pentru antrenamentul atenției)
-Pentru ce este: Pentru concentrare. O cască ușoară, cu jocuri pe tabletă. Le controlezi cu atenția ta. Așa îți antrenezi concentrarea.
+## NEUROS Focus (Pentru focus și claritate)
+Pentru ce este: Pentru concentrare. Te ajută să-ți aduni atenția. Susține focusul și energia pentru ce ai de făcut. Joci pe tabletă, cu atenția ta.
 Preț: 1.800 lei (TVA 21% inclus, livrare gratuită în românia).
 Promoție: Iei 2 bucăți din același produs: 10% reducere la ele. Iei 3: 20%. Reducerea apare în coș.
 Pagina produsului: https://biohack-tech.ro/products/focus
-Pe scurt: Atenția se risipește ușor printre notificări. Pui casca și deschizi aplicația Neuros Game pe tabletă. Jocurile răspund la cât de atent ești.
+Pe scurt: Te ajută să-ți aduni atenția când mintea fuge. Susține focusul și o stare mai clară. Jocurile de pe tabletă răspund la cât de prezent ești.
 Ce oferă:
-- 3 senzori EEG, conectare Bluetooth la tabletă
-- Peste 10 jocuri și meditații ghidate
-- Până la 4 ore pe o încărcare
-- Neuros Game salvează fiecare sesiune, ca să îți vezi progresul
-- Antrenezi concentrarea: Prin jocuri scurte, pe tabletă.
-- Și calmul: Meditații ghidate, cu feedback în timp real.
-- Îți vezi progresul: Fiecare sesiune rămâne salvată.
+- Te ajută să intri mai ușor în concentrare
+- Susține focusul
+- Susține și calmul, prin meditații ghidate
+- Îți vezi progresul, sesiune cu sesiune
+- Focus mai clar: Te ajută să rămâi la ce ai de făcut, prin jocuri scurte.
+- Mai multă energie: Susține energia pentru muncă și studiu.
+- Și liniște: Meditațiile ghidate te ajută să simți calmul, pe loc.
 Cum se folosește:
 1. Pui casca și o pornești.
-2. O conectezi la tabletă, prin Bluetooth.
+2. O legi de tabletă.
 3. Alegi un joc sau o meditație.
 Cum funcționează:
-Creierul produce semnale electrice foarte slabe. Casca le citește prin trei senzori mici (EEG).
-Aplicația transformă semnalul în joc. Când ești atent, jocul înaintează. Așa înveți treptat să ajungi mai ușor în starea potrivită.
-Casca recunoaște stări, precum concentrarea și relaxarea. Gândurile rămân ale tale.
-Metoda vine din cercetarea despre biofeedback. Studiile de mai jos privesc biofeedbackul ca metodă, în general.
+Te ajută să observi când ești atent și când mintea pleacă. Așa înveți să revii mai ușor la ce faci.
+Creierul produce semnale electrice foarte slabe. Casca le citește prin trei senzori EEG și le trimite aplicației prin Bluetooth.
+Neuros Game transformă semnalul în joc. Când ești atent, jocul înaintează. Sunt peste 10 jocuri și meditații ghidate, iar fiecare sesiune rămâne salvată. Bateria ține până la 4 ore.
+Casca recunoaște stări, precum concentrarea și relaxarea. Gândurile rămân ale tale. Metoda vine din cercetarea despre biofeedback. Studiile de mai jos privesc metoda, în general.
 Specificații:
 - Senzori: 3 senzori EEG
 - Aplicație: Neuros Game: peste 10 jocuri și meditații ghidate
@@ -75,14 +75,14 @@ Specificații:
 - Garanție: 2 ani
 Întrebări frecvente:
 Î: Am nevoie de tabletă?
-R: Da. Aplicația Neuros Game rulează pe tabletă, iar casca se conectează prin Bluetooth.
+R: Da. Jocurile care îți antrenează atenția rulează în Neuros Game, pe tabletă. Casca se leagă prin Bluetooth, iar tu te concentrezi pe joc.
 Î: Ce citește casca?
-R: Stări precum concentrarea și relaxarea. Gândurile rămân ale tale.
+R: Stări precum concentrarea și relaxarea, ca să te ajute să le recunoști. Gândurile rămân ale tale.
 Î: Cum încep?
-R: Încarci casca, instalezi aplicația Neuros Game pe tabletă și o conectezi prin Bluetooth. Pentru întrebări, ne scrii sau ne suni.
+R: Încarci casca, instalezi Neuros Game pe tabletă și o conectezi. Apoi alegi un joc scurt. Pentru întrebări, ne scrii sau ne suni.
 
-## NEUROS Amber (Ochelari cu filtru pentru lumina albastră)
-Pentru ce este: Pentru ecrane. Filtrează lumina albastră a ecranelor. Ochii tăi primesc o lumină mai blândă. Alegi din patru rame.
+## NEUROS Amber (Pentru seri mai liniștite)
+Pentru ce este: Pentru ochi odihniți. Te ajută să termini ziua mai calm. Lumina ecranelor se simte mai blândă, și susține ochi mai odihniți. Alegi din patru rame.
 Preț: 315 lei (TVA 21% inclus, livrare gratuită în românia).
 Variante:
 - Cat eye · Negru: 315 lei
@@ -91,15 +91,15 @@ Variante:
 - Unisex pătrat · Maro: 315 lei
 Promoție: La fiecare 3 perechi NEUROS Amber, una este gratuită. Poți combina ramele.
 Pagina produsului: https://biohack-tech.ro/products/amber
-Pe scurt: Ochii tăi petrec ore întregi în lumina ecranelor. Lentilele chihlimbar filtrează lumina albastră de la monitor, telefon și becuri LED. Rama este ușoară, pentru toată ziua.
+Pe scurt: Te ajută să stai la ecran cu o lumină mai blândă. Susține ochi mai odihniți și seri mai liniștite. Rama e ușoară, pentru toată ziua.
 Ce oferă:
-- Lentile chihlimbar care filtrează lumina albastră
-- Pentru monitor, telefon și becuri LED
-- Ramă ușoară, pentru toată ziua
-- Cat eye sau unisex pătrat, în trei culori
-- Mai puțină lumină albastră: La birou, în orele din fața ecranului.
-- Seri mai liniștite: Lumina ecranelor devine mai blândă.
-- Patru rame: Cat eye sau unisex pătrat, în trei culori.
+- Te ajută să termini ziua mai calm
+- Lumina ecranelor se simte mai blândă
+- Susține ochi mai odihniți
+- Patru rame, pe care le porți cu plăcere
+- Ochi mai odihniți: Te ajută în orele lungi de la birou, în fața ecranului.
+- Seri mai liniștite: Lumina telefonului și a laptopului devine mai blândă.
+- Un stil al tău: Patru rame. Alegi forma și culoarea care îți plac.
 Specificații:
 - Modele: Cat eye, unisex pătrat
 - Culori: Cat eye: negru, bej. Unisex pătrat: negru, maro
@@ -109,7 +109,7 @@ Specificații:
 - Garanție: 2 ani
 Întrebări frecvente:
 Î: Când îi port?
-R: La birou, în fața ecranelor, și seara, când folosești telefonul sau laptopul.
+R: Ziua, la birou, când vrei ochi mai odihniți. Seara, pe telefon sau laptop, când vrei o lumină mai blândă.
 Î: Se pot face cu dioptrie sau cu lentile progresive?
 R: Din păcate, nu. NEUROS Amber vine doar cu lentilele lui chihlimbar, fără dioptrie, așa că nu le putem face după rețetă și nici cu lentile progresive. Dacă ai întrebări despre cum ți s-ar potrivi, scrie-ne și te ajutăm cu drag.
 Î: Pot să îi returnez?

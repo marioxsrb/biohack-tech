@@ -44,13 +44,13 @@ export const landings: Landing[] = [
     theme: { bg: '#f2f5f6', ink: '#0b1316', muted: '#4b5960', panel: '#ffffff', line: '#dce3e6', accent: '#0e7490' },
     meta: {
       title: 'NEUROS Calm: liniște seara și somn mai lin',
-      description: 'NEUROS Calm te ajută să te relaxezi în câteva minute. Mulți utilizatori simt mai puțin stres și un somn mai lin. Livrare gratuită în România.',
+      description: 'NEUROS Calm te ajută să te relaxezi în câteva minute. Susține mai puțin stres și un somn mai lin. Livrare gratuită în România.',
     },
     faqs: [
       { q: 'Cât durează o ședință?', a: 'Câteva minute de liniște. Îl pornești dintr-un singur buton, iar la final se oprește singur.' },
       { q: 'Pot să lucrez sau să citesc în timp ce îl port?', a: 'Da. Poți citi, medita sau lucra ușor, în timp ce te relaxezi.' },
       { q: 'Cum încep?', a: 'Îl încarci, îl așezi la gât și îl pornești. Câteva minute de liniște, apoi se oprește singur. Pentru orice întrebare, ne scrii sau ne suni.' },
-      { q: 'Ce fel de produs este?', a: 'Un produs de wellness, care susține relaxarea. Mulți utilizatori simt mai mult calm. Pentru o afecțiune, cere întâi sfatul medicului.' },
+      { q: 'Ce fel de produs este?', a: 'Un produs de wellness, care susține relaxarea și calmul. Pentru o afecțiune, cere întâi sfatul medicului.' },
       { q: 'Pot să îl returnez?', a: 'Da. Ai 14 zile de la primire să te răzgândești. Garanția este de 2 ani.', buy: true },
     ],
   },
@@ -60,7 +60,7 @@ export const landings: Landing[] = [
     theme: { bg: '#f2f5f6', ink: '#0b1316', muted: '#4b5960', panel: '#ffffff', line: '#dce3e6', accent: '#0e7490' },
     meta: {
       title: 'NEUROS Focus: mai multă concentrare, prin joc',
-      description: 'NEUROS Focus te ajută să-ți aduni atenția. Mulți utilizatori simt mai mult focus și mai multă energie. Jocuri scurte pe tabletă. Livrare gratuită.',
+      description: 'NEUROS Focus te ajută să-ți aduni atenția. Susține focusul și energia. Jocuri scurte pe tabletă. Livrare gratuită.',
     },
     faqs: [
       { q: 'Am nevoie de tabletă?', a: 'Da. Jocurile care îți antrenează atenția rulează pe tabletă, în Neuros Game. Casca se leagă prin Bluetooth.' },
