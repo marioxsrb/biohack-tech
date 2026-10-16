@@ -29,6 +29,7 @@ export type JobKind =
   | 'ghl.call'
   | 'support.notify'
   | 'fx.refresh'
+  | 'meta.purchase'
 export type JobStatus = 'pending' | 'running' | 'retry' | 'done' | 'failed' | 'skipped'
 
 export type Job = {

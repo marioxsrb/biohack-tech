@@ -45,6 +45,12 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
   const [inSection, setInSection] = useState(false)
 
   useEffect(() => {
+    // ViewContent, like the other landings (LandingOffer). One per visit; consent-aware.
+    if (product.price != null) track('view_item', { value: product.price, items: [itemOf(product)] })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
     // Restored after hydration so the server and the first client render agree.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSel(readSelection(variants.map((v) => v.id)))

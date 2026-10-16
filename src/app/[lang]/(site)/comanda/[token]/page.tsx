@@ -6,7 +6,9 @@ import { connection } from 'next/server'
 import { Arrow, Check } from '@/components/ui/icons'
 import { site, terms } from '@/config/site'
 import { lineKey } from '@/components/cart/cart-store'
+import { lineRef } from '@/content/catalog'
 import { formatMoney } from '@/lib/currency'
+import { purchaseLei } from '@/lib/meta'
 import { promoText } from '@/config/promotions'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
@@ -151,8 +153,10 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
   const parent = order.parentOrderId ? await orders.byId(db, order.parentOrderId) : null
   const items = order.items.map((i) => lineKey({ productId: i.productId as never, variantId: i.variantId ?? undefined }))
   const money = (minor: number) => formatMoney(minor, order.currency)
-  // The ad platforms count sales in lei: an order in euro or dollars is reported at its own exchange rate.
-  const ron = (minor: number) => Math.round(minor * order.fxRate)
+  // Ad platforms count sales in lei. `track` still expects minor units, so the purchase value stays in bani
+  // of lei (fxRate is lei per unit of the order's currency, 1 for lei). Item prices passed in are already lei.
+  const ronMinor = (minor: number) => Math.round(minor * order.fxRate)
+  const unitLei = (i: Order['items'][number]) => purchaseLei(i.quantity ? Math.round((i.lineTotalMinor - i.discountMinor) / i.quantity) : i.unitPriceMinor, order.fxRate)
 
   return (
     <section className="pt-[calc(var(--nav-h)+48px)] pb-[var(--sec)] max-sm:pt-[calc(var(--nav-h)+24px)]">
@@ -161,8 +165,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
           orderNumber={order.orderNumber}
           clearKeys={placed ? items : []}
           funnel={order.attribution?.funnel}
-          placed={!paid && (cod || transfer) ? { orderNumber: order.orderNumber, value: ron(order.totalMinor), payment: cod ? 'cod' : 'transfer' } : null}
-          purchase={sale ? { orderNumber: order.orderNumber, value: ron(order.totalMinor), items: order.items.map((i) => ({ item_id: i.variantId ? `${i.productId}/${i.variantId}` : i.productId, item_name: i.productName, item_variant: i.variantName ?? undefined, price: ron(i.unitPriceMinor) / 100, quantity: i.quantity })) } : null}
+          placed={!paid && (cod || transfer) ? { orderNumber: order.orderNumber, value: ronMinor(order.totalMinor), payment: cod ? 'cod' : 'transfer' } : null}
+          purchase={sale ? { orderNumber: order.orderNumber, value: ronMinor(order.totalMinor), paid, items: order.items.map((i) => ({ item_id: lineRef(i.productId, i.variantId), item_name: i.productName, item_variant: i.variantName ?? undefined, price: unitLei(i), quantity: i.quantity })) } : null}
         />
 
         {placed && (

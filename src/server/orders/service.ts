@@ -637,6 +637,8 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
       return o.parentOrderId ? release(o.parentOrderId) : []
     case 'payment.confirmed':
       return [
+        // Server Purchase for ROAS. Same event id as the browser pixel (the order number). Skipped when the token is absent.
+        ...(c.metaCapi ? [{ kind: 'meta.purchase' as const, orderId: o.id, dedupeKey: `meta.purchase:${o.id}` }] : []),
         ...(o.upsellStatus === 'offered' && o.upsellExpiresAt ? release(o.id, o.upsellExpiresAt) : []),
         ...(o.kind === 'upsell' && o.parentOrderId ? release(o.parentOrderId) : []),
         ...crm(),

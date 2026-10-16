@@ -125,7 +125,7 @@ describe('script blocking', () => {
     track('purchase', { value: 638000, items: [item], transaction_id: 'BHT-1' })
     const queue = (win.fbq as { queue: unknown[][] }).queue
     expect(queue).toContainEqual(['set', 'autoConfig', false, '123'])
-    expect(queue).toContainEqual(['track', 'Purchase', expect.objectContaining({ value: 6380, content_ids: ['balance-wave'] }), { eventID: 'BHT-1' }])
+    expect(queue).toContainEqual(['track', 'Purchase', expect.objectContaining({ currency: 'RON', value: 6380, content_ids: ['balance-wave'], contents: [{ id: 'balance-wave', quantity: 1, item_price: 6380 }], num_items: 1 }), { eventID: 'BHT-1' }])
     expect(JSON.stringify(queue)).not.toMatch(/@|Popescu|0722/)
     expect(win.dataLayer).toBeUndefined()
   })

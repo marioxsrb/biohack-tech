@@ -55,13 +55,25 @@ it('Lead is a standard event with the lead id as event id; the others are custom
   expect(JSON.stringify(fbq.mock.calls)).not.toMatch(/@|07\d{8}/)
 })
 
-it('AddToCart and Purchase map to the standard Meta events; Purchase carries the order number as event id', () => {
+it('AddToCart and Purchase map to the standard Meta events; Purchase is lei, with contents and the order number as event id', () => {
   marketing = loaded = true
   const p = getProduct('balance-wave')!
-  track('add_to_cart', { value: p.price!, items: [itemOf(p)] })
-  track('purchase', { value: p.price!, items: [itemOf(p)], transaction_id: 'BHT-20261014-0001' })
+  const item = itemOf(p)
+  track('add_to_cart', { value: p.price!, items: [item] })
+  track('purchase', { value: p.price!, items: [item], transaction_id: 'BHT-20261014-0001' })
   expect(fbq.mock.calls.map((c) => [c[1], c[3]])).toEqual([
     ['AddToCart', undefined],
     ['Purchase', { eventID: 'BHT-20261014-0001' }],
   ])
+  // 638000 bani is 6.380 lei, never the minor-unit figure Meta would treat as the order value.
+  expect(fbq.mock.calls[1][2]).toEqual({
+    currency: 'RON',
+    value: 6380,
+    content_type: 'product',
+    content_ids: ['balance-wave'],
+    contents: [{ id: 'balance-wave', quantity: 1, item_price: 6380 }],
+    content_name: 'NEUROS Calm',
+    num_items: 1,
+  })
+  expect(item.price).toBe(6380)
 })

@@ -4,18 +4,20 @@
  * or without configured tools, every call does nothing: nothing is queued for later either.
  *
  * Events carry products and amounts only, never contact details. `purchase` is sent only from the
- * order page, only when the server says the order is paid, and only once per order per browser.
+ * order page. Meta's Purchase is only for a confirmed payment (see OrderEffects); the value is lei, not bani.
  */
 import type { ResolvedLine } from '@/components/cart/CartProvider'
 import { lineRef, unitPrice, type Product, type Variant } from '@/content/catalog'
 import { consentStore } from '@/lib/consent/store'
 import { isConfigured, whenLoaded } from '@/lib/consent/vendors'
+import { purchaseLei } from '@/lib/meta'
 
 export type EcomEvent = 'view_item' | 'select_item' | 'select_variant' | 'add_to_cart' | 'view_cart' | 'begin_checkout' | 'add_payment_info' | 'purchase'
 
 type Item = { item_id: string; item_name: string; item_variant?: string; price: number; quantity: number }
 
-const lei = (minor: number) => Math.round(minor) / 100
+/** `value` arguments of `track` / `trackFunnel` are minor units (bani). Item `price` is already lei. */
+const lei = (minor: number) => purchaseLei(minor)
 
 export const itemOf = (p: Product, v?: Variant, variantLabel?: string, quantity = 1): Item => ({
   item_id: lineRef(p.id, v?.id),
@@ -45,22 +47,35 @@ export const canTrack = () => ga4On() || metaOn()
 export function track(
   event: EcomEvent,
   data: { value: number; items: (Item | ResolvedLine)[]; transaction_id?: string; payment_type?: string },
+  /** Limit a call to one tool. Omitted: every tool the visitor allowed. */
+  only?: { ga4?: boolean; meta?: boolean },
 ) {
-  if (typeof window === 'undefined' || !canTrack()) return
+  const ga = (only?.ga4 ?? true) && ga4On()
+  const metaOk = (only?.meta ?? true) && metaOn()
+  if (typeof window === 'undefined' || (!ga && !metaOk)) return
   const items = data.items.map((i) => ('product' in i ? lineItem(i) : i))
+  const value = lei(data.value)
   const w = window as unknown as { gtag?: (...a: unknown[]) => void; fbq?: (...a: unknown[]) => void }
-  if (ga4On()) {
+  if (ga) {
     whenLoaded('ga4', () => w.gtag?.('event', event, {
       currency: 'RON',
-      value: lei(data.value),
+      value,
       ...(data.transaction_id && { transaction_id: data.transaction_id }),
       ...(data.payment_type && { payment_type: data.payment_type }),
       items,
     }))
   }
   const meta = META_EVENT[event]
-  if (meta && metaOn()) {
-    whenLoaded('meta', () => w.fbq?.('track', meta, { currency: 'RON', value: lei(data.value), content_type: 'product', content_ids: items.map((i) => i.item_id), content_name: [...new Set(items.map((i) => i.item_name))].join(', '), num_items: items.reduce((n, i) => n + i.quantity, 0) }, data.transaction_id ? { eventID: data.transaction_id } : undefined))
+  if (meta && metaOk) {
+    whenLoaded('meta', () => w.fbq?.('track', meta, {
+      currency: 'RON',
+      value,
+      content_type: 'product',
+      content_ids: items.map((i) => i.item_id),
+      contents: items.map((i) => ({ id: i.item_id, quantity: i.quantity, item_price: i.price })),
+      content_name: [...new Set(items.map((i) => i.item_name))].join(', '),
+      num_items: items.reduce((n, i) => n + i.quantity, 0),
+    }, data.transaction_id ? { eventID: data.transaction_id } : undefined))
   }
 }
 

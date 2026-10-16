@@ -120,6 +120,7 @@ const JOB_LABEL: Record<string, string> = {
   'ghl.enquiry': 'Trimiterea mesajului în GoHighLevel',
   'order.transfer_expiry': 'Anularea transferului expirat',
   'order.abandon_check': 'Verificarea plății nefinalizate',
+  'meta.purchase': 'Purchase către Meta (Conversions API)',
 }
 export const jobLabel = (kind: string, template?: string) => `${JOB_LABEL[kind] ?? kind}${template ? ` (${template})` : ''}`
 

@@ -5,6 +5,7 @@
  * kept with the order for campaign measurement (gclid is not collected). The funnel (visible or
  * price-gated) is set by the server from the hostname, never from what the browser says.
  */
+import type { MetaBrowser } from './meta'
 import type { Funnel } from './lead'
 import { isLandingSlug, landingBaseDomain, landingHost, type LandingSlug } from './landing-hosts'
 import { ENTRY_LABEL, isEntrySource, type EntrySource } from './purchase'
@@ -25,6 +26,11 @@ export type Attribution = {
   fbclid?: string
   /** visible_price (biohack-tech.ro and its landings) or gated_price (acces.<domain>). Server-set. */
   funnel?: Funnel
+  /**
+   * Browser signals for the Conversions API, captured by the server from the checkout request.
+   * Never taken from the body (sanitizeAttribution does not copy this).
+   */
+  meta?: MetaBrowser
 }
 
 const clean = (v: unknown) =>

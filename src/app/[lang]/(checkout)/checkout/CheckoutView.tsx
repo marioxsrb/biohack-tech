@@ -486,7 +486,8 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
         router.push(orderUrl)
         return
       }
-      // Stripe confirms the payment (3-D Secure included) and returns to the order page.
+      // Stripe confirms the payment. Redirect methods leave for the order page; a card that finishes here
+      // does not, so we open it ourselves. Purchase is sent from that page once the payment is paid.
       const failure = await card.current!.confirm(data.clientSecret, `${window.location.origin}${orderUrl}`, {
         name: `${form.firstName} ${form.lastName}`.trim(),
         email: form.email,
@@ -494,6 +495,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
         address: { line1: form.address, city: form.city, state: form.county, postal_code: form.postalCode, country: form.country },
       })
       if (failure) throw new Error(failure)
+      router.push(orderUrl)
     } catch (err) {
       setServerError(err instanceof Error && err.message ? err.message : t.offline)
       setSending(false)
