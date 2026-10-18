@@ -6,13 +6,13 @@ export const site = {
     en: 'NEUROS helps you unwind in the evening, ease into sleep and stay focused through the day. Calm, Focus and Amber. Free worldwide delivery.',
   },
   email: 'contact@biohack-tech.ro',
-  phone: '+40 757 890 707',
-  phoneHref: 'tel:+40757890707',
+  phone: '+40 767 978 707',
+  phoneHref: 'tel:+40767978707',
   /**
-   * The official WhatsApp number for orders (+40 757 890 707, the same as the phone; confirmed 14.10.2026), digits only in
+   * The official WhatsApp number for orders (+40 767 978 707, the same as the phone; changed 18.10.2026), digits only in
    * international format, as wa.me expects. null hides the WhatsApp button.
    */
-  whatsapp: '40757890707' as string | null,
+  whatsapp: '40767978707' as string | null,
   /**
    * Where bank-transfer customers send the proof of payment (+40 765 874 571), so the order is approved and packed
    * without waiting for the bank statement. Digits only, as wa.me expects; null hides the button.

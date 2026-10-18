@@ -378,7 +378,7 @@ describe('delayed steps: rechecked against the order right before sending', () =
     const p1 = sent.find((m) => m.subject.includes('a ajuns'))!
     // Service, not marketing: no unsubscribe link, no review request, the support line only once.
     expect(p1.text).not.toMatch(/dezabon|recenzie|părere/i)
-    expect(p1.text.match(/\+40 757 890 707/g)).toHaveLength(2)
+    expect(p1.text.match(/\+40 767 978 707/g)).toHaveLength(2)
   })
 
   it('DELIVERY_FOLLOWUP=off: no service email after delivery', async () => {
