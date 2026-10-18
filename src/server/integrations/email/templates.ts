@@ -142,7 +142,7 @@ function proofBlock(o: Order): Block[] {
   const label = en(o) ? 'Send the proof on WhatsApp' : 'Trimite dovada pe WhatsApp'
   return [
     {
-      html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:22px 0 18px;background:#e7f8ee;border:1.5px solid #25d366;border-radius:16px"><tr><td style="padding:20px 20px 22px"><p style="margin:0 0 6px;font-size:17px;line-height:1.3;font-weight:700;color:#0b1316">${esc(title)}</p><p style="margin:0 0 16px;font-size:15px;line-height:1.55;color:#27343a">${esc(body)}</p><a href="${esc(href)}" style="display:inline-block;background:#25d366;color:#0b1316;font-size:16px;font-weight:700;text-decoration:none;padding:14px 26px;border-radius:999px">${esc(label)} &rarr;</a></td></tr></table>`,
+      html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:4px 0 24px;background:#e7f8ee;border:1.5px solid #25d366;border-radius:16px"><tr><td style="padding:20px 20px 22px"><p style="margin:0 0 6px;font-size:17px;line-height:1.3;font-weight:700;color:#0b1316">${esc(title)}</p><p style="margin:0 0 16px;font-size:15px;line-height:1.55;color:#27343a">${esc(body)}</p><a href="${esc(href)}" style="display:inline-block;background:#25d366;color:#0b1316;font-size:16px;font-weight:700;text-decoration:none;padding:14px 26px;border-radius:999px">${esc(label)} &rarr;</a></td></tr></table>`,
       text: `\n${title}\n${body}\n${label}: ${href}`,
     },
   ]
@@ -197,7 +197,7 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
     case 'transfer_instructions':
       return {
         lead: `Mulțumim, ${first}. Comanda ta este înregistrată și așteaptă plata.`,
-        blocks: [h('Datele pentru transfer'), ...bankBlock(o, ctx.bank), ...proofBlock(o), p('Pregătim coletul imediat ce suma ajunge în cont sau primim dovada plății. Îți scriem când primim plata.'), ...summary, ...addressBlock(o)],
+        blocks: [...proofBlock(o), h('Datele pentru transfer'), ...bankBlock(o, ctx.bank), p('Pregătim coletul imediat ce suma ajunge în cont sau primim dovada plății. Îți scriem când primim plata.'), ...summary, ...addressBlock(o)],
         cta: { label: 'Vezi comanda', url: orderUrl },
       }
     case 'payment_received':
@@ -280,10 +280,10 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
       return {
         lead: `Bună, ${first}. Comanda ${o.orderNumber} este înregistrată și așteaptă plata prin transfer bancar.`,
         blocks: [
+          ...proofBlock(o),
           rows([['Suma', fm(o, o.totalMinor)]]),
           p('Datele pentru transfer sunt pe pagina comenzii.'),
           p(`Scrie ${o.orderNumber} la detaliile plății. Așa potrivim transferul cu comanda.`),
-          ...proofBlock(o),
           p('Ai plătit deja și ne-ai trimis dovada? Ignoră acest mesaj.'),
           p('Te-ai răzgândit? Răspunde la acest email și anulăm comanda.'),
         ],
@@ -344,7 +344,7 @@ function bodyEn(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; 
             p(`Write ${o.orderNumber} as the payment reference, so we can match the transfer to your order.`),
           ]
         : [p(`Our team sends you the transfer details separately. Write to ${site.email} if you need them now.`)]
-      return { lead: `Thank you, ${first}. Your order is placed and waiting for payment.`, blocks: [h('Bank transfer details'), ...details, ...proofBlock(o), p('We pack your order as soon as the payment arrives or we get the proof, and let you know.'), ...summary, ...addressBlock(o)], cta: view }
+      return { lead: `Thank you, ${first}. Your order is placed and waiting for payment.`, blocks: [...proofBlock(o), h('Bank transfer details'), ...details, p('We pack your order as soon as the payment arrives or we get the proof, and let you know.'), ...summary, ...addressBlock(o)], cta: view }
     }
     case 'payment_received':
       return { lead: `We received the payment for order #${o.orderNumber}. Thank you, ${first}.`, blocks: [p(packing), ...summary], cta: view }
@@ -410,10 +410,10 @@ function bodyEn(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; 
       return {
         lead: `Hello ${first}. Order ${o.orderNumber} is placed and waiting for your bank transfer.`,
         blocks: [
+          ...proofBlock(o),
           rows([['Amount', fm(o, o.totalMinor)]]),
           p('The transfer details are on the order page.'),
           p(`Write ${o.orderNumber} as the payment reference, so we can match the transfer to your order.`),
-          ...proofBlock(o),
           p('Already paid and sent us the proof? Please ignore this message.'),
           p('Changed your mind? Reply to this email and we will cancel the order.'),
         ],

@@ -242,8 +242,33 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
           </>
         )}
 
+        {transfer && proofHref && (
+          <div className="mt-8 rounded-[20px] bg-[#e7f8ee] p-6 shadow-[inset_0_0_0_1.5px_#25d366] max-sm:px-5">
+            <div className="flex items-start gap-3.5">
+              <span aria-hidden className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[#25d366] text-ink">
+                <WhatsApp className="h-[22px] w-[22px]" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-[19px] tracking-[-0.015em] text-ink">{t.proofTitle}</h2>
+                <p className="mt-1.5 text-[15.5px] leading-relaxed text-text">{t.proofText}</p>
+              </div>
+            </div>
+            <a
+              href={proofHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 flex min-h-[56px] w-full items-center justify-center gap-2.5 rounded-full bg-[#25d366] px-6 text-[16.5px] font-semibold text-ink shadow-[0_10px_24px_-12px_rgba(18,140,126,.8)] transition-colors hover:bg-[#1fbf5b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#128c7e]"
+            >
+              <WhatsApp className="h-[22px] w-[22px] flex-none" aria-hidden />
+              {t.proofButton}
+              <Arrow className="h-[18px] w-[18px] flex-none" aria-hidden />
+            </a>
+            <p className="mt-3 text-center text-[13.5px] text-muted">{t.proofNote}</p>
+          </div>
+        )}
+
         {transfer && (
-          <div className="mt-8 rounded-[20px] bg-paper p-6 max-sm:px-5">
+          <div className="mt-4 rounded-[20px] bg-paper p-6 max-sm:px-5">
             <h2 className="text-[19px] tracking-[-0.015em]">{t.transferTitle}</h2>
             {c.bank ? (
               <>
@@ -274,31 +299,6 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
             ) : (
               <p className="mt-3 text-[15.5px] text-text">{t.transferByEmail}</p>
             )}
-          </div>
-        )}
-
-        {transfer && proofHref && (
-          <div className="mt-4 rounded-[20px] bg-[#e7f8ee] p-6 shadow-[inset_0_0_0_1.5px_#25d366] max-sm:px-5">
-            <div className="flex items-start gap-3.5">
-              <span aria-hidden className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[#25d366] text-ink">
-                <WhatsApp className="h-[22px] w-[22px]" />
-              </span>
-              <div className="min-w-0">
-                <h2 className="text-[19px] tracking-[-0.015em] text-ink">{t.proofTitle}</h2>
-                <p className="mt-1.5 text-[15.5px] leading-relaxed text-text">{t.proofText}</p>
-              </div>
-            </div>
-            <a
-              href={proofHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-5 flex min-h-[56px] w-full items-center justify-center gap-2.5 rounded-full bg-[#25d366] px-6 text-[16.5px] font-semibold text-ink shadow-[0_10px_24px_-12px_rgba(18,140,126,.8)] transition-colors hover:bg-[#1fbf5b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#128c7e]"
-            >
-              <WhatsApp className="h-[22px] w-[22px] flex-none" aria-hidden />
-              {t.proofButton}
-              <Arrow className="h-[18px] w-[18px] flex-none" aria-hidden />
-            </a>
-            <p className="mt-3 text-center text-[13.5px] text-muted">{t.proofNote}</p>
           </div>
         )}
 
