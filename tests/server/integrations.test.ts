@@ -92,6 +92,12 @@ describe('transactional emails', () => {
     expect(bank.text).toContain('RO49 AAAA 1B31 0075 9384 0000')
     expect(bank.text).toContain('199,50 lei')
     expect(bank.html).toContain(`/comanda/${order.publicToken}`)
+    // The proof of payment goes to WhatsApp, with the order number and amount already written.
+    const proof = `https://wa.me/40765874571?text=${encodeURIComponent(`Bună! Am plătit comanda ${order.orderNumber} (199,50 lei) prin transfer bancar. Atașez dovada plății:`)}`
+    expect(bank.html).toContain(proof.replace(/&/g, '&amp;'))
+    expect(bank.text).toContain(proof)
+    expect(renderEmail('transfer_reminder', order, ctx).html).toContain('wa.me/40765874571')
+    expect(renderEmail('order_confirmed', order, ctx).html).not.toContain('wa.me/40765874571')
   })
 
   it('the cancellation email says exactly where the money stands', async () => {

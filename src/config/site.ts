@@ -13,7 +13,25 @@ export const site = {
    * international format, as wa.me expects. null hides the WhatsApp button.
    */
   whatsapp: '40757890707' as string | null,
+  /**
+   * Where bank-transfer customers send the proof of payment (+40 765 874 571), so the order is approved and packed
+   * without waiting for the bank statement. Digits only, as wa.me expects; null hides the button.
+   */
+  paymentProofWhatsapp: '40765874571' as string | null,
 } as const
+
+/**
+ * WhatsApp with the proof-of-payment message already written (order number and amount): the customer only attaches
+ * the screenshot or PDF from the bank. Null when no number is configured.
+ */
+export function paymentProofHref(orderNumber: string, amount: string, locale: 'ro' | 'en' = 'ro'): string | null {
+  if (!site.paymentProofWhatsapp) return null
+  const text =
+    locale === 'en'
+      ? `Hello! I paid order ${orderNumber} (${amount}) by bank transfer. Here is the proof of payment:`
+      : `Bună! Am plătit comanda ${orderNumber} (${amount}) prin transfer bancar. Atașez dovada plății:`
+  return `https://wa.me/${site.paymentProofWhatsapp}?text=${encodeURIComponent(text)}`
+}
 
 /** Commercial terms stated on the current biohack-tech.ro. Used everywhere they are repeated. */
 export const terms = {

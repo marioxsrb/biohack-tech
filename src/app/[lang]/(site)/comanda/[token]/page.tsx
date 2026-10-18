@@ -3,8 +3,8 @@ import type { Metadata } from 'next'
 import Link from '@/components/ui/Link'
 import { notFound } from 'next/navigation'
 import { connection } from 'next/server'
-import { Arrow, Check } from '@/components/ui/icons'
-import { site, terms } from '@/config/site'
+import { Arrow, Check, WhatsApp } from '@/components/ui/icons'
+import { paymentProofHref, site, terms } from '@/config/site'
 import { lineKey } from '@/components/cart/cart-store'
 import { lineRef } from '@/content/catalog'
 import { formatMoney } from '@/lib/currency'
@@ -38,7 +38,7 @@ const COPY = {
     codTitle: 'Plata la livrare (ramburs)',
     codText: (email: string) => `Plătești curierului când primești coletul. Nu ai nimic de plătit acum. Ți-am trimis confirmarea pe ${email}.`,
     packing: ` Pregătim coletul în ${terms.processingDays}.`,
-    transferWait: 'Comanda este înregistrată și așteaptă plata. O pregătim imediat ce suma ajunge în cont.',
+    transferWait: 'Comanda este înregistrată și așteaptă plata. O pregătim imediat ce suma ajunge în cont sau ne trimiți dovada plății pe WhatsApp.',
     stripeWait: 'Stripe confirmă plata în câteva secunde. Pagina se actualizează singură.',
     failed: (cod: boolean, ro: boolean) => `Nu s-a efectuat nicio plată. Produsele sunt tot în coș și poți încerca din nou${ro ? `, cu cardul${cod ? ', cu plata la livrare' : ''} sau prin transfer bancar` : ''}.`,
     retry: 'Încearcă din nou',
@@ -50,6 +50,10 @@ const COPY = {
     referenceValue: (n: string) => `Comanda ${n}`,
     writeRef: ['Scrie ', ' la detaliile plății. Așa potrivim transferul cu comanda ta.'],
     transferByEmail: `Îți trimitem datele pentru transfer pe email. Pentru ele acum, scrie-ne la ${site.email}.`,
+    proofTitle: 'Ai plătit? Trimite-ne dovada pe WhatsApp',
+    proofText: 'O captură de ecran sau PDF-ul din aplicația băncii ajunge. Aprobăm comanda și o trimitem imediat, fără să așteptăm să apară suma în extras.',
+    proofButton: 'Trimite dovada plății',
+    proofNote: 'Mesajul cu numărul comenzii este deja scris. Tu atașezi doar dovada.',
     invoice: 'Descarcă factura',
     atCourier: (c: string) => `Comanda este la ${c}. AWB: `,
     track: 'Urmărește coletul',
@@ -83,7 +87,7 @@ const COPY = {
     codTitle: 'Cash on delivery',
     codText: (email: string) => `You pay the courier when the parcel arrives. Nothing to pay now. We sent the confirmation to ${email}.`,
     packing: ' We pack your order within 1-3 days.',
-    transferWait: 'Your order is placed and waiting for payment. We pack it as soon as the payment arrives.',
+    transferWait: 'Your order is placed and waiting for payment. We pack it as soon as the payment arrives or you send us the proof on WhatsApp.',
     stripeWait: 'Stripe confirms the payment within a few seconds. This page updates by itself.',
     failed: (cod: boolean, ro: boolean) => `No payment was taken. Your products are still in the cart and you can try again${ro ? `, by card${cod ? ', cash on delivery' : ''} or bank transfer` : ''}.`,
     retry: 'Try again',
@@ -95,6 +99,10 @@ const COPY = {
     referenceValue: (n: string) => `Order ${n}`,
     writeRef: ['Write ', ' as the payment reference, so we can match the transfer to your order.'],
     transferByEmail: `We send you the transfer details by email. To get them now, write to ${site.email}.`,
+    proofTitle: 'Paid? Send us the proof on WhatsApp',
+    proofText: 'A screenshot or the PDF from your banking app is enough. We approve your order and ship it right away, without waiting for the bank statement.',
+    proofButton: 'Send the proof of payment',
+    proofNote: 'The message with your order number is already written. Just attach the proof.',
     invoice: 'Download invoice',
     atCourier: (c: string) => `Your order is with ${c}. Tracking number: `,
     track: 'Track your parcel',
@@ -157,6 +165,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
   const digital = await pageDigital(db, order, c)
   const items = order.items.map((i) => lineKey({ productId: i.productId as never, variantId: i.variantId ?? undefined }))
   const money = (minor: number) => formatMoney(minor, order.currency)
+  const proofHref = transfer ? paymentProofHref(order.orderNumber, money(order.totalMinor), L) : null
   // Ad platforms count sales in lei. `track` still expects minor units, so the purchase value stays in bani
   // of lei (fxRate is lei per unit of the order's currency, 1 for lei). Item prices passed in are already lei.
   const ronMinor = (minor: number) => Math.round(minor * order.fxRate)
@@ -265,6 +274,31 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
             ) : (
               <p className="mt-3 text-[15.5px] text-text">{t.transferByEmail}</p>
             )}
+          </div>
+        )}
+
+        {transfer && proofHref && (
+          <div className="mt-4 rounded-[20px] bg-[#e7f8ee] p-6 shadow-[inset_0_0_0_1.5px_#25d366] max-sm:px-5">
+            <div className="flex items-start gap-3.5">
+              <span aria-hidden className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[#25d366] text-ink">
+                <WhatsApp className="h-[22px] w-[22px]" />
+              </span>
+              <div className="min-w-0">
+                <h2 className="text-[19px] tracking-[-0.015em] text-ink">{t.proofTitle}</h2>
+                <p className="mt-1.5 text-[15.5px] leading-relaxed text-text">{t.proofText}</p>
+              </div>
+            </div>
+            <a
+              href={proofHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-5 flex min-h-[56px] w-full items-center justify-center gap-2.5 rounded-full bg-[#25d366] px-6 text-[16.5px] font-semibold text-ink shadow-[0_10px_24px_-12px_rgba(18,140,126,.8)] transition-colors hover:bg-[#1fbf5b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#128c7e]"
+            >
+              <WhatsApp className="h-[22px] w-[22px] flex-none" aria-hidden />
+              {t.proofButton}
+              <Arrow className="h-[18px] w-[18px] flex-none" aria-hidden />
+            </a>
+            <p className="mt-3 text-center text-[13.5px] text-muted">{t.proofNote}</p>
           </div>
         )}
 

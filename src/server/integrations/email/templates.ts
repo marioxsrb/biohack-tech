@@ -5,7 +5,7 @@
  * In the order's language (Romanian, or English for orders placed in English), amounts in the order's currency,
  * links to the site the order was placed on.
  */
-import { site, terms } from '@/config/site'
+import { paymentProofHref, site, terms } from '@/config/site'
 import type { BankConfig } from '@/server/config'
 import { customerName, formatAddress, PAYMENT_METHOD_LABEL, type Order } from '@/server/orders/model'
 import { awaitsCollection } from '@/server/orders/state'
@@ -131,6 +131,23 @@ function addressBlock(o: Order): Block[] {
   return [h('Livrare și facturare'), rows([['Livrare la', `${customerName(o.customer)}, ${formatAddress(o.shippingAddress)}`], ['Facturare', billing], ['Telefon', o.phone]])]
 }
 
+/** A highlighted WhatsApp button for the proof of payment (bank transfers): the message is written, the customer attaches the proof. */
+function proofBlock(o: Order): Block[] {
+  const href = paymentProofHref(o.orderNumber, fm(o, o.totalMinor), en(o) ? 'en' : 'ro')
+  if (!href) return []
+  const title = en(o) ? 'Paid? Send us the proof on WhatsApp' : 'Ai plătit? Trimite-ne dovada pe WhatsApp'
+  const body = en(o)
+    ? 'A screenshot or the PDF from your banking app is enough: we approve your order and ship it right away, without waiting for the bank statement.'
+    : 'O captură de ecran sau PDF-ul din aplicația băncii ajunge: aprobăm comanda și o trimitem imediat, fără să așteptăm extrasul.'
+  const label = en(o) ? 'Send the proof on WhatsApp' : 'Trimite dovada pe WhatsApp'
+  return [
+    {
+      html: `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate;margin:22px 0 18px;background:#e7f8ee;border:1.5px solid #25d366;border-radius:16px"><tr><td style="padding:20px 20px 22px"><p style="margin:0 0 6px;font-size:17px;line-height:1.3;font-weight:700;color:#0b1316">${esc(title)}</p><p style="margin:0 0 16px;font-size:15px;line-height:1.55;color:#27343a">${esc(body)}</p><a href="${esc(href)}" style="display:inline-block;background:#25d366;color:#0b1316;font-size:16px;font-weight:700;text-decoration:none;padding:14px 26px;border-radius:999px">${esc(label)} &rarr;</a></td></tr></table>`,
+      text: `\n${title}\n${body}\n${label}: ${href}`,
+    },
+  ]
+}
+
 function bankBlock(o: Order, bank: BankConfig | null): Block[] {
   if (!bank) return [p(`Datele pentru transfer îți sunt trimise separat de echipa noastră. Scrie-ne la ${site.email} dacă ai nevoie de ele acum.`)]
   return [
@@ -180,7 +197,7 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
     case 'transfer_instructions':
       return {
         lead: `Mulțumim, ${first}. Comanda ta este înregistrată și așteaptă plata.`,
-        blocks: [h('Datele pentru transfer'), ...bankBlock(o, ctx.bank), p('Pregătim coletul imediat ce suma ajunge în cont. Îți scriem când primim plata.'), ...summary, ...addressBlock(o)],
+        blocks: [h('Datele pentru transfer'), ...bankBlock(o, ctx.bank), ...proofBlock(o), p('Pregătim coletul imediat ce suma ajunge în cont sau primim dovada plății. Îți scriem când primim plata.'), ...summary, ...addressBlock(o)],
         cta: { label: 'Vezi comanda', url: orderUrl },
       }
     case 'payment_received':
@@ -266,7 +283,8 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
           rows([['Suma', fm(o, o.totalMinor)]]),
           p('Datele pentru transfer sunt pe pagina comenzii.'),
           p(`Scrie ${o.orderNumber} la detaliile plății. Așa potrivim transferul cu comanda.`),
-          p('Ai plătit deja? Ignoră acest mesaj. Îți scriem când primim suma.'),
+          ...proofBlock(o),
+          p('Ai plătit deja și ne-ai trimis dovada? Ignoră acest mesaj.'),
           p('Te-ai răzgândit? Răspunde la acest email și anulăm comanda.'),
         ],
         cta: { label: 'Văd datele de plată', url: orderUrl },
@@ -326,7 +344,7 @@ function bodyEn(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; 
             p(`Write ${o.orderNumber} as the payment reference, so we can match the transfer to your order.`),
           ]
         : [p(`Our team sends you the transfer details separately. Write to ${site.email} if you need them now.`)]
-      return { lead: `Thank you, ${first}. Your order is placed and waiting for payment.`, blocks: [h('Bank transfer details'), ...details, p('We pack your order as soon as the payment arrives and let you know.'), ...summary, ...addressBlock(o)], cta: view }
+      return { lead: `Thank you, ${first}. Your order is placed and waiting for payment.`, blocks: [h('Bank transfer details'), ...details, ...proofBlock(o), p('We pack your order as soon as the payment arrives or we get the proof, and let you know.'), ...summary, ...addressBlock(o)], cta: view }
     }
     case 'payment_received':
       return { lead: `We received the payment for order #${o.orderNumber}. Thank you, ${first}.`, blocks: [p(packing), ...summary], cta: view }
@@ -395,7 +413,8 @@ function bodyEn(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; 
           rows([['Amount', fm(o, o.totalMinor)]]),
           p('The transfer details are on the order page.'),
           p(`Write ${o.orderNumber} as the payment reference, so we can match the transfer to your order.`),
-          p('Already paid? Please ignore this message. We will email you when the payment arrives.'),
+          ...proofBlock(o),
+          p('Already paid and sent us the proof? Please ignore this message.'),
           p('Changed your mind? Reply to this email and we will cancel the order.'),
         ],
         cta: { label: 'See the payment details', url: orderUrl },
