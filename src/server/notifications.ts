@@ -28,6 +28,7 @@ export type NotifyEvent =
   | 'storno_needed'
   | 'job_failed'
   | 'team_confirmed'
+  | 'fulfillment_issue'
 
 export type NotifyContext = { siteUrl: string; parentNumber?: string | null; job?: { id: number; kind: string; status: string; lastError: string | null; template?: string } }
 
@@ -107,6 +108,11 @@ export const NOTIFICATIONS: Record<NotifyEvent, { title: string; action: (o: Ord
     title: 'factura trebuie stornată în FGO',
     action: (o) => `Emite stornarea facturii ${`${o.fgoInvoiceSeries ?? ''} ${o.fgoInvoiceNumber ?? ''}`.trim()} în FGO.`,
     stillTrue: (o) => !!o.fgoInvoiceNumber && !o.fgoStornoNumber,
+  },
+  fulfillment_issue: {
+    title: 'problemă raportată la pregătire',
+    action: (o) => `Depozitul a raportat: „${o.fulfillmentIssue ?? ''}”. Rezolvă și șterge problema din /fulfillment sau din comandă.`,
+    stillTrue: (o) => !!o.fulfillmentIssue && o.status !== 'cancelled',
   },
   team_confirmed: {
     title: 'comanda companiei a fost confirmată',

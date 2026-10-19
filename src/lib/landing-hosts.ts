@@ -141,7 +141,7 @@ export function routeGated(pathname: string, enabled: boolean, unlocked: boolean
   if (!enabled) return { action: 'main', path: product ?? (p === '/acces' ? prefix || '/' : pathname) }
   if (product) return { action: 'redirect', path: product }
   if (p === '/acces') return { action: 'redirect', path: prefix || '/' }
-  if (p === '/admin' || p.startsWith('/admin/') || p.startsWith('/prezentare') || p.startsWith('/lp/')) return { action: 'main', path: pathname }
+  if (p === '/admin' || p.startsWith('/admin/') || p === '/fulfillment' || p.startsWith('/fulfillment/') || p.startsWith('/prezentare') || p.startsWith('/lp/')) return { action: 'main', path: pathname }
   // The business page shows prices: like the cart and the checkout, it needs the unlocked state here.
   if ((p === '/cart' || p === '/checkout' || p === '/pentru-companii' || p === '/for-business') && !unlocked) return { action: 'redirect', path: prefix || '/' }
   return { action: 'site' }

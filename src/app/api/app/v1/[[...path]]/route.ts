@@ -9,6 +9,7 @@ import { orders, isAppFilter } from '@/server/orders/repository'
 import type { Order } from '@/server/orders/model'
 import { clientIp, rateLimit, rateLimited } from '@/server/rate-limit'
 import { buildReport, lifetimeTotals, period } from '@/server/report'
+import { isBulk } from '@/config/promotions'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -68,6 +69,9 @@ function row(o: Order) {
     kind: o.kind,
     site: o.site,
     items: o.items.map((i) => `${i.quantity} × ${i.productName}${i.variantName ? ` (${i.variantName})` : ''}`).join(', '),
+    // Additive (older app builds ignore them): a business order (40% offer) and the team's phone confirmation.
+    bulk: isBulk(o.promotions),
+    teamConfirmation: o.teamConfirmation,
   }
 }
 

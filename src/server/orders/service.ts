@@ -34,7 +34,7 @@ import { ensureOrderLead, markLeadsPurchased } from '@/server/leads'
 import { syncEntitlement } from '@/server/digital/entitlements'
 import { autoEmailJob } from '@/server/digital/delivery'
 
-export type Source = 'checkout' | 'stripe.webhook' | 'stripe.reconcile' | 'upsell' | 'admin' | 'system' | 'assistant'
+export type Source = 'checkout' | 'stripe.webhook' | 'stripe.reconcile' | 'upsell' | 'admin' | 'system' | 'assistant' | 'fulfillment'
 
 
 type PlaceInput = {
@@ -518,6 +518,36 @@ export function confirmByTeam(orderId: string, source: Source, by: string) {
   })
 }
 
+/**
+ * The fulfillment portal's own marks, outside the status flow (the order stays 'processing'): the parcel is packed,
+ * the courier's AWB is noted before pick-up, a problem is reported or cleared. Each is idempotent and recorded in
+ * the order's history; none touches payment, prices or the status.
+ */
+export function markPrepared(orderId: string, source: Source, by: string) {
+  return transition(orderId, source, async (o) => {
+    if (o.status !== 'processing' || !canFulfil(o)) return { skip: `status_${o.status}` }
+    if (o.preparedAt) return { skip: 'already_prepared' }
+    return { patch: { prepared_at: new Date() }, event: 'fulfillment.prepared', data: { by } }
+  })
+}
+
+export function noteAwb(orderId: string, source: Source, by: string, s: { courier: string; trackingNumber: string; trackingUrl?: string }) {
+  return transition(orderId, source, async (o) => {
+    if (o.status !== 'processing' || !canFulfil(o)) return { skip: `status_${o.status}` }
+    if (o.courier === s.courier && o.trackingNumber === s.trackingNumber && (o.trackingUrl ?? '') === (s.trackingUrl ?? '')) return { skip: 'unchanged' }
+    return { patch: { courier: s.courier, tracking_number: s.trackingNumber, tracking_url: s.trackingUrl || null }, event: 'fulfillment.awb_noted', data: { by, courier: s.courier, trackingNumber: s.trackingNumber } }
+  })
+}
+
+export function reportIssue(orderId: string, source: Source, by: string, issue: string | null) {
+  return transition(orderId, source, async (o) => {
+    const text = issue?.trim().slice(0, 500) || null
+    if (text === o.fulfillmentIssue) return { skip: 'unchanged' }
+    if (text && (o.status === 'delivered' || o.status === 'cancelled')) return { skip: `status_${o.status}` }
+    return { patch: { fulfillment_issue: text, fulfillment_issue_at: text ? new Date() : null }, event: text ? 'fulfillment.issue_reported' : 'fulfillment.issue_cleared', data: { by, ...(text && { issue: text }) } }
+  })
+}
+
 export function markProcessing(orderId: string, source: Source) {
   return transition(orderId, source, async (o) => {
     if (!canFulfil(o) || !canMoveOrder(o.status, 'processing')) return { skip: `status_${o.status}` }
@@ -687,6 +717,8 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
         // Cash on delivery: a note if the courier's settlement is still not recorded 10 days later. Nothing automatic.
         ...(o.paymentMethod === 'cash_on_delivery' ? notify('cod_uncollected', inDays(10)) : []),
       ]
+    case 'fulfillment.issue_reported':
+      return notify('fulfillment_issue')
     case 'order.team_confirmed':
       return [...crm(), ...notify('team_confirmed')]
     case 'order.shipped':

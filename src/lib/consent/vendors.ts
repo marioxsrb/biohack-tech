@@ -30,7 +30,7 @@ export type Vendor = {
   purpose: string
 }
 
-const PRIVATE_PAGES = /^\/(en\/)?(checkout|comanda|reluare|dezabonare|retragere|admin)(\/|$)/
+const PRIVATE_PAGES = /^\/(en\/)?(checkout|comanda|reluare|dezabonare|retragere|admin|fulfillment)(\/|$)/
 
 /** The page address without the secret part of private links (order, recovery, unsubscribe), for analytics. */
 export const safeHref = (href: string) => href.replace(/(\/(?:en\/)?(?:comanda|reluare|dezabonare|retragere)\/)[^/?#]+/, '$1token')

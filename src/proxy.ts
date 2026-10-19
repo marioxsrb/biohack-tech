@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { site } from '@/config/site'
 import { ADMIN_COOKIE, checkAdminRequest } from '@/lib/admin-auth'
+import { FULFIL_COOKIE, fulfilAccess } from '@/lib/fulfillment-auth'
 import { DISCONTINUED_PATH, isGatedHostname, isLandingSlug, landingForHost, presentationPath, retiredLandingRedirect, routeGated, routeLanding, wwwRedirect } from '@/lib/landing-hosts'
 import { GATE_COOKIE } from '@/lib/lead'
 import { defaultLocale, splitLocale } from '@/i18n/locales'
@@ -129,7 +130,7 @@ async function storefront(req: NextRequest, pathname: string, search: string) {
   const { locale, path } = splitLocale(pathname)
   if (locale === defaultLocale && pathname !== path) return NextResponse.redirect(new URL(`${path}${search}`, req.url), 308)
   // biohack-tech.net opens in English: Romanian only when chosen in the language switch.
-  if (locale === defaultLocale && isIntlHost(req.headers.get('host')) && req.cookies.get('bt_lang')?.value !== 'ro' && !path.startsWith('/admin')) {
+  if (locale === defaultLocale && isIntlHost(req.headers.get('host')) && req.cookies.get('bt_lang')?.value !== 'ro' && !path.startsWith('/admin') && !path.startsWith('/fulfillment')) {
     return NextResponse.redirect(new URL(`/en${path === '/' ? '' : path}${search}`, req.url), 307)
   }
 
@@ -147,6 +148,21 @@ async function storefront(req: NextRequest, pathname: string, search: string) {
     const login = new URL('/admin/login', req.url)
     login.searchParams.set('next', path)
     return admin(NextResponse.redirect(login, 303))
+  }
+
+  // The fulfillment portal: its own session (or an admin's); the login page is the only page open without one.
+  if (path === '/fulfillment' || path.startsWith('/fulfillment/')) {
+    const actor = await fulfilAccess(req.cookies.get(FULFIL_COOKIE)?.value, req.cookies.get(ADMIN_COOKIE)?.value, req.headers.get('authorization'))
+    const portal = (res: NextResponse) => {
+      res.headers.set('X-Robots-Tag', 'noindex, nofollow')
+      res.headers.set('Cache-Control', 'no-store')
+      return res
+    }
+    if (path === '/fulfillment/login') return portal(actor ? NextResponse.redirect(new URL('/fulfillment', req.url), 303) : serve(req, locale, path, search))
+    if (actor) return portal(serve(req, locale, path, search))
+    const login = new URL('/fulfillment/login', req.url)
+    login.searchParams.set('next', path)
+    return portal(NextResponse.redirect(login, 303))
   }
 
   const res = serve(req, locale, path, search)

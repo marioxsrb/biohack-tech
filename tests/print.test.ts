@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { expect, it } from 'vitest'
 
-const page = readFileSync('src/app/[lang]/(print)/admin/print/page.tsx', 'utf8')
+const page = readFileSync('src/components/print/OrderDocuments.tsx', 'utf8')
 
 it('offers the four documents and prints on A4', () => {
   for (const d of ['pregatire', 'livrare', 'eticheta', 'detalii']) expect(page).toContain(`${d}:`)
@@ -15,7 +15,12 @@ it('the label says it is internal and shows only an AWB entered by a person', ()
   expect(page).not.toMatch(/Math\.random|randomUUID|generateAwb/i)
 })
 
-it('lives under /admin, so the proxy’s admin auth covers it', () => {
-  expect(page).toContain("PageProps<'/[lang]/admin/print'>")
-  expect(readFileSync('src/proxy.ts', 'utf8')).toMatch(/path === '\/admin' \|\| path\.startsWith\('\/admin\/'\)/)
+it('lives under /admin and /fulfillment, so the proxy’s auth covers both; the warehouse copy hides order values', () => {
+  expect(readFileSync('src/app/[lang]/(print)/admin/print/page.tsx', 'utf8')).toContain("PageProps<'/[lang]/admin/print'>")
+  const portal = readFileSync('src/app/[lang]/(print)/fulfillment/print/page.tsx', 'utf8')
+  expect(portal).toContain("PageProps<'/[lang]/fulfillment/print'>")
+  expect(portal).toContain('restricted')
+  const proxy = readFileSync('src/proxy.ts', 'utf8')
+  expect(proxy).toMatch(/path === '\/admin' \|\| path\.startsWith\('\/admin\/'\)/)
+  expect(proxy).toMatch(/path === '\/fulfillment' \|\| path\.startsWith\('\/fulfillment\/'\)/)
 })

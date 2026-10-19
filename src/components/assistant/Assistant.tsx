@@ -27,7 +27,7 @@ const TEASER_KEY = 'bt-chat-teaser'
 const TEASER_START = 'bt-chat-start'
 /** The greeting bubble 30 seconds into the visit (business decision 16.10.2026). */
 const TEASER_AFTER_MS = 30_000
-const HIDDEN = /^(?:\/en)?\/(?:admin|prezentare)(?:\/|$)/
+const HIDDEN = /^(?:\/en)?\/(?:admin|fulfillment|prezentare)(?:\/|$)/
 
 const COPY = {
   ro: {
