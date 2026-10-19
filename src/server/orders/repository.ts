@@ -2,6 +2,7 @@
 import 'server-only'
 import type { Queryable, Row } from '@/server/db'
 import type { Address, Customer, Order, OrderItem } from './model'
+import { BULK_OFFER } from '@/config/promotions'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const date = (v: unknown) => (v ? new Date(v as string) : null)
@@ -119,8 +120,10 @@ export const QUEUES = {
   },
   noi: { label: 'Noi (48 h)', where: `created_at >= now() - interval '48 hours' and status <> 'cancelled' and (payment_method <> 'card' or payment_status in ('paid', 'partially_refunded'))` },
   transfer: { label: 'Așteaptă transferul', where: `payment_status = 'awaiting_transfer' and status <> 'cancelled'` },
-  pregatire: { label: 'Plătite, de pregătit', where: `status in ('confirmed', 'processing') and payment_status in ('paid', 'partially_refunded')` },
-  ramburs: { label: 'Ramburs, de pregătit', where: `status in ('confirmed', 'processing') and payment_status = 'awaiting_collection'` },
+  // A business order waiting for the team's call is not ready for preparation (state.ts canFulfil).
+  companii: { label: 'Companii: de confirmat', where: `team_confirmation = 'awaiting' and status <> 'cancelled'` },
+  pregatire: { label: 'Plătite, de pregătit', where: `status in ('confirmed', 'processing') and payment_status in ('paid', 'partially_refunded') and team_confirmation is distinct from 'awaiting'` },
+  ramburs: { label: 'Ramburs, de pregătit', where: `status in ('confirmed', 'processing') and payment_status = 'awaiting_collection' and team_confirmation is distinct from 'awaiting'` },
   expediate: { label: 'Expediate', where: `status = 'shipped'` },
   incasare: { label: 'Ramburs de încasat', where: `payment_status = 'awaiting_collection' and status in ('shipped', 'delivered')` },
   // A cash-on-delivery parcel that left and came back unpaid (refused or not picked up), cancelled by a person; nothing automatic.
@@ -182,6 +185,12 @@ export const orders = {
   /** Unpaid card attempts of an address still left in `abandoned`, newest first. */
   async abandonedFor(q: Queryable, email: string) {
     const { rows } = await q.query("select * from orders where email = $1 and status = 'abandoned' order by created_at desc", [email])
+    return withItems(q, rows)
+  },
+
+  /** Business orders (the 40% offer), newest first: every order whose promotions include it. */
+  async bulk(q: Queryable, limit = 200) {
+    const { rows } = await q.query(`select * from orders where promotions @> $2::jsonb order by created_at desc limit $1`, [limit, JSON.stringify([{ id: BULK_OFFER.id }])])
     return withItems(q, rows)
   },
 

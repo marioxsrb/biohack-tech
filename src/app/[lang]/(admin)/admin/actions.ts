@@ -25,7 +25,7 @@ import { getConfig } from '@/server/config'
 import { CODE_RE, normalizeCode, promoCodes } from '@/server/promo'
 import { products } from '@/content/catalog'
 import { adminCopyLink, adminSendDigital, adminSetAccess } from '@/server/digital/delivery'
-import { cancelOrder, confirmPayment, markDelivered, markProcessing, markReturnReceived, markReturnRequested, markShipped, recordRefund } from '@/server/orders/service'
+import { cancelOrder, confirmByTeam, confirmPayment, markDelivered, markProcessing, markReturnReceived, markReturnRequested, markShipped, recordRefund } from '@/server/orders/service'
 
 /**
  * Every action verifies the admin credentials itself. Server Actions are HTTP endpoints; the proxy's
@@ -73,6 +73,20 @@ export async function codCollectedAction(f: FormData) {
   if (!confirmed(f) || !Number.isFinite(lei) || lei <= 0 || reference.length < 3) return
   const r = await confirmPayment(id, 'admin', { amountMinor: Math.round(lei * 100), currency: 'RON', reference })
   await done(id, 'cod_collected', r.changed)
+}
+
+/**
+ * A business order (40%, cash on delivery or transfer): the team called the customer and confirms it, so it may be
+ * prepared. Needs the ticked box; recorded in the order's history and in the admin audit.
+ */
+export async function confirmTeamAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id')
+  if (!confirmed(f)) return
+  const r = await confirmByTeam(id, 'admin', 'admin')
+  if (r.changed) await audit(await getDb(), 'admin', 'order.team_confirmed', { orderId: id, orderNumber: r.order?.orderNumber })
+  await done(id, 'team_confirmed', r.changed)
+  revalidatePath('/admin/companii')
 }
 
 export async function processingAction(f: FormData) {

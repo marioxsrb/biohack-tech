@@ -25,6 +25,7 @@ import {
   codCollectedAction,
   deliveredAction,
   markPaidAction,
+  confirmTeamAction,
   processingAction,
   refundAction,
   resyncCrmAction,
@@ -277,6 +278,17 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
         <div className="min-w-0 space-y-5 lg:col-span-5">
           <Panel title="Acțiuni">
             <div className="space-y-4">
+              {o.teamConfirmation === 'awaiting' && o.status !== 'cancelled' && (
+                <form action={confirmTeamAction} className="rounded-[12px] bg-[#fff4d6] p-4">
+                  <input type="hidden" name="id" value={o.id} />
+                  <p className="text-[14px] text-text">
+                    <strong>Comandă companie (40%).</strong> Sună clientul și confirmă cantitățile și livrarea. Până la confirmare comanda nu se pregătește.
+                  </p>
+                  <Confirm text="Am vorbit cu clientul: cantitățile și livrarea sunt confirmate." />
+                  <button className="cta sm mt-3">Confirmă comanda</button>
+                </form>
+              )}
+              {o.teamConfirmation === 'confirmed' && <p className="text-[13.5px] text-muted">Comandă companie confirmată de echipă{o.teamConfirmedAt ? ` la ${dt(o.teamConfirmedAt)}` : ''}.</p>}
               {o.paymentMethod === 'bank_transfer' && o.paymentStatus === 'awaiting_transfer' && o.status !== 'cancelled' && (
                 <form action={markPaidAction} className="rounded-[12px] bg-mist p-4">
                   <input type="hidden" name="id" value={o.id} />
