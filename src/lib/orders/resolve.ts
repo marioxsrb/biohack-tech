@@ -3,7 +3,8 @@
  * Names, variants and prices come from the catalog only. Anything unknown, unpriced or
  * out of range rejects the whole order, so the customer never pays for a cart they didn't see.
  */
-import { lineKey, MAX_QTY } from '@/components/cart/cart-store'
+import { lineKey } from '@/components/cart/cart-store'
+import { maxQtyFor } from '@/lib/purchase'
 import { resolveLine, variantLabel } from '@/content/catalog'
 import { priceLines, type AppliedPromotion } from '@/lib/promotions'
 
@@ -40,12 +41,12 @@ export function resolveOrderLines(raw: unknown): ResolvedOrder {
     const v = typeof variantId === 'string' && variantId ? variantId : undefined
     const r = resolveLine(productId, v)
     const q = Number(quantity)
-    if (!r || r.unit === null || !Number.isInteger(q) || q < 1 || q > MAX_QTY) return { ok: false, reason: 'BAD_LINE' }
+    if (!r || r.unit === null || !Number.isInteger(q) || q < 1 || q > maxQtyFor(r.product.id)) return { ok: false, reason: 'BAD_LINE' }
 
     const key = lineKey({ productId: r.product.id, variantId: r.variant?.id })
     const prev = byKey.get(key)
     const quantityTotal = (prev?.quantity ?? 0) + q
-    if (quantityTotal > MAX_QTY) return { ok: false, reason: 'BAD_LINE' }
+    if (quantityTotal > maxQtyFor(r.product.id)) return { ok: false, reason: 'BAD_LINE' }
     byKey.set(key, {
       key,
       productId: r.product.id,

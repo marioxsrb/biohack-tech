@@ -134,7 +134,10 @@ describe('the item parameter', () => {
     ])
     // A product with variants needs one; a product without variants takes none; quantities are clamped.
     expect(parseItems('?item=brain-flow&item=brain-flow:4-zone&item=ochelari-biohack:nope&item=balance-wave:x&item=nu-exista&item=<script>')).toEqual([])
-    expect(parseItems('?item=brainlink-pro*99')).toEqual([{ productId: 'brainlink-pro', variantId: undefined, quantity: 10, source: 'link' }])
+    // Calm and Focus go up to 100 per line (the business offer); every other product stays at 10.
+    expect(parseItems('?item=brainlink-pro*99')).toEqual([{ productId: 'brainlink-pro', variantId: undefined, quantity: 99, source: 'link' }])
+    expect(parseItems('?item=brainlink-pro*150')[0].quantity).toBe(100)
+    expect(parseItems('?item=ochelari-biohack:cat-eye-negru*99')[0].quantity).toBe(10)
     expect(parseItems('?item=brainlink-pro&item=brainlink-pro')[0].quantity).toBe(2)
   })
 

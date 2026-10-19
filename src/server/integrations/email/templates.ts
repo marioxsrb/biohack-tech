@@ -131,6 +131,12 @@ function addressBlock(o: Order): Block[] {
   return [h('Livrare și facturare'), rows([['Livrare la', `${customerName(o.customer)}, ${formatAddress(o.shippingAddress)}`], ['Facturare', billing], ['Telefon', o.phone]])]
 }
 
+/** A business order paid at the door or by transfer: a colleague calls before anything is packed. */
+function teamBlock(o: Order): Block[] {
+  if (o.teamConfirmation !== 'awaiting') return []
+  return [p(en(o) ? 'A BiohackTech colleague will contact you to confirm the order and the delivery details.' : 'Un coleg BiohackTech vă va contacta pentru confirmarea comenzii și a detaliilor de livrare.')]
+}
+
 /** A highlighted WhatsApp button for the proof of payment (bank transfers): the message is written, the customer attaches the proof. */
 function proofBlock(o: Order): Block[] {
   const href = paymentProofHref(o.orderNumber, fm(o, o.totalMinor), en(o) ? 'en' : 'ro')
@@ -183,6 +189,18 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
         cta: { label: 'Vezi comanda', url: orderUrl },
       }
     case 'cod_confirmed':
+      if (o.teamConfirmation === 'awaiting')
+        return {
+          lead: `Mulțumim, ${first}. Comanda dumneavoastră a fost înregistrată!`,
+          blocks: [
+            p('Un coleg BiohackTech vă va contacta pentru confirmarea comenzii și a detaliilor de livrare.'),
+            rows([['De plătit la livrare', fm(o, o.codAmountMinor ?? o.totalMinor)]]),
+            p('Plătiți curierului când primiți coletul. Nu plătiți nimic acum. Pregătim coletul după confirmarea telefonică.'),
+            ...summary,
+            ...addressBlock(o),
+          ],
+          cta: { label: 'Vezi comanda', url: orderUrl },
+        }
       return {
         lead: `Mulțumim, ${first}. Comanda ta este confirmată.`,
         blocks: [
@@ -197,7 +215,7 @@ function body(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; bl
     case 'transfer_instructions':
       return {
         lead: `Mulțumim, ${first}. Comanda ta este înregistrată și așteaptă plata.`,
-        blocks: [...proofBlock(o), h('Datele pentru transfer'), ...bankBlock(o, ctx.bank), p('Pregătim coletul imediat ce suma ajunge în cont sau primim dovada plății. Îți scriem când primim plata.'), ...summary, ...addressBlock(o)],
+        blocks: [...teamBlock(o), ...proofBlock(o), h('Datele pentru transfer'), ...bankBlock(o, ctx.bank), p('Pregătim coletul imediat ce suma ajunge în cont sau primim dovada plății. Îți scriem când primim plata.'), ...summary, ...addressBlock(o)],
         cta: { label: 'Vezi comanda', url: orderUrl },
       }
     case 'payment_received':
@@ -324,6 +342,12 @@ function bodyEn(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; 
     case 'order_confirmed':
       return { lead: `Thank you, ${first}. Your payment is confirmed and your order is placed.`, blocks: [p(packing), ...summary, ...addressBlock(o)], cta: view }
     case 'cod_confirmed':
+      if (o.teamConfirmation === 'awaiting')
+        return {
+          lead: `Thank you, ${first}. Your order has been placed!`,
+          blocks: [...teamBlock(o), rows([['To pay on delivery', fm(o, o.codAmountMinor ?? o.totalMinor)]]), p('You pay the courier when the parcel arrives. Nothing to pay now.'), ...summary, ...addressBlock(o)],
+          cta: view,
+        }
       return {
         lead: `Thank you, ${first}. Your order is confirmed.`,
         blocks: [rows([['To pay on delivery', fm(o, o.codAmountMinor ?? o.totalMinor)]]), p('You pay the courier when the parcel arrives. Nothing to pay now.'), p(packing), ...summary, ...addressBlock(o)],
@@ -344,7 +368,7 @@ function bodyEn(t: EmailTemplate, o: Order, ctx: EmailContext): { lead: string; 
             p(`Write ${o.orderNumber} as the payment reference, so we can match the transfer to your order.`),
           ]
         : [p(`Our team sends you the transfer details separately. Write to ${site.email} if you need them now.`)]
-      return { lead: `Thank you, ${first}. Your order is placed and waiting for payment.`, blocks: [...proofBlock(o), h('Bank transfer details'), ...details, p('We pack your order as soon as the payment arrives or we get the proof, and let you know.'), ...summary, ...addressBlock(o)], cta: view }
+      return { lead: `Thank you, ${first}. Your order is placed and waiting for payment.`, blocks: [...teamBlock(o), ...proofBlock(o), h('Bank transfer details'), ...details, p('We pack your order as soon as the payment arrives or we get the proof, and let you know.'), ...summary, ...addressBlock(o)], cta: view }
     }
     case 'payment_received':
       return { lead: `We received the payment for order #${o.orderNumber}. Thank you, ${first}.`, blocks: [p(packing), ...summary], cta: view }

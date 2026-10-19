@@ -166,8 +166,21 @@ export type Order = {
   /** Parent orders: the post-purchase offer's state and deadline. */
   upsellStatus: UpsellStatus | null
   upsellExpiresAt: Date | null
+  /**
+   * Business orders paid by cash on delivery or transfer: 'awaiting' until a person confirms them by phone, then
+   * 'confirmed'. null for every other order (no confirmation needed). Preparation waits for it (state.ts canFulfil).
+   */
+  teamConfirmation: TeamConfirmation | null
+  teamConfirmedAt: Date | null
+  teamConfirmedBy: string | null
+  /** Fulfillment portal: the parcel is packed (still 'processing'), and a problem reported by the warehouse. */
+  preparedAt: Date | null
+  fulfillmentIssue: string | null
+  fulfillmentIssueAt: Date | null
   items: OrderItem[]
 }
+
+export type TeamConfirmation = 'awaiting' | 'confirmed'
 
 export type RecoveryStatus = 'eligible' | 'ineligible'
 

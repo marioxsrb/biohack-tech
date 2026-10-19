@@ -67,6 +67,12 @@ function toOrder(r: Row, items: OrderItem[]): Order {
     stripePaymentMethodId: (r.stripe_payment_method_id as string) ?? null,
     upsellStatus: (r.upsell_status as Order['upsellStatus']) ?? null,
     upsellExpiresAt: date(r.upsell_expires_at),
+    teamConfirmation: (r.team_confirmation as Order['teamConfirmation']) ?? null,
+    teamConfirmedAt: date(r.team_confirmed_at),
+    teamConfirmedBy: (r.team_confirmed_by as string) ?? null,
+    preparedAt: date(r.prepared_at),
+    fulfillmentIssue: (r.fulfillment_issue as string) ?? null,
+    fulfillmentIssueAt: date(r.fulfillment_issue_at),
     items,
   }
 }
@@ -227,7 +233,7 @@ export const orders = {
 
   async insert(
     q: Queryable,
-    o: Omit<Order, 'createdAt' | 'updatedAt' | 'refundedMinor' | 'paidAt' | 'cancelledAt' | 'cancelReason' | 'refundedAt' | 'fgoInvoiceSeries' | 'fgoInvoiceNumber' | 'fgoInvoiceLink' | 'fgoStornoNumber' | 'ghlContactId' | 'ghlOpportunityId' | 'courier' | 'trackingNumber' | 'trackingUrl' | 'shippedAt' | 'deliveredAt' | 'stripePaymentIntentId' | 'recoveryStatus' | 'recoveryReason' | 'recoveryToken' | 'recoveryExpiresAt' | 'returnStatus' | 'returnRequestedAt' | 'returnReceivedAt' | 'stripeCustomerId' | 'stripePaymentMethodId' | 'upsellStatus' | 'upsellExpiresAt' | 'codAmountMinor' | 'codReference'>,
+    o: Omit<Order, 'createdAt' | 'updatedAt' | 'refundedMinor' | 'paidAt' | 'cancelledAt' | 'cancelReason' | 'refundedAt' | 'fgoInvoiceSeries' | 'fgoInvoiceNumber' | 'fgoInvoiceLink' | 'fgoStornoNumber' | 'ghlContactId' | 'ghlOpportunityId' | 'courier' | 'trackingNumber' | 'trackingUrl' | 'shippedAt' | 'deliveredAt' | 'stripePaymentIntentId' | 'recoveryStatus' | 'recoveryReason' | 'recoveryToken' | 'recoveryExpiresAt' | 'returnStatus' | 'returnRequestedAt' | 'returnReceivedAt' | 'stripeCustomerId' | 'stripePaymentMethodId' | 'upsellStatus' | 'upsellExpiresAt' | 'codAmountMinor' | 'codReference' | 'teamConfirmation' | 'teamConfirmedAt' | 'teamConfirmedBy' | 'preparedAt' | 'fulfillmentIssue' | 'fulfillmentIssueAt'>,
     idempotencyKey: string,
     termsAcceptedAt: Date,
   ) {

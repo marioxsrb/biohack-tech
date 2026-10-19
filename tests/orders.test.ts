@@ -50,8 +50,11 @@ describe('resolveOrderLines (server side)', () => {
     [[{ productId: 'ochelari-biohack', variantId: 'cat-eye-maro', quantity: 1 }]],
     [[{ productId: 'brainlink-pro', quantity: 0 }]],
     [[{ productId: 'brainlink-pro', quantity: 1.5 }]],
-    [[{ productId: 'brainlink-pro', quantity: 11 }]],
-    [[{ productId: 'brainlink-pro', quantity: 6 }, { productId: 'brainlink-pro', quantity: 6 }]],
+    // Calm and Focus go up to 100 per line (business offer); every other product stays at 10.
+    [[{ productId: 'brainlink-pro', quantity: 101 }]],
+    [[{ productId: 'brainlink-pro', quantity: 60 }, { productId: 'brainlink-pro', quantity: 60 }]],
+    [[{ productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 11 }]],
+    [[{ productId: 'carte-diana', quantity: 6 }, { productId: 'carte-diana', quantity: 6 }]],
     [Array.from({ length: 21 }, () => ({ productId: 'brainlink-pro', quantity: 1 }))],
   ])('rejects an unknown, unpriced or out-of-range line (%#)', (lines) => {
     expect(resolveOrderLines(lines)).toEqual({ ok: false, reason: 'BAD_LINE' })

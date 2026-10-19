@@ -20,6 +20,7 @@ import type { Attribution } from '@/lib/attribution'
 import { lineRef } from '@/content/catalog'
 import type { OrderForm } from '@/lib/checkout'
 import { priceLines, type PromoCodeRule } from '@/lib/promotions'
+import { isBulk } from '@/config/promotions'
 import { shippingFor } from '@/lib/shipping'
 import { normalizeCode, promoCodes, ruleOf, type PromoProblem } from '@/server/promo'
 import { upsellsFor } from '@/lib/upsell'
@@ -159,6 +160,8 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
       )
       // What the courier has to collect, kept on the order for the parcel (fulfillment/courier.ts).
       if (cod) await orders.update(t, id, { cod_amount_minor: subtotal - discount + shipping })
+      // A business order paid at the door or by transfer is called and confirmed by a person before preparation.
+      if (isBulk(pricing.promotions) && method !== 'card') await orders.update(t, id, { team_confirmation: 'awaiting' })
       await orders.event(t, id, 'order.created', 'checkout', {
         method,
         total: subtotal - discount + shipping,
@@ -503,6 +506,18 @@ export function expireUnpaidTransfer(orderId: string) {
   })
 }
 
+/**
+ * A person called the business customer and confirmed the order (quantities, delivery). Only an order waiting for
+ * it; idempotent (a second click changes nothing). Payment and order status are untouched.
+ */
+export function confirmByTeam(orderId: string, source: Source, by: string) {
+  return transition(orderId, source, async (o) => {
+    if (o.teamConfirmation !== 'awaiting') return { skip: `team_${o.teamConfirmation ?? 'none'}` }
+    if (o.status === 'cancelled') return { skip: 'status_cancelled' }
+    return { patch: { team_confirmation: 'confirmed', team_confirmed_at: new Date(), team_confirmed_by: by.slice(0, 100) }, event: 'order.team_confirmed', data: { by: by.slice(0, 100) } }
+  })
+}
+
 export function markProcessing(orderId: string, source: Source) {
   return transition(orderId, source, async (o) => {
     if (!canFulfil(o) || !canMoveOrder(o.status, 'processing')) return { skip: `status_${o.status}` }
@@ -672,6 +687,8 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
         // Cash on delivery: a note if the courier's settlement is still not recorded 10 days later. Nothing automatic.
         ...(o.paymentMethod === 'cash_on_delivery' ? notify('cod_uncollected', inDays(10)) : []),
       ]
+    case 'order.team_confirmed':
+      return [...crm(), ...notify('team_confirmed')]
     case 'order.shipped':
       return [
         ...crm(),

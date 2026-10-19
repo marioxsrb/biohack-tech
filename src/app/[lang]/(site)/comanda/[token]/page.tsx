@@ -38,6 +38,8 @@ const COPY = {
     codTitle: 'Plata la livrare (ramburs)',
     codText: (email: string) => `Plătești curierului când primești coletul. Nu ai nimic de plătit acum. Ți-am trimis confirmarea pe ${email}.`,
     packing: ` Pregătim coletul în ${terms.processingDays}.`,
+    teamTitle: 'Comanda dumneavoastră a fost înregistrată!',
+    teamText: 'Un coleg BiohackTech vă va contacta pentru confirmarea comenzii și a detaliilor de livrare.',
     transferWait: 'Comanda este înregistrată și așteaptă plata. O pregătim imediat ce suma ajunge în cont sau ne trimiți dovada plății pe WhatsApp.',
     stripeWait: 'Stripe confirmă plata în câteva secunde. Pagina se actualizează singură.',
     failed: (cod: boolean, ro: boolean) => `Nu s-a efectuat nicio plată. Produsele sunt tot în coș și poți încerca din nou${ro ? `, cu cardul${cod ? ', cu plata la livrare' : ''} sau prin transfer bancar` : ''}.`,
@@ -87,6 +89,8 @@ const COPY = {
     codTitle: 'Cash on delivery',
     codText: (email: string) => `You pay the courier when the parcel arrives. Nothing to pay now. We sent the confirmation to ${email}.`,
     packing: ' We pack your order within 1-3 days.',
+    teamTitle: 'Your order has been placed!',
+    teamText: 'A BiohackTech colleague will contact you to confirm the order and the delivery details.',
     transferWait: 'Your order is placed and waiting for payment. We pack it as soon as the payment arrives or you send us the proof on WhatsApp.',
     stripeWait: 'Stripe confirms the payment within a few seconds. This page updates by itself.',
     failed: (cod: boolean, ro: boolean) => `No payment was taken. Your products are still in the cart and you can try again${ro ? `, by card${cod ? ', cash on delivery' : ''} or bank transfer` : ''}.`,
@@ -155,6 +159,8 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
 
   // Cash on delivery: confirmed when placed; the customer pays the courier.
   const cod = awaitsCollection(order) && order.status !== 'cancelled'
+  // A business order paid at the door or by transfer: a colleague calls to confirm before anything is packed.
+  const teamWait = order.teamConfirmation === 'awaiting' && order.status !== 'cancelled'
   const placed = paid || transfer || cod
   // The offer exists only for a card payment Stripe already confirmed (never from URL parameters).
   const db = await getDb()
@@ -189,8 +195,9 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
         )}
         <p className="mt-6 text-[15px] font-medium text-cyan-700">{t.order} #{order.orderNumber}</p>
         <h1 className="mt-1 text-[clamp(30px,3.6vw,42px)] leading-tight tracking-[-0.035em]">
-          {order.status === 'cancelled' ? t.cancelled : paid || cod ? t.confirmed : placed ? t.thanks : cardPending ? t.checking : t.notPaid}
+          {order.status === 'cancelled' ? t.cancelled : teamWait ? t.teamTitle : paid || cod ? t.confirmed : placed ? t.thanks : cardPending ? t.checking : t.notPaid}
         </h1>
+        {teamWait && <p className="sub mt-4">{t.teamText}</p>}
 
         {paid && order.status !== 'cancelled' && (
           <p className="sub mt-4">
@@ -221,7 +228,7 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
             <p className="mt-1 text-[28px] font-medium tracking-[-0.02em] text-ink tabular-nums">{money(order.codAmountMinor ?? order.totalMinor)}</p>
             <p className="mt-2 text-[15.5px] leading-relaxed text-text">
               {t.codText(order.email)}
-              {order.status === 'shipped' || order.status === 'delivered' ? '' : t.packing}
+              {order.status === 'shipped' || order.status === 'delivered' || teamWait ? '' : t.packing}
             </p>
           </div>
         )}

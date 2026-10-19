@@ -1,14 +1,17 @@
 'use client'
 
-import { promoText } from '@/config/promotions'
+import { isBulk, promoText } from '@/config/promotions'
 import { useLocale } from '@/i18n/LocaleProvider'
 import type { Pricing } from '@/lib/promotions'
 import { useMoney } from '@/i18n/currency'
 
 const COPY = {
-  ro: { delivery: 'Livrare', free: 'Gratuită' },
-  en: { delivery: 'Delivery', free: 'Free' },
+  ro: { delivery: 'Livrare', free: 'Gratuită', original: 'Subtotal inițial', after: 'Subtotal după reducere', vat: 'din care TVA 21%' },
+  en: { delivery: 'Delivery', free: 'Free', original: 'Original subtotal', after: 'Subtotal after discount', vat: 'of which VAT 21%' },
 }
+
+/** The VAT inside a VAT-inclusive amount at 21% (same rate as the invoices), whole bani. */
+const vatIn = (minor: number) => minor - Math.round(minor / 1.21)
 
 /**
  * Subtotal, each promotion with its amount, shipping and total (in the visitor's currency). Same rows in the cart and
@@ -18,10 +21,12 @@ export function Totals({ pricing, shippingMinor = 0, totalClassName = 'text-[26p
   const locale = useLocale()
   const t = COPY[locale]
   const { fmt } = useMoney()
+  // A business order spells everything out: the original subtotal, the 40%, what is left, delivery and the VAT.
+  const bulk = isBulk(pricing.promotions)
   return (
     <dl className="space-y-2 text-[15.5px]">
       <div className="flex justify-between">
-        <dt className="text-muted">Subtotal</dt>
+        <dt className="text-muted">{bulk ? t.original : 'Subtotal'}</dt>
         <dd data-price className="text-ink tabular-nums">{fmt(pricing.subtotalMinor)}</dd>
       </div>
       {pricing.promotions.map((p) => (
@@ -30,6 +35,12 @@ export function Totals({ pricing, shippingMinor = 0, totalClassName = 'text-[26p
           <dd data-price className="tabular-nums whitespace-nowrap">−{fmt(p.amountMinor)}</dd>
         </div>
       ))}
+      {bulk && (
+        <div className="flex justify-between">
+          <dt className="text-muted">{t.after}</dt>
+          <dd data-price className="text-ink tabular-nums">{fmt(pricing.totalMinor)}</dd>
+        </div>
+      )}
       <div className="flex justify-between">
         <dt className="text-muted">{t.delivery}</dt>
         {shippingMinor > 0 ? (
@@ -42,6 +53,12 @@ export function Totals({ pricing, shippingMinor = 0, totalClassName = 'text-[26p
         <dt className="font-medium text-ink">Total</dt>
         <dd data-price className={`${totalClassName} font-medium tracking-[-0.02em] text-ink tabular-nums`}>{fmt(pricing.totalMinor + shippingMinor)}</dd>
       </div>
+      {bulk && (
+        <div className="flex justify-between text-[14px]">
+          <dt className="text-muted">{t.vat}</dt>
+          <dd data-price className="text-muted tabular-nums">{fmt(vatIn(pricing.totalMinor + shippingMinor))}</dd>
+        </div>
+      )}
     </dl>
   )
 }

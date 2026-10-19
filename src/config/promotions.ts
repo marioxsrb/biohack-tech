@@ -72,6 +72,25 @@ export const PROMOTIONS: Promotion[] = [
 ]
 
 /**
+ * The business (bulk) offer, decided 19.10.2026: from 25 units of NEUROS Calm and NEUROS Focus together (any mix),
+ * 40% off every Calm and Focus unit. NEUROS Amber and the book never count towards the 25 and keep their own price
+ * (Amber keeps its 2+1). It replaces the quantity discount on Calm and Focus and never adds up with a promo code:
+ * the cart gets whichever saves more (lib/promotions.ts). Shown on /pentru-companii; applied to every cart.
+ */
+export type BulkOffer = { id: string; label: string; products: ProductId[]; minUnits: number; percent: number }
+
+export const BULK_OFFER: BulkOffer = {
+  id: 'companii-40',
+  label: 'Reducere pentru companii (40%)',
+  products: ['balance-wave', 'brainlink-pro'],
+  minUnits: 25,
+  percent: 40,
+}
+
+/** Whether an order's applied promotions include the business offer. */
+export const isBulk = (promotions: { id: string }[] | null | undefined) => !!promotions?.some((p) => p.id === BULK_OFFER.id)
+
+/**
  * English for the /en site. Orders keep the Romanian labels above; these only change what a visitor reads.
  * Keyed by the Romanian label, so a label taken from a computed price (a tier) translates too.
  */
@@ -84,6 +103,7 @@ const EN: Record<string, string> = {
   'NEUROS Amber 2+1 gratis': 'NEUROS Amber 3 for 2',
   '2+1 gratis': '3 for 2',
   'La fiecare 3 perechi NEUROS Amber, una este gratuită. Poți combina ramele.': 'In every 3 pairs of NEUROS Amber, one is free. You can mix the frames.',
+  'Reducere pentru companii (40%)': 'Business discount (40%)',
 }
 
 /** A promotion text (label, badge, line, tier label) in the visitor's language. */

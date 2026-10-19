@@ -10,7 +10,7 @@
  * applied under its own id (`trei-produse-20:balance-wave`), so 3 Calm + 2 Focus is 20% on the Calm
  * lines and 10% on the Focus lines, and an invoice line names the discount that lowered it.
  */
-import { PROMOTIONS, type BundlePercent, type BundleTier, type Promotion } from '@/config/promotions'
+import { BULK_OFFER, PROMOTIONS, type BulkOffer, type BundlePercent, type BundleTier, type Promotion } from '@/config/promotions'
 import { getProduct } from '@/content/catalog'
 
 export type PricedLine = { key: string; productId: string; quantity: number; unitAmount: number }
@@ -130,11 +130,51 @@ function applyOne(p: Promotion, lines: PricedLine[]): Applied[] {
   return [{ id: p.id, amount, own, perLine: allocate(amount, own.map((l) => l.unitAmount * l.quantity)), label: p.label }]
 }
 
-export function priceLines(lines: PricedLine[], promotions: Promotion[] = PROMOTIONS, promo?: PromoCodeRule | null): Pricing {
+/** Calm and Focus units in the cart: what counts towards the business offer (Amber and the book never do). */
+export const bulkUnits = (lines: Pick<PricedLine, 'productId' | 'quantity'>[], bulk: BulkOffer = BULK_OFFER) =>
+  lines.filter((l) => (bulk.products as string[]).includes(l.productId)).reduce((n, l) => n + l.quantity, 0)
+
+/**
+ * The cart with the business offer: 40% off every eligible line (instead of their quantity discount), the other
+ * products priced as usual (Amber keeps its 2+1). No promo code: the caller compares with the code alone.
+ */
+function withBulk(lines: PricedLine[], promotions: Promotion[], bulk: BulkOffer): Pricing {
+  const eligible = (id: string) => (bulk.products as string[]).includes(id)
+  // The quantity discount no longer sees Calm and Focus; promotions on other products are untouched.
+  const rest = promotions
+    .map((p) => (p.kind === 'bundle_percent' ? { ...p, products: p.products.filter((id) => !eligible(id)) } : p))
+    .filter((p) => p.products.length > 0)
+  const base = priceLines(lines, rest, null, null)
+  const own = lines.filter((l) => eligible(l.productId))
+  const full = own.map((l) => l.unitAmount * l.quantity)
+  const amount = percentOf(full.reduce((s, x) => s + x, 0), bulk.percent)
+  const parts = allocate(amount, full)
+  const lineDiscounts = { ...base.lineDiscounts }
+  const linePromotion = { ...base.linePromotion }
+  own.forEach((l, i) => {
+    if (!parts[i]) return
+    lineDiscounts[l.key] = (lineDiscounts[l.key] ?? 0) + parts[i]
+    linePromotion[l.key] = bulk.id
+  })
+  const promotionsApplied = [{ id: bulk.id, label: bulk.label, amountMinor: amount }, ...base.promotions]
+  const discountMinor = base.discountMinor + amount
+  return { ...base, discountMinor, totalMinor: base.subtotalMinor - discountMinor, promotions: promotionsApplied, lineDiscounts, linePromotion }
+}
+
+export function priceLines(lines: PricedLine[], promotions: Promotion[] = PROMOTIONS, promo?: PromoCodeRule | null, bulk: BulkOffer | null = BULK_OFFER): Pricing {
+  if (bulk && bulkUnits(lines, bulk) >= bulk.minUnits) {
+    // The business offer never adds up with a code or the quantity discount: the better of the business offer and
+    // the code alone on the full price applies (a code that saves no more is refused, as for the AI call codes).
+    const b = withBulk(lines, promotions, bulk)
+    if (!promo) return b
+    const alone = priceLines(lines, [], { ...promo, exclusive: false }, null)
+    if (alone.code?.problem) return { ...b, code: alone.code }
+    return alone.discountMinor > b.discountMinor ? alone : { ...b, code: { code: promo.code, amountMinor: 0, problem: 'not_better' } }
+  }
   if (promo?.exclusive) {
     // The better of the two, never both: the promotions alone, or the code alone on the full price.
-    const auto = priceLines(lines, promotions)
-    const alone = priceLines(lines, [], { ...promo, exclusive: false })
+    const auto = priceLines(lines, promotions, null, bulk)
+    const alone = priceLines(lines, [], { ...promo, exclusive: false }, null)
     if (alone.code?.problem) return { ...auto, code: alone.code }
     return alone.discountMinor > auto.discountMinor ? alone : { ...auto, code: { code: promo.code, amountMinor: 0, problem: 'not_better' } }
   }
@@ -207,8 +247,11 @@ export type PromotionHint = { id: string; text: string }
  */
 export function promotionHints(lines: Pick<PricedLine, 'productId' | 'quantity'>[], promotions: Promotion[] = PROMOTIONS): PromotionHint[] {
   const hints: PromotionHint[] = []
+  // With the business offer, Calm and Focus already have 40%: no hint about the quantity discount.
+  const bulkOn = bulkUnits(lines) >= BULK_OFFER.minUnits
   for (const p of promotions) {
     if (p.kind === 'bundle_percent') {
+      if (bulkOn) continue
       for (const g of groups(p, lines.map((l, i) => ({ ...l, key: String(i), unitAmount: 0 })))) {
         const next = nextTier(p, g.units)
         if (!next) continue
@@ -267,8 +310,11 @@ export type PromotionProgress = {
 export function promotionProgress(lines: PricedLine[], promotions: Promotion[] = PROMOTIONS): PromotionProgress[] {
   const pricing = priceLines(lines, promotions)
   const out: PromotionProgress[] = []
+  const bulkOn = bulkUnits(lines) >= BULK_OFFER.minUnits
   for (const p of promotions) {
     const bundle = p.kind === 'bundle_percent'
+    // The business offer replaces the quantity discount on Calm and Focus: no progress towards it.
+    if (bundle && bulkOn) continue
     // One entry per product for the per-product discount, one for the whole promotion otherwise.
     const parts = bundle
       ? groups(p, lines).map((g) => ({ id: groupId(p.id, g.productId), productId: g.productId, products: [g.productId], units: g.units }))

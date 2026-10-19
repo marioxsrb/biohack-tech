@@ -1,5 +1,6 @@
 'use client'
 
+import { maxQtyFor } from '@/lib/purchase'
 import Link from '@/components/ui/Link'
 import { useSearchParams } from 'next/navigation'
 import { cloneElement, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactElement, type ReactNode } from 'react'
@@ -921,7 +922,7 @@ function SummaryLine({ line: l }: { line: ResolvedLine }) {
         <span className="block text-muted">{l.variantLabel ?? l.product.purpose}</span>
         {l.quantity > 1 && <span className="block text-[13px] text-muted">{money.fmt(l.unit)} / {t.perUnit}</span>}
         <span className="mt-2 flex items-center gap-2">
-          <QuantityStepper size="sm" value={l.quantity} onChange={(q) => setQuantity(l.key, q)} label={t.quantityOf(l.product.name)} />
+          <QuantityStepper size="sm" max={maxQtyFor(l.product.id)} value={l.quantity} onChange={(q) => setQuantity(l.key, q)} label={t.quantityOf(l.product.name)} />
           <button
             type="button"
             onClick={() => remove(l.key)}

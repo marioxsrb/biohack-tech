@@ -11,6 +11,13 @@
 import { resolveLine, type ProductId } from '@/content/catalog'
 
 export const MAX_QTY = 10
+/**
+ * Calm and Focus may be ordered by the hundred for the business offer (25+ units, /pentru-companii); every other
+ * product keeps MAX_QTY per line. The server applies the same limits (lib/orders/resolve.ts).
+ */
+export const BULK_MAX_QTY = 100
+export const maxQtyFor = (productId: string) => (BULK_PRODUCT_IDS.includes(productId) ? BULK_MAX_QTY : MAX_QTY)
+const BULK_PRODUCT_IDS: string[] = ['balance-wave', 'brainlink-pro']
 
 /**
  * The surface where a cart line was first added. Stored with the line (first touch wins) and sent
@@ -47,11 +54,11 @@ export function sourceForPath(pathname: string): EntrySource {
   return 'link'
 }
 
-const clampQty = (n: number) => Math.min(MAX_QTY, Math.max(1, Math.floor(n) || 1))
+const clampQty = (n: number, productId = '') => Math.min(maxQtyFor(productId), Math.max(1, Math.floor(n) || 1))
 
 /** `ochelari-biohack:cat-eye-negru*3`, `balance-wave`. A product that is not in the catalog is dropped. */
 export function encodeItem(s: { productId: string; variantId?: string; quantity?: number }): string {
-  const q = clampQty(s.quantity ?? 1)
+  const q = clampQty(s.quantity ?? 1, s.productId)
   return `${s.productId}${s.variantId ? `:${s.variantId}` : ''}${q > 1 ? `*${q}` : ''}`
 }
 
@@ -63,13 +70,13 @@ export function parseItems(search: string | URLSearchParams, source: EntrySource
   const params = typeof search === 'string' ? new URLSearchParams(search) : search
   const out = new Map<string, Selection>()
   for (const raw of params.getAll('item')) {
-    const m = /^([\w-]{1,64})(?::([\w-]{1,64}))?(?:\*(\d{1,2}))?$/.exec(raw.trim())
+    const m = /^([\w-]{1,64})(?::([\w-]{1,64}))?(?:\*(\d{1,3}))?$/.exec(raw.trim())
     if (!m) continue
     const r = resolveLine(m[1], m[2])
     if (!r || r.unit === null) continue
     const key = `${r.product.id}:${r.variant?.id ?? ''}`
     const prev = out.get(key)
-    out.set(key, { productId: r.product.id, variantId: r.variant?.id, quantity: clampQty((prev?.quantity ?? 0) + Number(m[3] ?? 1)), source })
+    out.set(key, { productId: r.product.id, variantId: r.variant?.id, quantity: clampQty((prev?.quantity ?? 0) + Number(m[3] ?? 1), r.product.id), source })
   }
   return [...out.values()]
 }

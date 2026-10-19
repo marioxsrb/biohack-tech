@@ -5,7 +5,7 @@
  * products without an approved price, bad quantities and duplicates are dropped or fixed.
  */
 import { resolveLine, type ProductId } from '@/content/catalog'
-import { MAX_QTY, isEntrySource, type EntrySource } from '@/lib/purchase'
+import { MAX_QTY, isEntrySource, maxQtyFor, type EntrySource } from '@/lib/purchase'
 
 /** `source`: where the line was first added (first touch wins); see `lib/purchase.ts`. */
 export type CartLine = { productId: ProductId; variantId?: string; quantity: number; source?: EntrySource }
@@ -30,11 +30,11 @@ export function sanitize(raw: unknown): CartLine[] {
     const v = typeof variantId === 'string' ? variantId : undefined
     const r = resolveLine(productId, v)
     if (!r || r.unit === null) continue
-    const q = Math.min(MAX_QTY, Math.max(1, Math.floor(Number(quantity) || 1)))
+    const q = Math.min(maxQtyFor(r.product.id), Math.max(1, Math.floor(Number(quantity) || 1)))
     const key = lineKey({ productId: r.product.id, variantId: v })
     const prev = byKey.get(key)
     const src = prev?.source ?? (isEntrySource(source) ? source : undefined)
-    byKey.set(key, { productId: r.product.id, variantId: v, quantity: Math.min(MAX_QTY, (prev?.quantity ?? 0) + q), ...(src && { source: src }) })
+    byKey.set(key, { productId: r.product.id, variantId: v, quantity: Math.min(maxQtyFor(r.product.id), (prev?.quantity ?? 0) + q), ...(src && { source: src }) })
   }
   return [...byKey.values()]
 }
@@ -90,8 +90,8 @@ export const cartStore = {
     const existing = current.find((l) => lineKey(l) === key)
     commit(
       existing
-        ? current.map((l) => (l === existing ? { ...l, quantity: Math.min(MAX_QTY, l.quantity + quantity) } : l))
-        : [...current, { productId, variantId, quantity: Math.min(MAX_QTY, quantity), ...(source && { source }) }],
+        ? current.map((l) => (l === existing ? { ...l, quantity: Math.min(maxQtyFor(productId), l.quantity + quantity) } : l))
+        : [...current, { productId, variantId, quantity: Math.min(maxQtyFor(productId), quantity), ...(source && { source }) }],
     )
   },
   /**
@@ -106,14 +106,13 @@ export const cartStore = {
     for (const l of want) {
       const i = next.findIndex((x) => lineKey(x) === lineKey(l))
       if (i === -1) next.push(l)
-      else next[i] = { ...next[i], quantity: Math.min(MAX_QTY, next[i].quantity + l.quantity) }
+      else next[i] = { ...next[i], quantity: Math.min(maxQtyFor(l.productId), next[i].quantity + l.quantity) }
     }
     commit(next)
     return true
   },
   setQuantity(key: string, quantity: number) {
-    const q = Math.min(MAX_QTY, Math.max(1, Math.floor(quantity)))
-    commit(cartStore.getSnapshot().map((l) => (lineKey(l) === key ? { ...l, quantity: q } : l)))
+    commit(cartStore.getSnapshot().map((l) => (lineKey(l) === key ? { ...l, quantity: Math.min(maxQtyFor(l.productId), Math.max(1, Math.floor(quantity))) } : l)))
   },
   remove(key: string) {
     commit(cartStore.getSnapshot().filter((l) => lineKey(l) !== key))

@@ -1,5 +1,6 @@
 'use client'
 
+import { maxQtyFor } from '@/lib/purchase'
 import Link from '@/components/ui/Link'
 import { CarryLink } from '@/components/cart/CarryLink'
 import { LineBundle } from '@/components/cart/LineBundle'
@@ -115,7 +116,7 @@ export function CartView() {
                   <p data-price className="flex-none text-[17px] font-medium text-ink tabular-nums">{fmt(l.unit * l.quantity)}</p>
                 </div>
                 <div className="mt-4 flex items-center justify-between gap-3 max-sm:mt-2.5">
-                  <QuantityStepper size="sm" value={l.quantity} onChange={(q) => setQuantity(l.key, q)} label={t.quantity(l.product.name)} />
+                  <QuantityStepper size="sm" max={maxQtyFor(l.product.id)} value={l.quantity} onChange={(q) => setQuantity(l.key, q)} label={t.quantity(l.product.name)} />
                   <button
                     type="button"
                     onClick={() => remove(l.key)}

@@ -9,9 +9,11 @@ type Props = {
   onChange: (next: number) => void
   label: string
   size?: 'sm' | 'md'
+  /** The highest quantity (default MAX_QTY; Calm and Focus go higher in the cart, for the business offer). */
+  max?: number
 }
 
-export function QuantityStepper({ value, onChange, label, size = 'md' }: Props) {
+export function QuantityStepper({ value, onChange, label, size = 'md', max = MAX_QTY }: Props) {
   // Both sizes keep 44px+ touch targets; "sm" is just narrower.
   const h = size === 'sm' ? 'h-11' : 'h-14'
   const w = size === 'sm' ? 'w-11' : 'w-12'
@@ -38,7 +40,7 @@ export function QuantityStepper({ value, onChange, label, size = 'md' }: Props) 
         type="button"
         className={`${w} flex h-full items-center justify-center rounded-r-[10px] text-ink transition-colors hover:bg-paper disabled:text-muted disabled:hover:bg-transparent`}
         onClick={() => onChange(value + 1)}
-        disabled={value >= MAX_QTY}
+        disabled={value >= max}
         aria-label={en ? 'Increase the quantity' : 'Crește cantitatea'}
       >
         <Plus className="h-4 w-4" />

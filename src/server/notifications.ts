@@ -10,6 +10,7 @@
 import 'server-only'
 import { ORDER_LABEL, PAYMENT_LABEL } from '@/app/[lang]/(admin)/admin/labels'
 import { formatMoney } from '@/lib/currency'
+import { isBulk } from '@/config/promotions'
 import { PAYMENT_METHOD_LABEL, type Order } from '@/server/orders/model'
 
 export type NotifyEvent =
@@ -26,9 +27,12 @@ export type NotifyEvent =
   | 'refund_after_return'
   | 'storno_needed'
   | 'job_failed'
+  | 'team_confirmed'
 
 export type NotifyContext = { siteUrl: string; parentNumber?: string | null; job?: { id: number; kind: string; status: string; lastError: string | null; template?: string } }
 
+/** A business order still waiting for a person's call: what every "new order" note asks first. */
+const CONFIRM_FIRST = 'COMANDĂ COMPANIE: sună clientul și confirmă cantitățile și livrarea, apoi apasă „Confirmă comanda” în /admin/companii. Până atunci nu se pregătește.'
 const paid = (o: Order) => o.paymentStatus === 'paid' || o.paymentStatus === 'partially_refunded'
 const preparing = (o: Order) => o.status === 'confirmed' || o.status === 'processing'
 
@@ -41,17 +45,20 @@ export const NOTIFICATIONS: Record<NotifyEvent, { title: string; action: (o: Ord
   },
   new_transfer: {
     title: 'comandă nouă, așteaptă transferul',
-    action: (o) => `Verifică extrasul. Când suma de ${formatMoney(o.totalMinor, o.currency)} apare cu referința ${o.orderNumber}, apasă „Plata a fost primită” în /admin.`,
+    action: (o) => `${o.teamConfirmation === 'awaiting' ? `${CONFIRM_FIRST} ` : ''}Verifică extrasul. Când suma de ${formatMoney(o.totalMinor, o.currency)} apare cu referința ${o.orderNumber}, apasă „Plata a fost primită” în /admin.`,
     stillTrue: (o) => o.paymentStatus === 'awaiting_transfer' && o.status !== 'cancelled',
   },
   transfer_paid: {
     title: 'transferul a fost confirmat',
-    action: () => 'Pregătește coletul. Marchează „în pregătire”, apoi „expediată” cu AWB în /admin.',
+    action: (o) => (o.teamConfirmation === 'awaiting' ? CONFIRM_FIRST : 'Pregătește coletul. Marchează „în pregătire”, apoi „expediată” cu AWB în /admin.'),
     stillTrue: (o) => o.status !== 'cancelled',
   },
   new_cod: {
     title: 'comandă nouă cu plata la livrare',
-    action: (o) => `Pregătește coletul. Curierul încasează ${formatMoney(o.codAmountMinor ?? o.totalMinor, o.currency)}. Marchează „expediată” cu AWB în /admin.`,
+    action: (o) =>
+      o.teamConfirmation === 'awaiting'
+        ? `${CONFIRM_FIRST} Curierul va încasa ${formatMoney(o.codAmountMinor ?? o.totalMinor, o.currency)}.`
+        : `Pregătește coletul. Curierul încasează ${formatMoney(o.codAmountMinor ?? o.totalMinor, o.currency)}. Marchează „expediată” cu AWB în /admin.`,
     stillTrue: (o) => o.status !== 'cancelled',
   },
   upsell_paid: {
@@ -101,6 +108,11 @@ export const NOTIFICATIONS: Record<NotifyEvent, { title: string; action: (o: Ord
     action: (o) => `Emite stornarea facturii ${`${o.fgoInvoiceSeries ?? ''} ${o.fgoInvoiceNumber ?? ''}`.trim()} în FGO.`,
     stillTrue: (o) => !!o.fgoInvoiceNumber && !o.fgoStornoNumber,
   },
+  team_confirmed: {
+    title: 'comanda companiei a fost confirmată',
+    action: () => 'Clientul a confirmat la telefon. Pregătește coletul: marchează „în pregătire”, apoi „expediată” cu AWB (în /fulfillment sau /admin).',
+    stillTrue: (o) => o.status !== 'cancelled',
+  },
   job_failed: {
     title: 'o integrare a eșuat definitiv',
     action: (o, x) => `${jobLabel(x.job?.kind ?? '', x.job?.template)} s-a oprit după toate reîncercările. Verifică eroarea și apasă „Reîncearcă” în /admin.`,
@@ -132,7 +144,7 @@ const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&
 
 export function renderNotification(event: NotifyEvent, o: Order, x: NotifyContext) {
   const n = NOTIFICATIONS[event]
-  const subject = `Comanda ${o.orderNumber}: ${n.title}`
+  const subject = `${isBulk(o.promotions) ? '[Companii] ' : ''}Comanda ${o.orderNumber}: ${n.title}`
   const link = `${x.siteUrl}/admin/orders/${o.id}`
   const rows: [string, string][] = [
     ['Comanda', o.orderNumber],
@@ -140,6 +152,9 @@ export function renderNotification(event: NotifyEvent, o: Order, x: NotifyContex
     ['Stare comandă', ORDER_LABEL[o.status]],
     ['Plată', `${PAYMENT_METHOD_LABEL[o.paymentMethod]} · ${PAYMENT_LABEL[o.paymentStatus]}`],
     ['Total', formatMoney(o.totalMinor, o.currency)],
+    ...(isBulk(o.promotions)
+      ? ([['Comandă companie', `reducere 40%${o.teamConfirmation === 'awaiting' ? ' · așteaptă confirmarea echipei' : o.teamConfirmation === 'confirmed' ? ' · confirmată de echipă' : ''}`]] as [string, string][])
+      : []),
     ['Produse', o.items.map((i) => `${i.quantity} x ${i.productName}${i.variantName ? ` (${i.variantName})` : ''}`).join('; ')],
     ...(x.job ? ([['Eroare', x.job.lastError ?? '–']] as [string, string][]) : []),
   ]

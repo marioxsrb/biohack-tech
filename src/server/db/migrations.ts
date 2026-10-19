@@ -784,4 +784,17 @@ alter table digital_events enable row level security
     id: '026_app_admin_sessions',
     sql: `alter table app_sessions add column if not exists pw_tag text`,
   },
+  {
+    // Business orders (the 40% offer) paid by cash on delivery or bank transfer wait for a person to confirm them
+    // before preparation (team_confirmation). The fulfillment portal's own marks: prepared, and a reported problem.
+    // None of them is an order status: the canonical flow (state.ts) is unchanged.
+    id: '027_team_confirmation_fulfillment',
+    sql: `alter table orders add column if not exists team_confirmation text check (team_confirmation in ('awaiting', 'confirmed'));
+alter table orders add column if not exists team_confirmed_at timestamptz;
+alter table orders add column if not exists team_confirmed_by text;
+alter table orders add column if not exists prepared_at timestamptz;
+alter table orders add column if not exists fulfillment_issue text;
+alter table orders add column if not exists fulfillment_issue_at timestamptz;
+create index if not exists orders_team_confirmation_idx on orders (team_confirmation) where team_confirmation is not null`,
+  },
 ]

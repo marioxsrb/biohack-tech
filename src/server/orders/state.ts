@@ -35,8 +35,14 @@ export const isPaid = (p: PaymentStatus) => p === 'paid' || p === 'partially_ref
 export const awaitsCollection = (o: Pick<Order, 'paymentMethod' | 'paymentStatus'>) =>
   o.paymentMethod === 'cash_on_delivery' && o.paymentStatus === 'awaiting_collection'
 
-/** The order may be prepared and shipped: paid, or cash on delivery (the courier collects at the door). */
-export const canFulfil = (o: Pick<Order, 'paymentMethod' | 'paymentStatus'>) => isPaid(o.paymentStatus) || awaitsCollection(o)
+/** A business order (cash on delivery or transfer) that a person has not confirmed yet. */
+export const awaitsTeam = (o: { teamConfirmation?: Order['teamConfirmation'] }) => o.teamConfirmation === 'awaiting'
+
+/**
+ * The order may be prepared and shipped: paid, or cash on delivery (the courier collects at the door), and, for a
+ * business order paid by cash on delivery or transfer, confirmed by a person first.
+ */
+export const canFulfil = (o: Pick<Order, 'paymentMethod' | 'paymentStatus'> & { teamConfirmation?: Order['teamConfirmation'] }) => (isPaid(o.paymentStatus) || awaitsCollection(o)) && !awaitsTeam(o)
 
 /**
  * The customer has the product and owes or has paid for it: what a withdrawal and a return need.
