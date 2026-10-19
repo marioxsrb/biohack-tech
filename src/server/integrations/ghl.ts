@@ -9,6 +9,7 @@ import { isConfirmedPurchase } from '@/lib/segments'
 import type { GhlConfig } from '@/server/config'
 import { log } from '@/server/log'
 import { customerName, PAYMENT_METHOD_LABEL, type Order } from '@/server/orders/model'
+import { BULK_OFFER, isBulk } from '@/config/promotions'
 
 export class GhlError extends Error {
   constructor(message: string, readonly status: number) {
@@ -135,6 +136,10 @@ export const CONTACT_FIELDS = {
   unsubscribeUrl: 'contact.bt_unsubscribe_url',
   /** Where the latest order came from: "site", or "landing calm · facebook / paid / campanie". */
   lastOrderSource: 'contact.bt_last_order_source',
+  /** Business orders (40% from 25 Calm + Focus units): eligible units, the business discount in lei, the team's confirmation. */
+  b2bUnits: 'contact.bt_b2b_units',
+  b2bDiscount: 'contact.bt_b2b_discount',
+  b2bConfirmation: 'contact.bt_b2b_confirmation',
 } as const
 
 /**
@@ -159,6 +164,8 @@ export const TAGS = {
   orderPlaced: 'bt-comanda-plasata',
   /** Present only while an AI call consent is in force for one of the address's numbers (Supabase stays the proof). */
   callConsent: 'bt-acord-apel-ai',
+  /** A business order (the 40% offer) that stands; the opportunity stays the order's own (no extra one). */
+  bulkOrder: 'bt-comanda-companie',
 } as const
 /** One tag per product bought. Every catalog product must have one (tested). */
 /**
@@ -324,17 +331,30 @@ export function contactPayload(c: GhlConfig, o: Order, lifetime: { orders: numbe
       [CONTACT_FIELDS.lifetimeValue, (lifetime.valueMinor / 100).toFixed(2)],
       [CONTACT_FIELDS.lastOrderUrl, `${siteUrl}/comanda/${o.publicToken}`],
       [CONTACT_FIELDS.lastOrderSource, attributionSummary(o.attribution)],
+      ...(isBulk(o.promotions) ? b2bFields(o) : []),
     ]
       .map(([key, value]) => customField(key, value))
       .concat(marketingFields(m)),
   }
 }
 
-/** bt-comanda-plasata for an order that stands (see TAGS.orderPlaced); never for an upsell or a cancelled order. */
+/** The business order's own fields: eligible units, the business discount (lei) and the confirmation state. */
+function b2bFields(o: Order): [string, string][] {
+  const units = o.items.filter((i) => (BULK_OFFER.products as string[]).includes(i.productId)).reduce((n, i) => n + i.quantity, 0)
+  const discount = o.promotions.find((p) => p.id === BULK_OFFER.id)?.amountMinor ?? 0
+  const state = o.teamConfirmation === 'awaiting' ? 'Așteaptă confirmarea' : o.teamConfirmation === 'confirmed' ? 'Confirmată de echipă' : 'Fără confirmare (card)'
+  return [
+    [CONTACT_FIELDS.b2bUnits, String(units)],
+    [CONTACT_FIELDS.b2bDiscount, ((discount * o.fxRate) / 100).toFixed(2)],
+    [CONTACT_FIELDS.b2bConfirmation, state],
+  ]
+}
+
+/** bt-comanda-plasata (and bt-comanda-companie for a business order) for an order that stands; never for an upsell or a cancelled order. */
 export function placedTags(o: Order): string[] {
   if (o.kind !== 'checkout' || o.status === 'cancelled') return []
   const committed = o.paymentMethod !== 'card' || o.paymentStatus === 'paid' || o.paymentStatus === 'partially_refunded'
-  return committed ? [TAGS.orderPlaced] : []
+  return committed ? [TAGS.orderPlaced, ...(isBulk(o.promotions) ? [TAGS.bulkOrder] : [])] : []
 }
 
 /** Tags are added (never replaced): client + one per product bought, only once paid. */

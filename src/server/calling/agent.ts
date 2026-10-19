@@ -10,7 +10,7 @@ import { bookCopy } from '@/content/book'
 import { BOOK_SHIPPING_RON } from '@/config/prices'
 import { getProductContent } from '@/content/product-content'
 import { legalPages, type LegalBlock } from '@/content/legal'
-import { PROMOTIONS } from '@/config/promotions'
+import { BULK_OFFER, PROMOTIONS } from '@/config/promotions'
 import { cashOnDelivery } from '@/config/payments'
 import { site, terms } from '@/config/site'
 import { formatLei } from '@/lib/money'
@@ -78,6 +78,7 @@ export function agentKnowledge(siteUrl: string = site.url, opts: { prices: boole
     ...(book ? [`Livrare: gratuită pentru comenzile fără carte. O comandă care conține cartea plătește livrarea o singură dată${opts.prices ? ` (${money(BOOK_SHIPPING_RON)}, adică 10 lei + TVA)` : ''}, oricâte produse are. Livrarea nu primește reduceri și nu intră în codurile promoționale.`] : []),
     ...products,
     ...(book ? [bookKnowledge()] : []),
+    opts.prices ? bulkKnowledge(siteUrl) : '## Comenzi pentru companii\nExistă o ofertă pentru comenzile de la 25 de bucăți NEUROS Calm și Focus; procentul și sumele apar după formularul „Vezi prețul și oferta”.',
     cur === 'RON'
       ? `## Plată\nMetode: ${[cashOnDelivery.enabled && 'ramburs (plata la livrare, curierului)', 'card bancar online prin Stripe', 'transfer bancar'].filter(Boolean).join(', ')}. Datele cardului se introduc doar pe site, niciodată la telefon.`
       : `## Plată\nÎn ${cur}: doar card bancar online prin Stripe (rambursul și transferul sunt pentru comenzile în lei, cu livrare în România). Datele cardului se introduc doar pe site.`,
@@ -89,6 +90,21 @@ export function agentKnowledge(siteUrl: string = site.url, opts: { prices: boole
   ]
     .filter(Boolean)
     .join('\n\n')
+}
+
+/** The business offer (config/promotions.ts BULK_OFFER), its exclusions and how a business order is confirmed. */
+function bulkKnowledge(siteUrl: string) {
+  const b = BULK_OFFER
+  return [
+    '## Comenzi pentru companii (oferta B2B)',
+    `- ${b.percent}% reducere la toate bucățile NEUROS Calm și NEUROS Focus, de la ${b.minUnits} de bucăți în total. Se pot combina: 25 Calm, 25 Focus, 15 Calm + 10 Focus sau 20 Calm + 5 Focus primesc toate ${b.percent}%.`,
+    '- NEUROS Amber și cartea nu intră în calculul celor 25 de bucăți și rămân la prețul lor obișnuit (Amber păstrează oferta 2+1). Fără reducerea pentru companii: 24 Calm + 1 Amber, 20 Focus + 5 cărți, 25 Amber, 10 Calm + 10 Focus + 5 Amber.',
+    '- Nu se cumulează cu codurile de reducere și nici cu reducerea de cantitate (10% la 2, 20% la 3 bucăți din același produs): se aplică automat oferta cea mai avantajoasă, care la 25+ bucăți este cea de 40%.',
+    `- Cum se comandă: pe pagina ${siteUrl}/pentru-companii (cantități și sumar cu reducerea, apoi checkout-ul obișnuit) sau direct din coș. În checkout se alege „Persoană juridică” pentru factură pe firmă (CUI, Reg. Com.).`,
+    '- Plata: cu cardul, comanda se confirmă la plată și se pregătește imediat. Prin transfer bancar sau ramburs, un coleg Biohack Tech sună clientul pentru confirmarea comenzii și a detaliilor de livrare, înainte de pregătire.',
+    `- Online: cel mult 100 de bucăți din fiecare produs pe comandă. Pentru cantități mai mari, livrări în mai multe locații sau o ofertă personalizată: ${site.email} sau ${site.phone}.`,
+    '- Nu există alte reduceri pentru firme în afara acestei oferte: nu promiți prețuri speciale și nu negociezi.',
+  ].join('\n')
 }
 
 /** The book beyond its product card: contents, author, physical + PDF delivery and the PDF's rules by payment method. */
@@ -174,6 +190,7 @@ Prima frază ai spus-o deja: ai salutat, ai spus că te numești Maria, că suni
    - Codul se adaugă peste promoțiile din coș: 2 bucăți din același produs înseamnă 10% plus 10%, 3 sau mai multe 20% plus 10%, la Amber peste oferta 2 plus 1. Se scrie în coș la „Cod promoțional”.
    - Pe o comandă merge un singur cod.
    - Dacă reducerea e 0 sau codul lipsește, nu oferi nicio reducere.
+   - Comenzi mari (firme): de la 25 de bucăți NEUROS Calm și Focus în total se aplică singură oferta pentru companii, 40% la toate bucățile Calm și Focus. Ea nu se cumulează cu codul Baiohec zece și nici cu reducerea de cantitate, deci la o asemenea comandă nu mai oferi codul. Dacă cineva întreabă de o comandă pentru firmă, explici oferta din cunoștințe și pagina pentru companii. Nu inventezi alte reduceri sau prețuri speciale.
 4. Închei cu o întrebare care duce la decizie: „Vă trimit linkul și finalizați acum, cu reducerea?” sau „Vă e mai comod ramburs?”. Dacă spune da, confirmi scurt, mulțumești și închei.
 
 # Regula de refuz (obligatorie)

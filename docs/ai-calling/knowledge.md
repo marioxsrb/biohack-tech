@@ -115,6 +115,15 @@ R: Din păcate, nu. NEUROS Amber vine doar cu lentilele lui chihlimbar, fără d
 Î: Pot să îi returnez?
 R: Da, în 14 zile de la primire.
 
+## Comenzi pentru companii (oferta B2B)
+- 40% reducere la toate bucățile NEUROS Calm și NEUROS Focus, de la 25 de bucăți în total. Se pot combina: 25 Calm, 25 Focus, 15 Calm + 10 Focus sau 20 Calm + 5 Focus primesc toate 40%.
+- NEUROS Amber și cartea nu intră în calculul celor 25 de bucăți și rămân la prețul lor obișnuit (Amber păstrează oferta 2+1). Fără reducerea pentru companii: 24 Calm + 1 Amber, 20 Focus + 5 cărți, 25 Amber, 10 Calm + 10 Focus + 5 Amber.
+- Nu se cumulează cu codurile de reducere și nici cu reducerea de cantitate (10% la 2, 20% la 3 bucăți din același produs): se aplică automat oferta cea mai avantajoasă, care la 25+ bucăți este cea de 40%.
+- Cum se comandă: pe pagina https://biohack-tech.ro/pentru-companii (cantități și sumar cu reducerea, apoi checkout-ul obișnuit) sau direct din coș. În checkout se alege „Persoană juridică” pentru factură pe firmă (CUI, Reg. Com.).
+- Plata: cu cardul, comanda se confirmă la plată și se pregătește imediat. Prin transfer bancar sau ramburs, un coleg Biohack Tech sună clientul pentru confirmarea comenzii și a detaliilor de livrare, înainte de pregătire.
+- Online: cel mult 100 de bucăți din fiecare produs pe comandă. Pentru cantități mai mari, livrări în mai multe locații sau o ofertă personalizată: contact@biohack-tech.ro sau +40 767 978 707.
+- Nu există alte reduceri pentru firme în afara acestei oferte: nu promiți prețuri speciale și nu negociezi.
+
 ## Plată
 Metode: ramburs (plata la livrare, curierului), card bancar online prin Stripe, transfer bancar. Datele cardului se introduc doar pe site, niciodată la telefon.
 
