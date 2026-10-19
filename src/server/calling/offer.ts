@@ -185,5 +185,7 @@ export function openingLine(x: { firstName: string; name?: string | null; cart: 
   const why = x.cart
     ? `Am văzut că ați adăugat în coș ${x.items?.length ? cartInWords(x.items) : x.productNames || 'produse de pe site'}.`
     : `Am văzut că v-ați interesat de prețul pentru ${x.productNames || 'produsele noastre'} pe site-ul nostru și m-am gândit să vă ajut cu informații.`
-  return `${hello} Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. ${why} Aveți un minut?`
+  // The AI disclosure and the recording notice come before anything else is said about the person (AI Act art. 50;
+  // the recording is announced in the privacy policy, "Apeluri de la asistentul AI").
+  return `${hello} Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat, iar apelul este înregistrat. ${why} Aveți un minut?`
 }

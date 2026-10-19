@@ -17,7 +17,7 @@ export type LegalBlock = string | { list: string[] } | { table: { head: string[]
 export type LegalSection = { heading: string; id?: string; body: LegalBlock[] }
 export type LegalPage = { slug: string; title: string; shortTitle: string; description: string; updated: string; sections: LegalSection[] }
 
-const UPDATED = '14 octombrie 2026'
+const UPDATED = '19 octombrie 2026'
 const contactLine = `Scrie-ne la ${site.email} sau sună la ${site.phone}. Răspundem ${terms.responseTime}.`
 
 const identity = (): LegalSection => ({
@@ -114,7 +114,7 @@ export const legalPages: LegalPage[] = [
             list: [
               'Emailuri: noutăți, oferte și recomandări despre produsele Biohack Tech.',
               'Recuperarea comenzilor nefinalizate: dacă ai început o comandă sau ai cerut prețul și nu ai finalizat, îți putem trimite cel mult două emailuri de reamintire, cu linkul către produs sau coș. Ele se opresc imediat ce comanzi, te dezabonezi sau retragi acordul.',
-              'Apeluri de la asistentul AI: te poate suna un asistent AI al Biohack Tech, un sistem automat, despre produsul ales, dacă nu ai finalizat comanda. Îți spune de la început că este un asistent AI. Sună doar la un număr românesc, în zilele lucrătoare, între orele 8 și 21, de cel mult trei ori pentru aceeași comandă nefinalizată (dacă nu răspunzi: o dată după o oră, apoi a doua zi). Nu înregistrăm apelul și nu îți cere date de card.',
+              'Apeluri de la asistentul AI: te poate suna un asistent AI al Biohack Tech, un sistem automat, despre produsul ales, dacă nu ai finalizat comanda. Îți spune de la început că este un asistent AI și că apelul este înregistrat. Sună doar la un număr românesc, în zilele lucrătoare, între orele 8 și 21, de cel mult trei ori pentru aceeași comandă nefinalizată (dacă nu răspunzi: o dată după o oră, apoi a doua zi). Apelurile cu asistentul AI sunt înregistrate audio și analizate pentru verificarea calității serviciilor; înregistrarea se șterge automat după 30 de zile (detalii în [Politica de confidențialitate, Apeluri de la asistentul AI](/privacy-policy#apeluri)). Asistentul nu îți cere date de card.',
             ],
           },
           'Poți retrage acordul oricând, gratuit: din linkul de dezabonare din fiecare email de marketing (oprește și apelurile), spunându-i asistentului în timpul apelului că nu mai vrei să fii sunat (oprește apelurile) sau scriindu-ne. După retragere nu te mai contactăm în scop comercial. Emailurile despre comenzi (confirmare, plată, factură, livrare, rambursare) vin în continuare, pentru că sunt necesare comenzii.',
@@ -164,6 +164,7 @@ export const legalPages: LegalPage[] = [
                 ['Păstrăm ce ai scris în pasul de contact al comenzii înainte să o trimiți, ca să știm câte comenzi rămân neterminate și să îți putem reface coșul', 'Nume, email, telefon, produsele din coș', 'Interesul nostru legitim de a înțelege și îmbunătăți comanda (lit. f)'],
                 ['Îți trimitem noutăți, oferte, recomandări și un memento pentru o comandă sau o ofertă nefinalizată', 'Email, nume, produsele de care ai fost interesat', 'Consimțământul tău, dat prin bifă (lit. a)'],
                 ['Te sună asistentul nostru AI despre produsul ales, dacă nu ai finalizat comanda', 'Telefon, prenume, produsul ales, rezultatul apelului', 'Consimțământul tău separat pentru apeluri, dat prin bifă (lit. a)'],
+                ['Înregistrăm audio și analizăm apelurile asistentului AI, ca să verificăm calitatea serviciilor și să putem dovedi ce s-a convenit (de exemplu refuzul de a mai fi contactat)', 'Vocea ta, transcriptul conversației, numărul de telefon, data și durata apelului', 'Interesul nostru legitim de a verifica și îmbunătăți calitatea apelurilor și de a dovedi ce s-a convenit (lit. f); te anunțăm la începutul apelului și te poți opune oricând'],
                 ['Răspundem la întrebări, reclamații și cereri de retragere', 'Ce ne scrii și datele comenzii', 'Contractul și obligația legală'],
                 ['Statistici și reclame, doar dacă accepți', 'Date despre folosirea site-ului, fără date de contact', 'Consimțământul tău (lit. a)'],
               ],
@@ -189,8 +190,10 @@ export const legalPages: LegalPage[] = [
         id: 'apeluri',
         body: [
           `Te putem suna cu un asistent AI doar dacă bifezi căsuța care numește explicit apelurile: „${COMMUNICATIONS_CONSENT_TEXT}” Bifa este opțională și nu este necesară pentru a vedea prețul sau pentru a comanda. Acordul pentru apeluri este înregistrat separat, pentru numărul tău de telefon. Un acord mai vechi, dat doar pentru emailuri, nu înseamnă acord pentru apeluri.`,
-          'Asistentul îți spune de la început că este un asistent AI al Biohack Tech. Te sună doar la un număr românesc, în zilele lucrătoare, între orele 8 și 21, de cel mult trei ori pentru aceeași comandă nefinalizată (dacă nu răspunzi: o dată după o oră, apoi a doua zi). Nu îți cere date de card și nu face recomandări medicale.',
-          'Nu înregistrăm apelul. Păstrăm doar data, durata și rezultatul (de exemplu „vrea mai multe informații” sau „nu mai dorește apeluri”), legate de solicitarea ta. Dacă ceri, îți trimitem pe email linkul către produs.',
+          'Asistentul îți spune de la început că este un asistent AI al Biohack Tech și că apelul este înregistrat. Te sună doar la un număr românesc, în zilele lucrătoare, între orele 8 și 21, de cel mult trei ori pentru aceeași comandă nefinalizată (dacă nu răspunzi: o dată după o oră, apoi a doua zi). Nu îți cere date de card și nu face recomandări medicale.',
+          'Înregistrarea apelului. Apelurile cu asistentul AI sunt înregistrate audio și transcrise, iar conversația este analizată automat (rezumat, rezultat), ca să verificăm calitatea serviciilor și să putem dovedi ce s-a convenit, de exemplu că ai cerut să nu mai fii sunat. Temeiul este interesul nostru legitim (art. 6 alin. 1 lit. f GDPR), nu acordul pentru apeluri; asistentul te anunță la începutul fiecărui apel că este înregistrat. Apelurile făcute înainte de 19 octombrie 2026 nu au fost înregistrate.',
+          'Păstrare și acces. Înregistrarea, transcriptul și analiza sunt păstrate la furnizorul nostru ElevenLabs 30 de zile, apoi sunt șterse automat. Le pot asculta doar membrii echipei Biohack Tech cu acces la contul ElevenLabs al firmei, pentru verificarea calității și pentru solicitările tale. Nu le copiem în alte sisteme, nu le publicăm și nu le folosim pentru antrenarea modelelor AI. În baza noastră de date păstrăm doar data, durata și rezultatul apelului (de exemplu „vrea mai multe informații” sau „nu mai dorește apeluri”), legate de solicitarea ta. Dacă ceri, îți trimitem pe email linkul către produs.',
+          'Drepturile tale și ștergerea. Te poți opune înregistrării oricând: spune-i asistentului că nu vrei să fii înregistrat (asistentul încheie apelul) sau scrie-ne la contact@biohack-tech.ro. Ștergem înregistrarea și transcriptul apelului în cel mult 3 zile lucrătoare de la cerere și îți confirmăm pe email. Poți cere și o copie a înregistrării, cât timp ea există (30 de zile). Păstrăm doar dovada că ai refuzat apelurile sau înregistrarea, fără audio.',
           'Poți refuza oricând: spune-i asistentului că nu mai vrei să fii sunat, dezabonează-te din orice email sau scrie-ne. Nu te mai sunăm după ce comanzi.',
         ],
       },
@@ -203,7 +206,7 @@ export const legalPages: LegalPage[] = [
               'Stripe: plata cu cardul. Datele cardului merg direct la Stripe; noi nu le vedem. După o plată cu cardul, Stripe păstrează cardul asociat comenzii cel mult 30 de minute, pentru oferta opțională de după plată; se încasează doar dacă o accepți explicit. Apoi cardul este dezasociat.',
               'FGO: emiterea facturilor.',
               'GoHighLevel (platforma LeadConnector): evidența clienților și trimiterea emailurilor.',
-              'ElevenLabs (vocea și conversația asistentului AI) și Twilio (rețeaua telefonică), doar dacă ai acceptat apelurile. Datele conversației sunt păstrate de furnizor cel mult 30 de zile.',
+              'ElevenLabs (vocea, conversația, înregistrarea și transcriptul apelurilor asistentului AI) și Twilio (rețeaua telefonică), doar dacă ai acceptat apelurile. Înregistrarea, transcriptul și analiza apelului sunt păstrate de ElevenLabs 30 de zile, apoi șterse automat.',
               'Firma de curierat: livrarea coletului.',
               'Furnizorul de găzduire al site-ului și al bazei de date.',
               'Autorități, doar când legea ne obligă.',
@@ -221,7 +224,7 @@ export const legalPages: LegalPage[] = [
               'Acordul pentru marketing și dezabonarea: cât timp primești emailuri și apoi cât ne pot fi cerute ca dovadă.',
               'Mesajele și cererile tale: cât durează rezolvarea și termenul în care ne pot fi cerute ca dovadă.',
               'Datele din formularul de preț și din pasul de contact al unei comenzi netrimise: cel mult 12 luni de la ultima ta activitate, apoi le ștergem automat. Dacă plasezi o comandă, rămân legate de comandă.',
-              'Acordul pentru apeluri și refuzul lui: cât timp ne pot fi cerute ca dovadă. Rezultatele apelurilor: împreună cu solicitarea de care țin.',
+              'Acordul pentru apeluri și refuzul lui: cât timp ne pot fi cerute ca dovadă. Rezultatele apelurilor: împreună cu solicitarea de care țin. Înregistrarea audio, transcriptul și analiza unui apel: 30 de zile, la ElevenLabs, apoi se șterg automat.',
             ],
           },
         ],

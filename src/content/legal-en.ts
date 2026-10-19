@@ -10,7 +10,7 @@ import { CONSENT_MAX_AGE_DAYS } from '@/lib/consent/cookies'
 import { configuredVendors } from '@/lib/consent/vendors'
 import type { LegalPage, LegalSection } from './legal'
 
-const UPDATED = '14 octombrie 2026'
+const UPDATED = '19 octombrie 2026'
 const processingDays = terms.processingDays.replace(' zile', ' days')
 const transitDays = terms.transitDays.replace(' zile', ' days')
 const contactLine = `Write to us at ${site.email} or call ${site.phone}. We reply within 24 hours.`
@@ -110,7 +110,7 @@ export const legalPagesEn: LegalPage[] = [
             list: [
               'Emails: news, offers and recommendations about Biohack Tech products.',
               'Recovery of unfinished orders: if you started an order or asked for the price and did not finish, we may send you at most two reminder emails, with the link to the product or the cart. They stop as soon as you order, unsubscribe or withdraw your consent.',
-              'Calls from the AI assistant: a Biohack Tech AI assistant, an automated system, may call you about the product you chose if you did not finish your order. It tells you from the start that it is an AI assistant. It calls only a Romanian number, on working days, between 8:00 and 21:00, at most three times for the same unfinished order (if you do not answer: once after one hour, then the next day). We do not record the call and it does not ask for your card details.',
+              'Calls from the AI assistant: a Biohack Tech AI assistant, an automated system, may call you about the product you chose if you did not finish your order. It tells you from the start that it is an AI assistant and that the call is recorded. It calls only a Romanian number, on working days, between 8:00 and 21:00, at most three times for the same unfinished order (if you do not answer: once after one hour, then the next day). Calls with the AI assistant are recorded and analysed to check the quality of our service; the recording is deleted automatically after 30 days (details in the [Privacy policy, Calls from the AI assistant](/privacy-policy#apeluri)). The assistant does not ask for your card details.',
             ],
           },
           internationalNote,
@@ -161,6 +161,7 @@ export const legalPagesEn: LegalPage[] = [
                 ['We keep what you wrote in the contact step of the order before you submit it, so we know how many orders remain unfinished and can restore your cart', 'Name, email, phone, the products in the cart', 'Our legitimate interest in understanding and improving the ordering process (point f)'],
                 ['We send you news, offers, recommendations and a reminder about an unfinished order or offer', 'Email, name, the products you were interested in', 'Your consent, given by ticking the box (point a)'],
                 ['Our AI assistant calls you about the chosen product, if you did not finish your order', 'Phone, first name, the chosen product, the outcome of the call', 'Your separate consent to calls, given by ticking the box (point a)'],
+                ['We record and analyse the AI assistant calls, to check the quality of our service and to be able to prove what was agreed (for example that you asked not to be contacted again)', 'Your voice, the transcript of the conversation, the phone number, the date and duration of the call', 'Our legitimate interest in checking and improving call quality and in proving what was agreed (point f); we tell you at the start of the call and you can object at any time'],
                 ['We answer questions, complaints and withdrawal requests', 'What you write to us and the order details', 'The contract and legal obligation'],
                 ['Statistics and ads, only if you accept', 'Data about how the site is used, without contact details', 'Your consent (point a)'],
               ],
@@ -187,8 +188,10 @@ export const legalPagesEn: LegalPage[] = [
         id: 'apeluri',
         body: [
           `We may call you with an AI assistant only if you tick the box that explicitly names the calls: “${COMMUNICATIONS_CONSENT_TEXT_EN}” The box is optional and is not required to see the price or to order. Consent to calls is recorded separately, for your phone number. Older consent given only for emails does not mean consent to calls. The international site (biohack-tech.net) does not make AI assistant calls.`,
-          'The assistant tells you from the start that it is a Biohack Tech AI assistant. It calls only a Romanian number, on working days, between 8:00 and 21:00, at most three times for the same unfinished order (if you do not answer: once after one hour, then the next day). It does not ask for your card details and does not give medical advice.',
-          'We do not record the call. We keep only the date, the duration and the outcome (for example “wants more information” or “no longer wants calls”), linked to your request. If you ask, we email you the link to the product.',
+          'The assistant tells you from the start that it is a Biohack Tech AI assistant and that the call is recorded. It calls only a Romanian number, on working days, between 8:00 and 21:00, at most three times for the same unfinished order (if you do not answer: once after one hour, then the next day). It does not ask for your card details and does not give medical advice.',
+          'Call recording. Calls with the AI assistant are recorded and transcribed, and the conversation is analysed automatically (summary, outcome), to check the quality of our service and to be able to prove what was agreed, for example that you asked not to be called again. The legal basis is our legitimate interest (Art. 6(1)(f) GDPR), not the consent to calls; the assistant tells you at the start of every call that it is recorded. Calls made before 19 October 2026 were not recorded.',
+          'Retention and access. The recording, the transcript and the analysis are kept by our provider ElevenLabs for 30 days and then deleted automatically. Only Biohack Tech team members with access to the company ElevenLabs account can listen to them, to check quality and to handle your requests. We do not copy them to other systems, publish them or use them to train AI models. In our database we keep only the date, the duration and the outcome of the call (for example “wants more information” or “no longer wants calls”), linked to your request. If you ask, we email you the link to the product.',
+          'Your rights and deletion. You can object to the recording at any time: tell the assistant you do not want to be recorded (the assistant ends the call) or write to contact@biohack-tech.ro. We delete the recording and the transcript of the call within 3 working days of your request and confirm by email. You can also ask for a copy of the recording while it exists (30 days). We keep only the proof that you refused the calls or the recording, without audio.',
           'You can refuse at any time: tell the assistant you no longer want to be called, unsubscribe from any email or write to us. We stop calling you once you order.',
         ],
       },
@@ -201,7 +204,7 @@ export const legalPagesEn: LegalPage[] = [
               'Stripe: card payment. Card details go directly to Stripe; we do not see them. After a card payment, Stripe keeps the card associated with the order for at most 30 minutes, for the optional post-payment offer; it is charged only if you explicitly accept it. The card is then detached.',
               'FGO: issuing invoices.',
               'GoHighLevel (the LeadConnector platform): customer records and sending emails.',
-              'ElevenLabs (the voice and conversation of the AI assistant) and Twilio (the telephone network), only if you accepted calls. Conversation data is kept by the provider for at most 30 days.',
+              'ElevenLabs (the voice, the conversation, the recording and the transcript of the AI assistant calls) and Twilio (the telephone network), only if you accepted calls. The recording, transcript and analysis of a call are kept by ElevenLabs for 30 days, then deleted automatically.',
               'The courier company: delivering the parcel.',
               'The hosting provider of the website and the database.',
               'Authorities, only when the law requires us to.',
@@ -219,7 +222,7 @@ export const legalPagesEn: LegalPage[] = [
               'Marketing consent and unsubscription: as long as you receive emails and afterwards for as long as they may be requested from us as proof.',
               'Your messages and requests: for as long as the resolution takes and the period during which they may be requested from us as proof.',
               'The data in the price form and in the contact step of an unsubmitted order: at most 12 months from your last activity, after which we delete it automatically. If you place an order, it remains linked to the order.',
-              'Consent to calls and its refusal: for as long as they may be requested from us as proof. Call outcomes: together with the request they relate to.',
+              'Consent to calls and its refusal: for as long as they may be requested from us as proof. Call outcomes: together with the request they relate to. The audio recording, transcript and analysis of a call: 30 days, at ElevenLabs, then deleted automatically.',
             ],
           },
         ],

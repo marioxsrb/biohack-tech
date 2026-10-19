@@ -12,6 +12,9 @@ export type ConversationRow = {
   id: string
   at: Date
   phone: string | null
+  /** The lead's name and the funnel of the call (outbound calls we placed); null for inbound or dashboard calls. */
+  client: string | null
+  funnel: string | null
   durationSecs: number
   direction: 'inbound' | 'outbound' | null
   status: string
@@ -24,7 +27,11 @@ export async function recentConversations(q: Queryable, c: ElevenLabsConfig, n =
   const { conversations } = await elevenlabs.conversations(c, n)
   const ids = conversations.map((x) => x.conversation_id)
   const { rows } = ids.length
-    ? await q.query('select provider_call_id, phone, outcome, error from calls where provider_call_id = any($1)', [ids])
+    ? await q.query(
+        `select c.provider_call_id, c.phone, c.outcome, c.error, c.funnel, c.scenario, l.name, l.landing_host
+           from calls c left join leads l on l.id = c.lead_id where c.provider_call_id = any($1)`,
+        [ids],
+      )
     : { rows: [] as Record<string, unknown>[] }
   const ours = new Map(rows.map((r) => [r.provider_call_id as string, r]))
   return Promise.all(
@@ -44,6 +51,8 @@ export async function recentConversations(q: Queryable, c: ElevenLabsConfig, n =
         id: x.conversation_id,
         at: new Date(x.start_time_unix_secs * 1000),
         phone,
+        client: (mine?.name as string) ?? null,
+        funnel: mine ? funnelLabel(mine) : null,
         durationSecs: x.call_duration_secs,
         direction,
         status: x.status,
@@ -53,4 +62,11 @@ export async function recentConversations(q: Queryable, c: ElevenLabsConfig, n =
       }
     }),
   )
+}
+
+/** "biohack-tech.ro · coș nefinalizat", "acces.biohack-tech.ro · preț ascuns, ofertă cerută", or the landing host. */
+function funnelLabel(r: Record<string, unknown>) {
+  const site = (r.landing_host as string) || (r.funnel === 'gated_price' ? 'acces.biohack-tech.ro' : 'biohack-tech.ro')
+  const what = r.scenario === 'cart' ? 'coș nefinalizat' : r.scenario ? 'ofertă cerută' : ''
+  return [site, r.funnel === 'gated_price' ? 'preț ascuns' : '', what].filter(Boolean).join(' · ')
 }

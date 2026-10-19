@@ -139,7 +139,7 @@ describe('scenario A: a cart on the main site', () => {
       recovery_email_sent: 'da',
     })
     expect(vars).not.toHaveProperty('recovery_expiration')
-    expect(vars.opening_line).toMatch(/^Bună (ziua|seara)(, (doamna|domnule) [^!]+)?! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec\. Sunt un asistent automat\. Am văzut că ați adăugat în coș două bucăți de NEUROS Calm\. Aveți un minut\?$/)
+    expect(vars.opening_line).toMatch(/^Bună (ziua|seara)(, (doamna|domnule) [^!]+)?! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec\. Sunt un asistent automat, iar apelul este înregistrat\. Am văzut că ați adăugat în coș două bucăți de NEUROS Calm\. Aveți un minut\?$/)
     // One email in total: the code email (it replaces the regular first recovery email).
     expect(sent.map((m) => m.subject)).toEqual(['Codul tău de 10% pentru NEUROS Calm'])
     expect(sent[0].text).toContain(String(vars.recovery_code))
@@ -444,10 +444,10 @@ describe('the agent’s first sentence', () => {
   it('„Bună ziua” until 18:00 and „Bună seara” after, Bucharest time; Maria, with the AI disclosure', async () => {
     const { openingLine } = await import('@/server/calling/offer')
     expect(openingLine({ firstName: 'Ana', cart: true, productNames: 'NEUROS Calm', items: [{ name: 'NEUROS Calm', quantity: 2 }, { name: 'NEUROS Amber', quantity: 1 }], at: new Date('2026-10-15T07:00:00Z') })).toBe(
-      'Bună ziua, doamna Ana! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat. Am văzut că ați adăugat în coș două bucăți de NEUROS Calm și NEUROS Amber. Aveți un minut?',
+      'Bună ziua, doamna Ana! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat, iar apelul este înregistrat. Am văzut că ați adăugat în coș două bucăți de NEUROS Calm și NEUROS Amber. Aveți un minut?',
     )
     expect(openingLine({ firstName: 'Ana', cart: false, productNames: 'NEUROS Focus', at: new Date('2026-10-15T07:00:00Z') })).toBe(
-      'Bună ziua, doamna Ana! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat. Am văzut că v-ați interesat de prețul pentru NEUROS Focus pe site-ul nostru și m-am gândit să vă ajut cu informații. Aveți un minut?',
+      'Bună ziua, doamna Ana! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat, iar apelul este înregistrat. Am văzut că v-ați interesat de prețul pentru NEUROS Focus pe site-ul nostru și m-am gândit să vă ajut cu informații. Aveți un minut?',
     )
     expect(openingLine({ firstName: 'Ana', cart: true, productNames: 'NEUROS Calm', at: new Date('2026-10-15T18:00:00Z') })).toMatch(/^Bună seara, doamna Ana!/) // 21:00
     // The whole name with domnule/doamna when the given name is known; the name alone when it is not; none for junk.
