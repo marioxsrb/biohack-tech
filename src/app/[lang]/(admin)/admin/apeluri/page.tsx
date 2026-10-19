@@ -5,6 +5,7 @@ import { products, variantLabel } from '@/content/catalog'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { callBlocklist } from '@/server/calling/blocklist'
+import { recentConversations, type ConversationRow } from '@/server/calling/conversations'
 import { testCalls } from '@/server/calling/test-call'
 import { ensureStoreSettings } from '@/server/store-settings'
 import { addBlockAction, removeBlockAction } from '../actions'
@@ -20,7 +21,11 @@ const LINE: Record<string, string> = {
   'no-answer': 'nu a răspuns',
   no_answer: 'nu a răspuns',
   failed: 'apelul nu a putut fi inițiat',
+  answered: 'a răspuns',
+  success: 'reușit (după analiza ElevenLabs)',
+  failure: 'fără succes (după analiza ElevenLabs)',
 }
+const CONV_STATUS: Record<string, string> = { initiated: 'inițiat', 'in-progress': 'în curs', processing: 'se procesează', done: 'încheiat', failed: 'eșuat' }
 const explain = (v: string | null) => (v ? (LINE[v] ?? LINE[v.replace('initiation failed: ', '')] ?? v) : null)
 
 /** The AI agent: numbers never to call, and test calls with an imaginary order. */
@@ -30,6 +35,16 @@ export default async function CallsPage() {
   const db = await getDb()
   const c = getConfig()
   const [blocked, tests] = await Promise.all([callBlocklist.list(db), testCalls.recent(db, 20)])
+  // Every conversation of the agent, inbound and outbound, straight from ElevenLabs (a failure only hides this list).
+  let convs: ConversationRow[] | null = null
+  let convError: string | null = null
+  if (c.elevenlabs) {
+    try {
+      convs = await recentConversations(db, c.elevenlabs, 25)
+    } catch (e) {
+      convError = (e as Error).message.slice(0, 160)
+    }
+  }
   const options = products
     .filter((p) => p.price !== null)
     .map((p) => ({ id: p.id, name: p.name, price: p.variablePrice ? null : p.price, variants: (p.variants ?? []).map((v) => ({ id: v.id, label: variantLabel(p, v) })) }))
@@ -45,6 +60,56 @@ export default async function CallsPage() {
       </p>
 
       <section className="mt-5 rounded-[18px] bg-paper p-5">
+        <h2 className="text-[17px] font-semibold text-ink">Conversații (ElevenLabs)</h2>
+        <p className="mt-1 text-[14px] text-muted">
+          Ultimele 25 de apeluri ale agentului, primite și date. „Deschide” arată conversația în ElevenLabs (transcript, analiză și, dacă înregistrarea e pornită, audio); merge doar dacă ești logat în contul ElevenLabs.
+        </p>
+        {!c.elevenlabs ? (
+          <p className="mt-3 text-[14px] text-muted">ElevenLabs nu e configurat.</p>
+        ) : convError ? (
+          <p className="mt-3 text-[14px] text-muted">Lista nu poate fi citită acum: {convError}</p>
+        ) : convs && convs.length > 0 ? (
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full min-w-[760px] text-[14px]">
+              <thead>
+                <tr className="text-left text-[12.5px] text-muted">
+                  <th className="py-1.5 font-medium">Când</th>
+                  <th className="py-1.5 font-medium">Număr</th>
+                  <th className="py-1.5 font-medium">Direcție</th>
+                  <th className="py-1.5 text-right font-medium">Durată</th>
+                  <th className="py-1.5 pl-4 font-medium">Rezultat</th>
+                  <th className="py-1.5 font-medium">Stare</th>
+                  <th className="py-1.5 font-medium" />
+                </tr>
+              </thead>
+              <tbody>
+                {convs.map((v) => (
+                  <tr key={v.id} className="border-t border-mist-2 align-top">
+                    <td className="py-2 text-muted tabular-nums">{dt(v.at)}</td>
+                    <td className="py-2 tabular-nums">{v.phone ?? '–'}</td>
+                    <td className="py-2">{v.direction === 'inbound' ? 'primit' : v.direction === 'outbound' ? 'dat' : '–'}</td>
+                    <td className="py-2 text-right tabular-nums">{v.durationSecs ? `${v.durationSecs}s` : '–'}</td>
+                    <td className="py-2 pl-4">
+                      {explain(v.result) ?? '–'}
+                      {v.title && <span className="block text-[12.5px] text-muted">{v.title}</span>}
+                    </td>
+                    <td className="py-2">{CONV_STATUS[v.status] ?? v.status}</td>
+                    <td className="py-2 text-right">
+                      <a href={v.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
+                        Deschide
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="mt-3 text-[14px] text-muted">Nicio conversație încă.</p>
+        )}
+      </section>
+
+      <section className="mt-4 rounded-[18px] bg-paper p-5">
         <h2 className="text-[17px] font-semibold text-ink">Test: sună cu o comandă imaginară</h2>
         <p className="mt-1 mb-4 text-[14px] text-muted">Agentul sună cu exact datele unui apel real (prenume, produse, cantități, total cu promoțiile de azi, codul BIOHACK10). Nu se creează lead, comandă, acord sau email și nu se schimbă nimic în GHL.</p>
         <TestCallForm products={options} />

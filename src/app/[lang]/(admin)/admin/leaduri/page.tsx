@@ -9,6 +9,7 @@ import { marketing } from '@/server/marketing/consent'
 import { calls, type Call } from '@/server/calling/calls'
 import { callConsent } from '@/server/calling/consent'
 import { canRetryCall } from '@/server/calling/admin'
+import { conversationUrl } from '@/server/integrations/elevenlabs'
 import { romanianE164 } from '@/lib/consent/calling'
 import { callAction } from '../actions'
 
@@ -210,6 +211,14 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
                       {call.followUp && ` · necesită urmărire${call.followUpReason ? ` (${call.followUpReason})` : ''}`}
                       {call.optedOut && ' · a refuzat orice contact'}
                       {call.error && ` · eroare: ${call.error}`}
+                      {call.providerCallId && (
+                        <>
+                          {' · '}
+                          <a href={conversationUrl(call.providerCallId)} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">
+                            conversația în ElevenLabs
+                          </a>
+                        </>
+                      )}
                     </span>
                   )}
                   <form action={callAction} className="ml-auto flex flex-wrap gap-2">

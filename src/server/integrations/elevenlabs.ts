@@ -49,7 +49,12 @@ export type OutboundResult = { success: boolean; message: string; conversation_i
 export type Conversation = {
   conversation_id: string
   status: string
-  metadata?: { start_time_unix_secs?: number; call_duration_secs?: number; termination_reason?: string }
+  metadata?: {
+    start_time_unix_secs?: number
+    call_duration_secs?: number
+    termination_reason?: string
+    phone_call?: { direction?: 'inbound' | 'outbound'; external_number?: string; agent_number?: string; call_result?: string }
+  }
   analysis?: { call_successful?: string; data_collection_results?: Record<string, { value?: unknown }> }
 }
 
@@ -70,7 +75,26 @@ export const elevenlabs = {
   conversation(c: ElevenLabsConfig, conversationId: string) {
     return call<Conversation>(c, 'GET', `/v1/convai/conversations/${encodeURIComponent(conversationId)}`)
   },
+
+  /** The agent's latest conversations, newest first (inbound and outbound). */
+  conversations(c: ElevenLabsConfig, pageSize = 25) {
+    return call<{ conversations: ConversationSummary[] }>(c, 'GET', `/v1/convai/conversations?agent_id=${encodeURIComponent(c.agentId)}&page_size=${pageSize}`)
+  },
 }
+
+export type ConversationSummary = {
+  conversation_id: string
+  start_time_unix_secs: number
+  call_duration_secs: number
+  status: string
+  call_successful: string
+  direction?: 'inbound' | 'outbound' | null
+  termination_reason?: string
+  call_summary_title?: string | null
+}
+
+/** The conversation in the ElevenLabs dashboard (transcript, analysis and, when recording is on, the audio). Only for signed-in members of the workspace. */
+export const conversationUrl = (conversationId: string) => `https://elevenlabs.io/app/agents/history/${encodeURIComponent(conversationId)}`
 
 /** Webhooks older (or newer) than this are refused, like ElevenLabs' own SDK does. */
 export const WEBHOOK_TOLERANCE_SECS = 30 * 60
