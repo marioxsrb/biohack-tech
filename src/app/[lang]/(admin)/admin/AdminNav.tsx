@@ -10,6 +10,7 @@ const GROUPS: { title: string; items: { href: string; label: string }[] }[] = [
     items: [
       { href: '/admin/comenzi', label: 'Comenzi' },
       { href: '/admin/companii', label: 'Comenzi companii' },
+      { href: '/fulfillment', label: 'Fulfillment (depozit) ↗' },
       { href: '/admin/livrare-digitala', label: 'Livrare digitală' },
       { href: '/admin/leaduri', label: 'Leaduri' },
       { href: '/admin/apeluri', label: 'Apeluri AI: test și „nu suna”' },

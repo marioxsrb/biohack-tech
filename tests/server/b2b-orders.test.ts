@@ -74,6 +74,14 @@ describe('business orders', () => {
     expect(mail.text).not.toContain('Un coleg BiohackTech')
   })
 
+  it('two people confirming the same business order at once: one change, one history entry (row lock)', async () => {
+    const { order } = await place([{ productId: 'balance-wave', quantity: 25 }], 'cod', 'b-6')
+    const r = await Promise.all([svc.confirmByTeam(order.id, 'admin', 'a'), svc.confirmByTeam(order.id, 'admin', 'b'), svc.confirmByTeam(order.id, 'fulfillment', 'c')])
+    expect(r.filter((x) => x.changed)).toHaveLength(1)
+    const { rows } = await db.query(`select count(*)::int as n from order_events where order_id = $1 and type = 'order.team_confirmed'`, [order.id])
+    expect(rows[0].n).toBe(1)
+  })
+
   it('a promo code on a business cart is refused (never stacks with the 40%)', async () => {
     await expect(place([{ productId: 'balance-wave', quantity: 25 }], 'cod', 'b-5', 'LONGEVITY10')).rejects.toMatchObject({ problem: 'not_better' })
   })
