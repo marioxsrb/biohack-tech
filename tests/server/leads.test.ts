@@ -721,6 +721,10 @@ describe('gated hostname routing', () => {
     ['/en/cart', true, false, { action: 'redirect', path: '/en' }],
     ['/checkout', true, true, { action: 'site' }],
     ['/cart', true, true, { action: 'site' }],
+    // The business page shows prices: only after the form too.
+    ['/pentru-companii', true, false, { action: 'redirect', path: '/' }],
+    ['/en/for-business', true, false, { action: 'redirect', path: '/en' }],
+    ['/pentru-companii', true, true, { action: 'site' }],
     ['/comanda/abc', true, false, { action: 'site' }],
     ['/admin', true, true, { action: 'main', path: '/admin' }],
     ['/admin/leaduri', true, true, { action: 'main', path: '/admin/leaduri' }],

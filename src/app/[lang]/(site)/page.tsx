@@ -6,6 +6,7 @@ import { Discover } from '@/components/home/Discover'
 import { Hero } from '@/components/home/Hero'
 import { HomeFaq } from '@/components/home/HomeFaq'
 import { Offers } from '@/components/home/Offers'
+import { BusinessStrip } from '@/components/b2b/BusinessStrip'
 import { Rhythm } from '@/components/home/Rhythm'
 import { Why } from '@/components/home/Why'
 import { ReviewMarquee } from '@/components/reviews/ReviewMarquee'
@@ -52,6 +53,7 @@ export async function generateMetadata(): Promise<Metadata> {
  */
 export default async function Home() {
   await settingsForRender()
+  const locale = await getLocale()
   return (
     <>
       <VisitBeacon page="home" />
@@ -63,6 +65,8 @@ export default async function Home() {
       <ReviewMarquee className="pt-[var(--sec)]" />
       <Rhythm />
       <Offers />
+      {/* The business offer: one quiet line under the consumer offers, not a section of its own. */}
+      <BusinessStrip locale={locale} className="pt-6" />
       <HomeFaq />
       <ContactSection />
     </>

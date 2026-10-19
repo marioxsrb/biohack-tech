@@ -23,7 +23,7 @@ const BULK_PRODUCT_IDS: string[] = ['balance-wave', 'brainlink-pro']
  * The surface where a cart line was first added. Stored with the line (first touch wins) and sent
  * with the order as `attribution.entry`, so orders can later be told apart by where they started.
  */
-export const ENTRY_SOURCES = ['home', 'catalog', 'product', 'landing', 'cart_offer', 'recovery', 'link', 'cart_cross_sell', 'checkout_cross_sell', 'amber_configurator', 'bundle_configurator', 'assistant'] as const
+export const ENTRY_SOURCES = ['home', 'catalog', 'product', 'landing', 'cart_offer', 'recovery', 'link', 'cart_cross_sell', 'checkout_cross_sell', 'amber_configurator', 'bundle_configurator', 'assistant', 'business'] as const
 export type EntrySource = (typeof ENTRY_SOURCES)[number]
 export const isEntrySource = (v: unknown): v is EntrySource => typeof v === 'string' && (ENTRY_SOURCES as readonly string[]).includes(v)
 
@@ -40,6 +40,7 @@ export const ENTRY_LABEL: Record<EntrySource, string> = {
   amber_configurator: 'configuratorul NEUROS Amber 2+1',
   bundle_configurator: 'configuratorul de reduceri (10% la 2, 20% la 3 bucăți din același produs)',
   assistant: 'asistentul de chat',
+  business: 'pagina pentru companii (40% de la 25 de bucăți)',
 }
 
 export type Selection = { productId: ProductId; variantId?: string; quantity: number; source?: EntrySource }

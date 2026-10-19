@@ -10,6 +10,8 @@ import { getProduct, isPurchasable, variantLabel, type ProductId } from '@/conte
 import { useLocale } from '@/i18n/LocaleProvider'
 import { Availability, BundleOffer, ContactOrder, Highlights, PriceBlock, SocialProof, TrustRow } from './BuyBox'
 import { Gallery } from './Gallery'
+import { BusinessStrip } from '@/components/b2b/BusinessStrip'
+import { BULK_OFFER } from '@/config/promotions'
 
 const COPY = {
   ro: {
@@ -190,6 +192,7 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
               </div>
 
               <TrustRow className="mt-7" productId={product.id} />
+              {(BULK_OFFER.products as string[]).includes(product.id) && <BusinessStrip locale={locale} compact className="mt-6" />}
             </>
           ) : (
             <div className="mt-6 grid gap-2.5">

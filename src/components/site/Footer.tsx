@@ -13,7 +13,7 @@ import { Wordmark } from './Wordmark'
 const page = (slug: string) => legalPages.find((p) => p.slug === slug)!
 
 /** `mainOnly`: pages that exist only on the main host (hidden on acces. and the landing hosts, see MainHostOnly). */
-type FooterLink = { href: string; label: Record<Locale, string>; mainOnly?: true }
+type FooterLink = { href: string; label: Record<Locale, string>; mainOnly?: true; /** The English address when it differs. */ en?: string }
 
 const help: FooterLink[] = [
   { href: `/${page('politica-livrare').slug}`, label: { ro: 'Livrare', en: 'Delivery' } },
@@ -22,6 +22,7 @@ const help: FooterLink[] = [
   { href: `/${page('garantie').slug}`, label: { ro: 'Garanție și reclamații', en: 'Warranty and complaints' } },
   // OUG 34/2014 art. 11^1: the online withdrawal function, reachable from every page.
   { href: '/retragere', label: { ro: 'Retrage-te din contract aici', en: 'Withdraw from the contract here' } },
+  { href: '/pentru-companii', en: '/for-business', label: { ro: 'Pentru companii (−40%)', en: 'For business (−40%)' }, mainOnly: true },
   { href: '/intrebari-frecvente', label: { ro: 'Întrebări frecvente', en: 'FAQ' }, mainOnly: true },
   { href: '/contact-us', label: { ro: 'Contact', en: 'Contact' }, mainOnly: true },
   { href: '/about-us', label: { ro: 'Despre noi', en: 'About us' }, mainOnly: true },
@@ -103,7 +104,7 @@ export async function Footer() {
               {help.map((l) => {
                 const item = (
                   <li key={l.href}>
-                    <Link href={l.href} className="flex min-h-10 items-center hover:text-white">
+                    <Link href={locale === 'en' && l.en ? l.en : l.href} className="flex min-h-10 items-center hover:text-white">
                       {l.label[locale]}
                     </Link>
                   </li>

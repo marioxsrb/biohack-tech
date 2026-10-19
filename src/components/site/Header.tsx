@@ -15,8 +15,8 @@ import { useOffMainHost } from './MainHostOnly'
 import { Wordmark } from './Wordmark'
 
 const COPY = {
-  ro: { nav: 'Principal', products: 'Produse', about: 'Despre noi', contact: 'Contact', cart: 'Coș', cartLabel: (n: number) => (n ? `Coș, ${n} ${n === 1 ? 'produs' : 'produse'}` : 'Coș, gol'), openMenu: 'Deschide meniul', closeMenu: 'Închide meniul', menu: 'Meniu' },
-  en: { nav: 'Main', products: 'Products', about: 'About us', contact: 'Contact', cart: 'Cart', cartLabel: (n: number) => (n ? `Cart, ${n} ${n === 1 ? 'item' : 'items'}` : 'Cart, empty'), openMenu: 'Open the menu', closeMenu: 'Close the menu', menu: 'Menu' },
+  ro: { nav: 'Principal', products: 'Produse', business: 'Pentru companii', businessHref: '/pentru-companii', about: 'Despre noi', contact: 'Contact', cart: 'Coș', cartLabel: (n: number) => (n ? `Coș, ${n} ${n === 1 ? 'produs' : 'produse'}` : 'Coș, gol'), openMenu: 'Deschide meniul', closeMenu: 'Închide meniul', menu: 'Meniu' },
+  en: { nav: 'Main', products: 'Products', business: 'For business', businessHref: '/for-business', about: 'About us', contact: 'Contact', cart: 'Cart', cartLabel: (n: number) => (n ? `Cart, ${n} ${n === 1 ? 'item' : 'items'}` : 'Cart, empty'), openMenu: 'Open the menu', closeMenu: 'Close the menu', menu: 'Menu' },
 }
 
 /**
@@ -100,6 +100,12 @@ export function Header() {
                 {t.products}
                 <Chevron className={`h-3.5 w-3.5 transition-transform duration-200 ${menuOpen ? 'rotate-180' : ''}`} />
               </button>
+            </li>
+            <li>
+              <Link href={t.businessHref} className="nav-link inline-flex items-center gap-1.5 py-2.5">
+                {t.business}
+                <span className="rounded-full bg-cyan-300/90 px-1.5 py-0.5 text-[11px] leading-none font-semibold text-ink">−40%</span>
+              </Link>
             </li>
             <li>
               <Link href="/about-us" className="nav-link inline-block py-2.5">
@@ -196,6 +202,12 @@ export function Header() {
             </ul>
             <CurrencySwitch dark className="mt-10 w-fit sm:hidden" />
             <ul className="mt-12 space-y-1 text-[18px]">
+              <li>
+                <Link href={t.businessHref} onClick={closeSheet} className="flex items-center gap-2 py-2 text-white">
+                  {t.business}
+                  <span className="rounded-full bg-cyan-300 px-2 py-0.5 text-[12px] font-semibold text-ink">{locale === 'en' ? '−40% from 25 units' : '−40% de la 25 buc.'}</span>
+                </Link>
+              </li>
               <li>
                 <Link href="/about-us" onClick={closeSheet} className="block py-2 text-white/85">
                   {t.about}
