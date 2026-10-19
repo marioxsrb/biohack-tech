@@ -35,7 +35,11 @@ Stare: **pregătit, neactivat**. Nimic din ce e mai jos nu a fost cumpărat, por
 5. (tu) Pe telefonul cu SIM-ul Orange: redirecționare. Variante: totul `**21*<număr Twilio>#`; doar când nu răspunzi `**61*<număr>#`, ocupat `**67*<număr>#`, inaccesibil `**62*<număr>#`. Anulare: `##21#` (respectiv `##61#` etc.).
 6. Test: un singur apel de pe un număr autorizat, apoi verificare în Admin → Apeluri AI (direcție „primit”, link ElevenLabs).
 
-## 3. Înregistrări audio — de ce NU sunt pornite
+## 3. Înregistrări audio — ACTIVE din 19.10.2026 (vezi mai jos condițiile îndeplinite)
+
+**Actualizare 19.10.2026:** politica și termenii spun acum că apelurile sunt înregistrate (scop, temei: interes legitim art. 6(1)(f), 30 de zile, acces, drepturi, ștergere în 3 zile lucrătoare). Prima frază anunță „Sunt un asistent automat, iar apelul este înregistrat”. Agentul încheie apelul dacă persoana nu vrea înregistrare și cere ștergerea (request_human_follow_up). Abia după publicarea acestora s-a pornit `record_voice: true` (retenție 30 de zile). Ascultare: ElevenLabs → Conversations sau Admin → Apeluri AI → Deschide.
+
+### Istoric: de ce nu erau pornite
 
 Tehnic se pornesc cu un singur câmp (`platform_settings.privacy.record_voice: true`); apar apoi în ElevenLabs → Conversations, cu player și descărcare. **Legal însă nu se poate acum**, pentru că textele în vigoare promit contrariul:
 
