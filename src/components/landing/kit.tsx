@@ -8,7 +8,7 @@ import type { ReactNode } from 'react'
 import { CookieSettingsButton } from '@/components/consent/ConsentManager'
 import { ContactForm } from '@/components/contact/ContactForm'
 import { Wordmark } from '@/components/site/Wordmark'
-import { Arrow, Mail, Phone } from '@/components/ui/icons'
+import { Arrow, Mail, Phone, WhatsApp } from '@/components/ui/icons'
 import { getProduct } from '@/content/catalog'
 import type { Landing } from '@/content/landings'
 import { companyLine } from '@/config/company'
@@ -125,6 +125,13 @@ export function Help({ title, text }: { title: string; text: string }) {
                 <Phone className="h-[18px] w-[18px] text-[var(--lp-accent)]" /> {site.phone}
               </a>
             </li>
+            {site.whatsapp && (
+              <li>
+                <a href={`https://wa.me/${site.whatsapp}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center gap-3 hover:text-[var(--lp-accent)]">
+                  <WhatsApp className="h-[18px] w-[18px] text-[#25d366]" /> WhatsApp
+                </a>
+              </li>
+            )}
           </ul>
           <p className="mt-2 text-[15px] text-[var(--lp-muted)]">Răspundem {terms.responseTime}.</p>
         </div>

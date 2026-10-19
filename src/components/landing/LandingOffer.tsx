@@ -14,6 +14,7 @@ import type { LandingSlug } from '@/lib/landing-hosts'
 import { formatLei } from '@/lib/money'
 import { priceLines } from '@/lib/promotions'
 import { checkoutHref, isPlainClick, startCheckout } from './checkout-link'
+import { LandingContactOrder } from './ContactOrder'
 
 export type VariantNote = { big: string; text: string }
 
@@ -97,6 +98,7 @@ export function LandingOffer({ slug, productId, title, text, cta, notes, layout 
           <Lock /> {cta} <Arrow />
         </a>
       )}
+      {price !== null && <LandingContactOrder product={product.name} variant={variant ? variantLabel(product, variant) : null} quantity={quantity} className="mt-3 sm:max-w-[460px]" />}
       <ul className="mt-5 flex flex-wrap gap-x-5 gap-y-1.5 text-[14.5px] text-[var(--lp-muted)]">
         <li>{cashOnDelivery.enabled ? 'Plată la livrare, card sau transfer' : 'Card sau transfer bancar'}</li>
         <li>{terms.returnDays} zile să te răzgândești</li>

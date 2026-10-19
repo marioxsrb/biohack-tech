@@ -14,6 +14,7 @@ import { priceLines, promotionProgress } from '@/lib/promotions'
 import { amberCopy } from '@/lib/offer-copy'
 import { MAX_QTY } from '@/lib/purchase'
 import { checkoutHref, isPlainClick, startCheckout } from './checkout-link'
+import { LandingContactOrder } from './ContactOrder'
 
 const KEY = 'bt-amber-selection'
 type Selection = Record<string, number>
@@ -239,6 +240,7 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
           )}
 
           <div className="mt-5">{cta}</div>
+          <LandingContactOrder product={product.name} variant={lines.length ? lines.map((l) => `${variantLabel(product, l.variant)} × ${l.quantity}`).join(', ') : null} quantity={units || 1} className="mt-2.5" />
           <p className="mt-3 text-[13.5px] leading-snug text-[var(--lp-muted)]">
             {terms.vat}. Livrare gratuită. {cashOnDelivery.enabled ? 'Plată la livrare, card sau transfer.' : 'Card sau transfer.'} {terms.returnDays} zile să te răzgândești. Garanție {terms.warrantyYears} ani.
           </p>
