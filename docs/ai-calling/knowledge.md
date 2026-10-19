@@ -1,6 +1,6 @@
 # Biohack Tech
 
-Magazin online din România care vinde dispozitivele NEUROS. Site: https://biohack-tech.ro. Email: contact@biohack-tech.ro. Telefon: +40 757 890 707. Răspundem în cel mult 24 de ore.
+Magazin online din România care vinde dispozitivele NEUROS. Site: https://biohack-tech.ro. Email: contact@biohack-tech.ro. Telefon: +40 767 978 707. Răspundem în cel mult 24 de ore.
 
 Produse vândute acum: NEUROS Calm, NEUROS Focus, NEUROS Amber. NEUROS Flow nu se mai vinde.
 
@@ -44,7 +44,7 @@ R: Un produs de wellness, pentru calm în fiecare zi. Susține relaxarea. Pentru
 
 ## NEUROS Focus (Pentru focus și claritate)
 Pentru ce este: Pentru concentrare. Te ajută să-ți aduni atenția. Susține focusul și energia pentru ce ai de făcut. Joci pe tabletă, cu atenția ta.
-Preț: 1.800 lei (TVA 21% inclus, livrare gratuită în românia).
+Preț: 3.225 lei (TVA 21% inclus, livrare gratuită în românia).
 Promoție: Iei 2 bucăți din același produs: 10% reducere la ele. Iei 3: 20%. Reducerea apare în coș.
 Pagina produsului: https://biohack-tech.ro/products/focus
 Pe scurt: Te ajută să-ți aduni atenția când mintea fuge. Susține focusul și o stare mai clară. Jocurile de pe tabletă răspund la cât de prezent ești.
@@ -191,7 +191,7 @@ Dacă problema apare în primul an de la livrare, se presupune că exista la liv
 Ai dreptul ca produsul să fie reparat sau înlocuit gratuit, într-un termen rezonabil de cel mult 15 zile de la data la care ni l-ai adus sau trimis. Dacă asta nu e posibil, ai dreptul la o reducere de preț sau la încetarea contractului.
 Garanția legală se aplică la cumpărarea ca persoană fizică.
 Cum depui o reclamație:
-Scrie-ne la contact@biohack-tech.ro sau sună la +40 757 890 707. Spune-ne numărul comenzii, produsul și ce nu funcționează. Ajută și o fotografie sau un video scurt.
+Scrie-ne la contact@biohack-tech.ro sau sună la +40 767 978 707. Spune-ne numărul comenzii, produsul și ce nu funcționează. Ajută și o fotografie sau un video scurt.
 Îți spunem pașii pentru trimiterea produsului și te ținem la curent până la rezolvare.
 Dacă nu ajungem la o soluție:
 Te poți adresa Autorității Naționale pentru Protecția Consumatorilor (anpc.ro).
