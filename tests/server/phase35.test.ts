@@ -154,10 +154,10 @@ describe('discounted orders agree everywhere', () => {
     })
     const o = (await orders.byToken(db, (await res.json()).token))!
     // 10% on the two Calm only (127.600 bani); the Focus at full price; one Amber free.
-    const expected = 2 * 638000 - 127600 + 322500 + 2 * 31500
+    const expected = 2 * 638000 - 127600 + 333700 + 2 * 31500
     expect(o.totalMinor).toBe(expected)
     const c = getConfig()
-    expect(renderEmail('transfer_instructions', o, { siteUrl: c.siteUrl, bank: c.bank }).text).toContain('Suma: 15.339 lei')
+    expect(renderEmail('transfer_instructions', o, { siteUrl: c.siteUrl, bank: c.bank }).text).toContain('Suma: 15.451 lei')
     await svc.confirmPayment(o.id, 'admin')
     expect((await orders.byId(db, o.id))!.paymentStatus).toBe('paid')
     // A full refund is the discounted total, not the list price.
@@ -231,11 +231,11 @@ describe('post-purchase offer', () => {
     // The other choice afterwards only reports the existing linked order: no second child, no second charge.
     expect((await act(parent.publicToken, 'accept', { productId: 'balance-wave' })).state).toBe('paid')
     expect(upsellCalls()).toHaveLength(1)
-    expect(Number(upsellCalls()[0].form!.get('amount'))).toBe(322500)
+    expect(Number(upsellCalls()[0].form!.get('amount'))).toBe(333700)
     const p = (await orders.byId(db, parent.id))!
     expect([p.paymentStatus, p.upsellStatus]).toEqual(['paid', 'accepted'])
     expect(offersFor(p)).toEqual([])
-    expect((await orders.childOf(db, parent.id))!.items.map((i) => [i.productId, i.unitPriceMinor])).toEqual([['brainlink-pro', 322500]])
+    expect((await orders.childOf(db, parent.id))!.items.map((i) => [i.productId, i.unitPriceMinor])).toEqual([['brainlink-pro', 333700]])
   })
 
   it('refuses another product, a tampered price, a bank-transfer order, an unpaid or expired order, and an unknown token', async () => {

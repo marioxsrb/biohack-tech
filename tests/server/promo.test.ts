@@ -78,8 +78,8 @@ describe('pricing (pure)', () => {
   it('the launch emails: 1 piece 10%, 2 of the same 20%, 3+ 30%', () => {
     const rule = { code: 'NEUROS10', kind: 'percent' as const, value: 10, products: null, minOrderMinor: 0 }
     for (const [q, pct] of [[1, 10], [2, 20], [3, 30], [4, 30]] as const) {
-      const p = priceLines(lines([['brainlink-pro', q, 322500]]), undefined, rule)
-      expect(p.discountMinor, `${q} × Focus`).toBe((322500 * q * pct) / 100)
+      const p = priceLines(lines([['brainlink-pro', q, 333700]]), undefined, rule)
+      expect(p.discountMinor, `${q} × Focus`).toBe((333700 * q * pct) / 100)
     }
     // Amber: 3 pairs for the price of 2, plus 10% of the full price.
     const amber = priceLines(lines([['ochelari-biohack', 3, 31500]]), undefined, rule)
@@ -87,16 +87,16 @@ describe('pricing (pure)', () => {
   })
 
   it('fixed amount: never more than what is left; split over eligible lines only', () => {
-    const p = priceLines(lines([['balance-wave', 1, 638000], ['brainlink-pro', 1, 322500]]), undefined, { code: 'F', kind: 'fixed', value: 400000, products: ['brainlink-pro'], minOrderMinor: 0 })
-    expect(p.code).toEqual({ code: 'F', amountMinor: 322500 })
-    expect(p.lineCodeDiscounts).toEqual({ '1': 322500 })
+    const p = priceLines(lines([['balance-wave', 1, 638000], ['brainlink-pro', 1, 333700]]), undefined, { code: 'F', kind: 'fixed', value: 400000, products: ['brainlink-pro'], minOrderMinor: 0 })
+    expect(p.code).toEqual({ code: 'F', amountMinor: 333700 })
+    expect(p.lineCodeDiscounts).toEqual({ '1': 333700 })
     expect(p.totalMinor).toBe(638000)
   })
 
   it('minimum order (after automatic promotions) and products not in the cart: no discount, the reason is given', () => {
     const rule = { code: 'M', kind: 'percent' as const, value: 10, products: null, minOrderMinor: 400000 }
-    expect(priceLines(lines([['brainlink-pro', 1, 322500]]), undefined, rule).code).toEqual({ code: 'M', amountMinor: 0, problem: 'min_order' })
-    expect(priceLines(lines([['brainlink-pro', 1, 322500]]), undefined, { ...rule, minOrderMinor: 0, products: ['balance-wave'] }).code?.problem).toBe('no_products')
+    expect(priceLines(lines([['brainlink-pro', 1, 333700]]), undefined, rule).code).toEqual({ code: 'M', amountMinor: 0, problem: 'min_order' })
+    expect(priceLines(lines([['brainlink-pro', 1, 333700]]), undefined, { ...rule, minOrderMinor: 0, products: ['balance-wave'] }).code?.problem).toBe('no_products')
   })
 })
 
@@ -119,11 +119,11 @@ describe('orders with a code', () => {
     await code({ code: 'TOATE', kind: 'fixed', value: 5000 })
     for (const method of ['card', 'transfer', 'cod'] as const) {
       const { data } = await buy([FOCUS(1)], 'TOATE', { method })
-      expect((await order(data.orderNumber)).totalMinor).toBe(322500 - 5000)
+      expect((await order(data.orderNumber)).totalMinor).toBe(333700 - 5000)
     }
     const { data } = await buy([FOCUS(1)])
     const plain = await order(data.orderNumber)
-    expect([plain.totalMinor, plain.promoCode]).toEqual([322500, null])
+    expect([plain.totalMinor, plain.promoCode]).toEqual([333700, null])
   })
 
   it('refused codes: unknown, inactive, not started, expired, wrong products, under the minimum', async () => {
@@ -170,7 +170,7 @@ describe('orders with a code', () => {
     await buy([FOCUS(1)], 'NUMARA')
     await buy([FOCUS(1)], 'NUMARA', { email: 'b@exemplu.ro' })
     const c = (await promoCodes.list(db)).find((x) => x.code === 'NUMARA')!
-    expect([c.uses, c.discountMinor, c.revenueMinor]).toEqual([2, 2000, 2 * (322500 - 1000)])
+    expect([c.uses, c.discountMinor, c.revenueMinor]).toEqual([2, 2000, 2 * (333700 - 1000)])
   })
 })
 

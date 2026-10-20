@@ -490,7 +490,7 @@ describe('agent', () => {
     const k = agentKnowledge('https://biohack-tech.ro')
     expect(k).toContain('## NEUROS Calm')
     expect(k).toContain('6.380 lei')
-    expect(k).toContain('3.225 lei')
+    expect(k).toContain('3.337 lei')
     expect(k).toContain('315 lei')
     expect(k).toMatch(/2\+1|una este gratuită|gratis/i)
     expect(k).toContain('10% reducere')

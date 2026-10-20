@@ -138,14 +138,14 @@ export const productContent: Record<ProductId, ProductContent> = {
   'brainlink-pro': {
     seo: {
       title: 'NEUROS Focus, pentru concentrare și claritate',
-      description: 'NEUROS Focus te ajută să-ți aduni atenția. Susține focusul și energia la muncă și la studiu. Livrare gratuită.',
+      description: 'NEUROS Focus te ajută să-ți aduni atenția. Vine cu tabletă inclusă, 10 jocuri și 20 de ședințe gratuite. Livrare gratuită.',
     },
-    intro: 'Te ajută să-ți aduni atenția când mintea fuge. Îți dă mai mult focus și o minte mai limpede. Jocurile de pe tabletă răspund la cât de atent ești.',
+    intro: 'Te ajută să-ți aduni atenția când mintea fuge. Îți dă mai mult focus și o minte mai limpede. Primești și tableta, cu 10 jocuri care răspund la cât de atent ești, plus 20 de ședințe gratuite.',
     highlights: [
+      'Tabletă inclusă, gata de joc',
+      '10 jocuri care merg înainte când ești atent',
+      '20 de ședințe gratuite incluse',
       'Te ajută să intri mai ușor în concentrare',
-      'Te ajută să rămâi concentrat mai mult timp',
-      'Te ajută să te liniștești, cu meditații ghidate',
-      'Îți vezi progresul după fiecare sesiune',
     ],
     benefits: [
       { title: 'Focus mai clar', text: 'Te ajută să rămâi la ce ai de făcut, prin jocuri scurte.' },
@@ -187,8 +187,9 @@ export const productContent: Record<ProductId, ProductContent> = {
       },
     ],
     specs: [
+      { label: 'În pachet', value: 'Casca NEUROS Focus, tabletă, 10 jocuri în Neuros Game și 20 de ședințe gratuite' },
       { label: 'Senzori', value: '3 senzori EEG' },
-      { label: 'Aplicație', value: 'Neuros Game: peste 10 jocuri și meditații ghidate' },
+      { label: 'Aplicație', value: 'Neuros Game: 10 jocuri și meditații ghidate' },
       { label: 'Conectare', value: 'Bluetooth, la tabletă' },
       { label: 'Baterie', value: 'Până la 4 ore, după o oră de încărcare' },
       { label: 'Certificări', value: 'CE, FCC' },
@@ -330,10 +331,10 @@ export const productContentEn: Record<ProductId, ProductContent> = {
     },
     intro: 'It helps you gather your attention when your mind wanders. It supports focus and a clearer state. The games on your tablet respond to how present you are.',
     highlights: [
+      'Tablet included, ready to play',
+      '10 games that move forward when you focus',
+      '20 free sessions included',
       'Helps you get into focus more easily',
-      'It supports focus',
-      'Also supports calm, with guided meditations',
-      'See your progress, session by session',
     ],
     benefits: [
       { title: 'Clearer focus', text: 'It helps you stay with what you are doing, through short games.' },
@@ -375,6 +376,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       },
     ],
     specs: [
+      { label: 'In the box', value: 'The NEUROS Focus headband, a tablet, 10 games in Neuros Game and 20 free sessions' },
       { label: 'Sensors', value: '3 EEG sensors' },
       { label: 'App', value: 'Neuros Game: over 10 games and guided meditations' },
       { label: 'Connection', value: 'Bluetooth, to a tablet' },

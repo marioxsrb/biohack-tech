@@ -106,6 +106,7 @@ import blCasca from '@/assets/img/brainlink/casca.webp'
 import blLateral from '@/assets/img/brainlink/casca-lateral.webp'
 import blGeanta from '@/assets/img/brainlink/casca-geanta.webp'
 import blTableta from '@/assets/img/brainlink/pillar-games.webp'
+import blCascaTableta from '@/assets/img/brainlink/casca-tableta.webp'
 import blRelaxare from '@/assets/img/brainlink/lifestyle-relaxare.webp'
 
 import carteCoperta from '@/assets/img/carte/coperta.png'
@@ -424,10 +425,12 @@ const catalog: Omit<Product, 'price'>[] = [
     name: 'NEUROS Focus',
     kind: 'Pentru focus și claritate',
     purpose: 'Pentru concentrare',
-    tagline: 'Te ajută să-ți aduni atenția. Îți dă focus și energie pentru ce ai de făcut. Joci pe tabletă, iar jocul merge înainte când ești atent.',
+    tagline: 'Te ajută să-ți aduni atenția. Vine cu tabletă inclusă, 10 jocuri și 20 de ședințe gratuite. Jocul merge înainte când ești atent.',
     cutout: cut(blCasca, 'NEUROS Focus, casca văzută din unghi'),
     lifestyle: photo(blTableta, 'Tânăr pe canapea, purtând NEUROS Focus și jucând pe tabletă'),
     images: [
+      // Since 20.10.2026 the tablet comes with it: the headset and the tablet first.
+      studio(blCascaTableta, 'NEUROS Focus cu tableta inclusă, pe care rulează un joc'),
       cut(blCasca, 'NEUROS Focus, casca văzută din unghi'),
       photo(blTableta, 'Tânăr pe canapea, purtând NEUROS Focus și jucând pe tabletă'),
       cut(blLateral, 'NEUROS Focus văzută din lateral, cu senzorul de ureche'),

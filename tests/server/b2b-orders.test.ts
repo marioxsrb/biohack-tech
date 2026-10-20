@@ -21,7 +21,7 @@ beforeEach(async () => {
 })
 
 const CALM = 638000
-const FOCUS = 322500
+const FOCUS = 333700
 const place = (raw: unknown[], paymentMethod: 'cod' | 'transfer' | 'card', attemptId: string, promoCode?: string) =>
   svc.placeOrder({ lines: lines(raw), form: { ...person, paymentMethod }, attemptId, ...(promoCode && { promoCode }) } as never)
 
