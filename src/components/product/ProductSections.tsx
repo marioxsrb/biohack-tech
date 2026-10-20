@@ -31,7 +31,8 @@ export function ProductSections({ product, content: c, locale }: Props) {
     <>
       <Cinematic story={c.scene} />
       <Benefits items={c.benefits} t={t} />
-      {c.use && <Use use={c.use} />}
+      {/* Romanian Focus: the use steps live in the story under the buy area (components/focus/FocusStory). */}
+      {c.use && !(locale === 'ro' && product.id === 'brainlink-pro') && <Use use={c.use} />}
       {c.lookbook && <Lookbook lookbook={c.lookbook} t={t} />}
       {c.explain && <Explain explain={c.explain} t={t} />}
       {c.moments.length > 0 && (

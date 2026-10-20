@@ -13,6 +13,7 @@ import { Gallery } from './Gallery'
 import { BusinessStrip } from '@/components/b2b/BusinessStrip'
 import { CalmEvening } from '@/components/calm/CalmEvening'
 import { CalmUse } from '@/components/calm/CalmUse'
+import { FocusStory } from '@/components/focus/FocusStory'
 import { terms } from '@/config/site'
 import { BULK_OFFER } from '@/config/promotions'
 
@@ -54,6 +55,7 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
   const purchasable = isPurchasable(product)
   // Romanian Calm only: the evening headline, and the story that sits between the trust row and the business strip.
   const calmStory = locale === 'ro' && product.id === 'balance-wave'
+  const focusStory = locale === 'ro' && product.id === 'brainlink-pro'
 
   const [selected, setSelected] = useState<Record<string, string>>(() => product.variants?.[0]?.options ?? {})
   const [quantity, setQuantity] = useState(1)
@@ -217,6 +219,12 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
 
           {!calmStory && <p className="mt-7 max-w-[32em] border-t border-mist-2 pt-6 text-[16.5px] leading-relaxed text-text">{intro}</p>}
         </div>
+
+        {focusStory && (
+          <div className="min-w-0 md:col-span-12">
+            <FocusStory pairCta={<BuyNowButton productId={product.id} variantId={variant?.id} quantity={2} pay="online" title="Comandă 2 bucăți" className="w-full" />} />
+          </div>
+        )}
 
         {calmStory && (
           <div className="min-w-0 md:col-span-12">

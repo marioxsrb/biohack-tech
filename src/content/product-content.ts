@@ -140,12 +140,12 @@ export const productContent: Record<ProductId, ProductContent> = {
       title: 'NEUROS Focus, pentru concentrare și claritate',
       description: 'NEUROS Focus te ajută să-ți aduni atenția. Susține focusul și energia la muncă și la studiu. Livrare gratuită.',
     },
-    intro: 'Te ajută să-ți aduni atenția când mintea fuge. Susține focusul și o stare mai clară. Jocurile de pe tabletă răspund la cât de prezent ești.',
+    intro: 'Te ajută să-ți aduni atenția când mintea fuge. Îți dă mai mult focus și o minte mai limpede. Jocurile de pe tabletă răspund la cât de atent ești.',
     highlights: [
       'Te ajută să intri mai ușor în concentrare',
-      'Susține focusul',
-      'Susține și calmul, prin meditații ghidate',
-      'Îți vezi progresul, sesiune cu sesiune',
+      'Te ajută să rămâi concentrat mai mult timp',
+      'Te ajută să te liniștești, cu meditații ghidate',
+      'Îți vezi progresul după fiecare sesiune',
     ],
     benefits: [
       { title: 'Focus mai clar', text: 'Te ajută să rămâi la ce ai de făcut, prin jocuri scurte.' },

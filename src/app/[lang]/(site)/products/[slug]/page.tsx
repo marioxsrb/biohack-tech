@@ -8,6 +8,7 @@ import { BookCover } from '@/components/book/BookCover'
 import { ReviewMarquee } from '@/components/reviews/ReviewMarquee'
 import { CalmFacts } from '@/components/calm/CalmFacts'
 import { CalmScience } from '@/components/calm/CalmScience'
+import { FocusFacts } from '@/components/focus/FocusFacts'
 
 import { allSlugs, getProductBySlug, isBook, productHref } from '@/content/catalog'
 import { getProductContent } from '@/content/product-content'
@@ -60,6 +61,7 @@ export default async function ProductPage({ params }: PageProps<'/[lang]/product
   const content = getProductContent(product.id, locale)
   // The Romanian NEUROS Calm page has its own story sections (components/calm).
   const calmRo = locale === 'ro' && product.id === 'balance-wave'
+  const focusRo = locale === 'ro' && product.id === 'brainlink-pro'
 
   const gallery = product.variants?.[0]?.images ?? product.images
   const imageUrls = [product.lifestyle, ...gallery].map((i) => absolute(i.src.src))
@@ -97,6 +99,7 @@ export default async function ProductPage({ params }: PageProps<'/[lang]/product
       <VisitBeacon page={product.slug} />
       <ProductViewed productId={product.id} />
       <ReviewMarquee productId={product.id} className="mb-[var(--sec)]" note={calmRo ? CALM_CLINIC_NOTE : undefined} />
+      {focusRo && <FocusFacts />}
       {calmRo && (
         <>
           <CalmFacts />
