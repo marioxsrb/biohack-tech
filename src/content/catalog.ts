@@ -146,6 +146,9 @@ export type Product = {
   soldOut?: boolean
 }
 
+/** Products with only a few pieces left: the stock line says so. Remove an id when the stock is refilled. */
+export const LOW_STOCK: string[] = ['balance-wave']
+
 /**
  * Products that stay out of the store (not listed, not found, not sold) until the server releases them. The book is
  * released only once its PDF can be delivered securely (server/digital: NEUROS source and link secret configured),

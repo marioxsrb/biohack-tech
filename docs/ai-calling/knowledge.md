@@ -11,7 +11,7 @@ Promoție: Iei 2 bucăți din același produs: 10% reducere la ele. Iei 3: 20%. 
 Pagina produsului: https://biohack-tech.ro/products/calm
 Pe scurt: Te ajută să treci din agitația zilei într-o stare mai calmă. Susține mai puțin stres și un somn mai lin. O ședință ține câteva minute.
 Ce oferă:
-- Te ajută să te liniștești în câteva minute
+- Ajută la depresie și anxietate
 - Susține un somn mai lin
 - Susține calmul, seara sau într-o pauză
 - Pornești și te relaxezi. Se oprește singur

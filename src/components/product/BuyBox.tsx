@@ -15,7 +15,7 @@ import { cashOnDelivery } from '@/config/payments'
 import { promoText } from '@/config/promotions'
 import { socialProof } from '@/config/social-proof'
 import { site, terms } from '@/config/site'
-import { getProduct, getVariant, isBook, unitPrice, variantLabel, type ProductId } from '@/content/catalog'
+import { LOW_STOCK, getProduct, getVariant, isBook, unitPrice, variantLabel, type ProductId } from '@/content/catalog'
 import { useLocale, useUi } from '@/i18n/LocaleProvider'
 import { useMoney } from '@/i18n/currency'
 import { priceLines, promotionFor } from '@/lib/promotions'
@@ -35,6 +35,7 @@ const COPY = {
     pieces: (n: number) => (n === 1 ? '1 bucată' : `${n} bucăți`),
     pairs: (n: number) => (n === 1 ? '1 pereche' : `${n} perechi`),
     inStock: 'În stoc',
+    lowStock: 'În stoc · doar câteva bucăți rămase',
     soldOut: 'Stoc epuizat momentan',
     ships: `Expediem în ${terms.processingDays}`,
     contact: 'Comandă direct, cu ajutorul nostru',
@@ -63,6 +64,7 @@ const COPY = {
     pieces: (n: number) => (n === 1 ? '1 piece' : `${n} pieces`),
     pairs: (n: number) => (n === 1 ? '1 pair' : `${n} pairs`),
     inStock: 'In stock',
+    lowStock: 'In stock · only a few left',
     soldOut: 'Temporarily out of stock',
     ships: `Ships in ${terms.processingDays.replace('zile', 'days')}`,
     contact: 'Order directly, with our help',
@@ -247,7 +249,7 @@ export function Availability({ className = '', productId }: { className?: string
         <span className="relative h-2.5 w-2.5 rounded-full bg-[#1f9d55]" />
       </span>
       <span className="flex flex-col leading-tight">
-        <strong className="font-semibold text-ink">{t.inStock}</strong>
+        <strong className="font-semibold text-ink">{productId && LOW_STOCK.includes(productId) ? t.lowStock : t.inStock}</strong>
         <span className="mt-0.5 text-[13.5px] text-muted">{t.ships}</span>
       </span>
     </p>

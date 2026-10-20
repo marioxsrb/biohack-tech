@@ -83,7 +83,7 @@ export const productContent: Record<ProductId, ProductContent> = {
     },
     intro: 'Te ajută să treci din agitația zilei într-o stare mai calmă. Susține mai puțin stres și un somn mai lin. O ședință ține câteva minute.',
     highlights: [
-      'Te ajută să te liniștești în câteva minute',
+      'Ajută la depresie și anxietate',
       'Susține un somn mai lin',
       'Susține calmul, seara sau într-o pauză',
       'Pornești și te relaxezi. Se oprește singur',
