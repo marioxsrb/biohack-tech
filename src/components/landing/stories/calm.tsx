@@ -5,7 +5,6 @@
 import Image from 'next/image'
 import type { ReactNode } from 'react'
 import { Arrow } from '@/components/ui/icons'
-import { terms } from '@/config/site'
 import { Kicker, Steps, Title } from '../parts'
 
 import somn from '@/assets/img/balance-wave/result-somn.webp'
@@ -41,10 +40,10 @@ export function CalmHero({ name, buy, cta }: { name: string; buy?: ReactNode; ct
       </div>
       <div className="lp-wrap w-full pt-28 pb-[clamp(56px,10vh,110px)] max-md:pt-2 max-md:pb-12">
         <p className="text-[13px] font-semibold tracking-[0.14em] text-cyan uppercase">{name} · pentru liniște</p>
-        <h1 id="lp-title" className="mt-4 max-w-[11em] text-[clamp(40px,5.6vw,76px)] leading-[0.98] tracking-[-0.045em] !text-white">
-          Seara, când casa tace și gândurile pornesc.
+        <h1 id="lp-title" className="mt-4 max-w-[10.5em] text-[clamp(42px,6vw,84px)] leading-[0.98] tracking-[-0.045em] !text-white">
+          Câteva minute de liniște, doar pentru tine.
         </h1>
-        <p className="mt-5 max-w-[32em] text-[clamp(17px,1.4vw,20px)] leading-snug text-white/85">
+        <p className="mt-5 max-w-[30em] text-[clamp(17px,1.4vw,20px)] leading-snug text-white/85">
           Te ajută să lași stresul zilei în urmă. Susține calmul și un somn mai lin. Pornești și te relaxezi.
         </p>
         {buy}
@@ -54,9 +53,6 @@ export function CalmHero({ name, buy, cta }: { name: string; buy?: ReactNode; ct
             Cum te ajută <Arrow />
           </a>
         </div>
-        <p className="mt-5 max-w-[36em] text-[14px] leading-relaxed text-white/70">
-          Plată la livrare. Garanție {terms.warrantyYears} ani. Diana Palotaș, fondatoarea Neuros Europe, psiholog cu peste 20 de ani de experiență.
-        </p>
       </div>
     </section>
   )

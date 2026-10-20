@@ -9,8 +9,6 @@ import { formatLei } from '@/lib/money'
 import type { Landing } from '@/content/landings'
 import { getProductContent } from '@/content/product-content'
 import { Kicker, Title } from '@/components/landing/parts'
-import { Arrow } from '@/components/ui/icons'
-import { CalmEvening } from '@/components/calm/CalmEvening'
 import { CalmHero, CalmHow, CalmMoments, CalmUse } from '@/components/landing/stories/calm'
 import { FocusHero, FocusHow, FocusVideo, FocusWhere } from '@/components/landing/stories/focus'
 import { AmberHero, AmberHow, AmberWhen } from '@/components/landing/stories/amber'
@@ -25,14 +23,6 @@ export function PresentationPage({ landing }: { landing: Landing }) {
       return (
         <PresentationShell landing={landing} heroTone="light">
           <CalmHero name={p.name} buy={<HeroPrice amount={p.price} light />} />
-          <CalmEvening
-            frame="landing"
-            cta={
-              <a href="#contact" className="cta whitespace-normal text-center">
-                Spune-ne cum arată seara ta <Arrow />
-              </a>
-            }
-          />
           <CalmHow />
           <CalmUse />
           <CalmMoments />

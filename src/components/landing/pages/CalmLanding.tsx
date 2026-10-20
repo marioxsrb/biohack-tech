@@ -2,14 +2,12 @@ import { getProduct } from '@/content/catalog'
 import type { Landing } from '@/content/landings'
 import { terms } from '@/config/site'
 import { formatLei } from '@/lib/money'
-import { CalmEvening } from '@/components/calm/CalmEvening'
 import { HeroCta } from '../HeroCta'
 import { LandingOffer } from '../LandingOffer'
 import { FinalCta, Help, LandingFaq, LandingShell, Testimonials } from '../kit'
 import { CalmHero, CalmHow, CalmMoments, CalmUse } from '../stories/calm'
 
 const CTA = 'Comandă NEUROS Calm'
-const HERO_CTA = 'Vreau serile mai liniștite'
 
 /**
  * NEUROS Calm: the site's light pages, with one dark moment (the evening photograph in the hero). The story goes from the moment (evening, a few minutes for
@@ -28,12 +26,7 @@ export function CalmLanding({ landing }: { landing: Landing }) {
             <span className="text-[14px] text-white/70">{terms.vat} · livrare gratuită</span>
           </p>
         }
-        cta={<HeroCta slug={landing.slug} productId={p.id} label={HERO_CTA} className="whitespace-normal text-center" />}
-      />
-      <CalmEvening
-        frame="landing"
-        cta={<HeroCta slug={landing.slug} productId={p.id} label={HERO_CTA} className="whitespace-normal text-center max-md:w-full" />}
-        note={<p className="text-[13.5px] leading-relaxed text-[var(--lp-muted)]">Plată la livrare. Garanție {terms.warrantyYears} ani.</p>}
+        cta={<HeroCta slug={landing.slug} productId={p.id} label={CTA} />}
       />
       <CalmHow />
       <CalmUse />

@@ -10,12 +10,12 @@ import { checkoutHref, isPlainClick, startCheckout } from './checkout-link'
  * The hero's button. Products without variants go straight to the checkout; the others scroll to the
  * picker, because the customer has to choose first.
  */
-export function HeroCta({ slug, productId, label, className = '' }: { slug: LandingSlug; productId: ProductId; label: string; className?: string }) {
+export function HeroCta({ slug, productId, label }: { slug: LandingSlug; productId: ProductId; label: string }) {
   const router = useRouter()
   const hasVariants = !!getProduct(productId)?.variants?.length
   if (hasVariants) {
     return (
-      <a href="#comanda" className={`cta ${className}`}>
+      <a href="#comanda" className="cta">
         {label} <Arrow />
       </a>
     )
@@ -28,7 +28,7 @@ export function HeroCta({ slug, productId, label, className = '' }: { slug: Land
         e.preventDefault()
         startCheckout(router.push, slug, { productId })
       }}
-      className={`cta ${className}`}
+      className="cta"
     >
       {label} <Arrow />
     </a>
