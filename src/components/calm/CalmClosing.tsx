@@ -9,6 +9,7 @@ import { BuyNowButton } from '@/components/cart/BuyNowButton'
 import { Price } from '@/components/cart/Price'
 import { Faq } from '@/components/ui/Faq'
 import { site, terms } from '@/config/site'
+import { LOW_STOCK } from '@/content/catalog'
 import type { ProductContent } from '@/content/product-content'
 import continut from '@/assets/img/balance-wave/ce-e-in-cutie.webp'
 import seara from '@/assets/img/balance-wave/lifestyle-canapea.webp'
@@ -132,15 +133,21 @@ function Closing({ productId }: { productId: Parameters<typeof BuyNowButton>[0][
         <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(11,19,22,0.88)_0%,rgba(11,19,22,0.72)_45%,rgba(11,19,22,0.25)_100%)] max-md:bg-[linear-gradient(180deg,rgba(11,19,22,0.55)_0%,rgba(11,19,22,0.9)_60%)]" />
         <div className="max-w-[34em] px-[clamp(24px,5vw,72px)] py-[clamp(56px,8vw,112px)] max-md:pt-[44vw]">
           <h2 id="final" className="text-[clamp(32px,3.8vw,54px)] leading-[1.04] tracking-[-0.04em] !text-white text-balance">
-            Mâine seară, ședința de la ora patru rămâne la birou.
+            Seara ta liniștită începe cu un singur buton.
           </h2>
-          <p className="mt-5 text-[18px] leading-relaxed text-white/85">Câteva minute cu NEUROS Calm la gât, apoi o seară a ta și un somn mai lin.</p>
-          <p className="mt-7 text-[28px] font-medium tracking-[-0.02em]">
+          <p className="mt-5 text-[18px] leading-relaxed text-white/85">Câteva minute cu NEUROS Calm la gât, apoi lași ziua în urmă și adormi mai ușor.</p>
+          {LOW_STOCK.includes(productId) && (
+            <p className="mt-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[13px] font-semibold text-white shadow-[inset_0_0_0_1px_rgb(255_255_255/0.15)]">
+              <span aria-hidden className="h-2 w-2 rounded-full bg-[#f5b544]" />
+              Doar câteva bucăți rămase
+            </p>
+          )}
+          <p className="mt-4 text-[28px] font-medium tracking-[-0.02em]">
             <Price productId={productId} />
             <span className="ml-3 align-middle text-[14px] font-normal tracking-normal text-white/70">TVA inclus</span>
           </p>
           <div className="mt-5">
-            <BuyNowButton productId={productId} pay="online" title="Comandă NEUROS Calm" className="max-sm:!w-full" />
+            <BuyNowButton productId={productId} pay="online" title="Vreau serile mai liniștite" className="max-sm:!w-full" />
           </div>
           <p className="mt-4 text-[14px] text-white/75">Plată la livrare · Livrare gratuită · Garanție {terms.warrantyYears} ani</p>
           <p className="mt-8 border-t border-white/15 pt-6 text-[15px] leading-relaxed text-white/80">

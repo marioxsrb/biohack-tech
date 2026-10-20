@@ -57,9 +57,15 @@ export type LandingRoute = { action: 'rewrite'; path: string; bare?: true } | { 
 /** The presentation page of a landing: information only, at /prezentare on its hostname. */
 export const presentationPath = (slug: LandingSlug) => `/prezentare/${slug}`
 
+/**
+ * Landings whose hostname shows the product page itself at "/" (calm.<base> is exactly /products/calm, 20.10.2026),
+ * instead of the separate advertising landing at /lp/<slug>.
+ */
+export const PRODUCT_PAGE_LANDINGS: readonly LandingSlug[] = ['calm']
+
 /** What a landing hostname does with a path. Pure, so it is tested without a server. */
 export function routeLanding(slug: LandingSlug, pathname: string): LandingRoute {
-  if (pathname === '/' || pathname === '') return { action: 'rewrite', path: `/lp/${slug}` }
+  if (pathname === '/' || pathname === '') return { action: 'rewrite', path: PRODUCT_PAGE_LANDINGS.includes(slug) ? `/products/${slug}` : `/lp/${slug}` }
   if (pathname === '/prezentare' || pathname === '/prezentare/') return { action: 'rewrite', path: presentationPath(slug), bare: true }
   if (pathname === `/lp/${slug}` || pathname === `/lp/${slug}/`) return { action: 'redirect', path: '/' }
   if (LANDING_PASSTHROUGH.some((r) => r.test(pathname))) return { action: 'next' }
