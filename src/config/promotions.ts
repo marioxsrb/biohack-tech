@@ -18,7 +18,7 @@ type Copy = { badge: string; line: string }
 
 /**
  * Limits a promotion to some variants of its products, by the end of the variant id: `variantSuffix` only those
- * variants, `excludeVariantSuffix` all but those (NEUROS Amber: the pachet has its own 20%, so it stays out of 2+1).
+ * variants, `excludeVariantSuffix` all but those.
  */
 type VariantScope = { variantSuffix?: string; excludeVariantSuffix?: string }
 
@@ -74,21 +74,8 @@ export const PROMOTIONS: Promotion[] = [
     badge: '2+1 gratis',
     line: 'La fiecare 3 perechi NEUROS Amber, una este gratuită. Poți combina ramele.',
     products: ['ochelari-biohack'],
-    // The pachet (two pairs) has its own 20% and does not count towards 2+1: one unit is never discounted twice.
-    excludeVariantSuffix: '-pachet',
     group: 3,
     pay: 2,
-  },
-  {
-    // 20.10.2026: both pairs of one frame (yellow + red lens) cost 20% less, shown as a reduction in the cart and at checkout.
-    kind: 'bundle_percent',
-    id: 'amber-pachet-20',
-    label: 'Pachet NEUROS Amber −20%',
-    badge: '−20% la pachet',
-    line: 'Iei ambele perechi ale ramei, galbenă și roșie: 20% reducere la pachet.',
-    products: ['ochelari-biohack'],
-    variantSuffix: '-pachet',
-    tiers: [{ minUnits: 1, percent: 20, label: '20% la pachetul' }],
   },
 ]
 

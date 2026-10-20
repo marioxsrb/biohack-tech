@@ -206,11 +206,11 @@ export const productContent: Record<ProductId, ProductContent> = {
   'ochelari-biohack': {
     seo: {
       title: 'NEUROS Amber, pentru seri mai liniștite',
-      description: 'NEUROS Amber: lentile galbene pentru seară și lentile roșii pentru ultima oră înainte de somn, pe aceeași ramă. Cinci rame, probă live pe cameră. Livrare gratuită.',
+      description: 'NEUROS Amber: lentile galbene pentru seri mai liniștite. Cinci rame, probă live pe cameră. Livrare gratuită.',
     },
-    intro: 'Seara are două părți. De la apus porți lentilele galbene, care opresc cea mai mare parte din lumina albastră. În ultima oră înainte de somn treci la cele roșii, care opresc și o parte din verde. Aceeași ramă, doar lentila diferă.',
+    intro: 'De la apus porți lentilele galbene, care opresc cea mai mare parte din lumina albastră a ecranelor și a becurilor. Seara se așază mai ușor, iar tu îți vezi liniștit de ce ai de făcut.',
     highlights: [
-      'Lentile galbene pentru seară, roșii înainte de somn',
+      'Lentile galbene, pentru seară',
       'Lumina ecranelor și a becurilor se simte mai blândă',
       'Te ajută ca seara să se așeze mai ușor',
       'Cinci rame, le poți proba live pe cameră',
@@ -245,8 +245,7 @@ export const productContent: Record<ProductId, ProductContent> = {
     specs: [
       { label: 'Modele', value: 'Cat eye, unisex pătrat, ramă subțire de metal' },
       { label: 'Culori', value: 'Cat eye: negru, bej. Unisex pătrat: negru, maro. Ramă subțire: negru' },
-      { label: 'Lentile', value: 'Galbene, pentru seară: opresc cea mai mare parte din lumina albastră. Roșii, pentru ultima oră înainte de somn: opresc albastrul și o parte din verde' },
-      { label: 'Pachet', value: 'Ambele perechi ale aceleiași rame, galbenă și roșie' },
+      { label: 'Lentile', value: 'Galbene, pentru seară: opresc cea mai mare parte din lumina albastră' },
       { label: 'Dioptrie', value: 'Fără dioptrie. Nu se pot face pe rețetă sau cu lentile progresive' },
       { label: 'Ramă', value: 'Ușoară, pentru purtare zilnică' },
       { label: 'Garanție', value: '2 ani' },

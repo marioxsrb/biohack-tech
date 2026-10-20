@@ -75,7 +75,7 @@ describe('products and cart', () => {
     expect(a.outputs[0]).toMatchObject({ status: 'confirm', productId: 'balance-wave', quantity: 1, unitPrice: '6.380 lei' })
     const b = await turn([user('Adaug Amber în coș')])
     expect(b.outputs[0].status).toBe('choose_variant')
-    expect((b.outputs[0].variants as unknown[]).length).toBe(15)
+    expect((b.outputs[0].variants as unknown[]).length).toBe(5)
   })
 
   it('prices the visitor cart on the server, with the promotion', async () => {

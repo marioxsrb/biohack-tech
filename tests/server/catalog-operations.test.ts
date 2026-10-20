@@ -91,16 +91,16 @@ describe('the three-product catalog (NEUROS Flow discontinued 13.10.2026)', () =
     expect(order.items.map((i) => [i.productName, i.variantName, i.quantity, i.unitPriceMinor])).toEqual([
       ['NEUROS Calm', null, 1, 638000],
       ['NEUROS Focus', null, 2, 322500],
-      ['NEUROS Amber', 'Unisex pătrat · Maro · Doar galbene', 2, 31500],
+      ['NEUROS Amber', 'Unisex pătrat · Maro', 2, 31500],
     ])
     const c = getConfig()
     expect(invoicePayload(c.fgo!, order).Continut.map((l) => [l.Denumire, l.NrProduse, l.PretTotal])).toEqual([
       ['NEUROS Calm', 1, 6380],
       ['NEUROS Focus, 10% la 2 bucăți: -645.00 lei', 2, 5805],
-      ['NEUROS Amber (Unisex pătrat · Maro · Doar galbene)', 2, 630],
+      ['NEUROS Amber (Unisex pătrat · Maro)', 2, 630],
     ])
     const products = contactPayload(c.ghl!, order, { orders: 1, valueMinor: order.totalMinor }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, c.siteUrl).customFields.find((f) => f.key === 'bt_last_order_products')!
-    expect(products.field_value).toBe('1 x NEUROS Calm, 2 x NEUROS Focus, 2 x NEUROS Amber (Unisex pătrat · Maro · Doar galbene)')
+    expect(products.field_value).toBe('1 x NEUROS Calm, 2 x NEUROS Focus, 2 x NEUROS Amber (Unisex pătrat · Maro)')
     const mail = renderEmail('order_confirmed', order, { siteUrl: c.siteUrl, bank: c.bank })
     for (const s of ['NEUROS Calm', 'NEUROS Focus', 'NEUROS Amber', '6.380 lei', '6.450 lei', '630 lei', '10% la 2 bucăți NEUROS Focus', '12.815 lei', order.orderNumber, 'Plata a fost confirmată']) expect(mail.text).toContain(s)
   })

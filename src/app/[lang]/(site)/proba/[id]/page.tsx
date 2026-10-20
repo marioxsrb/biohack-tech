@@ -13,7 +13,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   const { id } = await params
   const meta = pageMetadata({
     title: 'Cum îmi stau ochelarii NEUROS Amber?',
-    description: 'Am probat NEUROS Amber pe cameră: lentile galbene pentru seară, roșii înainte de somn. Probează-i și tu.',
+    description: 'Am probat NEUROS Amber pe cameră: lentile galbene pentru seri mai liniștite. Probează-i și tu.',
     path: `/proba/${id}`,
     translated: false,
     image: { url: absolute(`/api/proba/${id}`), width: 960, height: 720, alt: 'Probă NEUROS Amber pe cameră' },
@@ -32,7 +32,7 @@ export default async function SharedTryOn({ params }: { params: Promise<{ id: st
         <h1 className="mt-1 text-[clamp(32px,4vw,52px)] leading-[1.02] tracking-[-0.045em]">Cum îmi stau ochelarii NEUROS Amber?</h1>
         {/* eslint-disable-next-line @next/next/no-img-element -- a stored photo served by the API, not a build asset */}
         <img src={`/api/proba/${id}`} alt="Probă NEUROS Amber pe cameră" width={960} height={720} className="mt-6 h-auto w-full rounded-[24px] bg-mist" />
-        <p className="mt-6 text-[17px] leading-relaxed text-text">Lentile galbene pentru seară, roșii pentru ultima oră înainte de somn. Aceeași ramă, cinci modele. Le poți proba și tu, live, pe camera telefonului.</p>
+        <p className="mt-6 text-[17px] leading-relaxed text-text">Lentile galbene pentru seară, cinci rame din care alegi. Le poți proba și tu, live, pe camera telefonului.</p>
         <Link href="/products/amber" className="cta mt-6 max-sm:!w-full">
           Probează-i și tu
         </Link>
