@@ -47,7 +47,7 @@ export function AmberGate({ onDone, onClose }: { onDone: () => void; onClose: ()
       className="relative w-full max-w-[880px] overflow-hidden rounded-[24px] bg-ink shadow-[0_40px_100px_-30px_rgba(0,0,0,.6)]"
     >
       <div className="relative aspect-[16/10] w-full max-sm:aspect-square">
-        <Image src={birou} alt="Un birou seara, văzut prin ochii tăi: monitor, laptop și telefon, toate cu lumină albastră" fill priority sizes="(max-width: 640px) 100vw, 880px" className="object-cover" />
+        <Image src={birou} alt="Seara la birou, văzut prin ochii tăi: telefonul în mână, monitorul și laptopul, toate cu lumină albastră" fill priority sizes="(max-width: 640px) 100vw, 880px" className="object-cover" />
         {/* Through the lens: the same photo, warm, revealed up to the bar. */}
         <div
           aria-hidden
