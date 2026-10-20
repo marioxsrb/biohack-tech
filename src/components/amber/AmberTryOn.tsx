@@ -6,18 +6,32 @@
  * frame of the video leaves the device and nothing is stored. The overlays (public/tryon/<frame>-<lens>.webp) are
  * the studio front shots with see-through lenses. Loaded only when the visitor opens it.
  */
+import Image, { type StaticImageData } from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FaceLandmarker } from '@mediapipe/tasks-vision'
 
-import { AMBER_FRAME_IDS } from '@/content/catalog'
+import { useCart } from '@/components/cart/CartProvider'
+import { cartStore, lineKey } from '@/components/cart/cart-store'
+import Link from '@/components/ui/Link'
+import type { ProductId } from '@/content/catalog'
+import iconCat from '@/assets/img/glasses/cat-eye-negru-1.webp'
+import iconSq from '@/assets/img/glasses/patrat-negru-1.webp'
+import iconSub from '@/assets/img/glasses/subtire-negru-1.webp'
 
-const FRAMES: Record<string, string> = {
-  'cat-eye-negru': 'Cat eye negru',
-  'cat-eye-bej': 'Cat eye bej',
-  'patrat-negru': 'Pătrat negru',
-  'patrat-maro': 'Pătrat maro',
-  'subtire-negru': 'Ramă subțire',
+const AMBER: ProductId = 'ochelari-biohack'
+
+/** The three models, each with the frame colours it is made in (frame id = model-colour). */
+const MODELS: { id: string; label: string; icon: StaticImageData; colours: string[] }[] = [
+  { id: 'cat-eye', label: 'Cat eye', icon: iconCat, colours: ['negru', 'bej'] },
+  { id: 'patrat', label: 'Unisex pătrat', icon: iconSq, colours: ['negru', 'maro'] },
+  { id: 'subtire', label: 'Ramă subțire', icon: iconSub, colours: ['negru'] },
+]
+const COLOURS: Record<string, { label: string; swatch: string }> = {
+  negru: { label: 'Negru', swatch: '#15181A' },
+  bej: { label: 'Bej', swatch: '#C9A193' },
+  maro: { label: 'Maro', swatch: '#6B4A36' },
 }
+const LENS_LABEL = { galben: 'galbene', rosu: 'roșii' } as const
 /** How wide each frame sits, as a share of the face width between the temples (cat eye is wider). */
 const FIT: Record<string, number> = { 'cat-eye-negru': 1.08, 'cat-eye-bej': 1.08, 'patrat-negru': 1.02, 'patrat-maro': 1.02, 'subtire-negru': 1.0 }
 
@@ -31,8 +45,19 @@ const BRIDGE = 168
 const TEMPLE_R = 127
 const TEMPLE_L = 356
 
-export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose, onChoose }: { frame: string; lens: Lens; onClose: () => void; onChoose: (frame: string, lens: Lens) => void }) {
-  const [frame, setFrame] = useState(AMBER_FRAME_IDS.includes(initialFrame) ? initialFrame : AMBER_FRAME_IDS[0])
+/**
+ * Pairs added from the try-on stay listed while the window is open: the visitor keeps trying, and the button offers
+ * to add the next configuration too. The other lens of a frame already added becomes the pachet (both pairs, 20%).
+ */
+type Added = { id: string; label: string }
+
+export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose }: { frame: string; lens: Lens; onClose: () => void }) {
+  const start = MODELS.find((m) => initialFrame.startsWith(`${m.id}-`)) ?? MODELS[0]
+  const [model, setModel] = useState(start.id)
+  const [colour, setColour] = useState(start.colours.find((c) => initialFrame === `${start.id}-${c}`) ?? start.colours[0])
+  const frame = `${model}-${colour}`
+  const [added, setAdded] = useState<Added[]>([])
+  const { addMany } = useCart()
   const [lens, setLens] = useState<Lens>(initialLens)
   const [status, setStatus] = useState<Status>('loading')
   const [face, setFace] = useState(false)
@@ -48,7 +73,7 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose, on
 
   // The overlay for the chosen frame and lens.
   useEffect(() => {
-    const img = new Image()
+    const img = new window.Image()
     img.src = `/tryon/${frame}-${lens}.webp`
     img.onload = () => (overlay.current = img)
   }, [frame, lens])
@@ -150,6 +175,30 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose, on
     }
   }, [close])
 
+  // What the button would add now: this frame with this lens. A frame in the cart as a pachet has both lenses.
+  const current = lens === 'rosu' ? `${frame}-rosu` : frame
+  const otherLens = lens === 'rosu' ? frame : `${frame}-rosu`
+  const inCart = added.some((a) => a.id === current || a.id === `${frame}-pachet`)
+  const pairsUp = added.some((a) => a.id === otherLens)
+  const name = `${MODELS.find((m) => m.id === model)!.label} ${COLOURS[colour].label.toLowerCase()}`
+
+  const add = () => {
+    if (pairsUp) {
+      // The other lens of this frame is already in the cart as a single pair: both become the pachet (20% off).
+      const key = lineKey({ productId: AMBER, variantId: otherLens })
+      const line = cartStore.getSnapshot().find((l) => lineKey(l) === key)
+      if (line) {
+        if (line.quantity > 1) cartStore.setQuantity(key, line.quantity - 1)
+        else cartStore.remove(key)
+      }
+      if (!addMany([{ productId: AMBER, variantId: `${frame}-pachet`, quantity: 1 }])) return
+      setAdded((list) => [...list.filter((a) => a.id !== otherLens), { id: `${frame}-pachet`, label: `${name}, pachet galbene + roșii` }])
+      return
+    }
+    if (!addMany([{ productId: AMBER, variantId: current, quantity: 1 }])) return
+    setAdded((list) => [...list, { id: current, label: `${name}, lentile ${LENS_LABEL[lens]}` }])
+  }
+
   return (
     <div className="fixed inset-0 z-[400] flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center sm:p-6" onClick={(e) => e.target === e.currentTarget && close()}>
       <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="proba-titlu" tabIndex={-1} className="flex max-h-[100svh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] bg-paper outline-none sm:rounded-[28px]">
@@ -183,19 +232,51 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose, on
         </div>
 
         <div className="space-y-4 overflow-y-auto px-5 pt-4 pb-[max(20px,env(safe-area-inset-bottom))]">
-          <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
-            {AMBER_FRAME_IDS.map((id) => (
-              <button
-                key={id}
-                type="button"
-                aria-pressed={frame === id}
-                onClick={() => setFrame(id)}
-                className={`flex-none rounded-full px-4 py-2 text-[14px] font-medium transition ${frame === id ? 'bg-ink text-white' : 'bg-mist text-ink hover:bg-mist-2'}`}
-              >
-                {FRAMES[id]}
-              </button>
-            ))}
+          {/* 1. The model, as the glasses themselves. */}
+          <div role="radiogroup" aria-label="Model" className="grid grid-cols-3 gap-2">
+            {MODELS.map((m) => {
+              const on = model === m.id
+              return (
+                <button
+                  key={m.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => {
+                    setModel(m.id)
+                    if (!m.colours.includes(colour)) setColour(m.colours[0])
+                  }}
+                  className={`flex flex-col items-center gap-1.5 rounded-[16px] px-2 pt-3 pb-2.5 transition ${on ? 'bg-white shadow-[inset_0_0_0_2px_var(--color-ink)]' : 'bg-mist hover:bg-mist-2'}`}
+                >
+                  <Image src={m.icon} alt="" sizes="140px" className="h-9 w-auto object-contain" />
+                  <span className={`text-[13px] leading-tight ${on ? 'font-semibold text-ink' : 'font-medium text-text'}`}>{m.label}</span>
+                </button>
+              )
+            })}
           </div>
+
+          {/* 2. The frame colours this model is made in. */}
+          <div className="flex items-center gap-3">
+            <span className="text-[14px] text-text">
+              Ramă: <strong className="font-semibold text-ink">{COLOURS[colour].label}</strong>
+            </span>
+            <div role="radiogroup" aria-label="Culoarea ramei" className="flex gap-2.5">
+              {MODELS.find((m) => m.id === model)!.colours.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  role="radio"
+                  aria-checked={colour === c}
+                  aria-label={COLOURS[c].label}
+                  onClick={() => setColour(c)}
+                  className={`h-8 w-8 rounded-full transition ${colour === c ? 'shadow-[0_0_0_2px_#fff,0_0_0_4px_var(--color-ink)]' : 'shadow-[inset_0_0_0_1px_rgba(0,0,0,.15)] hover:scale-110'}`}
+                  style={{ background: COLOURS[c].swatch }}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* 3. The lens. */}
           <div className="grid grid-cols-2 gap-2">
             {(['galben', 'rosu'] as const).map((l) => (
               <button
@@ -210,9 +291,36 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose, on
               </button>
             ))}
           </div>
-          <button type="button" onClick={() => onChoose(frame, lens)} className="cta w-full">
-            Aleg perechea asta
-          </button>
+
+          {added.length > 0 && !inCart && (
+            <p className="flex items-start gap-2 rounded-[14px] bg-[#eaf7ef] px-3.5 py-2.5 text-[13.5px] leading-snug text-[#1d6b3a]">
+              <svg aria-hidden viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 flex-none">
+                <path d="m5 12 4.5 4.5L19 7" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              <span>
+                {added.length === 1 ? `${added[0].label} e deja în coș.` : `În coș: ${added.map((a) => a.label).join('; ')}.`}
+                {pairsUp && ' Cu și perechea asta, iei pachetul ramei cu 20% reducere.'}
+              </span>
+            </p>
+          )}
+
+          {inCart ? (
+            <p className="flex min-h-[52px] items-center justify-center gap-2 rounded-full bg-[#eaf7ef] text-[15.5px] font-semibold text-[#1d6b3a]" role="status">
+              <svg aria-hidden viewBox="0 0 24 24" className="h-5 w-5">
+                <path d="m5 12 4.5 4.5L19 7" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Perechea asta e în coș
+            </p>
+          ) : (
+            <button type="button" onClick={add} className="cta w-full">
+              {added.length === 0 ? 'Adaugă în coș' : pairsUp ? 'Adaugă și perechea asta: pachet −20%' : 'Adaugă și perechea asta'}
+            </button>
+          )}
+          {added.length > 0 && (
+            <Link href="/cart" className="btn-secondary w-full !min-h-[48px]" onClick={close}>
+              Mergi la coș
+            </Link>
+          )}
           <p className="text-center text-[12.5px] leading-snug text-muted">Imaginea rămâne pe dispozitivul tău. Nu o salvăm și nu o trimitem nicăieri.</p>
         </div>
       </div>

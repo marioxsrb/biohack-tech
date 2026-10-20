@@ -214,11 +214,6 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
               frame={variant.id.replace(/-(rosu|pachet)$/, '')}
               lens={variant.id.endsWith('-rosu') ? 'rosu' : 'galben'}
               onClose={() => setTryOn(false)}
-              onChoose={(frame, lens) => {
-                setTryOn(false)
-                // The pachet stays the pachet (both lenses); a single pair follows the lens tried on.
-                pick(variant.id.endsWith('-pachet') ? `${frame}-pachet` : lens === 'rosu' ? `${frame}-rosu` : frame)
-              }}
             />
           )}
 
