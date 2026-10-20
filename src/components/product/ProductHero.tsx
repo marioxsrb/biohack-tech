@@ -202,7 +202,7 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
 
               {calmStory && (
                 <p className="mt-4 text-[13.5px] leading-relaxed text-muted">
-                  Plată la livrare. Garanție {terms.warrantyYears} ani. Diana Palotaș, fondatoarea Neuros Europe, psiholog cu peste 20 de ani de experiență.
+                  Plată la livrare. Garanție {terms.warrantyYears} ani. Recomandat de Diana Palotaș, fondatoarea Neuros Europe, psiholog cu peste 20 de ani de experiență.
                 </p>
               )}
 
