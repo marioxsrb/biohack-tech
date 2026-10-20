@@ -27,7 +27,7 @@ describe('series', () => {
     expect(rate.series[0].values.at(-1)).toBeCloseTo(33.3, 1)
     const weeks = await buildSeries(db, parseSeriesQuery({ metric: 'revenue', by: 'none', days: 30, grain: 'week' }))
     expect(weeks.buckets.length).toBeGreaterThanOrEqual(5)
-    expect(weeks.series[0].values.reduce((s, v) => s + v, 0)).toBe(3337) // NEUROS Focus, 3.337 lei since 20.10.2026
+    expect(weeks.series[0].values.reduce((s, v) => s + v, 0)).toBe(3225) // NEUROS Focus, 3.225 lei
   })
 
   it('unknown values fall back safely; a split the metric does not have is none', () => {

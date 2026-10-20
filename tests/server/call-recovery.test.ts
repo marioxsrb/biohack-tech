@@ -239,9 +239,9 @@ describe('the fixed codes: BIOHACK10 (caller) and LONGEVITY10 (website popup)', 
 
   it('once per address; anyone else can still use it', async () => {
     const { order: o } = await order('BIOHACK10', [{ productId: 'brainlink-pro', quantity: 1 }])
-    expect(o.totalMinor).toBe(300330) // 3.337 lei − 333,70 lei
+    expect(o.totalMinor).toBe(290250) // 3.225 lei − 322,50 lei
     await expect(order('BIOHACK10', [{ productId: 'brainlink-pro', quantity: 1 }])).rejects.toMatchObject({ problem: 'already_used' })
-    expect((await order('BIOHACK10', [{ productId: 'brainlink-pro', quantity: 1 }], 'altcineva@exemplu.ro')).order.totalMinor).toBe(300330)
+    expect((await order('BIOHACK10', [{ productId: 'brainlink-pro', quantity: 1 }], 'altcineva@exemplu.ro')).order.totalMinor).toBe(290250)
   })
 
   it('adds to the automatic promotions like every promo code: 10% of the full price on top (20% + 10% = 30%)', async () => {

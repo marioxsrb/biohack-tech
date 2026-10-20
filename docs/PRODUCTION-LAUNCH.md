@@ -11,7 +11,7 @@ Written 26 September 2026 against commit “Launch pass”; updated 29 September
 | Area | Status |
 |---|---|
 | Storefront (home, 4 product pages, cart page, checkout, order page, legal, 404) | Built, tested at 390/430/768/1024/1280/1440 |
-| Prices | NEUROS Calm 6.380 lei, NEUROS Amber 315 lei (approved), NEUROS Focus 1.800 lei (set 15.10.2026), NEUROS Flow 12.900 / 14.900 / 13.900 lei for 1 / 4 / 13 zones (from the previous site, **confirm**, §28) |
+| Prices | NEUROS Calm 6.380 lei, NEUROS Amber 315 lei (approved), NEUROS Focus 3.225 lei (confirmed 20.10.2026), NEUROS Flow discontinued 13.10.2026 (no price) |
 | Advertising landings (4, one per product) | Built: `/lp/<slug>` locally, `<slug>.biohack-tech.ro` in production through host routing (§26); DNS not changed |
 | Attribution (landing + UTM → order → GHL) | Built; `contact.bt_last_order_source` in GHL |
 | Canonical orders (PostgreSQL) | Built and tested (PGlite + real PostgreSQL concurrency tests) |
@@ -596,7 +596,7 @@ Use a staging deployment with `APP_ENV=staging`, Stripe **test** keys, the **FGO
 | # | Flow | Steps | Verify |
 |---|---|---|---|
 | 1 | PF, card | NEUROS Calm → add → popup “Finalizează comanda” → PF → card `4242 4242 4242 4242`, any future date, any CVC | Order page “Plata este confirmată”; /admin: Plătită, Factură Emisă; GHL: contact, fields, tags `bt-client` + `bt-cumparat-calm`, opportunity in “Plătită, de pregătit”, value 6380; emails: confirmation + invoice (one each) |
-| 2 | PJ, card + 3-D Secure | NEUROS Amber Unisex pătrat Maro ×2 + NEUROS Focus → PJ with a real CUI → card `4000 0027 6000 3184` → complete the challenge | FGO test invoice on the company with CUI, lines with the exact variant; totals 1.800 + 630 |
+| 2 | PJ, card + 3-D Secure | NEUROS Amber Unisex pătrat Maro ×2 + NEUROS Focus → PJ with a real CUI → card `4000 0027 6000 3184` → complete the challenge | FGO test invoice on the company with CUI, lines with the exact variant; totals 3.225 + 630 |
 | 3 | Declined card | card `4000 0000 0000 0002` | Message in checkout, nothing charged; order stays “Card eșuat”; retry with 4242 on the same page → paid; one order, one invoice |
 | 4 | Webhook without browser | Pay, then close the tab before the redirect | Order paid within seconds (webhook) |
 | 5 | Webhook replay | Stripe Dashboard → the event → Resend | No second invoice, email or opportunity |
@@ -679,7 +679,7 @@ The ordered sequence:
 6. `ADMIN_PASSWORD` set; domain + HTTPS; staging test orders §20 flows 1, 3, 5, 6, 7 passed.
 
 **P1: fix before or immediately after launch**
-1. NEUROS Focus price: 1.800 lei (decided 15.10.2026; nothing to confirm).
+1. NEUROS Focus price: 3.225 lei (confirmed 20.10.2026; list price, no comparison price).
 2. GHL workflows W1, W3, W4 and W7 live on day one; W5 and W6 in the first week; W2 after the legal review.
 3. Uptime monitor + log alerts (§22).
 4. Courier choice and packing routine; free-shipping rule confirmed.

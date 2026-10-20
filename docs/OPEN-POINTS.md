@@ -23,7 +23,7 @@ Updated 29 September 2026 (phase 3/4). Everything that is code is built; what is
 ## NEEDS BUSINESS INPUT
 
 **Prices and product 4**
-- **NEUROS Focus price:** decided 15.10.2026: 1.800 lei (canonical list price, no comparison price). Replaces the 790 lei decision of 30.09.2026.
+- **NEUROS Focus price:** confirmed 20.10.2026: 3.225 lei (canonical list price, no comparison price). Replaces 3.337 lei (same day), 1.800 lei (15.10.2026) and 790 lei (30.09.2026).
 - **NEUROS Flow prices:** confirm 12.900 / 14.900 / 13.900 lei for 1 / 4 / 13 zones. The source lists 13 zones cheaper than 4 zones; kept as listed (`src/config/prices.ts`).
 - **NEUROS Flow is for sale:** an earlier content decision said it “nu se vinde”; phase 3/4 made it a sold product. Confirm before ads run.
 - **NEUROS Flow:** manufacturer, CE / regulatory documentation, what's in the box (the photos show goggles next to the remote; not claimed), supplier SKU if any, whether configurations change delivery time.
