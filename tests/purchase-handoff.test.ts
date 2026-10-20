@@ -45,7 +45,7 @@ beforeEach(() => {
 
 const LANDINGS = [
   { slug: 'calm', pick: { productId: 'balance-wave' as const }, name: 'NEUROS Calm', unit: 638000 },
-  { slug: 'focus', pick: { productId: 'brainlink-pro' as const }, name: 'NEUROS Focus', unit: 322500 },
+  { slug: 'focus', pick: { productId: 'brainlink-pro' as const }, name: 'NEUROS Focus', unit: 333700 },
   { slug: 'amber', pick: { productId: 'ochelari-biohack' as const, variantId: 'patrat-maro', quantity: 3 }, name: 'NEUROS Amber', unit: 31500 },
 ] as const
 
@@ -172,7 +172,7 @@ describe('attribution and promotions survive the handoff', () => {
     const lines = p.cartStore.getSnapshot()
     expect(lines.map((l) => l.productId)).not.toContain('brain-flow')
     const shown = priceLines(
-      lines.map((l) => ({ key: `${l.productId}:${l.variantId ?? ''}`, productId: l.productId, quantity: l.quantity, unitAmount: ({ 'balance-wave': 638000, 'brainlink-pro': 322500, 'ochelari-biohack': 31500 } as Record<string, number>)[l.productId]! })),
+      lines.map((l) => ({ key: `${l.productId}:${l.variantId ?? ''}`, productId: l.productId, quantity: l.quantity, unitAmount: ({ 'balance-wave': 638000, 'brainlink-pro': 333700, 'ochelari-biohack': 31500 } as Record<string, number>)[l.productId]! })),
     )
     const server = resolveOrderLines(lines)
     expect(server.ok).toBe(true)

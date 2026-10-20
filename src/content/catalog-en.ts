@@ -17,7 +17,7 @@ export const productTextEn: Record<ProductId, ProductText> = {
   'brainlink-pro': {
     kind: 'For focus and clarity',
     purpose: 'For concentration',
-    tagline: 'It helps you gather your attention. It supports focus and energy for what you have to do. You play on a tablet, with your attention.',
+    tagline: 'It helps you gather your attention. It comes with a tablet, 10 games and 20 free sessions. The game moves forward when you focus.',
   },
   'ochelari-biohack': {
     kind: 'For calmer evenings',
@@ -82,6 +82,7 @@ const ALT: Record<string, string> = {
   'NEUROS Focus lângă geanta de transport': 'NEUROS Focus next to its carrying case',
   'NEUROS Focus văzută din lateral, cu senzorul de ureche': 'NEUROS Focus from the side, with the ear sensor',
   'NEUROS Focus, casca văzută din unghi': 'NEUROS Focus, the headband at an angle',
+  'NEUROS Focus cu tableta inclusă, pe care rulează un joc': 'NEUROS Focus with the included tablet, running a game',
   'Tânăr pe canapea, purtând NEUROS Focus și jucând pe tabletă': 'Young man on a sofa, wearing NEUROS Focus and playing on a tablet',
 }
 
