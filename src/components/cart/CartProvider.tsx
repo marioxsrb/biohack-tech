@@ -114,9 +114,9 @@ export function useCart() {
 
   const count = lines.reduce((n, l) => n + l.quantity, 0)
   // Same engine as the server, for display only: the server prices the order again when it is placed.
-  const pricing = useMemo(() => priceLines(lines.map((l) => ({ key: l.key, productId: l.product.id, quantity: l.quantity, unitAmount: l.unit }))), [lines])
-  const hints = useMemo(() => promotionHints(lines.map((l) => ({ productId: l.product.id, quantity: l.quantity }))), [lines])
-  const progress = useMemo(() => promotionProgress(lines.map((l) => ({ key: l.key, productId: l.product.id, quantity: l.quantity, unitAmount: l.unit }))), [lines])
+  const pricing = useMemo(() => priceLines(lines.map((l) => ({ key: l.key, productId: l.product.id, variantId: l.variant?.id, quantity: l.quantity, unitAmount: l.unit }))), [lines])
+  const hints = useMemo(() => promotionHints(lines.map((l) => ({ productId: l.product.id, variantId: l.variant?.id, quantity: l.quantity }))), [lines])
+  const progress = useMemo(() => promotionProgress(lines.map((l) => ({ key: l.key, productId: l.product.id, variantId: l.variant?.id, quantity: l.quantity, unitAmount: l.unit }))), [lines])
   // Free, or the book's flat fee once per order: the same rule the server charges (lib/shipping.ts).
   const shipping = useMemo(() => shippingFor(lines.map((l) => ({ productId: l.product.id, quantity: l.quantity })), money.currency), [lines, money.currency])
 

@@ -10,6 +10,7 @@ import { CalmFacts } from '@/components/calm/CalmFacts'
 import { CalmScience } from '@/components/calm/CalmScience'
 import { FocusFacts } from '@/components/focus/FocusFacts'
 import { FocusScience } from '@/components/focus/FocusScience'
+import { AmberFacts, AmberScience } from '@/components/amber/AmberScience'
 
 import { allSlugs, getProductBySlug, isBook, productHref } from '@/content/catalog'
 import { getProductContent } from '@/content/product-content'
@@ -63,6 +64,7 @@ export default async function ProductPage({ params }: PageProps<'/[lang]/product
   // The Romanian NEUROS Calm page has its own story sections (components/calm).
   const calmRo = locale === 'ro' && product.id === 'balance-wave'
   const focusRo = locale === 'ro' && product.id === 'brainlink-pro'
+  const amberRo = locale === 'ro' && product.id === 'ochelari-biohack'
 
   const gallery = product.variants?.[0]?.images ?? product.images
   const imageUrls = [product.lifestyle, ...gallery].map((i) => absolute(i.src.src))
@@ -106,6 +108,12 @@ export default async function ProductPage({ params }: PageProps<'/[lang]/product
           <FocusScience />
         </>
       )}
+      {amberRo && (
+        <>
+          <AmberFacts />
+          <AmberScience />
+        </>
+      )}
       {calmRo && (
         <>
           <CalmFacts />
@@ -115,7 +123,7 @@ export default async function ProductPage({ params }: PageProps<'/[lang]/product
       {/* The book has its own editorial page; the devices keep their product story. */}
       {isBook(product.id) ? <BookSections product={product} locale={locale} /> : <ProductSections product={product} content={content} locale={locale} />}
 
-      {!isBook(product.id) && !calmRo && (
+      {!isBook(product.id) && !calmRo && !amberRo && (
         <p className="wrap py-8 text-[13px] leading-relaxed text-muted">
           {t.note(product.name)}
         </p>

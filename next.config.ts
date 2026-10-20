@@ -45,8 +45,9 @@ const nextConfig: NextConfig = {
       { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
       { key: 'Content-Security-Policy', value: "frame-ancestors 'self'; base-uri 'self'; object-src 'none'" },
       { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
-      // Stripe's wallets (Apple Pay, Google Pay) run in its own frame and need the Payment Request API.
-      { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(), payment=(self "https://js.stripe.com")' },
+      // Stripe's wallets (Apple Pay, Google Pay) run in its own frame and need the Payment Request API. The camera only
+      // for this site itself: the NEUROS Amber try-on (components/amber/AmberTryOn), which never sends the video anywhere.
+      { key: 'Permissions-Policy', value: 'camera=(self), microphone=(), geolocation=(), payment=(self "https://js.stripe.com")' },
     ]
     const privatePages = '/:lang(en)?/:page(comanda|reluare|dezabonare|retragere)/:path*'
     return [

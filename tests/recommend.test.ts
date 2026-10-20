@@ -106,8 +106,9 @@ describe('recommendations: one engine, deterministic', () => {
 describe('NEUROS Amber 2+1 picker', () => {
   it('offers only frames that exist: cat eye (negru, bej), unisex pătrat (negru, maro)', () => {
     expect(amberModels().map((m) => [m.id, m.colours.map((c) => c.variantId)])).toEqual([
-      ['cat-eye', ['cat-eye-negru', 'cat-eye-bej']],
-      ['patrat', ['patrat-negru', 'patrat-maro']],
+      ['cat-eye', ['cat-eye-negru', 'cat-eye-negru-rosu', 'cat-eye-bej', 'cat-eye-bej-rosu']],
+      ['patrat', ['patrat-negru', 'patrat-negru-rosu', 'patrat-maro', 'patrat-maro-rosu']],
+      ['subtire', ['subtire-negru', 'subtire-negru-rosu']],
     ])
   })
 
@@ -209,7 +210,7 @@ describe('pages', () => {
     expect(box).toContain("openAmber('product_page', 3)")
     // The rows use the cart's own engine on this product; choosing one sets the quantity, it adds nothing by itself,
     // except Amber's 2+1 row, which opens the frames configurator (any mix of frames).
-    expect(box).toContain("priceLines([{ key: 'x', productId, quantity: n, unitAmount: unit }])")
+    expect(box).toContain("priceLines([{ key: 'x', productId, variantId, quantity: n, unitAmount: unit }])")
     expect(box).toContain(': onQuantity(n))}')
     expect(box).toContain("amber && n >= p.group ? (onAmberGroup ?? ((x: number) => openAmber('product_page', Math.min(3, x))))(n)")
   })

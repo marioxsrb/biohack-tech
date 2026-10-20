@@ -49,7 +49,7 @@ export function LandingOffer({ slug, productId, title, text, cta, notes, layout 
   const [quantity, setQuantity] = useState(1)
   const pairs = product.id === 'ochelari-biohack'
   // Same engine as the cart and the server, for display only.
-  const priced = price !== null ? priceLines([{ key: 'offer', productId: product.id, quantity, unitAmount: price }]) : null
+  const priced = price !== null ? priceLines([{ key: 'offer', productId: product.id, variantId, quantity, unitAmount: price }]) : null
   const image = variant?.images.find((i) => i.kind === 'cutout') ?? product.cutout
   const router = useRouter()
 

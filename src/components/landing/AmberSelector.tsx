@@ -81,7 +81,7 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
   }, [])
 
   const lines = variants.filter((v) => sel[v.id]).map((v) => ({ variant: v, quantity: sel[v.id], unit: unitPrice(product, v)! }))
-  const priced = lines.map((l) => ({ key: l.variant.id, productId: product.id, quantity: l.quantity, unitAmount: l.unit }))
+  const priced = lines.map((l) => ({ key: l.variant.id, productId: product.id, variantId: l.variant.id, quantity: l.quantity, unitAmount: l.unit }))
   const pricing = priceLines(priced)
   const progress = promotionProgress(priced).find((p) => p.kind === 'buy_x_get_y')
   const units = lines.reduce((n, l) => n + l.quantity, 0)

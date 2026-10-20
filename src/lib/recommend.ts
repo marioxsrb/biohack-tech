@@ -57,7 +57,7 @@ export function recommend(lines: RecLine[], placement: Placement, limit = LIMIT[
 
   // 1. Finish a promotion (inside one order only).
   if (placement !== 'post_purchase') {
-    const progress = promotionProgress(lines.map((l, i) => ({ key: `${l.productId}:${l.variantId ?? ''}:${i}`, productId: l.productId, quantity: l.quantity, unitAmount: priceOf(l) })))
+    const progress = promotionProgress(lines.map((l, i) => ({ key: `${l.productId}:${l.variantId ?? ''}:${i}`, productId: l.productId, variantId: l.variantId, quantity: l.quantity, unitAmount: priceOf(l) })))
     // The next Amber pair first (one suggestion), then one more unit of any product that is one away from 20%.
     const amber = progress.find((p) => p.kind === 'buy_x_get_y' && p.state === 'close')
     if (amber) push({ productId: AMBER, kind: 'complete_offer', promotionId: amber.id, add: 'amber_pairs', slots: amber.missing, reason: amber.missing === 1 ? 'Încă o pereche și a treia este gratuită.' : `Mai alege ${amber.missing} perechi pentru 2+1.` })

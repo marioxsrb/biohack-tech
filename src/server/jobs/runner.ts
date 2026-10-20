@@ -310,7 +310,7 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
       const code = await recoveryCode(db)
       const currency: Currency = intl || lead.locale === 'en' ? 'EUR' : 'RON'
       const lines = cartItems.map((l) => ({ ...l, unit: convertUnit(l.unit, currency) }))
-      const pricing = priceLines(lines.map((l, i) => ({ key: String(i), productId: l.productId, quantity: l.quantity, unitAmount: l.unit })))
+      const pricing = priceLines(lines.map((l, i) => ({ key: String(i), productId: l.productId, variantId: l.variantId, quantity: l.quantity, unitAmount: l.unit })))
       const shippingMinor = shippingFor(lines, currency)
       const mail = renderCartRecovery({
         step,

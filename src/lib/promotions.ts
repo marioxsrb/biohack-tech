@@ -13,7 +13,8 @@
 import { BULK_OFFER, PROMOTIONS, type BulkOffer, type BundlePercent, type BundleTier, type Promotion } from '@/config/promotions'
 import { getProduct } from '@/content/catalog'
 
-export type PricedLine = { key: string; productId: string; quantity: number; unitAmount: number }
+/** `variantId`: needed only by promotions limited to some variants (the NEUROS Amber pachet); lines without it count as the base variant. */
+export type PricedLine = { key: string; productId: string; variantId?: string; quantity: number; unitAmount: number }
 
 export type AppliedPromotion = { id: string; label: string; amountMinor: number }
 
@@ -99,10 +100,18 @@ export const savedBy = (applied: Pick<AppliedPromotion, 'id' | 'amountMinor'>[],
 
 const productName = (id: string) => getProduct(id)?.name ?? id
 
+/** Whether a cart line takes part in a promotion: its product, and its variant when the promotion is limited by variant. */
+export function eligibleLine(p: Promotion, l: { productId: string; variantId?: string }) {
+  if (!(p.products as string[]).includes(l.productId)) return false
+  if (p.variantSuffix && !l.variantId?.endsWith(p.variantSuffix)) return false
+  if (p.excludeVariantSuffix && l.variantId?.endsWith(p.excludeVariantSuffix)) return false
+  return true
+}
+
 /** The eligible products in the cart, in cart order, each with its lines. */
 function groups(p: Promotion, lines: PricedLine[]) {
   const by = new Map<string, PricedLine[]>()
-  for (const l of lines) if ((p.products as string[]).includes(l.productId)) by.set(l.productId, [...(by.get(l.productId) ?? []), l])
+  for (const l of lines) if (eligibleLine(p, l)) by.set(l.productId, [...(by.get(l.productId) ?? []), l])
   return [...by.entries()].map(([productId, own]) => ({ productId, own, units: own.reduce((n, l) => n + l.quantity, 0) }))
 }
 
@@ -118,7 +127,7 @@ function applyOne(p: Promotion, lines: PricedLine[]): Applied[] {
       return [{ id: groupId(p.id, productId), amount, own, perLine: allocate(amount, base), label: `${tier.label} ${productName(productId)}` }]
     })
   }
-  const own = lines.filter((l) => (p.products as string[]).includes(l.productId))
+  const own = lines.filter((l) => eligibleLine(p, l))
   const units = own.reduce((n, l) => n + l.quantity, 0)
   // Buy X get Y: the free units are the cheapest ones, so the customer always gets the stated deal,
   // whatever the frames cost. That amount is then spread over the eligible lines in proportion to their
@@ -245,7 +254,7 @@ export type PromotionHint = { id: string; text: string }
  * What the customer can still unlock with the cart as it is, in plain words. Honest by construction:
  * computed from the same rules, no urgency, nothing when there is nothing to say.
  */
-export function promotionHints(lines: Pick<PricedLine, 'productId' | 'quantity'>[], promotions: Promotion[] = PROMOTIONS): PromotionHint[] {
+export function promotionHints(lines: Pick<PricedLine, 'productId' | 'variantId' | 'quantity'>[], promotions: Promotion[] = PROMOTIONS): PromotionHint[] {
   const hints: PromotionHint[] = []
   // With the business offer, Calm and Focus already have 40%: no hint about the quantity discount.
   const bulkOn = bulkUnits(lines) >= BULK_OFFER.minUnits
@@ -262,7 +271,7 @@ export function promotionHints(lines: Pick<PricedLine, 'productId' | 'quantity'>
         })
       }
     } else {
-      const units = lines.filter((l) => (p.products as string[]).includes(l.productId)).reduce((n, l) => n + l.quantity, 0)
+      const units = lines.filter((l) => eligibleLine(p, l)).reduce((n, l) => n + l.quantity, 0)
       const inGroup = units % p.group
       if (units === 0 || inGroup < p.pay) continue
       hints.push({ id: p.id, text: 'Mai adaugă o pereche NEUROS Amber și o primești gratuit.' })
@@ -318,7 +327,7 @@ export function promotionProgress(lines: PricedLine[], promotions: Promotion[] =
     // One entry per product for the per-product discount, one for the whole promotion otherwise.
     const parts = bundle
       ? groups(p, lines).map((g) => ({ id: groupId(p.id, g.productId), productId: g.productId, products: [g.productId], units: g.units }))
-      : [{ id: p.id, productId: undefined, products: p.products as string[], units: lines.filter((l) => (p.products as string[]).includes(l.productId)).reduce((n, l) => n + l.quantity, 0) }]
+      : [{ id: p.id, productId: undefined, products: p.products as string[], units: lines.filter((l) => eligibleLine(p, l)).reduce((n, l) => n + l.quantity, 0) }]
     for (const part of parts) {
       const { units } = part
       if (!units) continue

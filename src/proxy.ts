@@ -159,7 +159,7 @@ async function storefront(req: NextRequest, pathname: string, search: string) {
   return res
 }
 
-// Everything except build assets and images: landing hostnames must be routed on every page path.
+// Everything except build assets, images and the try-on's face tracker (/mediapipe): landing hostnames must be routed on every page path.
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|.*\\.(?:webp|png|jpg|jpeg|svg|ico|woff2?|txt|xml|mp4|mp3)$).*)'],
+  matcher: ['/((?!_next/static|_next/image|mediapipe/|.*\\.(?:webp|png|jpg|jpeg|svg|ico|woff2?|txt|xml|mp4|mp3)$).*)'],
 }

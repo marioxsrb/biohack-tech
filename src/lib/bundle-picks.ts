@@ -45,7 +45,7 @@ export function bundleTotals(cart: { productId: string; variantId?: string; quan
     ...cart.filter((l) => l.productId === pick.productId).map((l) => ({ productId: l.productId, variantId: l.variantId ?? null, quantity: l.quantity })),
     ...(pickComplete(pick) ? [{ productId: pick.productId!, variantId: pick.variantId, quantity: pick.quantity }] : []),
   ]
-  const r = priceLines(lines.map((l, i) => ({ key: `${l.productId}:${l.variantId ?? ''}:${i}`, productId: l.productId, quantity: l.quantity, unitAmount: priceOf(l.productId, l.variantId, currency) })))
+  const r = priceLines(lines.map((l, i) => ({ key: `${l.productId}:${l.variantId ?? ''}:${i}`, productId: l.productId, variantId: l.variantId ?? undefined, quantity: l.quantity, unitAmount: priceOf(l.productId, l.variantId, currency) })))
   const units = lines.reduce((n, l) => n + l.quantity, 0)
   const discountMinor = pick.productId ? (r.promotions.find((a) => a.id === groupId(BUNDLE.id, pick.productId!))?.amountMinor ?? 0) : 0
   return { subtotalMinor: r.subtotalMinor, discountMinor, totalMinor: r.subtotalMinor - discountMinor, units, percent: tierFor(BUNDLE, units)?.percent ?? 0 }

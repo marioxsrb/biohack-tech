@@ -23,7 +23,7 @@ export function LineOffer({ line, className = '' }: { line: ResolvedLine; classN
   if (amber && [...lines].reverse().find((l) => l.product.id === line.product.id)?.key !== line.key) return null
   if (p.untilNext !== 1) return null
 
-  const base = lines.map((l) => ({ key: l.key, productId: l.product.id, quantity: l.quantity, unitAmount: l.unit }))
+  const base = lines.map((l) => ({ key: l.key, productId: l.product.id, variantId: l.variant?.id, quantity: l.quantity, unitAmount: l.unit }))
   const saved = (ls: typeof base) => priceLines(ls).promotions.filter((a) => a.id === p.id).reduce((s, a) => s + a.amountMinor, 0)
   const gain = saved(base.map((b) => (b.key === line.key ? { ...b, quantity: b.quantity + 1 } : b))) - saved(base)
   if (gain <= 0) return null

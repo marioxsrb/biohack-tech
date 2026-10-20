@@ -205,14 +205,14 @@ export const productContent: Record<ProductId, ProductContent> = {
   'ochelari-biohack': {
     seo: {
       title: 'NEUROS Amber, pentru seri mai liniștite',
-      description: 'NEUROS Amber te ajută să termini ziua mai calm. Lumina ecranelor se simte mai blândă, și susține ochi mai odihniți. Patru rame. Livrare gratuită.',
+      description: 'NEUROS Amber: lentile galbene pentru seară și lentile roșii pentru ultima oră înainte de somn, pe aceeași ramă. Cinci rame, probă live pe cameră. Livrare gratuită.',
     },
-    intro: 'Te ajută să stai la ecran cu o lumină mai blândă. Susține ochi mai odihniți și seri mai liniștite. Rama e ușoară, pentru toată ziua.',
+    intro: 'Seara are două părți. De la apus porți lentilele galbene, care opresc cea mai mare parte din lumina albastră. În ultima oră înainte de somn treci la cele roșii, care opresc și o parte din verde. Aceeași ramă, doar lentila diferă.',
     highlights: [
-      'Te ajută să termini ziua mai calm',
-      'Lumina ecranelor se simte mai blândă',
-      'Susține ochi mai odihniți',
-      'Patru rame, pe care le porți cu plăcere',
+      'Lentile galbene pentru seară, roșii înainte de somn',
+      'Lumina ecranelor și a becurilor se simte mai blândă',
+      'Te ajută ca seara să se așeze mai ușor',
+      'Cinci rame, le poți proba live pe cameră',
     ],
     benefits: [
       { title: 'Ochi mai odihniți', text: 'Te ajută în orele lungi de la birou, în fața ecranului.' },
@@ -242,9 +242,10 @@ export const productContent: Record<ProductId, ProductContent> = {
       },
     ],
     specs: [
-      { label: 'Modele', value: 'Cat eye, unisex pătrat' },
-      { label: 'Culori', value: 'Cat eye: negru, bej. Unisex pătrat: negru, maro' },
-      { label: 'Lentile', value: 'Filtru pentru lumina albastră, nuanță chihlimbar' },
+      { label: 'Modele', value: 'Cat eye, unisex pătrat, ramă subțire de metal' },
+      { label: 'Culori', value: 'Cat eye: negru, bej. Unisex pătrat: negru, maro. Ramă subțire: negru' },
+      { label: 'Lentile', value: 'Galbene, pentru seară: opresc cea mai mare parte din lumina albastră. Roșii, pentru ultima oră înainte de somn: opresc albastrul și o parte din verde' },
+      { label: 'Pachet', value: 'Ambele perechi ale aceleiași rame, galbenă și roșie' },
       { label: 'Dioptrie', value: 'Fără dioptrie. Nu se pot face pe rețetă sau cu lentile progresive' },
       { label: 'Ramă', value: 'Ușoară, pentru purtare zilnică' },
       { label: 'Garanție', value: '2 ani' },

@@ -25,7 +25,7 @@ describe('placing orders', () => {
     expect(order.shippingMinor).toBe(0)
     expect(order.items.map((i) => [i.productName, i.variantName, i.quantity, i.unitPriceMinor])).toEqual([
       ['NEUROS Calm', null, 1, 638000],
-      ['NEUROS Amber', 'Cat eye · Bej', 2, 19950],
+      ['NEUROS Amber', 'Cat eye · Bej · Doar galbene', 2, 19950],
     ])
     expect(order.status).toBe('pending')
     expect(order.paymentStatus).toBe('pending')

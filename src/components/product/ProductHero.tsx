@@ -14,8 +14,13 @@ import { BusinessStrip } from '@/components/b2b/BusinessStrip'
 import { CalmEvening } from '@/components/calm/CalmEvening'
 import { CalmUse } from '@/components/calm/CalmUse'
 import { FocusStory } from '@/components/focus/FocusStory'
+import { AmberStory } from '@/components/amber/AmberStory'
+import dynamic from 'next/dynamic'
 import { terms } from '@/config/site'
 import { BULK_OFFER } from '@/config/promotions'
+
+// The camera try-on loads only when opened (its tracker is several megabytes).
+const AmberTryOn = dynamic(() => import('@/components/amber/AmberTryOn').then((m) => m.AmberTryOn), { ssr: false })
 
 const COPY = {
   ro: {
@@ -56,6 +61,8 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
   // Romanian Calm only: the evening headline, and the story that sits between the trust row and the business strip.
   const calmStory = locale === 'ro' && product.id === 'balance-wave'
   const focusStory = locale === 'ro' && product.id === 'brainlink-pro'
+  const amberStory = locale === 'ro' && product.id === 'ochelari-biohack'
+  const [tryOn, setTryOn] = useState(false)
 
   const [selected, setSelected] = useState<Record<string, string>>(() => product.variants?.[0]?.options ?? {})
   const [quantity, setQuantity] = useState(1)
@@ -123,6 +130,15 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
     setSelected(next)
   }
 
+  // A variant chosen below the buy area (the collection, the try-on): select it and bring the buy area into view.
+  const pick = (variantId: string) => {
+    const v = product.variants?.find((x) => x.id === variantId)
+    if (!v) return
+    setSelected(v.options)
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    document.getElementById('cumpara')?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' })
+  }
+
   return (
     <>
       <div className="grid grid-cols-1 gap-y-5 md:grid-cols-12 md:gap-x-10 md:gap-y-8 lg:gap-x-14">
@@ -132,6 +148,16 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
 
         <div className="md:col-span-5 md:pt-2">
           <SocialProof className="mb-3 md:mb-4" />
+          {/* NEUROS Amber: the camera try-on first, above everything else that describes the glasses. */}
+          {amberStory && (
+            <button type="button" onClick={() => setTryOn(true)} className="cta mb-5 w-full">
+              <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 8h3l1.5-2h7L17 8h3v11H4z" />
+                <circle cx="12" cy="13" r="3.5" />
+              </svg>
+              Probează ochelarii live, pe cameră
+            </button>
+          )}
           {!calmStory && <p className="text-[16px] font-medium text-cyan-700">{product.purpose}</p>}
           <h1 className="mt-1 text-[clamp(38px,4.2vw,58px)] leading-[0.98] tracking-[-0.045em]">{title ?? product.name}</h1>
           <p className="mt-3 max-w-[32em] text-[17px] leading-snug text-text">
@@ -179,9 +205,18 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
                     )
                   })}
                 </div>
+                {current?.hint && <p className="mt-2.5 text-[14px] leading-snug text-muted">{current.hint}</p>}
               </fieldset>
             )
           })}
+
+          {tryOn && variant && (
+            <AmberTryOn
+              frame={variant.id.replace(/-(rosu|pachet)$/, '')}
+              lens={variant.id.endsWith('-rosu') ? 'rosu' : 'galben'}
+              onClose={() => setTryOn(false)}
+            />
+          )}
 
           {purchasable ? (
             <>
@@ -223,6 +258,12 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
         {focusStory && (
           <div className="min-w-0 md:col-span-12">
             <FocusStory pairCta={<BuyNowButton productId={product.id} variantId={variant?.id} quantity={2} pay="online" title="Comandă 2 bucăți" className="w-full" />} />
+          </div>
+        )}
+
+        {amberStory && (
+          <div className="min-w-0 md:col-span-12">
+            <AmberStory productId={product.id} onPick={pick} />
           </div>
         )}
 

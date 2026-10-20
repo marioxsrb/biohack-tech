@@ -210,9 +210,9 @@ describe('NEUROS Amber selection: several frames in one handoff', () => {
     const order = resolveOrderLines(p.cartStore.getSnapshot())
     expect(order.ok && [order.lines.map((l) => [l.variantId, l.quantity, l.description]), order.subtotal, order.discount, order.total]).toEqual([
       [
-        ['cat-eye-negru', 1, 'Cat eye · Negru'],
-        ['cat-eye-bej', 1, 'Cat eye · Bej'],
-        ['patrat-maro', 2, 'Unisex pătrat · Maro'],
+        ['cat-eye-negru', 1, 'Cat eye · Negru · Doar galbene'],
+        ['cat-eye-bej', 1, 'Cat eye · Bej · Doar galbene'],
+        ['patrat-maro', 2, 'Unisex pătrat · Maro · Doar galbene'],
       ],
       4 * 31500,
       31500,

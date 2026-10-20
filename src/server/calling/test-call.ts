@@ -49,7 +49,7 @@ export function testVariables(id: string, x: TestCallInput) {
     return r && r.unit !== null ? [{ ...i, name: r.product.name, variant: r.variant ? variantLabel(r.product, r.variant) : null, unit: r.unit }] : []
   })
   const names = [...new Set(lines.map((l) => l.name))].join(', ')
-  const pricing = priceLines(lines.map((l, i) => ({ key: String(i), productId: l.productId, quantity: l.quantity, unitAmount: l.unit })))
+  const pricing = priceLines(lines.map((l, i) => ({ key: String(i), productId: l.productId, variantId: l.variantId, quantity: l.quantity, unitAmount: l.unit })))
   return {
     call_id: `test-${id}`,
     opening_line: openingLine({ firstName: x.firstName, productNames: names, items: lines }),

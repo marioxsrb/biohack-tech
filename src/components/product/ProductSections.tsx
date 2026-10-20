@@ -1,3 +1,4 @@
+import { AmberClosing } from '@/components/amber/AmberClosing'
 import Image from 'next/image'
 import Link from '@/components/ui/Link'
 import { AddToCartButton } from '@/components/cart/AddToCartButton'
@@ -27,6 +28,8 @@ export function ProductSections({ product, content: c, locale }: Props) {
   const t = COPY[locale]
   // Romanian NEUROS Calm: the page ends with its own sections (what's in the box, questions, closing).
   if (locale === 'ro' && product.id === 'balance-wave') return <CalmClosing productId={product.id} specs={c.specs} />
+  // Romanian NEUROS Amber: its own story under the buy area (components/amber); the page ends with details, questions, closing.
+  if (locale === 'ro' && product.id === 'ochelari-biohack') return <AmberClosing specs={c.specs} />
   return (
     <>
       <Cinematic story={c.scene} />

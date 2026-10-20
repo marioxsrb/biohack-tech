@@ -44,7 +44,7 @@ const LANDING_PASSTHROUGH = [
   /^\/cart\/?$/,
   /^\/products(\/[\w-]+)?\/?$/,
   /^\/comanda(\/[\w-]+)?\/?$/,
-  /^\/api\/(checkout|consent|contact)(\/|$)/,
+  /^\/api\/(checkout|consent|contact|proba)(\/|$)/,
   /^\/_next\//,
   /^\/(terms-of-service|privacy-policy|politica-cookies|politica-livrare|politica-retur|garantie|plati)\/?$/,
   /^\/retragere(\/confirmare)?\/?$/,

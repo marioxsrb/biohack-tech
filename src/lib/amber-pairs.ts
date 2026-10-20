@@ -22,10 +22,13 @@ export function amberModels(locale: Locale = 'ro'): AmberModel[] {
       id: m.id,
       label: m.label,
       colours: (p.variants ?? [])
-        .filter((v) => v.options.model === m.id && unitPrice(p, v) !== null)
+        // One pair per slot: the "pachet" (two pairs) is not offered here; the red lens is its own choice.
+        .filter((v) => v.options.model === m.id && v.options.lentila !== 'pachet' && unitPrice(p, v) !== null)
         .map((v) => {
           const c = colour.find((x) => x.id === v.options.culoare)
-          return { id: v.options.culoare, label: c?.label ?? v.options.culoare, swatch: c?.swatch, variantId: v.id }
+          const red = v.options.lentila === 'rosu'
+          const label = c?.label ?? v.options.culoare
+          return { id: red ? `${v.options.culoare}-rosu` : v.options.culoare, label: red ? `${label}, ${locale === 'en' ? 'red lenses' : 'lentile roșii'}` : label, swatch: c?.swatch, variantId: v.id }
         }),
     }))
     .filter((m) => m.colours.length)
@@ -54,7 +57,7 @@ export function pairsToLines(picks: (string | null)[]): { productId: ProductId; 
 export function amberTotals(existing: { variantId?: string; quantity: number }[], picks: (string | null)[], currency: Currency = 'RON') {
   const p = getProduct(AMBER_ID)!
   const lines = [...existing, ...picks.filter((v): v is string => !!v).map((variantId) => ({ variantId, quantity: 1 }))]
-  const priced = lines.map((l, i) => ({ key: `${l.variantId}:${i}`, productId: AMBER_ID as string, quantity: l.quantity, unitAmount: convertUnit(unitPrice(p, p.variants?.find((v) => v.id === l.variantId)) ?? p.price ?? 0, currency) }))
+  const priced = lines.map((l, i) => ({ key: `${l.variantId}:${i}`, productId: AMBER_ID as string, variantId: l.variantId, quantity: l.quantity, unitAmount: convertUnit(unitPrice(p, p.variants?.find((v) => v.id === l.variantId)) ?? p.price ?? 0, currency) }))
   const r = priceLines(priced)
   return { subtotalMinor: r.subtotalMinor, discountMinor: r.discountMinor, totalMinor: r.totalMinor, units: lines.reduce((n, l) => n + l.quantity, 0) }
 }

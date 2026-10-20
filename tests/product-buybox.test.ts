@@ -54,12 +54,12 @@ describe('bundle offers on the product page', () => {
     expect(at(4).discountMinor).toBe(510400) // 3+ stays 20%
   })
   it('NEUROS Amber: 3 pairs, one free', () => {
-    const amber = PRICES_RON['ochelari-biohack'] as number
+    const amber = (PRICES_RON['ochelari-biohack'] as Record<string, number>)['cat-eye-negru']
     expect([at(3, 'ochelari-biohack', amber).totalMinor, at(3, 'ochelari-biohack', amber).discountMinor]).toEqual([63000, 31500])
     expect(at(2, 'ochelari-biohack', amber).discountMinor).toBe(0)
   })
   it('never shows an individual reduced price or a struck-through old price', () => {
-    const src = read('src/components/product/BuyBox.tsx') + read('src/components/product/ProductHero.tsx')
+    const src = read('src/components/product/BuyBox.tsx') + read('src/components/product/ProductHero.tsx') + read('src/components/amber/AmberStory.tsx')
     expect(src).not.toMatch(/<s[\s>]|line-through|REFERENCE_PRICES/)
   })
 })

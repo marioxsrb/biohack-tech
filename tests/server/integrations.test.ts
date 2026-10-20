@@ -33,7 +33,7 @@ describe('FGO mapping', () => {
     expect(p.Client).not.toHaveProperty('CodUnic')
     expect(p.Continut).toEqual([
       { Denumire: 'NEUROS Calm', CodArticol: 'balance-wave', UM: 'BUC', NrProduse: 1, CotaTVA: 21, PretTotal: 6380 },
-      { Denumire: 'NEUROS Amber (Unisex pătrat · Maro)', CodArticol: 'ochelari-biohack/patrat-maro', UM: 'BUC', NrProduse: 2, CotaTVA: 21, PretTotal: 399 },
+      { Denumire: 'NEUROS Amber (Unisex pătrat · Maro · Doar galbene)', CodArticol: 'ochelari-biohack/patrat-maro', UM: 'BUC', NrProduse: 2, CotaTVA: 21, PretTotal: 399 },
     ])
     expect(p.Hash).toBe(fgoHash('2864518', '1234567890', 'Ana Popescu'))
   })
