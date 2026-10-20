@@ -148,6 +148,16 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
 
         <div className="md:col-span-5 md:pt-2">
           <SocialProof className="mb-3 md:mb-4" />
+          {/* NEUROS Amber: the camera try-on first, above everything else that describes the glasses. */}
+          {amberStory && (
+            <button type="button" onClick={() => setTryOn(true)} className="cta mb-5 w-full">
+              <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 8h3l1.5-2h7L17 8h3v11H4z" />
+                <circle cx="12" cy="13" r="3.5" />
+              </svg>
+              Probează ochelarii live, pe cameră
+            </button>
+          )}
           {!calmStory && <p className="text-[16px] font-medium text-cyan-700">{product.purpose}</p>}
           <h1 className="mt-1 text-[clamp(38px,4.2vw,58px)] leading-[0.98] tracking-[-0.045em]">{title ?? product.name}</h1>
           <p className="mt-3 max-w-[32em] text-[17px] leading-snug text-text">
@@ -200,15 +210,6 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
             )
           })}
 
-          {amberStory && (
-            <button type="button" onClick={() => setTryOn(true)} className="btn-secondary mt-5 w-full">
-              <svg aria-hidden viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 8h3l1.5-2h7L17 8h3v11H4z" />
-                <circle cx="12" cy="13" r="3.5" />
-              </svg>
-              Probează-i live, pe cameră
-            </button>
-          )}
           {tryOn && variant && (
             <AmberTryOn
               frame={variant.id.replace(/-(rosu|pachet)$/, '')}

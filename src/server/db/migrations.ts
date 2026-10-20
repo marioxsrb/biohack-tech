@@ -809,4 +809,15 @@ update jobs set status = 'skipped', last_error = 'acces closed', locked_until = 
   where status in ('pending', 'retry') and kind in ('lead.recovery', 'call.attempt')
     and payload->>'leadId' in (select id::text from leads where stage = 'lead')`,
   },
+  {
+    // NEUROS Amber try-on photos the visitor chose to share as a link (20.10.2026). Only the JPEG the visitor sent,
+    // nothing about who sent it; removed after 30 days (server/try-on-photos.ts).
+    id: '029_try_on_photos',
+    sql: `create table if not exists try_on_photos (
+  id text primary key,
+  image bytea not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists try_on_photos_created_idx on try_on_photos (created_at)`,
+  },
 ]

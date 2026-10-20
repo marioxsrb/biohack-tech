@@ -14,6 +14,8 @@ import { useCart } from '@/components/cart/CartProvider'
 import { cartStore, lineKey } from '@/components/cart/cart-store'
 import Link from '@/components/ui/Link'
 import type { ProductId } from '@/content/catalog'
+import { TRYON_FIT } from './tryon-fit'
+import { placement, renderGlasses, type FrameStyle, type Landmarks } from './tryon-render'
 import iconCat from '@/assets/img/glasses/cat-eye-negru-1.webp'
 import iconSq from '@/assets/img/glasses/patrat-negru-1.webp'
 import iconSub from '@/assets/img/glasses/subtire-negru-1.webp'
@@ -32,18 +34,23 @@ const COLOURS: Record<string, { label: string; swatch: string }> = {
   maro: { label: 'Maro', swatch: '#6B4A36' },
 }
 const LENS_LABEL = { galben: 'galbene', rosu: 'roșii' } as const
-/** How wide each frame sits, as a share of the face width between the temples (cat eye is wider). */
-const FIT: Record<string, number> = { 'cat-eye-negru': 1.08, 'cat-eye-bej': 1.08, 'patrat-negru': 1.02, 'patrat-maro': 1.02, 'subtire-negru': 1.0 }
+/**
+ * Per frame: the colour and width of the temples (cat eye has thin gold metal arms, the square frames acetate, the
+ * thin frame wire) and how far beyond the temples the hinges sit.
+ */
+const STYLE: Record<string, FrameStyle> = {
+  'cat-eye-negru': { temple: '#b99a5e', templeWidth: 0.012, fit: 1.06 },
+  'cat-eye-bej': { temple: '#c4a46c', templeWidth: 0.012, fit: 1.06 },
+  'patrat-negru': { temple: '#15181a', templeWidth: 0.026, fit: 1.04 },
+  'patrat-maro': { temple: 'rgba(107,74,54,0.93)', templeWidth: 0.026, fit: 1.04 },
+  'subtire-negru': { temple: '#1b1b1b', templeWidth: 0.009, fit: 1.02 },
+}
+/** The lens colour as a filter: what it lets through (multiplied with the face behind it). */
+const TINT: Record<Lens, [number, number, number]> = { galben: [255, 206, 0], rosu: [255, 72, 36] }
 
 type Lens = 'galben' | 'rosu'
 type Status = 'loading' | 'live' | 'denied' | 'error'
 
-// Face mesh points: outer eye corners, the bridge of the nose, the two temples.
-const EYE_R = 33
-const EYE_L = 263
-const BRIDGE = 168
-const TEMPLE_R = 127
-const TEMPLE_L = 356
 
 /**
  * Pairs added from the try-on stay listed while the window is open: the visitor keeps trying, and the button offers
@@ -57,13 +64,20 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose }: 
   const [colour, setColour] = useState(start.colours.find((c) => initialFrame === `${start.id}-${c}`) ?? start.colours[0])
   const frame = `${model}-${colour}`
   const [added, setAdded] = useState<Added[]>([])
+  // A photo taken from the try-on: shown over the camera until the visitor goes back; shared only on request.
+  const [photo, setPhoto] = useState<{ blob: Blob; url: string } | null>(null)
+  const [share, setShare] = useState<{ state: 'idle' | 'busy' | 'done' | 'error'; link?: string; copied?: boolean }>({ state: 'idle' })
   const { addMany } = useCart()
   const [lens, setLens] = useState<Lens>(initialLens)
   const [status, setStatus] = useState<Status>('loading')
   const [face, setFace] = useState(false)
   const video = useRef<HTMLVideoElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
-  const overlay = useRef<HTMLImageElement | null>(null)
+  const layers = useRef<{ frame: HTMLImageElement; lens: HTMLImageElement; id: string } | null>(null)
+  const lensRef = useRef(lens)
+  useEffect(() => {
+    lensRef.current = lens
+  }, [lens])
   const dialog = useRef<HTMLDivElement>(null)
   // Read by the drawing loop, so changing the frame does not restart the camera.
   const frameRef = useRef(frame)
@@ -71,12 +85,17 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose }: 
     frameRef.current = frame
   }, [frame])
 
-  // The overlay for the chosen frame and lens.
+  // The frame's two layers (the front, and the lens shape that gets tinted).
   useEffect(() => {
-    const img = new window.Image()
-    img.src = `/tryon/${frame}-${lens}.webp`
-    img.onload = () => (overlay.current = img)
-  }, [frame, lens])
+    const frameImg = new window.Image()
+    const lensImg = new window.Image()
+    let ready = 0
+    const done = () => ++ready === 2 && (layers.current = { frame: frameImg, lens: lensImg, id: frame })
+    frameImg.onload = done
+    lensImg.onload = done
+    frameImg.src = `/tryon/${frame}-rama.webp`
+    lensImg.src = `/tryon/${frame}-lentila.png`
+  }, [frame])
 
   // Camera and tracker: started once, stopped (camera light off) when the window closes.
   useEffect(() => {
@@ -84,7 +103,14 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose }: 
     let landmarker: FaceLandmarker | undefined
     let raf = 0
     let stopped = false
-    const smooth = { x: 0, y: 0, w: 0, a: 0, ready: false }
+    const scratch = document.createElement('canvas')
+    // The mesh, eased between video frames so the glasses sit still on a still face.
+    let prev: Landmarks | null = null
+    const smoothed = (raw: Landmarks): Landmarks => {
+      const out = raw.map((p, i) => (prev?.[i] ? { x: prev[i].x + (p.x - prev[i].x) * 0.5, y: prev[i].y + (p.y - prev[i].y) * 0.5, z: prev[i].z + (p.z - prev[i].z) * 0.5 } : { x: p.x, y: p.y, z: p.z }))
+      prev = out
+      return out
+    }
     let seen = false
 
     const draw = () => {
@@ -100,27 +126,14 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose }: 
         ctx.translate(W, 0)
         ctx.scale(-1, 1)
         ctx.drawImage(v, 0, 0, W, H)
-        const pts = landmarker.detectForVideo(v, performance.now()).faceLandmarks[0]
-        if (pts) {
-          const p = (i: number) => ({ x: pts[i].x * W, y: pts[i].y * H })
-          const r = p(EYE_R)
-          const l = p(EYE_L)
-          const b = p(BRIDGE)
-          const faceW = Math.hypot(p(TEMPLE_L).x - p(TEMPLE_R).x, p(TEMPLE_L).y - p(TEMPLE_R).y)
-          const target = { x: (r.x + l.x) / 2, y: ((r.y + l.y) / 2) * 0.82 + b.y * 0.18, w: faceW * (FIT[frameRef.current] ?? 1), a: Math.atan2(l.y - r.y, l.x - r.x) }
-          const k = smooth.ready ? 0.45 : 1
-          smooth.x += (target.x - smooth.x) * k
-          smooth.y += (target.y - smooth.y) * k
-          smooth.w += (target.w - smooth.w) * k
-          smooth.a += (target.a - smooth.a) * k
-          smooth.ready = true
-          const img = overlay.current
-          if (img) {
-            const h = (smooth.w * img.naturalHeight) / img.naturalWidth
-            ctx.translate(smooth.x, smooth.y)
-            ctx.rotate(smooth.a)
-            ctx.drawImage(img, -smooth.w / 2, -h * 0.5, smooth.w, h)
-          }
+        const raw = landmarker.detectForVideo(v, performance.now()).faceLandmarks[0]
+        const pts = raw && smoothed(raw)
+        const l = layers.current
+        const fit = l && TRYON_FIT[l.id]
+        if (pts && l && fit) {
+          const style = STYLE[l.id]
+          const base = ctx.getTransform()
+          renderGlasses(ctx, scratch, base, placement(pts, W, H, style, fit), { frame: l.frame, lens: l.lens, fit }, TINT[lensRef.current], style)
         }
         if (!!pts !== seen) setFace((seen = !!pts))
         ctx.restore()
@@ -199,6 +212,52 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose }: 
     setAdded((list) => [...list, { id: current, label: `${name}, lentile ${LENS_LABEL[lens]}` }])
   }
 
+  const snap = () => {
+    const c = canvas.current
+    if (!c || !c.width) return
+    // The picture as it is on screen, with a small mark in the corner.
+    const out = document.createElement('canvas')
+    out.width = c.width
+    out.height = c.height
+    const o = out.getContext('2d')!
+    o.drawImage(c, 0, 0)
+    const size = Math.round(c.width * 0.026)
+    o.font = `600 ${size}px system-ui, sans-serif`
+    o.textAlign = 'right'
+    o.fillStyle = 'rgba(255,255,255,0.92)'
+    o.shadowColor = 'rgba(0,0,0,0.45)'
+    o.shadowBlur = size / 2
+    o.fillText('NEUROS Amber · biohack-tech.ro', c.width - size, c.height - size)
+    out.toBlob((blob) => blob && setPhoto({ blob, url: URL.createObjectURL(blob) }), 'image/jpeg', 0.88)
+    setShare({ state: 'idle' })
+  }
+
+  const closePhoto = () => {
+    if (photo) URL.revokeObjectURL(photo.url)
+    setPhoto(null)
+    setShare({ state: 'idle' })
+  }
+
+  const shareLink = async () => {
+    if (!photo) return
+    let link = share.link
+    if (!link) {
+      setShare({ state: 'busy' })
+      const res = await fetch('/api/proba', { method: 'POST', headers: { 'Content-Type': 'image/jpeg' }, body: photo.blob }).catch(() => null)
+      const json = (await res?.json().catch(() => null)) as { ok?: boolean; url?: string } | null
+      if (!json?.ok || !json.url) return setShare({ state: 'error' })
+      link = json.url
+    }
+    setShare({ state: 'done', link })
+    const text = 'Cum îmi stau ochelarii NEUROS Amber?'
+    if (navigator.share) {
+      await navigator.share({ title: text, text, url: link }).catch(() => {})
+      return
+    }
+    const copied = await navigator.clipboard?.writeText(link).then(() => true, () => false)
+    setShare({ state: 'done', link, copied })
+  }
+
   return (
     <div className="fixed inset-0 z-[400] flex items-end justify-center bg-ink/70 backdrop-blur-sm sm:items-center sm:p-6" onClick={(e) => e.target === e.currentTarget && close()}>
       <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="proba-titlu" tabIndex={-1} className="flex max-h-[100svh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-[28px] bg-paper outline-none sm:rounded-[28px]">
@@ -228,7 +287,29 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose }: 
               {status === 'error' && <p className="text-[15px] text-white/90">Pe acest dispozitiv proba nu a pornit. Încearcă din Chrome sau Safari, pe telefon sau pe laptop.</p>}
             </div>
           )}
-          {status === 'live' && !face && <p className="absolute inset-x-0 bottom-3 mx-auto w-fit rounded-full bg-ink/60 px-3 py-1.5 text-[13px] text-white">Privește spre cameră</p>}
+          {status === 'live' && !face && !photo && <p className="absolute inset-x-0 top-3 mx-auto w-fit rounded-full bg-ink/60 px-3 py-1.5 text-[13px] text-white">Privește spre cameră</p>}
+          {status === 'live' && !photo && (
+            <button type="button" onClick={snap} aria-label="Fă o poză" className="absolute bottom-4 left-1/2 flex h-16 w-16 -translate-x-1/2 items-center justify-center rounded-full bg-white/25 backdrop-blur transition hover:bg-white/35">
+              <span className="h-12 w-12 rounded-full bg-white shadow-[0_2px_10px_rgba(0,0,0,.3)]" />
+            </button>
+          )}
+          {photo && (
+            <div className="absolute inset-0 bg-ink">
+              {/* eslint-disable-next-line @next/next/no-img-element -- a local photo (object URL), not an asset */}
+              <img src={photo.url} alt="Poza ta cu NEUROS Amber" className="h-full w-full object-cover" />
+              <div className="absolute inset-x-0 bottom-0 flex flex-wrap items-center justify-center gap-2 bg-[linear-gradient(0deg,rgba(11,19,22,.8),rgba(11,19,22,0))] p-4 pt-10">
+                <button type="button" onClick={shareLink} disabled={share.state === 'busy'} className="cta sm !min-h-11">
+                  {share.state === 'busy' ? 'Se pregătește linkul…' : 'Distribuie link'}
+                </button>
+                <a href={photo.url} download="neuros-amber.jpg" className="btn-secondary sm !min-h-11 !bg-white">
+                  Salvează
+                </a>
+                <button type="button" onClick={closePhoto} className="btn-secondary sm !min-h-11 !bg-white">
+                  Altă poză
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="space-y-4 overflow-y-auto px-5 pt-4 pb-[max(20px,env(safe-area-inset-bottom))]">
@@ -321,7 +402,16 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose }: 
               Mergi la coș
             </Link>
           )}
-          <p className="text-center text-[12.5px] leading-snug text-muted">Imaginea rămâne pe dispozitivul tău. Nu o salvăm și nu o trimitem nicăieri.</p>
+          {share.state === 'done' && share.link && (
+            <p className="rounded-[14px] bg-mist px-3.5 py-2.5 text-[13.5px] leading-snug text-text">
+              {share.copied ? 'Linkul e copiat: ' : 'Linkul pozei: '}
+              <a href={share.link} target="_blank" rel="noopener noreferrer" className="font-semibold break-all text-ink underline">
+                {share.link}
+              </a>
+            </p>
+          )}
+          {share.state === 'error' && <p className="text-[13.5px] text-[#d93636]">Linkul nu s-a putut face acum. Încearcă din nou peste puțin timp sau salvează poza.</p>}
+          <p className="text-center text-[12.5px] leading-snug text-muted">Imaginea rămâne pe dispozitivul tău. O poză ajunge pe site doar dacă apeși „Distribuie link”, și o ștergem după 30 de zile.</p>
         </div>
       </div>
     </div>
