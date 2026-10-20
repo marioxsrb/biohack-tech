@@ -37,7 +37,7 @@ import { syncAgentPrices } from '@/server/calling/agent-sync'
 import { ensureStoreSettings, saveFx } from '@/server/store-settings'
 import { fetchRates } from '@/server/fx'
 import { revalidatePath } from 'next/cache'
-import { WELCOME_CODE } from '@/config/promotions'
+import { WELCOME_GIFTS, isWelcomeGift } from '@/config/promotions'
 import { calls, leadProduct, renderCallFollowUp, renderCallLink, runCallAttempt, runCallCheck, type StepResult } from '@/server/calling/calls'
 import { companyLine } from '@/config/company'
 import { errText, log } from '@/server/log'
@@ -427,19 +427,20 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     }
   },
 
-  // The website popup's code (LONGEVITY10), once per address; still only with the marketing consent in force.
+  // The website popup's code (LONGEVITY10, or the gift drawn from a box), once per address; still only with the marketing consent in force.
   'email.welcome': async (j) => {
     const c = getConfig()
     const db = await getDb()
     const email = String(j.payload.email ?? '')
     if (c.email.transport !== 'smtp' && c.email.transport !== 'file') throw new Skip('no own email transport')
     if (!(await marketing.state(db, email))?.granted) throw new Skip('no marketing consent')
-    const code = await promoCodes.get(db, WELCOME_CODE)
+    const gift = isWelcomeGift(j.payload.gift) ? j.payload.gift : 'p10'
+    const code = await promoCodes.get(db, WELCOME_GIFTS[gift].code)
     if (!code?.active) throw new Skip('code switched off')
     const token = await marketing.unsubscribeToken(db, email)
     const origin = siteOrigin(j.payload.site === 'net' ? 'net' : 'ro', c.siteUrl)
     const en = j.payload.locale === 'en'
-    const mail = renderWelcome({ siteUrl: origin, unsubscribeUrl: `${origin}${en ? '/en' : ''}/dezabonare/${token}`, code: code.code, locale: en ? 'en' : 'ro' })
+    const mail = renderWelcome({ siteUrl: origin, unsubscribeUrl: `${origin}${en ? '/en' : ''}/dezabonare/${token}`, code: code.code, locale: en ? 'en' : 'ro', gift })
     return deliver(c, { ...mail, to: email, name: `welcome-${email.replace(/[^\w.-]+/g, '-')}` })
   },
 

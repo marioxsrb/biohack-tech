@@ -820,4 +820,22 @@ update jobs set status = 'skipped', last_error = 'acces closed', locked_until = 
 );
 create index if not exists try_on_photos_created_idx on try_on_photos (created_at)`,
   },
+  {
+    // The popup's three gifts (20.10.2026): a code value may have decimals (12,33%); the two new codes; each box the
+    // server opens (what was inside, and the address that claimed it); the gift a signup got.
+    id: '030_welcome_gifts',
+    sql: `alter table promo_codes alter column value type double precision;
+insert into promo_codes (code, kind, value, products, once_per_email, note) values
+  ('CADOU1233', 'percent', 12.33, null, true, 'Popup site: cadoul de 12,33%'),
+  ('CADOU100', 'fixed', 10000, array['balance-wave','brainlink-pro','ochelari-biohack'], true, 'Popup site: cadoul de 100 lei (fără carte)')
+on conflict (code) do nothing;
+create table if not exists welcome_gifts (
+  id text primary key,
+  gift text not null check (gift in ('p10', 'p1233', 'lei100')),
+  claimed_by text,
+  created_at timestamptz not null default now()
+);
+alter table welcome_gifts enable row level security;
+alter table welcome_signups add column if not exists gift text`,
+  },
 ]

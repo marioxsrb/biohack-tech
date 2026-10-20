@@ -233,7 +233,7 @@ describe('the fixed codes: BIOHACK10 (caller) and LONGEVITY10 (website popup)', 
   it('both exist after the migrations: 10%, once per address, no time limit, listed in /admin/coduri', async () => {
     for (const code of ['BIOHACK10', 'LONGEVITY10'])
       expect(await promoCodes.get(db, code)).toMatchObject({ kind: 'percent', value: 10, oncePerEmail: true, endsAt: null, maxUses: null, active: true, exclusive: false })
-    expect((await promoCodes.list(db)).map((c) => c.code).sort()).toEqual(['BIOHACK10', 'LONGEVITY10'])
+    expect((await promoCodes.list(db)).map((c) => c.code).sort()).toEqual(['BIOHACK10', 'CADOU100', 'CADOU1233', 'LONGEVITY10'])
     expect((await recoveryCode(db))?.code).toBe('BIOHACK10')
   })
 
