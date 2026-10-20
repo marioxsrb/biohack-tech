@@ -703,3 +703,10 @@ textarea.field { resize: vertical; }
 
 /* The popup's gift box, while the server opens it. */
 @keyframes gift-shake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
+
+/* NEUROS Calm popup: the red light on the neck breathes; the button at the nape asks to be pressed. */
+@keyframes calm-glow { 0%, 100% { opacity: .75; } 50% { opacity: 1; } }
+.calm-glow { animation: calm-glow 2.4s ease-in-out infinite; }
+@keyframes calm-tap { 0% { transform: scale(.7); opacity: 1; } 100% { transform: scale(1.8); opacity: 0; } }
+.calm-tap { transform-box: fill-box; transform-origin: center; animation: calm-tap 1.2s ease-out infinite; }
+@media (prefers-reduced-motion: reduce) { .calm-glow, .calm-tap { animation: none; } }
