@@ -117,12 +117,14 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
         ? { big: c.headline, small: [`Plătești ${formatLei(pricing.totalMinor)} în loc de ${formatLei(pricing.subtotalMinor)}.`, c.nudge ?? c.quiet].filter(Boolean).join(' ') }
         : { big: c.headline, small: '' }
   const active = !!progress?.active
+  const barOn = inSection && !summaryVisible && units > 0
   const steps = [0, 1, 2].map((i) => i < (units % 3 === 0 && units > 0 ? 3 : units % 3))
 
   const cta = (
     <a
       href={picks.length ? checkoutHref(slug, picks) : '#comanda'}
       onClick={go}
+      data-buy
       aria-disabled={!picks.length}
       className={`cta w-full ${picks.length ? '' : 'pointer-events-none opacity-50'}`}
     >
@@ -249,21 +251,20 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
 
       {/* Phones: the running total while choosing frames. */}
       <div
-        aria-hidden={!(inSection && !summaryVisible && units > 0)}
-        inert={!(inSection && !summaryVisible && units > 0)}
+        aria-hidden={!barOn}
+        inert={!barOn}
         data-sticky-bar
-      className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--lp-line)] bg-paper/95 backdrop-blur-md transition-transform duration-300 lg:hidden ${inSection && !summaryVisible && units > 0 ? 'translate-y-0' : 'translate-y-full'}`}
+        className={`fixed inset-x-0 bottom-0 z-[200] box-content h-16 border-t border-[var(--lp-line)] bg-paper/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md transition-transform duration-300 lg:hidden ${barOn ? 'translate-y-0' : 'translate-y-full'}`}
       >
-        <div className="lp-wrap flex items-center justify-between gap-4 py-3">
+        <div className="lp-wrap flex h-16 items-center justify-between gap-4">
           <p className="min-w-0 leading-tight">
-            <span className="block text-[14px] text-[var(--lp-muted)]">
-              {units === 1 ? '1 pereche' : `${units} perechi`}
-              {active ? ' · 2+1 activ' : ''}
+            <span className="block truncate text-[15px] font-semibold text-ink tabular-nums">
+              {units === 1 ? '1 pereche' : `${units} perechi`} · {formatLei(pricing.totalMinor)}
             </span>
-            <span className="block text-[18px] font-semibold text-ink tabular-nums">{formatLei(pricing.totalMinor)}</span>
+            {active && <span className="block text-[13px] text-[var(--lp-muted)]">2+1 gratis</span>}
           </p>
-          <a href={checkoutHref(slug, picks.length ? picks : [])} onClick={go} className="cta sm !min-h-12">
-            Continuă <Arrow />
+          <a href={checkoutHref(slug, picks.length ? picks : [])} onClick={go} data-buy className="cta sm !min-h-12 !min-w-12">
+            Comandă <Arrow />
           </a>
         </div>
       </div>

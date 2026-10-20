@@ -94,7 +94,7 @@ export function LandingOffer({ slug, productId, title, text, cta, notes, layout 
       )}
       {price !== null && <PromoNote productId={product.id} full className="mt-3 [&_.text-text]:!text-[var(--lp-muted)]" />}
       {price !== null && (
-        <a href={href} onClick={go} className="cta mt-6 w-full sm:w-auto">
+        <a href={href} data-buy onClick={go} className="cta mt-6 w-full sm:w-auto">
           <Lock /> {cta} <Arrow />
         </a>
       )}

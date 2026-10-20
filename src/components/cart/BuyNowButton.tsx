@@ -69,6 +69,7 @@ export function BuyNowButton({ productId, variantId, quantity = 1, pay, look = '
   return (
     <a
       href={href}
+      data-buy
       aria-disabled={pending || undefined}
       aria-label={look === 'primary' ? undefined : label}
       onClick={(e) => {
