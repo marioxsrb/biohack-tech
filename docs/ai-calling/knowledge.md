@@ -44,7 +44,7 @@ R: Un produs de wellness, pentru calm în fiecare zi. Susține relaxarea. Pentru
 
 ## NEUROS Focus (Pentru focus și claritate)
 Pentru ce este: Pentru concentrare. Te ajută să-ți aduni atenția. Vine cu tabletă inclusă, 10 jocuri și 20 de ședințe gratuite. Jocul merge înainte când ești atent.
-Preț: 3.337 lei (TVA 21% inclus, livrare gratuită în românia).
+Preț: 3.225 lei (TVA 21% inclus, livrare gratuită în românia).
 Promoție: Iei 2 bucăți din același produs: 10% reducere la ele. Iei 3: 20%. Reducerea apare în coș.
 Pagina produsului: https://biohack-tech.ro/products/focus
 Pe scurt: Te ajută să-ți aduni atenția când mintea fuge. Îți dă mai mult focus și o minte mai limpede. Primești și tableta, cu 10 jocuri care răspund la cât de atent ești, plus 20 de ședințe gratuite.

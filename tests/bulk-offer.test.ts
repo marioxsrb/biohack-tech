@@ -9,7 +9,7 @@ import { bulkUnits, priceLines, promotionHints, type PricedLine } from '@/lib/pr
 import { resolveOrderLines } from '@/lib/orders/resolve'
 
 const CALM = 638000
-const FOCUS = 333700
+const FOCUS = 322500
 const AMBER = 31500
 const BOOK = 12000
 const line = (productId: string, quantity: number, unitAmount: number, key = productId): PricedLine => ({ key, productId, quantity, unitAmount })
