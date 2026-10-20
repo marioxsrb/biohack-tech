@@ -75,3 +75,6 @@ export const WhatsApp = (p: P) => (
 export const Wallet = (p: P) => (
   <svg {...base} {...p}><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H17v2.5" /><path d="M4 7.5V17a2 2 0 0 0 2 2h13a1 1 0 0 0 1-1v-9.5a1 1 0 0 0-1-1H6.5A2.5 2.5 0 0 1 4 7.5Z" /><circle cx="16" cy="13" r="1.2" /></svg>
 )
+export const Battery = (p: P) => (
+  <svg {...base} {...p}><rect x="3" y="7" width="16" height="10" rx="2.5" /><path d="M21 10.5v3M7 10.5v3M10.5 10.5v3" /></svg>
+)

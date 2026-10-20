@@ -12,6 +12,7 @@ import { Availability, BundleOffer, ContactOrder, Highlights, PriceBlock, Social
 import { Gallery } from './Gallery'
 import { BusinessStrip } from '@/components/b2b/BusinessStrip'
 import { CalmEvening } from '@/components/calm/CalmEvening'
+import { CalmUse } from '@/components/calm/CalmUse'
 import { terms } from '@/config/site'
 import { BULK_OFFER } from '@/config/promotions'
 
@@ -225,6 +226,7 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
               cta={<BuyNowButton productId={product.id} variantId={variant?.id} quantity={quantity} pay="online" title="Vreau serile mai liniștite" className="!w-auto max-md:!w-full" />}
               note={<p className="text-[13.5px] leading-relaxed text-muted">Plată la livrare. Garanție {terms.warrantyYears} ani.</p>}
             />
+            <CalmUse pairCta={<BuyNowButton productId={product.id} variantId={variant?.id} quantity={2} pay="online" title="Comandă 2 bucăți" className="w-full" />} />
             {(BULK_OFFER.products as string[]).includes(product.id) && <BusinessStrip locale={locale} compact className="mt-8" />}
             <p className="mt-7 max-w-[32em] border-t border-mist-2 pt-6 text-[16.5px] leading-relaxed text-text">{intro}</p>
           </div>

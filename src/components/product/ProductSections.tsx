@@ -28,7 +28,8 @@ export function ProductSections({ product, content: c, locale }: Props) {
     <>
       <Cinematic story={c.scene} />
       <Benefits items={c.benefits} t={t} />
-      {c.use && <Use use={c.use} />}
+      {/* On the Romanian Calm page the use steps live under the evening story (components/calm/CalmUse). */}
+      {c.use && !(locale === 'ro' && product.id === 'balance-wave') && <Use use={c.use} />}
       {c.lookbook && <Lookbook lookbook={c.lookbook} t={t} />}
       {c.explain && <Explain explain={c.explain} t={t} />}
       {c.moments.length > 0 && (

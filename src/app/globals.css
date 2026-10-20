@@ -670,3 +670,11 @@ textarea.field { resize: vertical; }
 @keyframes welcome-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes welcome-rise { from { transform: translateY(14px) scale(.98); } to { transform: none; } }
 @media (prefers-reduced-motion: reduce) { .welcome-in, .welcome-in [role='dialog'] { animation: none; } }
+
+/* NEUROS Calm: the red light, breathing slowly behind the device. */
+@keyframes calm-pulse {
+  0%, 100% { opacity: 0.55; transform: translate(-50%, -50%) scale(0.92); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.06); }
+}
+.calm-pulse { animation: calm-pulse 3.2s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .calm-pulse { animation: none; } }
