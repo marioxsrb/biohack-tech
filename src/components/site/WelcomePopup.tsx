@@ -10,6 +10,7 @@ import { WELCOME_CONSENT_TEXT, WELCOME_CONSENT_TEXT_EN, WELCOME_GIFT_CONSENT_TEX
 import { getProduct } from '@/content/catalog'
 import { AmberGate } from './AmberGate'
 import { FocusGate } from './FocusGate'
+import { CalmGate } from './CalmGate'
 import { GiftGate, savedGift, type Gift } from './GiftGate'
 
 /** One minute on the site (anywhere, across pages of the same visit) before the offer shows (business decision 16.10.2026). */
@@ -94,12 +95,16 @@ export function WelcomePopup() {
   // NEUROS Focus's pages: a one-obstacle tap game comes first.
   const focus = /\/products\/focus\/?$/.test(pathname) || window.location.hostname.startsWith('focus.')
   // Everywhere else on the Romanian site (the main site, NEUROS Calm): three gift boxes, the server draws the gift.
-  const gifts = !amber && !focus && locale === 'ro'
+  // NEUROS Calm's pages: the woman with the device turns, the visitor presses the button at her nape.
+  const calm = /\/products\/calm\/?$/.test(pathname) || window.location.hostname.startsWith('calm.')
+  const gifts = !amber && !focus && !calm && locale === 'ro'
   const [passed, setPassed] = useState(false)
   const [gift, setGift] = useState<Gift | null>(null)
-  const gate = (amber || focus || gifts) && !passed
-  // After the Amber scene the offer shows the glasses; everywhere else, NEUROS Focus.
-  const photo = getProduct(amber ? 'ochelari-biohack' : 'brainlink-pro', locale)!.lifestyle
+  const gate = (amber || focus || calm || gifts) && !passed
+  // The offer speaks of the product whose page (or site) the visitor is on, with its photo; elsewhere NEUROS Focus's.
+  const context = amber ? 'ochelari-biohack' : calm ? 'balance-wave' : focus ? 'brainlink-pro' : null
+  const contextProduct = context ? getProduct(context, locale) : null
+  const photo = getProduct(context ?? 'brainlink-pro', locale)!.lifestyle
 
   useEffect(() => {
     if (hiddenHere || window.__BT_STORE__?.welcomePopup === false) return
@@ -181,6 +186,8 @@ export function WelcomePopup() {
           <AmberGate onDone={() => setPassed(true)} onClose={close} />
         ) : focus ? (
           <FocusGate onDone={() => setPassed(true)} onClose={close} />
+        ) : calm ? (
+          <CalmGate onDone={() => setPassed(true)} onClose={close} />
         ) : (
           <GiftGate
             onDone={(g) => {
@@ -216,7 +223,7 @@ export function WelcomePopup() {
           </button>
           <p className="text-[13px] font-semibold tracking-[0.12em] text-cyan-700 uppercase">{t.kicker}</p>
           <p id="welcome-title" className="mt-2 text-[42px] leading-[1.02] font-semibold tracking-[-0.035em] text-ink max-sm:text-[30px]">
-            {gift ? `${gift.title} la prima comandă` : t.title}
+            {gift ? `${gift.title} la prima comandă` : contextProduct && locale === 'ro' ? `10% reducere la ${contextProduct.name}` : t.title}
           </p>
           {state === 'done' || state === 'already' ? (
             <div role="status" className="mt-4">
@@ -227,7 +234,7 @@ export function WelcomePopup() {
             </div>
           ) : (
             <form onSubmit={submit} noValidate className="mt-3">
-              <p className="text-[16px] leading-snug text-text">{gift ? `Lasă-ne adresa de email și îți trimitem codul imediat: ${gift.detail}. Se adaugă peste ofertele din coș.` : t.lead}</p>
+              <p className="text-[16px] leading-snug text-text">{gift ? `Lasă-ne adresa de email și îți trimitem codul imediat: ${gift.detail}. Se adaugă peste ofertele din coș.` : contextProduct && locale === 'ro' ? `Lasă-ne adresa de email și îți trimitem codul imediat. Îl folosești la ${contextProduct.name} (și la orice alt produs), peste ofertele din coș.` : t.lead}</p>
               <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
               <label className="sr-only" htmlFor="welcome-email">
                 {t.placeholder}
