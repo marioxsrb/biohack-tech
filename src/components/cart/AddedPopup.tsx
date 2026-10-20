@@ -60,7 +60,7 @@ export function AddedPopup() {
       onMouseLeave={() => setHold(false)}
       onFocus={() => setHold(true)}
       onBlur={(e) => !ref.current?.contains(e.relatedTarget as Node) && setHold(false)}
-      className="added-popup fixed z-[260] w-[min(400px,calc(100vw-2*var(--gut)))] rounded-[20px] bg-paper p-5 shadow-[0_24px_60px_-20px_rgba(8,17,19,.35),0_0_0_1px_rgba(8,17,19,.06)] md:top-[calc(var(--nav-h)+12px)] md:right-[max(var(--gut),calc((100vw-1152px)/2+var(--gut)))] max-md:inset-x-[var(--gut)] max-md:bottom-[max(12px,env(safe-area-inset-bottom))] max-md:w-auto"
+      className="added-popup fixed z-[500] w-[min(400px,calc(100vw-2*var(--gut)))] rounded-[20px] bg-paper p-5 shadow-[0_24px_60px_-20px_rgba(8,17,19,.35),0_0_0_1px_rgba(8,17,19,.06)] md:top-[calc(var(--nav-h)+12px)] md:right-[max(var(--gut),calc((100vw-1152px)/2+var(--gut)))] max-md:inset-x-[var(--gut)] max-md:bottom-[calc(var(--buybar-h,0px)+max(12px,env(safe-area-inset-bottom)))] max-md:w-auto"
     >
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-2.5 text-[16px] font-semibold text-ink">

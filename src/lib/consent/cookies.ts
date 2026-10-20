@@ -15,6 +15,15 @@ export const COOKIE_POLICY_VERSION = '2026-09-29'
 export const CONSENT_MAX_AGE_DAYS = 365
 export const CONSENT_STORAGE_KEY = 'bt-consent-v1'
 
+/**
+ * The choice is one cookie for the whole shop: calm., focus. and amber. share it with biohack-tech.ro,
+ * so the banner is not asked again on the way to checkout. Other hosts (localhost, biohack-tech.net) stay host-only.
+ */
+export function consentCookieDomain(hostname: string): string | null {
+  const host = hostname.trim().toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '')
+  return host === 'biohack-tech.ro' || host.endsWith('.biohack-tech.ro') ? '.biohack-tech.ro' : null
+}
+
 export type OptionalCategory = 'analytics' | 'marketing'
 export type ConsentChoice = Record<OptionalCategory, boolean>
 export type ConsentAction = 'accept_all' | 'reject_all' | 'custom'

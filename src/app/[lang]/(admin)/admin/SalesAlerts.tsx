@@ -161,7 +161,7 @@ export function SalesAlerts() {
 
   return (
     <>
-      <div aria-live="polite" className="pointer-events-none fixed top-4 right-4 z-[400] flex w-[360px] max-w-[calc(100vw-32px)] flex-col gap-3">
+      <div aria-live="polite" className="pointer-events-none fixed top-4 right-4 z-[500] flex w-[360px] max-w-[calc(100vw-32px)] flex-col gap-3">
         {toasts.map((t) => (
           <div key={t.orderId} role="status" className="pointer-events-auto overflow-hidden rounded-[16px] bg-paper shadow-[0_24px_60px_-20px_rgba(8,17,19,.45),0_0_0_1px_rgba(8,17,19,.06)]">
             <div className="flex items-start gap-3 p-4">
@@ -194,7 +194,7 @@ export function SalesAlerts() {
       </div>
 
       {pref !== 'loading' && (
-        <div className="fixed right-4 bottom-4 z-[390] max-md:bottom-3">
+        <div className="fixed right-4 bottom-4 z-[500] max-md:bottom-3">
           {pref === null ? (
             <div className="flex items-center gap-2 rounded-full bg-ink py-1.5 pr-1.5 pl-4 text-[13px] text-white shadow-lg">
               <span>🔔 Sunet la fiecare comandă nouă?</span>

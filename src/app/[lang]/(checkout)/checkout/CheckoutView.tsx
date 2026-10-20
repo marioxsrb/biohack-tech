@@ -760,7 +760,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
                   </p>
                 )}
 
-                <button type="submit" disabled={sending} className="cta mt-5 w-full disabled:cursor-wait disabled:opacity-80">
+                <button type="submit" data-buy disabled={sending} className="cta mt-5 w-full disabled:cursor-wait disabled:opacity-80">
                   {sending ? (
                     <>
                       <span aria-hidden className="spinner" /> {form.paymentMethod === 'card' ? t.paying : t.sending}

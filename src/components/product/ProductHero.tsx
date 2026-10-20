@@ -6,8 +6,10 @@ import { BuyNowButton } from '@/components/cart/BuyNowButton'
 import { Price } from '@/components/cart/Price'
 import { QuantityStepper } from '@/components/cart/QuantityStepper'
 import { Check } from '@/components/ui/icons'
-import { getProduct, isPurchasable, variantLabel, type ProductId } from '@/content/catalog'
+import { getProduct, isPurchasable, unitPrice, variantLabel, type ProductId } from '@/content/catalog'
 import { useLocale } from '@/i18n/LocaleProvider'
+import { formatLei } from '@/lib/money'
+import { priceLines } from '@/lib/promotions'
 import { Availability, BundleOffer, ContactOrder, Highlights, PriceBlock, SocialProof, TrustRow } from './BuyBox'
 import { Gallery } from './Gallery'
 import { BusinessStrip } from '@/components/b2b/BusinessStrip'
@@ -57,6 +59,10 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
 
   const variant = product.variants?.find((v) => Object.entries(v.options).every(([k, val]) => selected[k] === val))
   const images = variant?.images ?? product.images
+  const amber = product.id === 'ochelari-biohack'
+  const amberUnit = amber ? unitPrice(product, variant) : null
+  const amberPrice = amberUnit != null ? priceLines([{ key: 'amber', productId: product.id, quantity, unitAmount: amberUnit }]) : null
+  const amberPairs = locale === 'en' ? (quantity === 1 ? '1 pair' : `${quantity} pairs`) : quantity === 1 ? '1 pereche' : `${quantity} perechi`
 
   // Phones and tablets: a compact purchase bar whenever no buy button is on screen.
   useEffect(() => {
@@ -75,14 +81,6 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
     if (closing) io.observe(closing)
     return () => io.disconnect()
   }, [purchasable])
-
-  // Keep the page's last lines clear of the bar.
-  useEffect(() => {
-    const root = document.documentElement
-    if (barVisible) root.dataset.buybar = ''
-    else delete root.dataset.buybar
-    return () => void delete root.dataset.buybar
-  }, [barVisible])
 
   // A frame chosen elsewhere (the homepage, the final section) arrives as #variant-id.
   useEffect(() => {
@@ -209,21 +207,32 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
       {purchasable && (
         <div
           data-sticky-bar
-      className={`fixed inset-x-0 bottom-0 z-[200] border-t border-line bg-paper/95 backdrop-blur-md transition-transform duration-300 ease-[var(--ease-brand)] lg:hidden ${
+          className={`fixed inset-x-0 bottom-0 z-[200] box-content h-16 border-t border-line bg-paper/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md transition-transform duration-300 ease-[var(--ease-brand)] lg:hidden ${
             barVisible ? 'translate-y-0' : 'translate-y-full'
           }`}
           aria-hidden={!barVisible}
           inert={!barVisible}
         >
-          <div className="wrap flex items-center gap-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+          <div className="wrap flex h-16 items-center gap-4">
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[15px] font-medium text-ink">{product.name}</p>
-              <p className="truncate text-[13.5px] text-muted">
-                <Price productId={product.id} variantId={variant?.id} />
-                {variant && ` · ${variantLabel(product, variant)}`}
-              </p>
+              {amber && amberPrice ? (
+                <>
+                  <p className="truncate text-[15px] font-medium text-ink">
+                    {amberPairs} · {formatLei(amberPrice.totalMinor)}
+                  </p>
+                  {amberPrice.discountMinor > 0 && <p className="truncate text-[13px] text-muted">2+1 gratis</p>}
+                </>
+              ) : (
+                <>
+                  <p className="truncate text-[15px] font-medium text-ink">{product.name}</p>
+                  <p className="truncate text-[13.5px] text-muted">
+                    <Price productId={product.id} variantId={variant?.id} />
+                    {variant && ` · ${variantLabel(product, variant)}`}
+                  </p>
+                </>
+              )}
             </div>
-            <BuyNowButton productId={product.id} variantId={variant?.id} quantity={quantity} pay="online" look="bar" className="!min-h-12 !px-5" />
+            <BuyNowButton productId={product.id} variantId={variant?.id} quantity={quantity} pay="online" look="bar" className="!min-h-12 !min-w-12 !px-5" />
           </div>
         </div>
       )}

@@ -30,16 +30,16 @@ export function StickyBuy({ name, productId, cta }: { name: string; productId: P
       aria-hidden={!show}
       inert={!show}
       data-sticky-bar
-      className={`fixed inset-x-0 bottom-0 z-40 border-t border-[var(--lp-line)] bg-[var(--lp-bg)]/95 backdrop-blur-md transition-transform duration-300 ease-[var(--ease-brand)] lg:hidden ${show ? 'translate-y-0' : 'translate-y-full'}`}
+      className={`fixed inset-x-0 bottom-0 z-[200] box-content h-16 border-t border-[var(--lp-line)] bg-[var(--lp-bg)]/95 pb-[env(safe-area-inset-bottom,0px)] backdrop-blur-md transition-transform duration-300 ease-[var(--ease-brand)] lg:hidden ${show ? 'translate-y-0' : 'translate-y-full'}`}
     >
-      <div className="lp-wrap flex items-center gap-4 py-3 pb-[max(12px,env(safe-area-inset-bottom))]">
+      <div className="lp-wrap flex h-16 items-center gap-4">
         <div className="min-w-0 flex-1">
           <p className="truncate text-[15px] font-semibold text-[var(--lp-ink)]">{name}</p>
           <p className="text-[14px] text-[var(--lp-muted)] tabular-nums">
             <Price productId={productId} pendingClassName="" />
           </p>
         </div>
-        <a href="#comanda" className="cta sm !min-h-12">
+        <a href="#comanda" data-buy className="cta sm !min-h-12 !min-w-12">
           {cta}
         </a>
       </div>

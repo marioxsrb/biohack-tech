@@ -155,7 +155,7 @@ export function WelcomePopup() {
   }
 
   return (
-    <div className="welcome-in fixed inset-0 z-[280] flex items-center justify-center p-4 max-sm:items-end max-sm:p-3" onKeyDown={(e) => e.key === 'Escape' && close()}>
+    <div className="welcome-in fixed inset-0 z-[400] flex items-center justify-center p-4 max-sm:items-end max-sm:p-3" onKeyDown={(e) => e.key === 'Escape' && close()}>
       {/* The page behind, dimmed: a click outside closes the offer. */}
       <button type="button" aria-label={t.close} tabIndex={-1} onClick={close} className="absolute inset-0 cursor-default bg-[rgb(8_17_19/0.7)] backdrop-blur-[3px]" />
       <div

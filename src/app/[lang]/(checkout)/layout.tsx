@@ -12,7 +12,7 @@ export default async function CheckoutLayout({ children }: { children: React.Rea
   const ui = await getUi()
   return (
     <>
-      <a href="#main" className="sr-only z-[300] rounded-md bg-paper px-4 py-2 text-ink focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
+      <a href="#main" className="sr-only z-[500] rounded-md bg-paper px-4 py-2 text-ink focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
         {ui.skipToContent}
       </a>
       <Suspense fallback={<CheckoutHeader />}>
