@@ -22,13 +22,10 @@ export function amberModels(locale: Locale = 'ro'): AmberModel[] {
       id: m.id,
       label: m.label,
       colours: (p.variants ?? [])
-        // One pair per slot: the "pachet" (two pairs) is not offered here; the red lens is its own choice.
-        .filter((v) => v.options.model === m.id && v.options.lentila !== 'pachet' && unitPrice(p, v) !== null)
+        .filter((v) => v.options.model === m.id && unitPrice(p, v) !== null)
         .map((v) => {
           const c = colour.find((x) => x.id === v.options.culoare)
-          const red = v.options.lentila === 'rosu'
-          const label = c?.label ?? v.options.culoare
-          return { id: red ? `${v.options.culoare}-rosu` : v.options.culoare, label: red ? `${label}, ${locale === 'en' ? 'red lenses' : 'lentile roșii'}` : label, swatch: c?.swatch, variantId: v.id }
+          return { id: v.options.culoare, label: c?.label ?? v.options.culoare, swatch: c?.swatch, variantId: v.id }
         }),
     }))
     .filter((m) => m.colours.length)

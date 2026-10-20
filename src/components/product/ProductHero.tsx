@@ -212,8 +212,7 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
 
           {tryOn && variant && (
             <AmberTryOn
-              frame={variant.id.replace(/-(rosu|pachet)$/, '')}
-              lens={variant.id.endsWith('-rosu') ? 'rosu' : 'galben'}
+              frame={variant.id}
               onClose={() => setTryOn(false)}
             />
           )}

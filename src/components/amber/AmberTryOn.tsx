@@ -3,15 +3,14 @@
 /**
  * NEUROS Amber, live try-on: the front camera with the chosen frame drawn over the eyes, like a filter. The face is
  * tracked in the browser (MediaPipe Face Landmarker, its WebAssembly and model served from /public/mediapipe); no
- * frame of the video leaves the device and nothing is stored. The overlays (public/tryon/<frame>-<lens>.webp) are
- * the studio front shots with see-through lenses. Loaded only when the visitor opens it.
+ * frame of the video leaves the device and nothing is stored. The layers (public/tryon/<frame>-rama.webp and
+ * -lentila.png) come from the studio front shots. Loaded only when the visitor opens it.
  */
 import Image, { type StaticImageData } from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { FaceLandmarker } from '@mediapipe/tasks-vision'
 
 import { useCart } from '@/components/cart/CartProvider'
-import { cartStore, lineKey } from '@/components/cart/cart-store'
 import Link from '@/components/ui/Link'
 import type { ProductId } from '@/content/catalog'
 import { TRYON_FIT } from './tryon-fit'
@@ -33,7 +32,6 @@ const COLOURS: Record<string, { label: string; swatch: string }> = {
   bej: { label: 'Bej', swatch: '#C9A193' },
   maro: { label: 'Maro', swatch: '#6B4A36' },
 }
-const LENS_LABEL = { galben: 'galbene', rosu: 'roșii' } as const
 /**
  * Per frame: the colour and width of the temples (cat eye has thin gold metal arms, the square frames acetate, the
  * thin frame wire) and how far beyond the temples the hinges sit.
@@ -45,20 +43,19 @@ const STYLE: Record<string, FrameStyle> = {
   'patrat-maro': { temple: 'rgba(86,56,38,0.95)', templeWidth: 0.026, fit: 1.04 },
   'subtire-negru': { temple: '#1b1b1b', templeWidth: 0.009, fit: 1.02 },
 }
-/** The lens colour as a filter: what it lets through (multiplied with the face behind it). */
-const TINT: Record<Lens, [number, number, number]> = { galben: [255, 206, 0], rosu: [255, 72, 36] }
+/** The yellow lens as a filter: what it lets through (multiplied with the face behind it). */
+const TINT: [number, number, number] = [255, 206, 0]
 
-type Lens = 'galben' | 'rosu'
 type Status = 'loading' | 'live' | 'denied' | 'error'
 
 
 /**
  * Pairs added from the try-on stay listed while the window is open: the visitor keeps trying, and the button offers
- * to add the next configuration too. The other lens of a frame already added becomes the pachet (both pairs, 20%).
+ * to add the next frame too.
  */
 type Added = { id: string; label: string }
 
-export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose }: { frame: string; lens: Lens; onClose: () => void }) {
+export function AmberTryOn({ frame: initialFrame, onClose }: { frame: string; onClose: () => void }) {
   const start = MODELS.find((m) => initialFrame.startsWith(`${m.id}-`)) ?? MODELS[0]
   const [model, setModel] = useState(start.id)
   const [colour, setColour] = useState(start.colours.find((c) => initialFrame === `${start.id}-${c}`) ?? start.colours[0])
@@ -68,16 +65,11 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose }: 
   const [photo, setPhoto] = useState<{ blob: Blob; url: string } | null>(null)
   const [share, setShare] = useState<{ state: 'idle' | 'busy' | 'done' | 'error'; link?: string; copied?: boolean }>({ state: 'idle' })
   const { addMany } = useCart()
-  const [lens, setLens] = useState<Lens>(initialLens)
   const [status, setStatus] = useState<Status>('loading')
   const [face, setFace] = useState(false)
   const video = useRef<HTMLVideoElement>(null)
   const canvas = useRef<HTMLCanvasElement>(null)
   const layers = useRef<{ frame: HTMLImageElement; lens: HTMLImageElement; id: string } | null>(null)
-  const lensRef = useRef(lens)
-  useEffect(() => {
-    lensRef.current = lens
-  }, [lens])
   const dialog = useRef<HTMLDivElement>(null)
   // Read by the drawing loop, so changing the frame does not restart the camera.
   const frameRef = useRef(frame)
@@ -133,7 +125,7 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose }: 
         if (pts && l && fit) {
           const style = STYLE[l.id]
           const base = ctx.getTransform()
-          renderGlasses(ctx, scratch, base, placement(pts, W, H, style, fit), { frame: l.frame, lens: l.lens, fit }, TINT[lensRef.current], style)
+          renderGlasses(ctx, scratch, base, placement(pts, W, H, style, fit), { frame: l.frame, lens: l.lens, fit }, TINT, style)
         }
         if (!!pts !== seen) setFace((seen = !!pts))
         ctx.restore()
@@ -188,28 +180,14 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose }: 
     }
   }, [close])
 
-  // What the button would add now: this frame with this lens. A frame in the cart as a pachet has both lenses.
-  const current = lens === 'rosu' ? `${frame}-rosu` : frame
-  const otherLens = lens === 'rosu' ? frame : `${frame}-rosu`
-  const inCart = added.some((a) => a.id === current || a.id === `${frame}-pachet`)
-  const pairsUp = added.some((a) => a.id === otherLens)
+  // What the button would add now: one pair of this frame.
+  const current = frame
+  const inCart = added.some((a) => a.id === current)
   const name = `${MODELS.find((m) => m.id === model)!.label} ${COLOURS[colour].label.toLowerCase()}`
 
   const add = () => {
-    if (pairsUp) {
-      // The other lens of this frame is already in the cart as a single pair: both become the pachet (20% off).
-      const key = lineKey({ productId: AMBER, variantId: otherLens })
-      const line = cartStore.getSnapshot().find((l) => lineKey(l) === key)
-      if (line) {
-        if (line.quantity > 1) cartStore.setQuantity(key, line.quantity - 1)
-        else cartStore.remove(key)
-      }
-      if (!addMany([{ productId: AMBER, variantId: `${frame}-pachet`, quantity: 1 }])) return
-      setAdded((list) => [...list.filter((a) => a.id !== otherLens), { id: `${frame}-pachet`, label: `${name}, pachet galbene + roșii` }])
-      return
-    }
     if (!addMany([{ productId: AMBER, variantId: current, quantity: 1 }])) return
-    setAdded((list) => [...list, { id: current, label: `${name}, lentile ${LENS_LABEL[lens]}` }])
+    setAdded((list) => [...list, { id: current, label: name }])
   }
 
   const snap = () => {
@@ -357,22 +335,6 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose }: 
             </div>
           </div>
 
-          {/* 3. The lens. */}
-          <div className="grid grid-cols-2 gap-2">
-            {(['galben', 'rosu'] as const).map((l) => (
-              <button
-                key={l}
-                type="button"
-                aria-pressed={lens === l}
-                onClick={() => setLens(l)}
-                className={`flex items-center justify-center gap-2 rounded-full py-2.5 text-[14.5px] font-medium transition ${lens === l ? 'bg-ink text-white' : 'bg-mist text-ink hover:bg-mist-2'}`}
-              >
-                <span aria-hidden className="h-4 w-4 rounded-full" style={{ background: l === 'galben' ? '#F2C21B' : '#E2492B' }} />
-                {l === 'galben' ? 'Galbene, seara' : 'Roșii, înainte de somn'}
-              </button>
-            ))}
-          </div>
-
           {added.length > 0 && !inCart && (
             <p className="flex items-start gap-2 rounded-[14px] bg-[#eaf7ef] px-3.5 py-2.5 text-[13.5px] leading-snug text-[#1d6b3a]">
               <svg aria-hidden viewBox="0 0 24 24" className="mt-0.5 h-4 w-4 flex-none">
@@ -380,7 +342,6 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose }: 
               </svg>
               <span>
                 {added.length === 1 ? `${added[0].label} e deja în coș.` : `În coș: ${added.map((a) => a.label).join('; ')}.`}
-                {pairsUp && ' Cu și perechea asta, iei pachetul ramei cu 20% reducere.'}
               </span>
             </p>
           )}
@@ -394,7 +355,7 @@ export function AmberTryOn({ frame: initialFrame, lens: initialLens, onClose }: 
             </p>
           ) : (
             <button type="button" onClick={add} className="cta w-full">
-              {added.length === 0 ? 'Adaugă în coș' : pairsUp ? 'Adaugă și perechea asta: pachet −20%' : 'Adaugă și perechea asta'}
+              {added.length === 0 ? 'Adaugă în coș' : 'Adaugă și perechea asta'}
             </button>
           )}
           {added.length > 0 && (

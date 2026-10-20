@@ -128,17 +128,6 @@ export function Highlights({ items, className = '' }: { items: string[]; classNa
 /** The price of the chosen configuration. Bundle savings are shown by BundleOffer, never as a reduced unit price. */
 export function PriceBlock({ productId, variantId, purchasable }: { productId: ProductId; variantId?: string; purchasable: boolean }) {
   const ui = useUi()
-  const deal = useUnitDeal(productId, variantId)
-  if (deal)
-    return (
-      <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-[30px] leading-none font-medium tracking-[-0.025em] text-ink tabular-nums">{deal.price}</span>
-        <span className="self-center rounded-full bg-[#ef4444] px-2.5 py-1 text-[13px] leading-none font-semibold text-white">−{deal.percent}% la pachet</span>
-        {purchasable && <span className="text-[14px] text-muted">{ui.vat}</span>}
-        {/* A saving against buying the two pairs separately, never a struck-through "old" price. */}
-        <span className="basis-full text-[14px] text-[#d93636]">Economisești {deal.saved} față de cele două perechi luate separat</span>
-      </p>
-    )
   return (
     <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
       <span className="text-[30px] leading-none font-medium tracking-[-0.025em] text-ink">
@@ -149,20 +138,6 @@ export function PriceBlock({ productId, variantId, purchasable }: { productId: P
   )
 }
 
-/**
- * A variant whose own promotion applies to a single unit (the NEUROS Amber pachet, 20%): the price to pay, the saving
- * and the percent, from the same engine as the cart and the server. Null for everything else.
- */
-export function useUnitDeal(productId: ProductId, variantId?: string) {
-  const money = useMoney()
-  const p = getProduct(productId)
-  const base = p ? unitPrice(p, getVariant(p, variantId)) : null
-  if (!p || base === null || !variantId) return null
-  const unit = money.unit(base)
-  const r = priceLines([{ key: 'u', productId, variantId, quantity: 1, unitAmount: unit }])
-  if (!r.discountMinor) return null
-  return { price: money.fmt(r.totalMinor), saved: money.fmt(r.discountMinor), percent: Math.round((r.discountMinor * 100) / unit) }
-}
 
 /**
  * The store's bundle offers for this product, as quantity choices: 1, 2 (−10%), 3+ (−20%) for NEUROS Calm,
@@ -200,7 +175,7 @@ export function BundleOffer({
   const p = promotionFor(productId)
   const product = getProduct(productId, locale)!
   const base = unitPrice(product, getVariant(product, variantId))
-  // Only an offer this variant takes part in (the NEUROS Amber pachet has its own 20% and stays out of 2+1).
+  // Only an offer this variant takes part in (a promotion can be limited to some variants).
   if (!p || base === null || !eligibleLine(p, { productId, variantId })) return null
   const unit = money.unit(base)
 
