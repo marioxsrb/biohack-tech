@@ -272,7 +272,7 @@ export const amberFaq: { q: string; a: string }[] = [
   },
   {
     q: 'Pot să le folosesc pe amândouă?',
-    a: 'Da, una după alta. Porți galbenul de la apus, iar când ajungi în pat treci la roșu. Pachetul le are pe amândouă, pentru toată seara.',
+    a: 'Da, una după alta. Porți galbenul de la apus, iar când ajungi în pat treci la roșu. Pachetul le are pe amândouă, pentru toată seara, cu 20% reducere.',
   },
   {
     q: 'De ce nu îmi ajunge modul de noapte de pe telefon?',
@@ -296,7 +296,7 @@ export const amberFaq: { q: string; a: string }[] = [
   },
   {
     q: 'Ce rame pot alege?',
-    a: 'Cat eye, în negru sau bej. Unisex pătrat, în negru sau maro. Și o ramă subțire de metal, în negru. Fiecare ramă vine cu lentilă galbenă sau roșie, iar o pereche costă 315 lei.',
+    a: 'Cat eye, în negru sau bej. Unisex pătrat, în negru sau maro. Și o ramă subțire de metal, în negru. Fiecare ramă vine cu lentilă galbenă sau roșie. O pereche costă 315 lei, iar pachetul cu ambele perechi are 20% reducere.',
   },
   {
     q: 'Cum îi curăț?',

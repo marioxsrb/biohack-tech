@@ -343,7 +343,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
     const code = brought && /^[A-Z0-9]{4,32}$/.test(brought) ? brought : ''
     return { input: code, rule: null, error: null, busy: false, open: !!code }
   })
-  const priced = useMemo(() => lines.map((l) => ({ key: l.key, productId: l.product.id, quantity: l.quantity, unitAmount: l.unit })), [lines])
+  const priced = useMemo(() => lines.map((l) => ({ key: l.key, productId: l.product.id, variantId: l.variant?.id, quantity: l.quantity, unitAmount: l.unit })), [lines])
   const withCode = useMemo(() => (promo.rule ? priceLines(priced, undefined, money.rule(promo.rule)) : null), [priced, promo.rule, money])
   // A cart change can make an applied code stop fitting (minimum, products): the totals fall back, and the order says why.
   const pricing = withCode && !withCode.code?.problem ? withCode : cartPricing

@@ -21,12 +21,12 @@ export const PRICES_RON: Record<ProductId, PriceEntry> = {
   // NEUROS Focus. Set 19.10.2026: 3.225 lei, 21% VAT included (a new list price, not a reduction: no comparison price is shown).
   'brainlink-pro': 322500,
   // NEUROS Amber. One pair, yellow or red lens, any of the five frames: 315 lei (approved 26.09.2026). The "pachet"
-  // (both pairs of one frame): 567 lei, two pairs less 10% (20.10.2026, PROPOSED, to be confirmed before it goes live).
+  // (both pairs of one frame): two pairs, (20.10.2026): listed at the full 630 lei, the 20% pachet reduction (config/promotions.ts) brings it to 504 lei.
   'ochelari-biohack': Object.fromEntries(
     ['cat-eye-negru', 'cat-eye-bej', 'patrat-negru', 'patrat-maro', 'subtire-negru'].flatMap((f) => [
       [f, 31500],
       [`${f}-rosu`, 31500],
-      [`${f}-pachet`, 56700],
+      [`${f}-pachet`, 63000],
     ]),
   ),
   // NEUROS Flow was discontinued on 13.10.2026: no price, so it can never be charged.

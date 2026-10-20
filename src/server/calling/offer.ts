@@ -44,13 +44,13 @@ export function leadItems(lead: Pick<Lead, 'productId' | 'variantId' | 'cart'>) 
 export function cartTotal(lead: Pick<Lead, 'productId' | 'variantId' | 'cart'>): number | null {
   const items = leadItems(lead)
   if (!items.length) return null
-  return priceLines(items.map((l, i) => ({ key: String(i), productId: l.productId, quantity: l.quantity, unitAmount: l.unit }))).totalMinor + shippingFor(items)
+  return priceLines(items.map((l, i) => ({ key: String(i), productId: l.productId, variantId: l.variantId, quantity: l.quantity, unitAmount: l.unit }))).totalMinor + shippingFor(items)
 }
 
 /** The automatic promotions the cart already gets, in words ("10% la 2 buc. NEUROS Calm: −1.276 lei"); empty when there is none. */
 export function existingDiscounts(lead: Pick<Lead, 'productId' | 'variantId' | 'cart'>): string {
   const items = leadItems(lead)
-  const pricing = priceLines(items.map((l, i) => ({ key: String(i), productId: l.productId, quantity: l.quantity, unitAmount: l.unit })))
+  const pricing = priceLines(items.map((l, i) => ({ key: String(i), productId: l.productId, variantId: l.variantId, quantity: l.quantity, unitAmount: l.unit })))
   return pricing.promotions.map((a) => `${a.label}: −${formatLei(a.amountMinor)}`).join('; ')
 }
 

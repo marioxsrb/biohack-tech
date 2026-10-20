@@ -52,7 +52,7 @@ export function AmberClosing({ specs }: { specs: ProductContent['specs'] }) {
             <h2 id="final-amber" className="text-[clamp(32px,3.8vw,54px)] leading-[1.04] tracking-[-0.04em] !text-white text-balance">
               Galben de la apus. Roșu în ultima oră.
             </h2>
-            <p className="mt-5 text-[18px] leading-relaxed text-white/85">Alegi rama, apoi lentilele: una dintre ele sau pachetul cu amândouă, pentru toată seara.</p>
+            <p className="mt-5 text-[18px] leading-relaxed text-white/85">Alegi rama și iei pachetul cu ambele perechi, cu 20% reducere. Sau doar una dintre ele.</p>
             <a href="#cumpara" className="cta mt-8 max-sm:!w-full">
               Alege-ți perechea
             </a>

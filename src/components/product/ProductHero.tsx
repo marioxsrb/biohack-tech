@@ -216,7 +216,8 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
               onClose={() => setTryOn(false)}
               onChoose={(frame, lens) => {
                 setTryOn(false)
-                pick(lens === 'rosu' ? `${frame}-rosu` : frame)
+                // The pachet stays the pachet (both lenses); a single pair follows the lens tried on.
+                pick(variant.id.endsWith('-pachet') ? `${frame}-pachet` : lens === 'rosu' ? `${frame}-rosu` : frame)
               }}
             />
           )}
@@ -229,8 +230,7 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
                 <QuantityStepper value={quantity} onChange={setQuantity} label={t.quantity} size="sm" />
               </div>
 
-              {/* The "pachet" is already two pairs: the 3-pair offer is for single pairs. */}
-              {!variant?.id.endsWith('-pachet') && <BundleOffer productId={product.id} variantId={variant?.id} quantity={quantity} onQuantity={setQuantity} className="mt-5" />}
+              <BundleOffer productId={product.id} variantId={variant?.id} quantity={quantity} onQuantity={setQuantity} className="mt-5" />
 
               {/* Four buttons in rows of 1, 2, 1: order (card or transfer preselected), phone and WhatsApp, add to cart. */}
               <div ref={buyRef} className="mt-5 grid gap-2.5">

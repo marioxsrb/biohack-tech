@@ -46,12 +46,12 @@ export const optionLabelEn: Record<string, string> = {
   Maro: 'Brown',
   'Ramă subțire': 'Thin frame',
   Lentile: 'Lenses',
-  Galbene: 'Yellow',
-  Roșii: 'Red',
+  'Doar galbene': 'Yellow only',
+  'Doar roșii': 'Red only',
   'Pachet galbene + roșii': 'Set: yellow + red',
   'Seara, de la apus, la ecrane și sub lumina din casă.': 'In the evening, from sunset, at screens and under the lights at home.',
   'În ultima oră înainte de somn, în pat, la telefon sau la citit.': 'In the last hour before sleep, in bed, on the phone or reading.',
-  'Ambele perechi ale ramei, pentru toată seara. 10% mai puțin decât separat.': 'Both pairs of the frame, for the whole evening. 10% less than separately.',
+  'Ambele perechi ale ramei, pentru toată seara, cu 20% reducere.': 'Both pairs of the frame, for the whole evening, 20% off.',
 }
 
 const ALT: Record<string, string> = {

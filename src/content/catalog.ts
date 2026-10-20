@@ -239,9 +239,10 @@ const AMBER_OPTIONS: ProductOption[] = [
     id: 'lentila',
     label: 'Lentile',
     values: [
-      { id: 'galben', label: 'Galbene', hint: 'Seara, de la apus, la ecrane și sub lumina din casă.', swatch: '#F2C21B' },
-      { id: 'rosu', label: 'Roșii', hint: 'În ultima oră înainte de somn, în pat, la telefon sau la citit.', swatch: '#E2492B' },
-      { id: 'pachet', label: 'Pachet galbene + roșii', hint: 'Ambele perechi ale ramei, pentru toată seara. 10% mai puțin decât separat.', swatch: 'linear-gradient(135deg,#F2C21B 50%,#E2492B 50%)' },
+      // The pachet first: it is what the page proposes (20.10.2026); a single pair is a choice the visitor makes.
+      { id: 'pachet', label: 'Pachet galbene + roșii', hint: 'Ambele perechi ale ramei, pentru toată seara, cu 20% reducere.', swatch: 'linear-gradient(135deg,#F2C21B 50%,#E2492B 50%)' },
+      { id: 'galben', label: 'Doar galbene', hint: 'Seara, de la apus, la ecrane și sub lumina din casă.', swatch: '#F2C21B' },
+      { id: 'rosu', label: 'Doar roșii', hint: 'În ultima oră înainte de somn, în pat, la telefon sau la citit.', swatch: '#E2492B' },
     ],
   },
 ]
@@ -365,18 +366,21 @@ const AMBER_FRAMES: AmberFrame[] = [
   },
 ]
 
-/** Fifteen variants: every frame with the yellow lens (original id), the red lens (-rosu) and both (-pachet). */
+/**
+ * Fifteen variants: every frame with both pairs (-pachet), the yellow lens (original id) and the red lens (-rosu).
+ * The pachet comes first, so the page opens on it (the first variant is the one selected).
+ */
 function amberVariants(): Variant[] {
   return AMBER_FRAMES.flatMap((f) => {
     const options = { model: f.model, culoare: f.culoare }
     return [
-      { id: f.id, options: { ...options, lentila: 'galben' }, images: f.galben },
-      { id: `${f.id}-rosu`, options: { ...options, lentila: 'rosu' }, images: f.rosu },
       {
         id: `${f.id}-pachet`,
         options: { ...options, lentila: 'pachet' },
         images: [cut(f.set, `NEUROS Amber ${f.name}, cele două perechi: lentile galbene și lentile roșii`), f.galben[0], f.rosu[0], ...(f.extra ?? []), ...f.galben.slice(1, 3), ...f.rosu.slice(1, 3)],
       },
+      { id: f.id, options: { ...options, lentila: 'galben' }, images: f.galben },
+      { id: `${f.id}-rosu`, options: { ...options, lentila: 'rosu' }, images: f.rosu },
     ]
   })
 }

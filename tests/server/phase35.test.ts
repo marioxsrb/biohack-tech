@@ -138,7 +138,7 @@ describe('discounted orders agree everywhere', () => {
     const c = getConfig()
     const lines = invoicePayload(c.fgo!, o).Continut
     expect(Math.round(lines.reduce((s, l) => s + l.PretTotal * 100, 0))).toBe(expected)
-    expect(lines.map((l) => l.Denumire)).toEqual(['NEUROS Calm, 20% la 3 bucăți: -3828.00 lei', 'NEUROS Amber (Unisex pătrat · Negru · Galbene), NEUROS Amber 2+1 gratis: -315.00 lei'])
+    expect(lines.map((l) => l.Denumire)).toEqual(['NEUROS Calm, 20% la 3 bucăți: -3828.00 lei', 'NEUROS Amber (Unisex pătrat · Negru · Doar galbene), NEUROS Amber 2+1 gratis: -315.00 lei'])
     const f = contactPayload(c.ghl!, o, { orders: 1, valueMinor: o.totalMinor }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, c.siteUrl).customFields
     expect(f.find((x) => x.key === 'bt_last_order_value')!.field_value).toBe((expected / 100).toFixed(2))
     const mail = renderEmail('order_confirmed', o, { siteUrl: c.siteUrl, bank: c.bank })

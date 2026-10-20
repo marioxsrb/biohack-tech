@@ -85,21 +85,21 @@ R: Încarci casca, instalezi Neuros Game pe tabletă și o conectezi. Apoi alegi
 Pentru ce este: Pentru seară și pentru somn. Două perechi pentru aceeași seară: lentilele galbene de la apus, cele roșii în ultima oră înainte de somn. Aceeași ramă, doar lentila diferă.
 Preț: de la 315 lei (TVA 21% inclus, livrare gratuită în românia).
 Variante:
-- Cat eye · Negru · Galbene: 315 lei
-- Cat eye · Negru · Roșii: 315 lei
-- Cat eye · Negru · Pachet galbene + roșii: 567 lei
-- Cat eye · Bej · Galbene: 315 lei
-- Cat eye · Bej · Roșii: 315 lei
-- Cat eye · Bej · Pachet galbene + roșii: 567 lei
-- Unisex pătrat · Negru · Galbene: 315 lei
-- Unisex pătrat · Negru · Roșii: 315 lei
-- Unisex pătrat · Negru · Pachet galbene + roșii: 567 lei
-- Unisex pătrat · Maro · Galbene: 315 lei
-- Unisex pătrat · Maro · Roșii: 315 lei
-- Unisex pătrat · Maro · Pachet galbene + roșii: 567 lei
-- Ramă subțire · Negru · Galbene: 315 lei
-- Ramă subțire · Negru · Roșii: 315 lei
-- Ramă subțire · Negru · Pachet galbene + roșii: 567 lei
+- Cat eye · Negru · Pachet galbene + roșii: 630 lei
+- Cat eye · Negru · Doar galbene: 315 lei
+- Cat eye · Negru · Doar roșii: 315 lei
+- Cat eye · Bej · Pachet galbene + roșii: 630 lei
+- Cat eye · Bej · Doar galbene: 315 lei
+- Cat eye · Bej · Doar roșii: 315 lei
+- Unisex pătrat · Negru · Pachet galbene + roșii: 630 lei
+- Unisex pătrat · Negru · Doar galbene: 315 lei
+- Unisex pătrat · Negru · Doar roșii: 315 lei
+- Unisex pătrat · Maro · Pachet galbene + roșii: 630 lei
+- Unisex pătrat · Maro · Doar galbene: 315 lei
+- Unisex pătrat · Maro · Doar roșii: 315 lei
+- Ramă subțire · Negru · Pachet galbene + roșii: 630 lei
+- Ramă subțire · Negru · Doar galbene: 315 lei
+- Ramă subțire · Negru · Doar roșii: 315 lei
 Promoție: La fiecare 3 perechi NEUROS Amber, una este gratuită. Poți combina ramele.
 Pagina produsului: https://biohack-tech.ro/products/amber
 Pe scurt: Seara are două părți. De la apus porți lentilele galbene, care opresc cea mai mare parte din lumina albastră. În ultima oră înainte de somn treci la cele roșii, care opresc și o parte din verde. Aceeași ramă, doar lentila diferă.

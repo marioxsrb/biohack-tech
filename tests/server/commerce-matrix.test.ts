@@ -64,9 +64,9 @@ function agreeEverywhere(o: Awaited<ReturnType<typeof buy>>, method: 'card' | 't
 const LEI = (n: number) => n * 100
 
 describe('configured prices', () => {
-  it('only Calm 6.380, Focus 3.225, Amber 315 (the pachet of two pairs 567) and the book 120 lei; NEUROS Flow has no price', () => {
+  it('only Calm 6.380, Focus 3.225, Amber 315 (the pachet of two pairs 630, 20% off in the cart) and the book 120 lei; NEUROS Flow has no price', () => {
     const frames = ['cat-eye-negru', 'cat-eye-bej', 'patrat-negru', 'patrat-maro', 'subtire-negru']
-    const amber = Object.fromEntries(frames.flatMap((f) => [[f, LEI(315)], [`${f}-rosu`, LEI(315)], [`${f}-pachet`, LEI(567)]]))
+    const amber = Object.fromEntries(frames.flatMap((f) => [[f, LEI(315)], [`${f}-rosu`, LEI(315)], [`${f}-pachet`, LEI(630)]]))
     expect(PRICES_RON).toEqual({ 'balance-wave': LEI(6380), 'brainlink-pro': LEI(3225), 'ochelari-biohack': amber, 'carte-diana': 12000 })
   })
 })

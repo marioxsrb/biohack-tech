@@ -114,7 +114,7 @@ export function assistantTools(ctx: ToolContext) {
         })
         if (!lines.length) return { empty: true as const }
         const items = lines.map((l) => `${l.quantity} × ${l.r.product.name}${l.r.variant ? ` (${variantLabel(l.r.product, l.r.variant)})` : ''}${l.r.unit === null ? ' (indisponibil)' : ''}`)
-        const priced = lines.filter((l) => l.r.unit !== null).map((l) => ({ key: l.key, productId: l.r.product.id, quantity: l.quantity, unitAmount: convertUnit(l.r.unit!, ctx.currency) }))
+        const priced = lines.filter((l) => l.r.unit !== null).map((l) => ({ key: l.key, productId: l.r.product.id, variantId: l.r.variant?.id, quantity: l.quantity, unitAmount: convertUnit(l.r.unit!, ctx.currency) }))
         const p = priceLines(priced)
         // Free, or the book's fee once per order (lib/shipping.ts); never discounted.
         const ship = shippingFor(priced, ctx.currency)

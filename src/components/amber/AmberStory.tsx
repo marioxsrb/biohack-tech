@@ -9,6 +9,7 @@
 import Image from 'next/image'
 
 import { Price } from '@/components/cart/Price'
+import { useUnitDeal } from '@/components/product/BuyBox'
 import { Row, RowArrows, rowCard, useRow } from '@/components/calm/carousel'
 import { amberCompare, amberRoutine, amberWhen, type AmberLens } from '@/content/amber-story'
 import type { ProductId } from '@/content/catalog'
@@ -76,13 +77,31 @@ const SETS = [
   { id: 'subtire-negru', name: 'Ramă subțire neagră', img: setSubNegru, isNew: true },
 ]
 
+/** The pachet's price after its 20%, then a single pair's. No struck-through price (store rule, see BuyBox). */
+function SetPrice({ productId, frame }: { productId: ProductId; frame: string }) {
+  const deal = useUnitDeal(productId, `${frame}-pachet`)
+  return (
+    <span className="mt-1 block text-[14px] text-muted">
+      {deal && (
+        <span className="flex flex-wrap items-baseline gap-x-2">
+          <span className="text-[16px] font-semibold text-ink tabular-nums">Pachet {deal.price}</span>
+          <span className="font-semibold text-[#d93636]">−{deal.percent}%</span>
+        </span>
+      )}
+      <span className="block">
+        sau <Price productId={productId} variantId={frame} /> o pereche
+      </span>
+    </span>
+  )
+}
+
 function Collection({ productId, onPick }: { productId: ProductId; onPick: (variantId: string) => void }) {
   return (
     <section aria-labelledby="colectia" className="pt-12 md:pt-16">
       <h2 id="colectia" className={`${titleClass} max-w-[15em]`}>
         Alege rama. Lentilele vin în două culori.
       </h2>
-      <p className="mt-3 max-w-[34em] text-[17px] leading-relaxed text-muted md:text-[18px]">Fiecare ramă există cu lentile galbene și cu lentile roșii. Iei una dintre ele sau pachetul cu amândouă.</p>
+      <p className="mt-3 max-w-[34em] text-[17px] leading-relaxed text-muted md:text-[18px]">Fiecare ramă există cu lentile galbene și cu lentile roșii. Pachetul cu amândouă are 20% reducere, sau iei doar una dintre ele.</p>
       <ul className="mt-8 grid grid-cols-2 gap-3 md:mt-10 md:grid-cols-3 md:gap-4">
         <li className="relative col-span-2 min-h-[260px] overflow-hidden rounded-[20px] md:col-span-1 md:row-span-1">
           <Image src={perechi} alt="Cele două perechi NEUROS Amber cu ramă subțire, galbenă și roșie, pe noptieră" fill placeholder="blur" sizes="(min-width: 768px) 360px, 100vw" className="object-cover" />
@@ -97,9 +116,7 @@ function Collection({ productId, onPick }: { productId: ProductId; onPick: (vari
               </span>
               <span className="mt-auto px-4 pb-4 sm:px-5 sm:pb-5">
                 <span className="block text-[16.5px] leading-snug font-medium tracking-[-0.015em] text-ink">{s.name}</span>
-                <span className="mt-1 block text-[14px] text-muted">
-                  <Price productId={productId} variantId={s.id} /> perechea · pachet <Price productId={productId} variantId={`${s.id}-pachet`} />
-                </span>
+                <SetPrice productId={productId} frame={s.id} />
               </span>
             </button>
           </li>
