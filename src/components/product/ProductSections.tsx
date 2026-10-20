@@ -31,7 +31,8 @@ export function ProductSections({ product, content: c, locale }: Props) {
       {/* On the Romanian Calm page the use steps live under the evening story (components/calm/CalmUse). */}
       {c.use && !(locale === 'ro' && product.id === 'balance-wave') && <Use use={c.use} />}
       {c.lookbook && <Lookbook lookbook={c.lookbook} t={t} />}
-      {c.explain && <Explain explain={c.explain} t={t} />}
+      {/* Romanian Calm: "Cum susține calmul" is replaced by the science section, shown right after "Știai că?" (page.tsx). */}
+      {c.explain && !(locale === 'ro' && product.id === 'balance-wave') && <Explain explain={c.explain} t={t} />}
       {c.moments.length > 0 && (
         <div className="py-[calc(var(--sec)*0.5)]">
           {c.moments.map((s, i) => (

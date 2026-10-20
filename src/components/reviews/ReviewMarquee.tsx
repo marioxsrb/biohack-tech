@@ -263,7 +263,7 @@ function Lane({ items: list, reverse, reduced, showProduct }: { items: Review[];
   )
 }
 
-export function ReviewMarquee({ productId, variant = 'site', className = '' }: { productId?: ProductId; variant?: 'site' | 'landing'; className?: string }) {
+export function ReviewMarquee({ productId, variant = 'site', className = '', note }: { productId?: ProductId; variant?: 'site' | 'landing'; className?: string; note?: { title: string; text: string } }) {
   const reviews = productId ? reviewsFor(productId) : allReviews
   const locale = useLocale()
   const t = COPY[locale]
@@ -315,6 +315,20 @@ export function ReviewMarquee({ productId, variant = 'site', className = '' }: {
             </div>
           )}
         </div>
+
+        {note && (
+          <div className="mt-8 flex items-start gap-4 px-[clamp(24px,5vw,64px)]">
+            <span aria-hidden className="mt-0.5 flex h-11 w-11 flex-none items-center justify-center rounded-full bg-white/[0.08] text-[#7fdcec] shadow-[inset_0_0_0_1px_rgb(255_255_255/0.12)]">
+              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M4 21V8l8-5 8 5v13" />
+                <path d="M9 21v-6h6v6M12 7v4M10 9h4" />
+              </svg>
+            </span>
+            <p className="max-w-[44em] text-[15.5px] leading-relaxed text-white/75">
+              <span className="font-semibold text-white">{note.title}</span> {note.text}
+            </p>
+          </div>
+        )}
 
         <div className="rv2-lanes mt-[clamp(36px,5vw,56px)] grid grid-cols-[minmax(0,1fr)] gap-2">
           {lanes.map((l, i) => (

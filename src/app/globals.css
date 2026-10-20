@@ -678,3 +678,15 @@ textarea.field { resize: vertical; }
 }
 .calm-pulse { animation: calm-pulse 3.2s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .calm-pulse { animation: none; } }
+
+/* NEUROS Calm, "Știai că?": breathe in for 4 s, out for 6 s. */
+@keyframes calm-breathe { 0% { transform: scale(0.72); } 40% { transform: scale(1.12); } 100% { transform: scale(0.72); } }
+@keyframes calm-breathe-in { 0%, 36% { opacity: 1; } 42%, 96% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes calm-breathe-out { 0%, 36% { opacity: 0; } 42%, 96% { opacity: 1; } 100% { opacity: 0; } }
+.calm-breathe { animation: calm-breathe 10s ease-in-out infinite; }
+.calm-breathe-in { animation: calm-breathe-in 10s linear infinite; }
+.calm-breathe-out { animation: calm-breathe-out 10s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .calm-breathe, .calm-breathe-in { animation: none; }
+  .calm-breathe-out { animation: none; opacity: 0; }
+}

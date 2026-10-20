@@ -8,9 +8,10 @@
  * existing model until there is a matching photo.
  */
 import Image, { type StaticImageData } from 'next/image'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
-import { Arrow, Battery } from '@/components/ui/icons'
+import { Row, RowArrows, rowCard, useRow } from '@/components/calm/carousel'
+import { Battery } from '@/components/ui/icons'
 import activ from '@/assets/img/balance-wave/dispozitiv-activ.webp'
 import birou from '@/assets/img/balance-wave/lifestyle-birou.webp'
 import canapea from '@/assets/img/balance-wave/result-calm.webp'
@@ -119,37 +120,9 @@ const PAIR = {
   text: 'Fiecare cu aparatul lui, pe aceeași canapea. Seara devine un mic ritual pe care îl faceți împreună.',
 }
 
-/** Arrow buttons for the row (desktop); on the phone the row is swiped. */
-function useRow() {
-  const row = useRef<HTMLUListElement>(null)
-  const [edge, setEdge] = useState({ start: true, end: false })
-  useEffect(() => {
-    const el = row.current
-    if (!el) return
-    const update = () => setEdge({ start: el.scrollLeft < 8, end: el.scrollLeft + el.clientWidth > el.scrollWidth - 8 })
-    update()
-    el.addEventListener('scroll', update, { passive: true })
-    window.addEventListener('resize', update)
-    return () => {
-      el.removeEventListener('scroll', update)
-      window.removeEventListener('resize', update)
-    }
-  }, [])
-  const step = (dir: 1 | -1) => {
-    const el = row.current
-    const card = el?.querySelector('li')
-    if (!el || !card) return
-    el.scrollBy({ left: dir * (card.getBoundingClientRect().width + 16), behavior: 'smooth' })
-  }
-  return { row, edge, step }
-}
-
-const arrowBtn =
-  'flex h-11 w-11 items-center justify-center rounded-full border border-line bg-paper text-ink transition hover:border-ink disabled:cursor-default disabled:opacity-35 disabled:hover:border-line'
-
 function WhenYouWear({ pairCta }: { pairCta?: ReactNode }) {
   const { row, edge, step } = useRow()
-  const card = 'w-[80%] flex-none snap-start sm:w-[calc((100%-16px)/2.15)] lg:w-[calc((100%-32px)/3.15)]'
+  const card = rowCard
   return (
     <section aria-labelledby="cand-il-porti" className="pt-16 md:pt-24">
       <div className="flex items-end justify-between gap-6">
@@ -159,20 +132,10 @@ function WhenYouWear({ pairCta }: { pairCta?: ReactNode }) {
           </h2>
           <p className="mt-3 max-w-[28em] text-[17px] leading-relaxed text-muted md:text-[18px]">Locul lui de bază e seara. Îl poți lua cu tine și peste zi.</p>
         </div>
-        <div className="flex flex-none gap-2 max-md:hidden">
-          <button type="button" onClick={() => step(-1)} disabled={edge.start} aria-label="Înapoi" className={arrowBtn}>
-            <Arrow className="h-5 w-5 rotate-180" />
-          </button>
-          <button type="button" onClick={() => step(1)} disabled={edge.end} aria-label="Mai departe" className={arrowBtn}>
-            <Arrow className="h-5 w-5" />
-          </button>
-        </div>
+        <RowArrows edge={edge} step={step} />
       </div>
 
-      <ul
-        ref={row}
-        className="-mx-[var(--gut)] mt-8 flex snap-x snap-mandatory scroll-px-[var(--gut)] gap-4 overflow-x-auto px-[var(--gut)] pb-2 [scrollbar-width:none] md:mt-10 [&::-webkit-scrollbar]:hidden"
-      >
+      <Row row={row} className="mt-8 md:mt-10">
         {CARDS.map((c, i) => (
           <li key={c.title} className={card}>
             <article className="flex h-full flex-col overflow-hidden rounded-[22px] bg-paper">
@@ -205,7 +168,7 @@ function WhenYouWear({ pairCta }: { pairCta?: ReactNode }) {
             </div>
           </article>
         </li>
-      </ul>
+      </Row>
     </section>
   )
 }
