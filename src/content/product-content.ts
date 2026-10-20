@@ -138,12 +138,12 @@ export const productContent: Record<ProductId, ProductContent> = {
   'brainlink-pro': {
     seo: {
       title: 'NEUROS Focus, pentru concentrare și claritate',
-      description: 'NEUROS Focus te ajută să-ți aduni atenția. Vine cu tabletă inclusă, 10 jocuri și 20 de ședințe gratuite. Livrare gratuită.',
+      description: 'NEUROS Focus te ajută să-ți aduni atenția. Vine cu tabletă inclusă, peste 10 jocuri și 20 de ședințe gratuite. Livrare gratuită.',
     },
-    intro: 'Te ajută să-ți aduni atenția când mintea fuge. Îți dă mai mult focus și o minte mai limpede. Primești și tableta, cu 10 jocuri care răspund la cât de atent ești, plus 20 de ședințe gratuite.',
+    intro: 'Te ajută să-ți aduni atenția când mintea fuge. Îți dă mai mult focus și o minte mai limpede. Primești și tableta, cu peste 10 jocuri care răspund la cât de atent ești, plus 20 de ședințe gratuite.',
     highlights: [
       'Tabletă inclusă, gata de joc',
-      '10 jocuri care merg înainte când ești atent',
+      'Peste 10 jocuri care merg înainte când ești atent',
       '20 de ședințe gratuite incluse',
       'Te ajută să intri mai ușor în concentrare',
     ],
@@ -187,9 +187,9 @@ export const productContent: Record<ProductId, ProductContent> = {
       },
     ],
     specs: [
-      { label: 'În pachet', value: 'Casca NEUROS Focus, tabletă, 10 jocuri în Neuros Game și 20 de ședințe gratuite' },
+      { label: 'În pachet', value: 'Casca NEUROS Focus, tabletă, peste 10 jocuri în Neuros Game și 20 de ședințe gratuite' },
       { label: 'Senzori', value: '3 senzori EEG' },
-      { label: 'Aplicație', value: 'Neuros Game: 10 jocuri și meditații ghidate' },
+      { label: 'Aplicație', value: 'Neuros Game: peste 10 jocuri și meditații ghidate' },
       { label: 'Conectare', value: 'Bluetooth, la tabletă' },
       { label: 'Baterie', value: 'Până la 4 ore, după o oră de încărcare' },
       { label: 'Certificări', value: 'CE, FCC' },
@@ -254,7 +254,7 @@ export const productContent: Record<ProductId, ProductContent> = {
       { q: 'Când îi port?', a: 'Ziua, la birou, când vrei ochi mai odihniți. Seara, pe telefon sau laptop, când vrei o lumină mai blândă.' },
       {
         q: 'Se pot face cu dioptrie sau cu lentile progresive?',
-        a: 'Din păcate, nu. NEUROS Amber vine doar cu lentilele lui chihlimbar, fără dioptrie, așa că nu le putem face după rețetă și nici cu lentile progresive. Dacă ai întrebări despre cum ți s-ar potrivi, scrie-ne și te ajutăm cu drag.',
+        a: 'Din păcate, nu. NEUROS Amber vine doar cu lentilele galbene, fără dioptrie, așa că nu le putem face după rețetă și nici cu lentile progresive. Dacă ai întrebări despre cum ți s-ar potrivi, scrie-ne și te ajutăm cu drag.',
       },
       { q: 'Pot să îi returnez?', a: 'Da, în 14 zile de la primire.' },
     ],
@@ -331,7 +331,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
     intro: 'It helps you gather your attention when your mind wanders. It supports focus and a clearer state. The games on your tablet respond to how present you are.',
     highlights: [
       'Tablet included, ready to play',
-      '10 games that move forward when you focus',
+      'Over 10 games that move forward when you focus',
       '20 free sessions included',
       'Helps you get into focus more easily',
     ],
@@ -375,7 +375,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       },
     ],
     specs: [
-      { label: 'In the box', value: 'The NEUROS Focus headband, a tablet, 10 games in Neuros Game and 20 free sessions' },
+      { label: 'In the box', value: 'The NEUROS Focus headband, a tablet, over 10 games in Neuros Game and 20 free sessions' },
       { label: 'Sensors', value: '3 EEG sensors' },
       { label: 'App', value: 'Neuros Game: over 10 games and guided meditations' },
       { label: 'Connection', value: 'Bluetooth, to a tablet' },
@@ -433,7 +433,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
     specs: [
       { label: 'Models', value: 'Cat eye, unisex square' },
       { label: 'Colours', value: 'Cat eye: black, beige. Unisex square: black, brown' },
-      { label: 'Lenses', value: 'Blue light filter, amber tint' },
+      { label: 'Lenses', value: 'Blue light filter, yellow tint' },
       { label: 'Prescription', value: 'Non-prescription. Not available with prescription or progressive lenses' },
       { label: 'Frame', value: 'Light, for everyday wear' },
       { label: 'Warranty', value: '2 years' },
@@ -442,7 +442,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       { q: 'When do I wear them?', a: 'In the daytime, at your desk, when you want more rested eyes. In the evening, on your phone or laptop, when you want a softer light.' },
       {
         q: 'Can they be made with a prescription or progressive lenses?',
-        a: 'Unfortunately not. NEUROS Amber comes only with its own amber lenses, without a prescription, so we cannot make them to a prescription or with progressive lenses. If you are wondering whether they would suit you, write to us and we will gladly help.',
+        a: 'Unfortunately not. NEUROS Amber comes only with its yellow lenses, without a prescription, so we cannot make them to a prescription or with progressive lenses. If you are wondering whether they would suit you, write to us and we will gladly help.',
       },
       { q: 'Can I return them?', a: 'Yes, within 14 days of delivery.' },
     ],

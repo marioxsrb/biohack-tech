@@ -43,14 +43,14 @@ R: Îl încarci, îl așezi la gât și apeși butonul. Câteva minute de liniș
 R: Un produs de wellness, pentru calm în fiecare zi. Susține relaxarea. Pentru o afecțiune, vorbește întâi cu medicul tău.
 
 ## NEUROS Focus (Pentru focus și claritate)
-Pentru ce este: Pentru concentrare. Te ajută să-ți aduni atenția. Vine cu tabletă inclusă, 10 jocuri și 20 de ședințe gratuite. Jocul merge înainte când ești atent.
+Pentru ce este: Pentru concentrare. Te ajută să-ți aduni atenția. Vine cu tabletă inclusă, peste 10 jocuri și 20 de ședințe gratuite. Jocul merge înainte când ești atent.
 Preț: 3.225 lei (TVA 21% inclus, livrare gratuită în românia).
 Promoție: Iei 2 bucăți din același produs: 10% reducere la ele. Iei 3: 20%. Reducerea apare în coș.
 Pagina produsului: https://biohack-tech.ro/products/focus
-Pe scurt: Te ajută să-ți aduni atenția când mintea fuge. Îți dă mai mult focus și o minte mai limpede. Primești și tableta, cu 10 jocuri care răspund la cât de atent ești, plus 20 de ședințe gratuite.
+Pe scurt: Te ajută să-ți aduni atenția când mintea fuge. Îți dă mai mult focus și o minte mai limpede. Primești și tableta, cu peste 10 jocuri care răspund la cât de atent ești, plus 20 de ședințe gratuite.
 Ce oferă:
 - Tabletă inclusă, gata de joc
-- 10 jocuri care merg înainte când ești atent
+- Peste 10 jocuri care merg înainte când ești atent
 - 20 de ședințe gratuite incluse
 - Te ajută să intri mai ușor în concentrare
 - Focus mai clar: Te ajută să rămâi la ce ai de făcut, prin jocuri scurte.
@@ -66,9 +66,9 @@ Creierul produce semnale electrice foarte slabe. Casca le citește prin trei sen
 Neuros Game transformă semnalul în joc. Când ești atent, jocul înaintează. Sunt peste 10 jocuri și meditații ghidate, iar fiecare sesiune rămâne salvată. Bateria ține până la 4 ore.
 Casca recunoaște stări, precum concentrarea și relaxarea. Gândurile rămân ale tale. Metoda vine din cercetarea despre biofeedback. Studiile de mai jos privesc metoda, în general.
 Specificații:
-- În pachet: Casca NEUROS Focus, tabletă, 10 jocuri în Neuros Game și 20 de ședințe gratuite
+- În pachet: Casca NEUROS Focus, tabletă, peste 10 jocuri în Neuros Game și 20 de ședințe gratuite
 - Senzori: 3 senzori EEG
-- Aplicație: Neuros Game: 10 jocuri și meditații ghidate
+- Aplicație: Neuros Game: peste 10 jocuri și meditații ghidate
 - Conectare: Bluetooth, la tabletă
 - Baterie: Până la 4 ore, după o oră de încărcare
 - Certificări: CE, FCC
@@ -113,7 +113,7 @@ Specificații:
 Î: Când îi port?
 R: Ziua, la birou, când vrei ochi mai odihniți. Seara, pe telefon sau laptop, când vrei o lumină mai blândă.
 Î: Se pot face cu dioptrie sau cu lentile progresive?
-R: Din păcate, nu. NEUROS Amber vine doar cu lentilele lui chihlimbar, fără dioptrie, așa că nu le putem face după rețetă și nici cu lentile progresive. Dacă ai întrebări despre cum ți s-ar potrivi, scrie-ne și te ajutăm cu drag.
+R: Din păcate, nu. NEUROS Amber vine doar cu lentilele galbene, fără dioptrie, așa că nu le putem face după rețetă și nici cu lentile progresive. Dacă ai întrebări despre cum ți s-ar potrivi, scrie-ne și te ajutăm cu drag.
 Î: Pot să îi returnez?
 R: Da, în 14 zile de la primire.
 
