@@ -34,7 +34,8 @@ export function ProductSections({ product, content: c, locale }: Props) {
       {/* Romanian Focus: the use steps live in the story under the buy area (components/focus/FocusStory). */}
       {c.use && !(locale === 'ro' && product.id === 'brainlink-pro') && <Use use={c.use} />}
       {c.lookbook && <Lookbook lookbook={c.lookbook} t={t} />}
-      {c.explain && <Explain explain={c.explain} t={t} />}
+      {/* Romanian Focus: "Cum îți citește atenția" is replaced by the science section (page.tsx). */}
+      {c.explain && !(locale === 'ro' && product.id === 'brainlink-pro') && <Explain explain={c.explain} t={t} />}
       {c.moments.length > 0 && (
         <div className="py-[calc(var(--sec)*0.5)]">
           {c.moments.map((s, i) => (

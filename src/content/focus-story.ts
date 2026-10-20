@@ -5,6 +5,8 @@
  */
 import type { StaticImageData } from 'next/image'
 
+import type { Chart } from '@/content/calm-science'
+
 import adolescent from '@/assets/img/brainlink/adolescent-examen.webp'
 import copilTableta from '@/assets/img/brainlink/copil-tableta.webp'
 import copilTeme from '@/assets/img/brainlink/copil-teme.webp'
@@ -187,5 +189,141 @@ export const focusFacts: FocusFact[] = [
     title: 'Campionii mondiali din 2006 și-au antrenat mintea',
     text: 'Înainte de Cupa Mondială din 2006, Pirlo, Nesta, Gattuso și Gilardino s-au antrenat luni de zile în „Mind Room”-ul de la AC Milan, cu aparate care le măsurau undele cerebrale. Italia a câștigat titlul în acel an.',
     source: { label: 'Wilson, Peper și Moss, 2006, „The Mind Room” in Italian soccer training', url: 'https://www.researchgate.net/publication/259558691_The_Mind_Room_in_Italian_soccer_training_The_use_of_biofeedback_and_neurofeedback_for_optimum_performance' },
+  },
+]
+
+// ── 8. Ce spune știința, pe înțelesul tuturor ──────────────────────────────────
+// Checked against the papers (abstracts; Lim 2023 Table 2; Lim 2019 full text). Two wordings were
+// corrected to match the papers: Bhayee 2016 (13 adults meditated, 13 did math; healthy, not stressed)
+// and Lumsden 2016 (the review says gamified training boosts motivation, not "in every study").
+
+
+export const focusScience = {
+  title: 'Ce spune știința, pe înțelesul tuturor',
+  intro: 'NEUROS Focus pleacă de la o idee studiată de zeci de ani: când îți vezi atenția pe loc, înveți să o aduci înapoi mai ușor.',
+  howTitle: 'Cum lucrează NEUROS Focus',
+  how: [
+    { key: 'signals', label: 'Semnalele creierului', text: 'Creierul tău produce semnale electrice foarte slabe. Medicii le măsoară de aproape 100 de ani, prin EEG.' },
+    { key: 'headset', label: 'Casca', text: 'Senzorii de pe frunte citesc aceste semnale și recunosc stări precum concentrarea și relaxarea. Gândurile rămân ale tale.' },
+    { key: 'game', label: 'Jocul', text: 'Aplicația Neuros Game transformă semnalul într-un joc. Când ești atent, jocul merge înainte, iar când mintea pleacă, jocul încetinește.' },
+    { key: 'training', label: 'Antrenamentul', text: 'Așa vezi pe loc momentul în care atenția fuge și înveți să o aduci înapoi. Metoda se numește neurofeedback, adică feedback de la propriul creier.' },
+    { key: 'meditation', label: 'Meditațiile', text: 'În meditațiile ghidate, casca îți arată cât de relaxat ești, așa că mintea se așază mai ușor.' },
+  ] as const,
+  studiesTitle: 'Studiile, explicate simplu',
+  footnote: 'Studiile privesc metoda de antrenament (neurofeedbackul și biofeedbackul), nu casca NEUROS Focus în sine. NEUROS Focus este un produs de wellness și nu înlocuiește un tratament medical.',
+}
+
+export type FocusStudy = {
+  tag: 'Copii' | 'Adulți' | 'Metoda'
+  title: string
+  text: string
+  cite: string
+  url: string
+  chart?: Chart
+  visual?: 'game' | 'motivation' | 'adult' | 'realtime' | 'meditation' | 'signals' | 'heart'
+}
+
+const doi = (d: string) => `https://doi.org/${d}`
+
+export const focusStudies: FocusStudy[] = [
+  {
+    tag: 'Copii',
+    title: 'Un joc cu cască, pentru atenția copiilor',
+    text: 'În Singapore, 20 de copii cărora le era greu să stea atenți au jucat 8 săptămâni un joc controlat cu atenția, cu o cască asemănătoare. Părinții au văzut o atenție mai bună, iar progresul se vedea și după 24 de săptămâni.',
+    cite: 'Lim și colegii, 2012, PLoS ONE',
+    url: doi('10.1371/journal.pone.0046692'),
+    visual: 'game',
+  },
+  {
+    tag: 'Copii',
+    title: 'Studiul mare, cu 172 de copii',
+    text: 'Copiii au fost împărțiți în două grupuri. Cei care s-au antrenat de 3 ori pe săptămână, timp de 8 săptămâni, au progresat mai mult decât cei care au așteptat, iar progresul a ținut și o lună după final.',
+    cite: 'Lim și colegii, 2019, PLoS ONE',
+    url: doi('10.1371/journal.pone.0216225'),
+    chart: {
+      caption: 'Cu cât a scăzut scorul de neatenție în 8 săptămâni (ADHD-RS)',
+      unit: 'puncte',
+      bars: [
+        { label: 'Cu antrenament', value: 3.5, highlight: true },
+        { label: 'Au așteptat', value: 1.9 },
+      ],
+    },
+  },
+  {
+    tag: 'Copii',
+    title: 'Acasă, pe tabletă',
+    text: 'În 2023, același antrenament s-a mutat pe tabletă, acasă. 19 din 20 de copii au făcut aproape toate sesiunile, iar rezultatele de acasă au semănat cu cele de la clinică.',
+    cite: 'Lim și colegii, 2023, Child and Adolescent Psychiatry and Mental Health',
+    url: doi('10.1186/s13034-022-00539-x'),
+    chart: {
+      caption: 'Cu cât a scăzut scorul de neatenție în 8 săptămâni',
+      unit: 'puncte',
+      bars: [
+        { label: 'Acasă', value: 3.2, highlight: true },
+        { label: 'La clinică', value: 3.9 },
+      ],
+    },
+  },
+  {
+    tag: 'Copii',
+    title: 'Progresul rămâne și după antrenament',
+    text: 'O analiză a 10 studii a urmărit copiii luni de zile după ultima sesiune de neurofeedback. Atenția lor a continuat să crească între 2 și 12 luni după final.',
+    cite: 'Van Doren și colegii, 2019, European Child and Adolescent Psychiatry',
+    url: doi('10.1007/s00787-018-1121-4'),
+    chart: {
+      caption: 'Cât de mare e efectul asupra atenției (mărimea efectului)',
+      bars: [
+        { label: 'La finalul antrenamentului', value: 0.64 },
+        { label: 'După 2–12 luni', value: 0.8, highlight: true },
+      ],
+    },
+  },
+  {
+    tag: 'Metoda',
+    title: 'Jocurile țin copiii motivați',
+    text: 'O analiză a 33 de studii a găsit că antrenamentul sub formă de joc îi ține pe oameni implicați și le crește motivația.',
+    cite: 'Lumsden și colegii, 2016, JMIR Serious Games',
+    url: doi('10.2196/games.5888'),
+    visual: 'motivation',
+  },
+  {
+    tag: 'Adulți',
+    title: 'Și adulții își antrenează atenția',
+    text: '25 de adulți sănătoși au făcut câteva săptămâni de antrenament al undelor cerebrale. La final, atenția lor a fost mai stabilă la un test pe calculator, iar grupul de control a rămas la același nivel.',
+    cite: 'Egner și Gruzelier, 2004, Clinical Neurophysiology',
+    url: doi('10.1016/s1388-2457(03)00353-5'),
+    visual: 'adult',
+  },
+  {
+    tag: 'Adulți',
+    title: 'Când îți vezi atenția pe loc',
+    text: 'La Princeton, oamenii au văzut pe ecran, în timp ce lucrau, momentul în care atenția începea să fugă. După o singură sesiune, atenția lor a devenit mai stabilă, cu mai puține scăpări.',
+    cite: 'deBettencourt și colegii, 2015, Nature Neuroscience',
+    url: doi('10.1038/nn.3940'),
+    visual: 'realtime',
+  },
+  {
+    tag: 'Adulți',
+    title: 'Meditație cu o cască, 6 săptămâni',
+    text: '13 adulți au meditat zilnic cu o cască ce le dădea feedback prin sunet, iar alți 13 au făcut exerciții de matematică. După 6 săptămâni, cei care au meditat au fost mai rapizi la un test de atenție și s-au simțit mai calmi.',
+    cite: 'Bhayee și colegii, 2016, BMC Psychology',
+    url: doi('10.1186/s40359-016-0168-6'),
+    visual: 'meditation',
+  },
+  {
+    tag: 'Metoda',
+    title: 'Cât de bine citește o cască de acasă',
+    text: 'Cercetătorii au pus pe aceleași 21 de persoane o cască de acasă și un aparat medical, în același timp. Semnalele s-au potrivit bine, și pe o sesiune lungă.',
+    cite: 'Rieiro și colegii, 2019, Sensors',
+    url: doi('10.3390/s19122808'),
+    visual: 'signals',
+  },
+  {
+    tag: 'Metoda',
+    title: 'Biofeedbackul și stresul',
+    text: 'O analiză a 24 de studii a arătat că oamenii care își văd pe loc semnalele corpului învață să își reducă stresul. Studiile au folosit ritmul inimii.',
+    cite: 'Goessl, Curtiss și Hofmann, 2017, Psychological Medicine',
+    url: doi('10.1017/S0033291717001003'),
+    visual: 'heart',
   },
 ]

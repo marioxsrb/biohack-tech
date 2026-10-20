@@ -690,3 +690,8 @@ textarea.field { resize: vertical; }
   .calm-breathe, .calm-breathe-in { animation: none; }
   .calm-breathe-out { animation: none; opacity: 0; }
 }
+
+/* NEUROS Focus: the game ball rises while the player pays attention, then drifts back. */
+@keyframes focus-rise { 0%, 100% { top: 70%; } 50% { top: 18%; } }
+.focus-rise { animation: focus-rise 4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .focus-rise { animation: none; top: 40%; } }

@@ -9,6 +9,7 @@ import { ReviewMarquee } from '@/components/reviews/ReviewMarquee'
 import { CalmFacts } from '@/components/calm/CalmFacts'
 import { CalmScience } from '@/components/calm/CalmScience'
 import { FocusFacts } from '@/components/focus/FocusFacts'
+import { FocusScience } from '@/components/focus/FocusScience'
 
 import { allSlugs, getProductBySlug, isBook, productHref } from '@/content/catalog'
 import { getProductContent } from '@/content/product-content'
@@ -99,7 +100,12 @@ export default async function ProductPage({ params }: PageProps<'/[lang]/product
       <VisitBeacon page={product.slug} />
       <ProductViewed productId={product.id} />
       <ReviewMarquee productId={product.id} className="mb-[var(--sec)]" note={calmRo ? CALM_CLINIC_NOTE : undefined} />
-      {focusRo && <FocusFacts />}
+      {focusRo && (
+        <>
+          <FocusFacts />
+          <FocusScience />
+        </>
+      )}
       {calmRo && (
         <>
           <CalmFacts />

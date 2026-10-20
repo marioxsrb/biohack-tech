@@ -107,7 +107,7 @@ function HowItWorks() {
 
 // ── Study cards ────────────────────────────────────────────────────────────────
 
-function Bars({ chart }: { chart: Chart }) {
+export function Bars({ chart }: { chart: Chart }) {
   const { ref, seen } = useSeen<HTMLDivElement>()
   const max = Math.max(...chart.bars.map((b) => b.value))
   return (
