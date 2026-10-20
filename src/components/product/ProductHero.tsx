@@ -123,17 +123,15 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-y-8 md:grid-cols-12 md:gap-x-10 lg:gap-x-14">
+      <div className="grid grid-cols-1 gap-y-5 md:grid-cols-12 md:gap-x-10 md:gap-y-8 lg:gap-x-14">
         <div className="md:col-span-7">
           {media ?? <Gallery key={variant?.id ?? product.id} images={images} label={t.images(product.name)} wide={!!product.variants} />}
         </div>
 
         <div className="md:col-span-5 md:pt-2">
-          <SocialProof className="mb-4" />
-          <p className="text-[16px] font-medium text-cyan-700">{calmStory ? product.name : product.purpose}</p>
-          <h1 className={calmStory ? 'mt-2 max-w-[13em] text-[clamp(32px,3.4vw,48px)] leading-[1.05] tracking-[-0.04em]' : 'mt-1 text-[clamp(38px,4.2vw,58px)] leading-[0.98] tracking-[-0.045em]'}>
-            {title ?? (calmStory ? 'Seara, când casa tace și gândurile pornesc.' : product.name)}
-          </h1>
+          <SocialProof className="mb-3 md:mb-4" />
+          {!calmStory && <p className="text-[16px] font-medium text-cyan-700">{product.purpose}</p>}
+          <h1 className="mt-1 text-[clamp(38px,4.2vw,58px)] leading-[0.98] tracking-[-0.045em]">{title ?? product.name}</h1>
           <p className="mt-3 max-w-[32em] text-[17px] leading-snug text-text">
             {calmStory ? 'Te ajută să lași stresul zilei în urmă și să treci mai ușor spre somn. Câteva minute, apoi se oprește singur.' : product.tagline}
           </p>

@@ -128,9 +128,9 @@ export function Gallery({ images, label, wide }: Props) {
       </div>
 
       {images.length > 1 && (
-        <ul className="mt-3 grid grid-cols-5 gap-1.5 sm:flex sm:gap-2" aria-label={t.pick}>
+        <ul className="mt-2.5 flex gap-1.5 overflow-x-auto [scrollbar-width:none] sm:mt-3 sm:gap-2 [&::-webkit-scrollbar]:hidden" aria-label={t.pick}>
           {images.map((img, i) => (
-            <li key={img.src.src} className="min-w-0 sm:max-w-[88px] sm:flex-1">
+            <li key={img.src.src} className="w-[56px] flex-none sm:w-auto sm:max-w-[88px] sm:min-w-0 sm:flex-1">
               <button
                 type="button"
                 onClick={() => go(i)}

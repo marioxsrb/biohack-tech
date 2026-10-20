@@ -93,6 +93,16 @@ export function SocialProof({ className = '' }: { className?: string }) {
         <Users className="h-[15px] w-[15px]" />
       </span>
       {customersLine(n, locale)}
+      {socialProof.averageRating && (
+        <span className="ml-0.5 inline-flex items-center gap-[2px] text-[#f5b544]" title={`${socialProof.averageRating.toLocaleString(locale === 'ro' ? 'ro-RO' : 'en-GB', { minimumFractionDigits: 1 })} / 5`}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <svg key={i} aria-hidden viewBox="0 0 20 20" width="13" height="13" fill="currentColor">
+              <path d="M10 1.6l2.6 5.3 5.8.8-4.2 4.1 1 5.8L10 14.9l-5.2 2.7 1-5.8L1.6 7.7l5.8-.8L10 1.6z" />
+            </svg>
+          ))}
+          <span className="sr-only">{locale === 'ro' ? `Nota medie ${socialProof.averageRating} din 5` : `Average rating ${socialProof.averageRating} out of 5`}</span>
+        </span>
+      )}
     </p>
   )
 }
