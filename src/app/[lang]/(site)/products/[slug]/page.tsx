@@ -44,6 +44,12 @@ export async function generateMetadata({ params }: PageProps<'/[lang]/products/[
   })
 }
 
+/** Above the NEUROS Calm reviews: the clinics use the same device. */
+const CALM_CLINIC_NOTE = {
+  title: 'Același aparat ca în clinicile Neuros.',
+  text: 'Rezultatele obținute de clienții noștri în clinică sunt cu NEUROS Calm, exact produsul de pe această pagină.',
+}
+
 export default async function ProductPage({ params }: PageProps<'/[lang]/products/[slug]'>) {
   await settingsForRender()
   const { slug } = await params
@@ -90,16 +96,7 @@ export default async function ProductPage({ params }: PageProps<'/[lang]/product
 
       <VisitBeacon page={product.slug} />
       <ProductViewed productId={product.id} />
-      <ReviewMarquee
-        productId={product.id}
-        className="mb-[var(--sec)]"
-        {...(calmRo && {
-          note: {
-            title: 'Același aparat ca în clinicile Neuros.',
-            text: 'Rezultatele obținute de clienții noștri în clinică sunt cu NEUROS Calm, exact produsul de pe această pagină.',
-          },
-        })}
-      />
+      <ReviewMarquee productId={product.id} className="mb-[var(--sec)]" note={calmRo ? CALM_CLINIC_NOTE : undefined} />
       {calmRo && (
         <>
           <CalmFacts />
