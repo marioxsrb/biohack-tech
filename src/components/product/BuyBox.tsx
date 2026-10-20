@@ -207,8 +207,8 @@ export function BundleOffer({
                 {deal && !compact && <span className="mt-0.5 block text-[13px] text-text">{amber ? t.amberLine : t.bundleLine(n, tier!.percent)}</span>}
               </span>
               <span className="flex-none text-right leading-snug">
-                <span data-price className="block text-[15.5px] font-semibold text-ink tabular-nums">{money.fmt(r.totalMinor)}</span>
-                {r.discountMinor > 0 && <span data-price className="block text-[12.5px] font-medium text-red-deep tabular-nums">{t.save(money.fmt(r.discountMinor))}</span>}
+                <span className="block text-[15.5px] font-semibold text-ink tabular-nums">{money.fmt(r.totalMinor)}</span>
+                {r.discountMinor > 0 && <span className="block text-[12.5px] font-medium text-red-deep tabular-nums">{t.save(money.fmt(r.discountMinor))}</span>}
               </span>
             </button>
           )

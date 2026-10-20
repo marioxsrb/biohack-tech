@@ -77,19 +77,18 @@ describe.skipIf(!url)('on real PostgreSQL', () => {
     expect(new Set(nums).size).toBe(20)
   })
 
-  it('ten simultaneous submits of the same lead form give one lead and one set of follow-up jobs', async () => {
+  it('ten simultaneous submits of the same checkout contact step give one lead and one set of follow-up jobs', async () => {
     vi.stubEnv('ABANDONED_CHECKOUT_ENABLED', 'true')
     resetConfig()
     const visitorId = crypto.randomUUID()
-    const input = { visitorId, funnel: 'gated_price' as const, stage: 'lead' as const, productId: 'balance-wave', contact: { name: 'Ana Popescu', email: 'race@exemplu.ro', phone: '0722123456' }, marketingConsent: true }
+    const input = { visitorId, stage: 'checkout_started' as const, productId: CART_INTEREST, cart: [{ productId: 'balance-wave', quantity: 1 }], contact: { name: 'Ana Popescu', email: 'race@exemplu.ro', phone: '0722123456' }, marketingConsent: true }
     const res = await Promise.all(Array.from({ length: 10 }, () => db.tx((t) => captureLead(t, input))))
     expect(new Set(res.map((r) => r.lead.id)).size).toBe(1)
     expect(res.filter((r) => r.created)).toHaveLength(1)
     const { rows } = await db.query<{ n: number }>(`select count(*)::int as n from jobs where payload->>'leadId' = $1 and kind = 'lead.recovery'`, [res[0].lead.id])
-    expect(rows[0].n).toBe(2)
-    // A checkout lead next to it, with a different interest key.
-    await db.tx((t) => captureLead(t, { ...input, stage: 'checkout_started', productId: CART_INTEREST, cart: [{ productId: 'balance-wave', quantity: 1 }] }))
-    expect((await db.query<{ n: number }>('select count(*)::int as n from leads where visitor_id = $1', [visitorId])).rows[0].n).toBe(2)
+    // The three emails of an abandoned cart.
+    expect(rows[0].n).toBe(3)
+    expect((await db.query<{ n: number }>('select count(*)::int as n from leads where visitor_id = $1', [visitorId])).rows[0].n).toBe(1)
   })
 
   it('lead tables are closed to the public Supabase roles (row level security on, no policies)', async () => {

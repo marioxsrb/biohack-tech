@@ -183,7 +183,6 @@ export default async function OrderPage({ params, searchParams }: PageProps<'/[l
         <OrderEffects
           orderNumber={order.orderNumber}
           clearKeys={placed ? items : []}
-          funnel={order.attribution?.funnel}
           placed={!paid && (cod || transfer) ? { orderNumber: order.orderNumber, value: ronMinor(order.totalMinor), payment: cod ? 'cod' : 'transfer' } : null}
           purchase={sale ? { orderNumber: order.orderNumber, value: ronMinor(order.totalMinor), paid, items: order.items.map((i) => ({ item_id: lineRef(i.productId, i.variantId), item_name: i.productName, item_variant: i.variantName ?? undefined, price: unitLei(i), quantity: i.quantity })) } : null}
         />

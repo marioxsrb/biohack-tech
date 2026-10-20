@@ -25,7 +25,7 @@ import { log } from '@/server/log'
 import { marketing } from '@/server/marketing/consent'
 import { callConsent } from './consent'
 import { callBlocklist } from './blocklist'
-import { callScenario, firstCallDelay, type CallScenario } from './delay'
+import { firstCallDelay } from './delay'
 import { cartTotal, describeItems, leadItems, existingDiscounts, lei, openingLine, prepareOffer, RECOVERY_PERCENT, type OfferEmailStatus } from './offer'
 
 /** What a call ended with. The first four come from the conversation, the rest from the line. */
@@ -63,8 +63,8 @@ export type Call = {
   startedAt: Date | null
   endedAt: Date | null
   durationSecs: number | null
-  funnel: string | null
-  scenario: CallScenario | null
+  /** 'cart' (an unfinished checkout); older rows may hold 'price_reveal', the former acces price form. */
+  scenario: string | null
   /** What the call was about, in words ("2 × NEUROS Calm"), as told to the agent. */
   productInterest: string | null
   /** The personal recovery code offered (made by the server, never by the agent). */
@@ -76,7 +76,7 @@ export type Call = {
   createdAt: Date
 }
 
-export { callScenario, firstCallDelay, type CallScenario } from './delay'
+export { firstCallDelay } from './delay'
 
 const dt = (v: unknown) => (v ? new Date(v as string) : null)
 const toCall = (r: Row): Call => ({
@@ -95,8 +95,7 @@ const toCall = (r: Row): Call => ({
   startedAt: dt(r.started_at),
   endedAt: dt(r.ended_at),
   durationSecs: r.duration_secs == null ? null : Number(r.duration_secs),
-  funnel: (r.funnel as string) ?? null,
-  scenario: (r.scenario as CallScenario) ?? null,
+  scenario: (r.scenario as string) ?? null,
   productInterest: (r.product_interest as string) ?? null,
   discountCode: (r.discount_code as string) ?? null,
   emailStatus: (r.email_status as OfferEmailStatus) ?? null,
@@ -186,6 +185,8 @@ export function callDecision(lead: Lead, ctx: { attempt: number; now: Date; call
   if (!c.enabled) return { call: false, reason: 'calling off', status: 'disabled' }
   if (lead.callDisabled) return { call: false, reason: 'calling disabled for this lead', status: 'disabled' }
   if (lead.stage === 'ordered' || lead.stage === 'purchased' || ctx.converted) return { call: false, reason: 'converted', status: 'stopped' }
+  // The former price form (acces, closed 20.10.2026): never called any more.
+  if (lead.stage === 'lead') return { call: false, reason: 'acces closed', status: 'stopped' }
   if (lead.orderId) return { call: false, reason: 'order placed', status: 'stopped' }
   if (!ctx.phone) return { call: false, reason: 'no valid Romanian phone number', status: 'stopped' }
   if (ctx.blocked) return { call: false, reason: 'number on the do-not-call list', status: 'stopped' }
@@ -200,7 +201,7 @@ export function callDecision(lead: Lead, ctx: { attempt: number; now: Date; call
   if (ctx.talkedBefore) return { call: false, reason: 'already talked to the agent', status: 'stopped' }
   if (c.testMode && !c.testNumbers) return { call: false, reason: 'test mode without test numbers', status: 'disabled' }
   if (c.testNumbers && !c.testNumbers.includes(ctx.phone)) return { call: false, reason: 'calling in test mode', status: 'disabled' }
-  const quietUntil = lead.lastActivityAt.getTime() + firstCallDelay(lead, c, ctx.phone) * 60_000
+  const quietUntil = lead.lastActivityAt.getTime() + firstCallDelay(c, ctx.phone) * 60_000
   if (ctx.attempt === 1 && ctx.now.getTime() < quietUntil) return { call: false, reason: 'still active', later: nextCallingWindow(new Date(quietUntil), c) }
   if (!inCallingWindow(ctx.now, c)) return { call: false, reason: 'outside calling hours', later: nextCallingWindow(ctx.now, c) }
   if ((ctx.placedToday ?? 0) >= c.dailyMax) {
@@ -212,7 +213,7 @@ export function callDecision(lead: Lead, ctx: { attempt: number; now: Date; call
 
 export async function callFacts(q: Queryable, lead: Lead, calling?: Pick<CallingConfig, 'testMode' | 'testNumbers'> & Partial<Pick<CallingConfig, 'timezone'>>): Promise<CallFacts> {
   const phone = romanianE164(lead.phone)
-  // Test mode, a listed number: one person per email (marioxsrb+a@…, +b@…), so both scenarios can be tested on one phone.
+  // Test mode, a listed number: one person per email (marioxsrb+a@…, +b@…), so several carts can be tested on one phone.
   const samePhone = phone && !(calling?.testMode && calling.testNumbers?.includes(phone)) ? phone : ''
   const [consent, mkt, conv, sup, other, talked, blocked, today] = await Promise.all([
     phone ? callConsent.state(q, phone) : null,
@@ -258,22 +259,18 @@ export async function callFacts(q: Queryable, lead: Lead, calling?: Pick<Calling
 export type StepResult = { skip: string } | { note: string }
 
 /**
- * What the agent is told about this lead: first name, the products (and, for a checkout, quantities and total at
- * today's prices), the offer the server made and whether its email went out. No email address, no street address.
+ * What the agent is told about this lead: first name, the products, quantities and total at today's prices, the offer the server made and whether its email went out. No email address, no street address.
  */
 export function callVariables(lead: Lead, callId: string, offer: { code: string; emailStatus: OfferEmailStatus; link: string } | null) {
   const items = describeItems(lead)
-  const scenario = callScenario(lead)
   // The given name to confirm who answered (the form may hold "Popescu Ana"); the greeting uses the whole name.
   const firstName = givenName(lead.name).slice(0, 40)
   return {
     call_id: callId,
-    opening_line: openingLine({ firstName, name: lead.name, cart: scenario === 'cart', productNames: items.names, items: leadItems(lead) }),
+    opening_line: openingLine({ firstName, name: lead.name, productNames: items.names, items: leadItems(lead) }),
     customer_first_name: firstName,
-    funnel_type: lead.funnel,
-    abandonment_type: scenario === 'cart' ? 'cos_nefinalizat' : 'oferta_solicitata',
     product_names: items.names,
-    product_quantities: scenario === 'cart' ? items.quantities : '',
+    product_quantities: items.quantities,
     cart_total: lei(cartTotal(lead)),
     existing_discounts: existingDiscounts(lead),
     recovery_discount_percent: offer ? RECOVERY_PERCENT : 0,
@@ -281,11 +278,6 @@ export function callVariables(lead: Lead, callId: string, offer: { code: string;
     checkout_recovery_url: offer?.link ?? '',
     recovery_email_sent: offer?.emailStatus === 'sent' ? 'da' : 'nu',
   }
-}
-
-export function productUrlFor(lead: Lead, c: Pick<Config, 'siteUrl'>, gatedOrigin: string) {
-  const p = leadProduct(lead)!
-  return `${lead.funnel === 'gated_price' ? gatedOrigin : c.siteUrl}/products/${p.slug}`
 }
 
 /** One `call.attempt` job: decide, record the attempt, place the call (or pretend to, in dry run). */
@@ -313,9 +305,9 @@ export async function runCallAttempt(q: Queryable, c: Config, payload: { leadId:
   const product = leadProduct(lead)!
   const items = describeItems(lead)
   const { rows } = await q.query(
-    `insert into calls (id, lead_id, phone, product_id, attempt, status, provider, funnel, scenario, product_interest) values ($1, $2, $3, $4, $5, 'scheduled', $6, $7, $8, $9)
+    `insert into calls (id, lead_id, phone, product_id, attempt, status, provider, scenario, product_interest) values ($1, $2, $3, $4, $5, 'scheduled', $6, 'cart', $7)
      on conflict (lead_id, attempt) do nothing returning id`,
-    [id, lead.id, d.phone, product.id, attempt, c.calling.provider, lead.funnel, callScenario(lead), ((callScenario(lead) === 'cart' && items.quantities) || items.names).slice(0, 300)],
+    [id, lead.id, d.phone, product.id, attempt, c.calling.provider, (items.quantities || items.names).slice(0, 300)],
   )
   if (!rows.length) return { skip: `attempt ${attempt} already recorded` }
   await leads.update(q, lead.id, { call_attempts: attempt, last_call_at: now })
@@ -514,7 +506,7 @@ export function renderCallFollowUp(x: { call: Call; lead: Lead; adminUrl: string
     `Telefon: ${x.call.phone}`,
     `Email: ${x.lead.email}`,
     `Interes: ${x.call.productInterest ?? ''}`,
-    `Funnel: ${x.call.funnel === 'gated_price' ? 'acces (preț ascuns)' : 'site (preț vizibil)'}`,
+    `Site: ${x.lead.landingHost ?? 'biohack-tech.ro'}`,
     `Rezultat: ${outcomeLabel(x.call.outcome ?? x.call.agentOutcome)}`,
     ...(x.call.followUpReason ? [`Motiv: ${x.call.followUpReason}`] : []),
     ...(x.call.discountCode ? [`Cod oferit: ${x.call.discountCode} (email: ${x.call.emailStatus ?? '-'})`] : []),

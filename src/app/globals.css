@@ -657,12 +657,6 @@ textarea.field { resize: vertical; }
   from { opacity: 0; transform: translateY(6px); }
 }
 
-/*
- * Price gate (acces.<domain>, components/gate): the locked label is hidden by default; while prices are locked,
- * a <style id="bt-gate"> added before the first paint blurs [data-price] and shows it. Elsewhere nothing changes.
- */
-.gate-label-locked { display: none; }
-
 /* Admin print documents (/admin/print): A4, black on white, no browser chrome around the content. */
 @media print {
   @page { size: A4; margin: 12mm; }

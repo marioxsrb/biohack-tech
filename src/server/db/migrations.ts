@@ -797,4 +797,16 @@ alter table orders add column if not exists fulfillment_issue text;
 alter table orders add column if not exists fulfillment_issue_at timestamptz;
 create index if not exists orders_team_confirmation_idx on orders (team_confirmation) where team_confirmation is not null`,
   },
+  {
+    // acces.<domain> (prices behind a form) closed on 20.10.2026: its price-form leads (stage 'lead') get no more
+    // recovery emails or AI calls, and what was still planned for them is skipped. The rows stay as history.
+    id: '028_close_acces_funnel',
+    sql: `update leads set recovery_status = 'stopped', recovery_reason = coalesce(recovery_reason, 'acces closed'), updated_at = now()
+  where stage = 'lead' and recovery_status in ('none', 'scheduled', 'sent', 'ineligible', 'disabled');
+update leads set call_status = 'stopped', updated_at = now() where stage = 'lead' and call_status in ('none', 'scheduled');
+update calls set status = 'cancelled' where status = 'scheduled' and lead_id in (select id from leads where stage = 'lead');
+update jobs set status = 'skipped', last_error = 'acces closed', locked_until = null, updated_at = now()
+  where status in ('pending', 'retry') and kind in ('lead.recovery', 'call.attempt')
+    and payload->>'leadId' in (select id::text from leads where stage = 'lead')`,
+  },
 ]

@@ -42,7 +42,6 @@ const ENV = {
   SMTP_USER: 'contact@biohack-tech.ro',
   SMTP_PASSWORD: 'not-a-real-password',
   EMAIL_FROM: 'contact@biohack-tech.ro',
-  PRICE_GATE_ENABLED: 'true',
   ABANDONED_CHECKOUT_ENABLED: 'true',
   AI_CALLING_ENABLED: 'true',
   AI_CALLING_DRY_RUN: 'false',
@@ -55,7 +54,7 @@ const ENV = {
   ELEVENLABS_WEBHOOK_SECRET: SECRET,
   ELEVENLABS_API_BASE: 'https://el.test',
 }
-const GATED = 'acces.biohack-tech.ro'
+const MAIN = 'biohack-tech.ro'
 
 let db: Awaited<ReturnType<typeof freshDb>>
 let el: { url: string; method: string; json: Record<string, unknown> | null }[]
@@ -106,8 +105,9 @@ function post(path: string, host: string, body: unknown, cookies: Record<string,
   const cookie = Object.entries(cookies).map(([k, v]) => `${k}=${v}`).join('; ')
   return new NextRequest(`https://${host}${path}`, { method: 'POST', headers: { host, 'content-type': 'application/json', 'x-forwarded-for': `10.7.0.${++ip}`, ...(cookie && { cookie }) }, body: JSON.stringify(body) })
 }
-async function reveal(extra: Record<string, unknown> = {}) {
-  const res = await lead(post('/api/lead', GATED, { action: 'reveal', termsAccepted: true, ...ana, productId: 'balance-wave', ...extra }))
+/** The checkout's contact step for Ana, with one NEUROS Calm in the cart (the only lead that can be called). */
+async function capture(extra: Record<string, unknown> = {}, host = MAIN) {
+  const res = await lead(post('/api/lead', host, { action: 'checkout', ...ana, cart: [{ productId: 'balance-wave', quantity: 1 }], ...extra }))
   return (await res.json()) as { leadId: string }
 }
 /** Lets a background run finish, makes every waiting job due, runs the queue (twice: results queue more). */
@@ -138,31 +138,31 @@ const transcription = (conversationId: string, results: Record<string, unknown>,
 
 describe('consent', () => {
   it('the calling box is separate and optional: no box, no consent, no call (lead capture unchanged)', async () => {
-    const { leadId } = await reveal({ marketingConsent: true })
+    const { leadId } = await capture({ marketingConsent: true })
     expect(await callConsent.state(db, PHONE)).toBeNull()
     expect((await leads.byId(db, leadId))!.callConsent).toBe(false)
     expect((await db.query(`select count(*)::int as n from jobs where kind = 'call.attempt'`)).rows[0].n).toBe(0)
   })
 
   it('ticked: recorded by phone with its text version and source; the first call is planned after the quiet time', async () => {
-    const { leadId } = await reveal({ callConsent: true })
-    expect(await callConsent.state(db, PHONE)).toMatchObject({ granted: true, version: CALL_CONSENT_VERSION, source: 'lead_form' })
+    const { leadId } = await capture({ callConsent: true })
+    expect(await callConsent.state(db, PHONE)).toMatchObject({ granted: true, version: CALL_CONSENT_VERSION, source: 'checkout' })
     const job = (await db.query<{ run_at: string }>(`select run_at from jobs where kind = 'call.attempt' and payload->>'leadId' = $1`, [leadId])).rows
     expect(job).toHaveLength(1)
-    expect(Math.round((new Date(job[0].run_at).getTime() - Date.now()) / 60_000)).toBe(30) // price form: 30 minutes
+    expect(Math.round((new Date(job[0].run_at).getTime() - Date.now()) / 60_000)).toBe(20) // a cart: 20 minutes
     // Email marketing consent is not implied either way.
     expect(await marketing.state(db, ana.email)).toBeNull()
   })
 
   it('a non-Romanian or invalid number: no consent recorded, nothing planned', async () => {
-    await reveal({ callConsent: true, phone: '+44 20 7946 0000' })
+    await capture({ callConsent: true, phone: '+44 20 7946 0000' })
     expect((await db.query('select count(*)::int as n from call_consent_events')).rows[0].n).toBe(0)
     expect((await db.query(`select count(*)::int as n from jobs where kind = 'call.attempt'`)).rows[0].n).toBe(0)
   })
 
   it('AI_CALLING_ENABLED off: consent is still recorded (it is the person’s choice), no call is planned or placed', async () => {
     await setup({ ...ENV, AI_CALLING_ENABLED: 'false' })
-    await reveal({ callConsent: true })
+    await capture({ callConsent: true })
     expect((await callConsent.state(db, PHONE))?.granted).toBe(true)
     await quiet()
     await later()
@@ -179,7 +179,7 @@ describe('consent', () => {
 describe('placing calls', () => {
   it('dry run (the default): everything is recorded, ElevenLabs is never called', async () => {
     await setup({ ...ENV, AI_CALLING_DRY_RUN: 'true' })
-    const { leadId } = await reveal({ callConsent: true })
+    const { leadId } = await capture({ callConsent: true })
     await quiet()
     await later()
     expect(dials()).toEqual([])
@@ -188,7 +188,7 @@ describe('placing calls', () => {
   })
 
   it('a successful conversation: dialed once with first name, product and the server-made offer only; the result is stored once; CRM tags; the code by email on request', async () => {
-    const { leadId } = await reveal({ callConsent: true })
+    const { leadId } = await capture({ callConsent: true })
     await runDueJobs()
     await later()
     expect(dials()).toEqual([]) // still within the quiet time
@@ -200,21 +200,21 @@ describe('placing calls', () => {
     const vars = (req.conversation_initiation_client_data as { dynamic_variables: Record<string, string> }).dynamic_variables
     expect(vars).toMatchObject({
       customer_first_name: 'Ana',
-      funnel_type: 'gated_price',
-      abandonment_type: 'oferta_solicitata',
       product_names: 'NEUROS Calm',
-      product_quantities: '',
-      cart_total: '',
+      product_quantities: '1 × NEUROS Calm',
+      cart_total: '6.380 lei',
       recovery_discount_percent: 10,
       recovery_code: 'BIOHACK10',
       recovery_email_sent: 'nu', // no email marketing consent: nothing was sent before the call
     })
-    expect(vars.opening_line).toMatch(/^Bună (ziua|seara)(, (doamna|domnule) [^!]+)?! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec\. Sunt un asistent automat, iar apelul este înregistrat\. Am văzut că v-ați interesat de prețul pentru NEUROS Calm pe site-ul nostru și m-am gândit să vă ajut cu informații\. Aveți un minut\?$/)
-    expect(vars.checkout_recovery_url).toMatch(/^https:\/\/acces\.biohack-tech\.ro\/api\/lead\/resume\?t=[\w-]+&cod=BIOHACK10/)
+    expect(vars).not.toHaveProperty('funnel_type')
+    expect(vars).not.toHaveProperty('abandonment_type')
+    expect(vars.opening_line).toMatch(/^Bună (ziua|seara)(, (doamna|domnule) [^!]+)?! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec\. Sunt un asistent automat, iar apelul este înregistrat\. Am văzut că ați adăugat în coș NEUROS Calm\. Aveți un minut\?$/)
+    expect(vars.checkout_recovery_url).toMatch(/^https:\/\/biohack-tech\.ro\/api\/lead\/resume\?t=[\w-]+&cod=BIOHACK10/)
     expect(JSON.stringify(vars)).not.toMatch(/@|0722|Popescu/)
     expect(sent).toEqual([])
     const [call] = await callsOf(leadId)
-    expect(call).toMatchObject({ status: 'dialing', attempt: 1, phone: PHONE, productId: 'balance-wave', funnel: 'gated_price', scenario: 'price_reveal', productInterest: 'NEUROS Calm', discountCode: vars.recovery_code, emailStatus: 'no_consent' })
+    expect(call).toMatchObject({ status: 'dialing', attempt: 1, phone: PHONE, productId: 'balance-wave', scenario: 'cart', productInterest: '1 × NEUROS Calm', discountCode: vars.recovery_code, emailStatus: 'no_consent' })
 
     const res = await transcription(call.providerCallId!, { outcome: 'more_info', follow_up_required: false, opted_out: false, wants_link: true })
     expect(await res.json()).toMatchObject({ ok: true, applied: true })
@@ -230,7 +230,7 @@ describe('placing calls', () => {
     const link = sent.find((m) => m.subject === 'Codul tău de 10% pentru NEUROS Calm')!
     expect(link.to).toBe('ana@exemplu.ro')
     expect(link.text).toContain(vars.recovery_code)
-    expect(link.text).toMatch(/https:\/\/acces\.biohack-tech\.ro\/api\/lead\/resume\?t=[\w-]+&cod=BIOHACK10/)
+    expect(link.text).toMatch(/https:\/\/biohack-tech\.ro\/api\/lead\/resume\?t=[\w-]+&cod=BIOHACK10/)
     expect((await callsOf(leadId))[0].emailStatus).toBe('sent_on_request')
     // The same webhook again (ElevenLabs retries): nothing changes, nothing is sent twice.
     expect(await (await transcription(call.providerCallId!, { outcome: 'not_interested' })).json()).toMatchObject({ duplicate: true })
@@ -241,7 +241,7 @@ describe('placing calls', () => {
   })
 
   it('a refusal during the call withdraws the number’s consent and stops every further attempt', async () => {
-    const { leadId } = await reveal({ callConsent: true })
+    const { leadId } = await capture({ callConsent: true })
     await quiet()
     await later()
     const [call] = await callsOf(leadId)
@@ -256,7 +256,7 @@ describe('placing calls', () => {
   })
 
   it('busy, no answer, no answer: an hour later, then the next day, then stop (maximum three)', async () => {
-    const { leadId } = await reveal({ callConsent: true })
+    const { leadId } = await capture({ callConsent: true })
     await quiet()
     await later()
     const first = (await callsOf(leadId))[0]
@@ -286,7 +286,7 @@ describe('placing calls', () => {
   })
 
   it('a provider timeout may have dialed: marked for review, never redialed on its own', async () => {
-    const { leadId } = await reveal({ callConsent: true })
+    const { leadId } = await capture({ callConsent: true })
     mode.dial = 'timeout'
     await quiet()
     await later()
@@ -302,14 +302,14 @@ describe('placing calls', () => {
   })
 
   it('a provider error (5xx) is also left for review; an invalid number stops the lead', async () => {
-    const a = await reveal({ callConsent: true })
+    const a = await capture({ callConsent: true })
     mode.dial = 'error500'
     await quiet()
     await later()
     expect((await callsOf(a.leadId))[0].status).toBe('unknown')
     await setup()
     mode.dial = 'invalid'
-    const b = await reveal({ callConsent: true })
+    const b = await capture({ callConsent: true })
     await quiet()
     await later()
     expect((await callsOf(b.leadId))[0]).toMatchObject({ status: 'failed', outcome: 'invalid_number' })
@@ -317,7 +317,7 @@ describe('placing calls', () => {
   })
 
   it('the webhook may arrive before the dial response: found by our call id; a late webhook is read back by the check job', async () => {
-    const { leadId } = await reveal({ callConsent: true })
+    const { leadId } = await capture({ callConsent: true })
     await quiet()
     await later()
     const [call] = await callsOf(leadId)
@@ -327,7 +327,7 @@ describe('placing calls', () => {
     expect((await callsOf(leadId))[0]).toMatchObject({ status: 'completed', outcome: 'interested', providerCallId: 'conv_other' })
 
     await setup()
-    const b = await reveal({ callConsent: true })
+    const b = await capture({ callConsent: true })
     await quiet()
     await later()
     mode.conversation = { conversation_id: 'x', status: 'done', metadata: { start_time_unix_secs: 1, call_duration_secs: 60 }, analysis: { data_collection_results: { outcome: { value: 'human_follow_up' }, follow_up_required: { value: true } } } }
@@ -337,7 +337,7 @@ describe('placing calls', () => {
   })
 
   it('GoHighLevel down: the result is kept, the CRM copy retries on its own', async () => {
-    const { leadId } = await reveal({ callConsent: true })
+    const { leadId } = await capture({ callConsent: true })
     await quiet()
     await later()
     mode.ghl = 'down'
@@ -364,7 +364,7 @@ describe('placing calls', () => {
 
 describe('who is never called', () => {
   it('after a purchase (any device, same email)', async () => {
-    const { leadId } = await reveal({ callConsent: true })
+    const { leadId } = await capture({ callConsent: true })
     await svc.placeOrder({ lines: lines([{ productId: 'balance-wave', quantity: 1 }]), form: { ...person, email: ana.email, paymentMethod: 'cod' }, attemptId: 'other-device' })
     await quiet()
     await later()
@@ -373,7 +373,7 @@ describe('who is never called', () => {
   })
 
   it('after an email unsubscribe, or a withdrawn call consent', async () => {
-    const a = await reveal({ callConsent: true })
+    const a = await capture({ callConsent: true })
     await marketing.grant(db, { email: ana.email, source: 'checkout' })
     await marketing.withdraw(db, { email: ana.email, source: 'unsubscribe_link' })
     await quiet()
@@ -381,7 +381,7 @@ describe('who is never called', () => {
     expect(dials()).toEqual([])
     expect((await leads.byId(db, a.leadId))!.callStatus).toBe('stopped')
     await setup()
-    const b = await reveal({ callConsent: true })
+    const b = await capture({ callConsent: true })
     await callConsent.withdraw(db, { phone: PHONE, source: 'admin' })
     await quiet()
     await later()
@@ -389,25 +389,35 @@ describe('who is never called', () => {
     expect((await leads.byId(db, b.leadId))!.callStatus).toBe('stopped')
   })
 
-  it('twice for the same person: a second lead with consent (another product) gets no call of its own', async () => {
-    const first = await reveal({ callConsent: true })
-    await lead(post('/api/lead', 'biohack-tech.ro', { action: 'checkout', ...ana, callConsent: true, cart: [{ productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 1 }] }))
+  it('twice for the same person: a second checkout with consent (another browser, another cart) gets no call of its own', async () => {
+    await capture({ callConsent: true })
+    await capture({ callConsent: true, cart: [{ productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 1 }] }, 'calm.biohack-tech.ro')
+    expect((await db.query('select count(*)::int as n from leads')).rows[0].n).toBe(2)
     await quiet()
     await later()
     await later()
     expect(dials()).toHaveLength(1)
     expect((await db.query('select count(*)::int as n from calls')).rows[0].n).toBe(1)
-    expect((await leads.byId(db, first.leadId))!.callAttempts + (await db.query<{ n: number }>(`select count(*)::int as n from leads where product_id = 'cart' and call_attempts > 0`)).rows[0].n).toBe(1)
+    expect((await db.query<{ n: number }>('select count(*)::int as n from leads where call_attempts > 0')).rows[0].n).toBe(1)
+  })
+
+  it('a lead of the former acces price form (stage lead) is never called, whatever was queued', async () => {
+    const { leadId } = await capture({ callConsent: true })
+    await db.query("update leads set stage = 'lead', product_id = 'balance-wave', cart = null where id = $1", [leadId])
+    await quiet()
+    await later()
+    expect(dials()).toEqual([])
+    expect((await leads.byId(db, leadId))!).toMatchObject({ callStatus: 'stopped', callAttempts: 0 })
   })
 
   it('admin: disabling stops calls for the lead; cancelling removes the waiting attempt', async () => {
-    const a = await reveal({ callConsent: true })
+    const a = await capture({ callConsent: true })
     expect(await cancelScheduledCalls(db, a.leadId)).toBe(1)
     await quiet()
     await later()
     expect(dials()).toEqual([])
     await setup()
-    const b = await reveal({ callConsent: true })
+    const b = await capture({ callConsent: true })
     await disableCalling(db, b.leadId)
     expect(await retryCall(db, getConfig(), b.leadId)).toBe('calling disabled for this lead')
     await quiet()
@@ -417,7 +427,7 @@ describe('who is never called', () => {
 
   it('test mode: only the listed numbers are dialed', async () => {
     await setup({ ...ENV, AI_CALLING_TEST_NUMBERS: '+40700000000' })
-    const { leadId } = await reveal({ callConsent: true })
+    const { leadId } = await capture({ callConsent: true })
     await quiet()
     await later()
     expect(dials()).toEqual([])
@@ -443,7 +453,7 @@ describe('calling window and decision', () => {
     const c = getConfig().calling
     const now = new Date()
     if (inCallingWindow(now, c)) return // the window is open right now: covered by the pure test above
-    await reveal({ callConsent: true })
+    await capture({ callConsent: true })
     await quiet()
     await later()
     expect(dials()).toEqual([])
@@ -453,7 +463,7 @@ describe('calling window and decision', () => {
   })
 
   it('the decision, in order', () => {
-    const lead = { stage: 'lead', callDisabled: false, orderId: null, callAttempts: 0, productId: 'balance-wave', cart: null, lastActivityAt: new Date(Date.now() - 3 * 3_600_000) } as never
+    const lead = { stage: 'checkout_started', callDisabled: false, orderId: null, callAttempts: 0, productId: 'cart', cart: [{ productId: 'balance-wave', quantity: 1 }], lastActivityAt: new Date(Date.now() - 3 * 3_600_000) } as never
     const calling = { ...getConfig().calling, enabled: true, hours: { start: 0, end: 24 }, days: [1, 2, 3, 4, 5, 6, 7], testNumbers: null }
     const ok = { attempt: 1, now: new Date(), calling, phone: PHONE, consentGranted: true, unsubscribed: false, converted: false, superseded: false, otherCall: false, talkedBefore: false }
     expect(callDecision(lead, ok)).toEqual({ call: true, phone: PHONE })
@@ -462,6 +472,7 @@ describe('calling window and decision', () => {
     expect(callDecision(lead, { ...ok, consentGranted: false })).toMatchObject({ call: false, status: 'stopped' })
     expect(callDecision(lead, { ...ok, phone: null })).toMatchObject({ call: false, status: 'stopped' })
     expect(callDecision(lead, { ...ok, converted: true })).toMatchObject({ call: false, reason: 'converted' })
+    expect(callDecision({ ...(lead as object), stage: 'lead' } as never, ok)).toEqual({ call: false, reason: 'acces closed', status: 'stopped' })
     expect(callDecision(lead, { ...ok, attempt: 4 })).toMatchObject({ call: false, reason: 'maximum attempts reached' })
     expect(callDecision(lead, { ...ok, otherCall: true })).toMatchObject({ call: false, reason: 'another call for this person' })
     expect(callDecision(lead, { ...ok, talkedBefore: true })).toMatchObject({ call: false, reason: 'already talked to the agent', status: 'stopped' })
@@ -507,11 +518,13 @@ describe('agent', () => {
     expect(def.conversation_config.conversation.max_duration_seconds).toBe(240)
     expect(def.conversation_config.agent.dynamic_variables.dynamic_variable_placeholders.opening_line).toMatch(/Numele meu este Maria și vă sun din partea magazinului Baiohec Tec\. Sunt un asistent automat/)
     expect(Object.keys(def.conversation_config.agent.dynamic_variables.dynamic_variable_placeholders)).toEqual(
-      expect.arrayContaining(['customer_first_name', 'funnel_type', 'product_names', 'product_quantities', 'cart_total', 'existing_discounts', 'recovery_discount_percent', 'recovery_code', 'recovery_email_sent', 'checkout_recovery_url']),
+      expect.arrayContaining(['customer_first_name', 'product_names', 'product_quantities', 'cart_total', 'existing_discounts', 'recovery_discount_percent', 'recovery_code', 'recovery_email_sent', 'checkout_recovery_url']),
     )
     expect(def.platform_settings.privacy.record_voice).toBe(false)
     expect(def.platform_settings.data_collection.outcome.description).toMatch(/discount_accepted.*needs_information.*human_followup.*no_time.*technical_failure/s)
     // Every variable the prompt uses is passed on each call.
+    expect(def.conversation_config.agent.dynamic_variables.dynamic_variable_placeholders).not.toHaveProperty('funnel_type')
+    expect(def.conversation_config.agent.prompt.prompt).not.toMatch(/oferta_solicitata|funnel_type|abandonment_type/)
     const used = [...new Set([...def.conversation_config.agent.prompt.prompt.matchAll(/\{\{(\w+)\}\}/g)].map((m: RegExpMatchArray) => m[1]))]
     for (const v of used) expect(def.conversation_config.agent.dynamic_variables.dynamic_variable_placeholders, v).toHaveProperty(v)
     expect(tools).not.toMatch(/secret_id|x-biohack-tool-secret/)

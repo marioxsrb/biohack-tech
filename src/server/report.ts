@@ -13,19 +13,18 @@ import { orders as ordersRepo, QUEUES, type QueueKey } from '@/server/orders/rep
 
 const TZ = 'Europe/Bucharest'
 
-/** The sites the report separates: the main store, acces (prices behind the form) and each landing. */
+/** The sites the report separates: the main store, each landing and the international store. */
 export const SITES = [
   { site: 'main', label: 'biohack-tech.ro' },
-  { site: 'acces', label: 'acces.biohack-tech.ro' },
   { site: 'calm', label: 'calm.biohack-tech.ro' },
   { site: 'focus', label: 'focus.biohack-tech.ro' },
   { site: 'amber', label: 'amber.biohack-tech.ro' },
   { site: 'net', label: 'biohack-tech.net' },
 ] as const
 /** A lead's site, from the host it was captured on. */
-const LEAD_SITE = `case when funnel = 'gated_price' then 'acces' when coalesce(landing_host,'') like '%biohack-tech.net' or coalesce(landing_host,'') like 'net.localhost%' then 'net' when split_part(coalesce(landing_host,''), '.', 1) in ('calm','focus','amber') then split_part(landing_host, '.', 1) else 'main' end`
-/** An order's site: the landing it came through, acces, or the main store. */
-const ORDER_SITE = `case when o.site = 'net' then 'net' when o.attribution->>'landing' in ('calm','focus','amber') then o.attribution->>'landing' when coalesce(o.attribution->>'funnel','') = 'gated_price' then 'acces' else 'main' end`
+const LEAD_SITE = `case when coalesce(landing_host,'') like '%biohack-tech.net' or coalesce(landing_host,'') like 'net.localhost%' then 'net' when split_part(coalesce(landing_host,''), '.', 1) in ('calm','focus','amber') then split_part(landing_host, '.', 1) else 'main' end`
+/** An order's site: the landing it came through, the international store, or the main store. */
+const ORDER_SITE = `case when o.site = 'net' then 'net' when o.attribution->>'landing' in ('calm','focus','amber') then o.attribution->>'landing' else 'main' end`
 /** An order that stands (counted in sales). */
 const STANDS = `o.kind = 'checkout' and o.status not in ('cancelled', 'abandoned') and (o.payment_method <> 'card' or o.payment_status in ('paid', 'partially_refunded', 'refunded'))`
 
@@ -85,7 +84,6 @@ export type ReportOrder = {
   items: string
   firstName: string
   city: string
-  funnel: string
   source: string
   code: string | null
 }
@@ -147,17 +145,17 @@ export async function lifetimeTotals(q: Queryable) {
 
 export async function buildReport(q: Queryable, p: Period) {
   const range = [p.from, p.to]
-  const [now, before, byFunnel, pages, sources, leadRows, orderRows, payments, products, calls, outcomes, emails, codes, signups, queues, daily, siteVisits, siteLeads, siteOrders] = await Promise.all([
+  const [now, before, visits, pages, sources, leadRows, orderRows, payments, products, calls, outcomes, emails, codes, signups, queues, daily, siteVisits, siteLeads, siteOrders] = await Promise.all([
     totals(q, p),
     totals(q, previous(p)),
     q.query(
-      `select funnel, sum(sessions)::int as sessions, sum(views)::int as views from visit_stats
-       where day >= ($1::timestamptz at time zone '${TZ}')::date and day <= (($2::timestamptz - interval '1 second') at time zone '${TZ}')::date group by funnel`,
+      `select sum(sessions)::int as sessions, sum(views)::int as views from visit_stats
+       where day >= ($1::timestamptz at time zone '${TZ}')::date and day <= (($2::timestamptz - interval '1 second') at time zone '${TZ}')::date`,
       range,
     ),
     q.query(
-      `select site, page, sum(views)::int as views from visit_stats where day >= ($1::timestamptz at time zone '${TZ}')::date and day <= (($2::timestamptz - interval '1 second') at time zone '${TZ}')::date
-       group by site, page order by views desc limit 10`,
+      `select case when site = 'acces' then 'main' else site end as site, page, sum(views)::int as views from visit_stats where day >= ($1::timestamptz at time zone '${TZ}')::date and day <= (($2::timestamptz - interval '1 second') at time zone '${TZ}')::date
+       group by 1, page order by views desc limit 10`,
       range,
     ),
     q.query(
@@ -167,16 +165,16 @@ export async function buildReport(q: Queryable, p: Period) {
       range,
     ),
     q.query(
-      `select funnel, count(*)::int as leads, count(price_revealed_at)::int as reveals, count(checkout_started_at)::int as checkouts,
+      `select count(*)::int as leads, count(checkout_started_at)::int as checkouts,
               count(*) filter (where abandonment is not null and order_id is null)::int as abandoned,
               count(*) filter (where marketing_consent)::int as marketing, count(*) filter (where call_consent)::int as calls
-       from leads where created_at >= $1 and created_at < $2 group by funnel`,
+       from leads where created_at >= $1 and created_at < $2`,
       range,
     ),
     q.query(
       `select o.id, o.order_number, o.created_at, round(o.total_minor * o.fx_rate)::bigint as total_minor, o.currency, o.total_minor as total_in_currency, o.status, o.payment_method, o.payment_status, o.promo_code,
               o.customer->>'firstName' as first_name, coalesce(o.shipping_address->>'city', o.billing_address->>'city', '') as city,
-              coalesce(o.attribution->>'funnel','visible_price') as funnel, coalesce(o.attribution->'utm'->>'utm_source','') as source,
+              coalesce(o.attribution->'utm'->>'utm_source','') as source,
               (select string_agg(i.quantity || ' × ' || i.product_name || coalesce(' (' || i.variant_name || ')', ''), ', ' order by i.position) from order_items i where i.order_id = o.id) as items
        from orders o where o.kind = 'checkout' and o.created_at >= $1 and o.created_at < $2 order by o.created_at desc limit 100`,
       range,
@@ -214,29 +212,27 @@ export async function buildReport(q: Queryable, p: Period) {
       [p.days > 1 ? p.from : new Date(p.to.getTime() - 14 * 86_400_000), p.to],
     ),
     q.query(
-      `select site, sum(sessions)::int as sessions, sum(views)::int as views from visit_stats
-       where day >= ($1::timestamptz at time zone '${TZ}')::date and day <= (($2::timestamptz - interval '1 second') at time zone '${TZ}')::date group by site`,
+      `select case when site = 'acces' then 'main' else site end as site, sum(sessions)::int as sessions, sum(views)::int as views from visit_stats
+       where day >= ($1::timestamptz at time zone '${TZ}')::date and day <= (($2::timestamptz - interval '1 second') at time zone '${TZ}')::date group by 1`,
       range,
     ),
     q.query(`select ${LEAD_SITE} as site, count(*)::int as leads from leads where created_at >= $1 and created_at < $2 group by 1`, range),
     q.query(`select ${ORDER_SITE} as site, count(*)::int as orders, coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate),0)::bigint as revenue from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1`, range),
   ])
 
-  const funnels = ['visible_price', 'gated_price'].map((f) => {
-    const v = byFunnel.rows.find((r) => r.funnel === f)
-    const l = leadRows.rows.find((r) => r.funnel === f)
-    const o = orderRows.rows.filter((r) => r.funnel === f && r.status !== 'cancelled' && r.status !== 'abandoned' && (r.payment_method !== 'card' || ['paid', 'partially_refunded', 'refunded'].includes(r.payment_status as string)))
-    return {
-      funnel: f === 'visible_price' ? 'site (preț vizibil)' : 'acces (preț ascuns)',
-      sessions: n(v?.sessions),
-      leads: n(l?.leads),
-      priceReveals: n(l?.reveals),
-      checkouts: n(l?.checkouts),
-      abandoned: n(l?.abandoned),
-      orders: o.length,
-      revenueLei: lei(o.reduce((s, r) => s + n(r.total_minor), 0)),
-    }
-  })
+  // The store's one funnel, all sites together: visits → leads (checkout contact step) → checkouts → orders.
+  const standing = orderRows.rows.filter((r) => r.status !== 'cancelled' && r.status !== 'abandoned' && (r.payment_method !== 'card' || ['paid', 'partially_refunded', 'refunded'].includes(r.payment_status as string)))
+  const funnels = [
+    {
+      funnel: 'biohack-tech.ro',
+      sessions: n(visits.rows[0]?.sessions),
+      leads: n(leadRows.rows[0]?.leads),
+      checkouts: n(leadRows.rows[0]?.checkouts),
+      abandoned: n(leadRows.rows[0]?.abandoned),
+      orders: standing.length,
+      revenueLei: lei(standing.reduce((s, r) => s + n(r.total_minor), 0)),
+    },
+  ]
 
   const list: ReportOrder[] = orderRows.rows.map((r) => ({
     number: r.order_number as string,
@@ -249,7 +245,6 @@ export async function buildReport(q: Queryable, p: Period) {
     items: (r.items as string) ?? '',
     firstName: (r.first_name as string) ?? '',
     city: (r.city as string) ?? '',
-    funnel: r.funnel === 'gated_price' ? 'acces' : 'site',
     source: (r.source as string) || '(direct)',
     code: (r.promo_code as string) ?? null,
   }))
@@ -322,7 +317,7 @@ export function reportMarkdown(r: Report) {
     ...r.sites.map((s) => `- ${s.label}: ${s.sessions} sesiuni, ${s.leads} leaduri, ${s.orders} comenzi, ${L(s.revenueLei)}${s.conversionPct !== null ? `, conversie ${s.conversionPct}%` : ''}`),
     '',
     '## Funnel',
-    ...r.funnels.map((f) => `- ${f.funnel}: ${f.sessions} sesiuni → ${f.leads} leaduri (${f.priceReveals} au văzut prețul, ${f.checkouts} au început checkout-ul, ${f.abandoned} abandonate) → ${f.orders} comenzi, ${L(f.revenueLei)}`),
+    ...r.funnels.map((f) => `- ${f.funnel}: ${f.sessions} sesiuni → ${f.leads} leaduri (${f.checkouts} au început checkout-ul, ${f.abandoned} abandonate) → ${f.orders} comenzi, ${L(f.revenueLei)}`),
     '',
     '## Surse de trafic',
     ...(r.sources.length ? r.sources.map((s) => `- ${s.source}${s.campaign ? ` / ${s.campaign}` : ''}: ${s.sessions} sesiuni`) : ['- fără date']),
@@ -332,7 +327,7 @@ export function reportMarkdown(r: Report) {
     '',
     '## Comenzi',
     ...(r.orders.length
-      ? r.orders.map((o) => `- ${o.number} · ${new Date(o.at).toLocaleString('ro-RO', { timeZone: TZ, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · ${L(o.totalLei)} · ${PAY[o.payment] ?? o.payment} (${o.paymentStatus}) · ${o.status} · ${o.items}${o.city ? ` · ${o.city}` : ''} · ${o.funnel}, ${o.source}${o.code ? ` · cod ${o.code}` : ''}`)
+      ? r.orders.map((o) => `- ${o.number} · ${new Date(o.at).toLocaleString('ro-RO', { timeZone: TZ, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })} · ${L(o.totalLei)} · ${PAY[o.payment] ?? o.payment} (${o.paymentStatus}) · ${o.status} · ${o.items}${o.city ? ` · ${o.city}` : ''} · ${o.source}${o.code ? ` · cod ${o.code}` : ''}`)
       : ['- nicio comandă']),
     '',
     '## Produse vândute',

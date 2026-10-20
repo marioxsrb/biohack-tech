@@ -13,7 +13,7 @@ import type { Queryable } from '@/server/db'
 import { jobs } from '@/server/jobs/outbox'
 import { leads } from '@/server/leads'
 import { promoCodes } from '@/server/promo'
-import { calls, callScenario, normalizeOutcome, optOut, type Call } from './calls'
+import { calls, normalizeOutcome, optOut, type Call } from './calls'
 import { testCalls } from './test-call'
 import { cartTotal, describeItems, existingDiscounts, lei, RECOVERY_PERCENT } from './offer'
 
@@ -31,8 +31,6 @@ const clean = (v: unknown, max: number) => (typeof v === 'string' ? v.replace(/[
 
 const SAMPLE = {
   customer_first_name: 'Ana',
-  funnel_type: 'visible_price',
-  abandonment_type: 'cos_nefinalizat',
   product_names: 'NEUROS Calm',
   product_quantities: '1 × NEUROS Calm',
   cart_total: '6.380 lei',
@@ -78,15 +76,12 @@ export async function runCallTool(q: Queryable, c: Config, tool: string, body: R
   switch (tool as CallTool) {
     case 'get_recovery_context': {
       const items = describeItems(lead)
-      const cart = callScenario(lead) === 'cart'
       return {
         status: 200,
         body: {
           customer_first_name: lead.name?.split(' ')[0] ?? '',
-          funnel_type: lead.funnel,
-          abandonment_type: cart ? 'cos_nefinalizat' : 'oferta_solicitata',
           product_names: items.names,
-          product_quantities: cart ? items.quantities : '',
+          product_quantities: items.quantities,
           cart_total: lei(cartTotal(lead)),
           existing_discounts: existingDiscounts(lead),
           discount: await discountState(q, call, lead.email),
@@ -133,7 +128,7 @@ async function testCallTool(q: Queryable, tool: CallTool, id: string, body: Reco
   const email = { sent: v.recovery_email_sent === 'da', status: v.recovery_email_sent === 'da' ? 'sent' : 'not_sent' }
   switch (tool) {
     case 'get_recovery_context':
-      return { status: 200, body: { customer_first_name: v.customer_first_name, funnel_type: v.funnel_type, abandonment_type: v.abandonment_type, product_names: v.product_names, product_quantities: v.product_quantities, cart_total: v.cart_total, existing_discounts: v.existing_discounts, discount, recovery_email: email } }
+      return { status: 200, body: { customer_first_name: v.customer_first_name, product_names: v.product_names, product_quantities: v.product_quantities, cart_total: v.cart_total, existing_discounts: v.existing_discounts, discount, recovery_email: email } }
     case 'check_discount':
       return { status: 200, body: discount }
     case 'recovery_email_status':

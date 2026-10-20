@@ -76,7 +76,7 @@ export const VENDORS: Vendor[] = [
     name: 'Meta Pixel',
     category: 'marketing',
     // On only with META_PIXEL_ENABLED=true (inlined at build). The id is public; the retired pixel is never used.
-    // No excludePaths: the same pixel runs on the main site, calm/focus/amber, and acces (ConsentManager is in the root layout).
+    // No excludePaths: the same pixel runs on the main site and calm/focus/amber (ConsentManager is in the root layout).
     key: process.env.NEXT_PUBLIC_META_PIXEL_ENABLED === 'true' ? activeMetaPixelId() : undefined,
     cookies: [/^_fbp$/, /^_fbc$/],
     purpose: 'Măsurarea și afișarea reclamelor Biohack Tech pe Facebook și Instagram.',

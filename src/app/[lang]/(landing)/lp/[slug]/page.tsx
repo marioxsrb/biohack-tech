@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { VisitBeacon } from '@/components/gate/VisitBeacon'
+import { VisitBeacon } from '@/components/analytics/VisitBeacon'
 import { LandingPage } from '@/components/landing/LandingPage'
 import { getProduct, productHref } from '@/content/catalog'
 import { getLanding, landings } from '@/content/landings'

@@ -174,7 +174,6 @@ describe('abandoned carts on biohack-tech.net', () => {
     await db.tx((t) =>
       captureLead(t, {
         visitorId: '11111111-1111-1111-1111-111111111111',
-        funnel: 'visible_price',
         stage: 'checkout_started',
         productId: 'cart',
         contact: { name: 'Anna Schmidt', email: 'anna@example.de', phone: '0722123456' },
@@ -200,7 +199,6 @@ describe('abandoned carts on biohack-tech.net', () => {
     const { lead } = await db.tx((t) =>
       captureLead(t, {
         visitorId: '22222222-2222-2222-2222-222222222222',
-        funnel: 'visible_price',
         stage: 'checkout_started',
         productId: 'cart',
         contact: { name: 'Anna Schmidt', email: 'anna2@example.de', phone: '' },
@@ -234,7 +232,7 @@ describe('the chat on the English pages', () => {
     const res = await assistantTurn({
       db,
       config: getConfig(),
-      context: { locked: false, gated: false, locale: 'en', currency: 'USD', intl: true, page: '/en', siteUrl: 'https://www.biohack-tech.net' },
+      context: { locale: 'en', currency: 'USD', intl: true, page: '/en', siteUrl: 'https://www.biohack-tech.net' },
       messages: [{ id: 'u', role: 'user', parts: [{ type: 'text', text: 'Ce produs mi se potrivește?' }] }],
       cart: [],
       model: scriptedModel(),
@@ -242,7 +240,7 @@ describe('the chat on the English pages', () => {
     const text = await res.text()
     expect(text).toContain('$1,418') // 6.380 lei / 4.5
     expect(text).not.toContain('6.380 lei')
-    const prompt = assistantInstructions({ locked: false, gated: false, locale: 'en', currency: 'EUR', page: '/en', siteUrl: 'https://www.biohack-tech.net' })
+    const prompt = assistantInstructions({ locale: 'en', currency: 'EUR', page: '/en', siteUrl: 'https://www.biohack-tech.net' })
     expect(prompt).toContain('doar card online prin Stripe, în EUR')
     expect(prompt).toContain('€1,276')
   })

@@ -130,38 +130,28 @@ describe('proxy', () => {
     expect(getRewrittenUrl(basic)).toBe('https://biohack-tech.ro/ro/admin')
   })
 
-  describe('price-gated funnel (acces.<domain>)', () => {
-    it('serves the same storefront pages as the main site, never indexed, keeping the campaign query', async () => {
-      vi.stubEnv('PRICE_GATE_ENABLED', 'true')
-      const home = await run('https://acces.biohack-tech.ro/?utm_source=meta&fbclid=IwAR0abcdefghij', 'acces.biohack-tech.ro')
-      expect(getRewrittenUrl(home)).toBe('https://acces.biohack-tech.ro/ro?utm_source=meta&fbclid=IwAR0abcdefghij')
-      expect(home.headers.get('x-robots-tag')).toBe('noindex, nofollow')
-      expect(getRewrittenUrl(await run('https://acces.biohack-tech.ro/products/focus', 'acces.biohack-tech.ro'))).toBe('https://acces.biohack-tech.ro/ro/products/focus')
-      expect(getRewrittenUrl(await run('https://acces.biohack-tech.ro/en/products/focus', 'acces.biohack-tech.ro'))).toBe('https://acces.biohack-tech.ro/en/products/focus')
-      // Old funnel addresses (ads, recovery emails) go to the product page on acces.
-      const old = await run('https://acces.biohack-tech.ro/calm?utm_source=meta', 'acces.biohack-tech.ro')
-      expect([old.status, old.headers.get('location')]).toEqual([307, 'https://acces.biohack-tech.ro/products/calm?utm_source=meta'])
+  describe('the former acces.<domain> funnel (closed 20.10.2026)', () => {
+    it('every address goes permanently to the main site; old short addresses go to the product page', async () => {
+      const home = await run('https://acces.biohack-tech.ro/?utm_source=meta', 'acces.biohack-tech.ro')
+      expect([home.status, home.headers.get('location')]).toEqual([308, 'https://biohack-tech.ro/?utm_source=meta'])
+      const product = await run('https://acces.biohack-tech.ro/en/products/focus', 'acces.biohack-tech.ro')
+      expect(product.headers.get('location')).toBe('https://biohack-tech.ro/en/products/focus')
+      for (const old of ['/calm', '/acces/calm', '/lp/calm']) {
+        const res = await run(`https://acces.biohack-tech.ro${old}?utm_source=meta`, 'acces.biohack-tech.ro')
+        expect([res.status, res.headers.get('location')]).toEqual([308, 'https://biohack-tech.ro/products/calm?utm_source=meta'])
+      }
+      for (const path of ['/checkout', '/cart', '/admin', '/pentru-companii']) expect((await run(`https://acces.biohack-tech.ro${path}`, 'acces.biohack-tech.ro')).headers.get('location')).toBe(`https://biohack-tech.ro${path}`)
     })
 
-    it('cart and checkout only after the form (gate cookie); everything else goes to the main site', async () => {
-      vi.stubEnv('PRICE_GATE_ENABLED', 'true')
-      const locked = await run('https://acces.biohack-tech.ro/checkout', 'acces.biohack-tech.ro')
-      expect([locked.status, locked.headers.get('location')]).toEqual([307, 'https://acces.biohack-tech.ro/'])
-      const open = await run('https://acces.biohack-tech.ro/checkout', 'acces.biohack-tech.ro', { cookie: 'bt_gate2=6f1c2a1e-1111-4111-8111-111111111111' })
-      expect(getRewrittenUrl(open)).toBe('https://acces.biohack-tech.ro/ro/checkout')
-      const admin = await run('https://acces.biohack-tech.ro/admin', 'acces.biohack-tech.ro')
-      expect([admin.status, admin.headers.get('location')]).toEqual([307, 'https://biohack-tech.ro/admin'])
-      expect(getRewrittenUrl(await run('https://acces.biohack-tech.ro/comanda/abc', 'acces.biohack-tech.ro'))).toBe('https://acces.biohack-tech.ro/ro/comanda/abc')
+    it('links already sent keep working: order, recovery and unsubscribe links keep their token on the way', async () => {
+      const token = 'AbCdEfGhIjKlMnOpQrStUvWx12'
+      for (const path of [`/comanda/${token}`, `/reluare/${token}`, `/dezabonare/${token}`, `/api/lead/resume?t=${token}&cod=BIOHACK10`]) {
+        const res = await run(`https://acces.biohack-tech.ro${path}`, 'acces.biohack-tech.ro')
+        expect([res.status, res.headers.get('location')]).toEqual([308, `https://biohack-tech.ro${path}`])
+      }
     })
 
-    it('PRICE_GATE_ENABLED off: its pages send visitors to the same product on the main site', async () => {
-      const res = await run('https://acces.biohack-tech.ro/amber?utm_source=meta', 'acces.biohack-tech.ro')
-      expect([res.status, res.headers.get('location')]).toEqual([307, 'https://biohack-tech.ro/products/amber?utm_source=meta'])
-      expect(getRewrittenUrl(await run('https://acces.biohack-tech.ro/reluare/abc', 'acces.biohack-tech.ro'))).toBe('https://acces.biohack-tech.ro/ro/reluare/abc')
-    })
-
-    it('the gated pages do not exist on the main site, and a forged acces host is the main site', async () => {
-      vi.stubEnv('PRICE_GATE_ENABLED', 'true')
+    it('old /acces/<slug> addresses on the main site go to the product page; a forged acces host is the main site', async () => {
       const res = await run('https://biohack-tech.ro/acces/calm', 'biohack-tech.ro')
       expect([res.status, res.headers.get('location')]).toEqual([307, 'https://biohack-tech.ro/products/calm'])
       const forged = await run('https://biohack-tech.ro/', 'acces.biohack-tech.ro.evil.com')

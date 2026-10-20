@@ -1,7 +1,7 @@
 /**
  * The AI calling consent log, by phone number: every grant and withdrawal is a new row (the proof), the
  * latest one is the current state. Granted only by a box whose text names the calls (today the communications
- * box, on the price form or in the checkout); withdrawn by a refusal during a call, by an admin, or by the email
+ * box in the checkout); withdrawn by a refusal during a call, by an admin, or by the email
  * unsubscribe (which stops calls too). The CRM learns the state through marketing.sync (a contact tag).
  */
 import 'server-only'
@@ -72,6 +72,6 @@ export const callConsent = {
 }
 
 /** The first call for a lead: after the configured quiet time; the job itself checks everything again. */
-export function firstCallJob(lead: Pick<Lead, 'id' | 'lastActivityAt' | 'productId' | 'cart'>, c: Pick<Config, 'calling'>, phone: string | null): NewJob {
-  return { kind: 'call.attempt', dedupeKey: `call.attempt:${lead.id}:1`, payload: { leadId: lead.id, attempt: 1 }, runAt: new Date(lead.lastActivityAt.getTime() + firstCallDelay(lead, c.calling, phone) * 60_000) }
+export function firstCallJob(lead: Pick<Lead, 'id' | 'lastActivityAt'>, c: Pick<Config, 'calling'>, phone: string | null): NewJob {
+  return { kind: 'call.attempt', dedupeKey: `call.attempt:${lead.id}:1`, payload: { leadId: lead.id, attempt: 1 }, runAt: new Date(lead.lastActivityAt.getTime() + firstCallDelay(c.calling, phone) * 60_000) }
 }

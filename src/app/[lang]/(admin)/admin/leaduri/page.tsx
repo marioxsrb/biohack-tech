@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { connection } from 'next/server'
 import { attributionSummary } from '@/lib/attribution'
-import type { Funnel } from '@/lib/lead'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { interestOf, leads, type Lead } from '@/server/leads'
@@ -15,8 +14,8 @@ import { callAction } from '../actions'
 
 const dt = (d: Date) => d.toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 
-const STAGE: Record<Lead['stage'], string> = { lead: 'Formular trimis', checkout_started: 'Checkout început', ordered: 'Comandă plasată', purchased: 'Plătită' }
-const ABANDON: Record<NonNullable<Lead['abandonment']>, string> = { lead_abandoned: 'Abandon după preț', checkout_abandoned: 'Checkout abandonat' }
+const STAGE: Record<Lead['stage'], string> = { lead: 'Formular de preț (vechi)', checkout_started: 'Checkout început', ordered: 'Comandă plasată', purchased: 'Plătită' }
+const ABANDON: Record<NonNullable<Lead['abandonment']>, string> = { lead_abandoned: 'Abandon după preț (vechi)', checkout_abandoned: 'Checkout abandonat' }
 const RECOVERY: Record<string, string> = {
   none: 'neprogramată',
   scheduled: 'programată',
@@ -60,20 +59,18 @@ const EMAIL_STATUS: Record<string, string> = {
 const VIEWS = { '': 'Toate', abandoned: 'Abandonate', converted: 'Convertite' } as const
 
 /**
- * Leads of both funnels: who gave contact details (price form or checkout contact step), what they looked at,
- * how far they got, whether a recovery email may go out and why not, and the order they placed. Plus the
- * two funnels side by side. Auth: the /admin Basic Auth in the proxy.
+ * Leads: who gave contact details in the checkout's contact step, what was in the cart, how far they got, whether
+ * a recovery email may go out and why not, and the order they placed. Auth: the /admin login in the proxy.
  */
 export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/admin/leaduri'>) {
   await connection()
   const sp = await searchParams
-  const funnel = sp.funnel === 'visible_price' || sp.funnel === 'gated_price' ? (sp.funnel as Funnel) : undefined
   const view = sp.view === 'abandoned' || sp.view === 'converted' ? sp.view : undefined
   // Duplicate filter: one row per person (email), the newest form, unless every form is asked for.
   const all = sp.dup === 'all' ? 'all' : undefined
   const db = await getDb()
   const c = getConfig()
-  const rows = await leads.listWithForms(db, { funnel, view, unique: !all })
+  const rows = await leads.listWithForms(db, { view, unique: !all })
   const list = rows.map((r) => r.lead)
   const forms = new Map(rows.map((r) => [r.lead.id, r.forms]))
   // Consent belongs to the person (the latest decision for the address), not to one form: that is what recovery checks.
@@ -94,7 +91,7 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
     return now === undefined ? 'nu' : now ? (l.marketingConsent ? 'da (bifat aici)' : 'da (dat în alt formular)') : 'retras / dezabonat'
   }
   const q = (p: Record<string, string | undefined>) => {
-    const u = new URLSearchParams(Object.entries({ funnel, view, dup: all, ...p }).filter((e): e is [string, string] => !!e[1]))
+    const u = new URLSearchParams(Object.entries({ view, dup: all, ...p }).filter((e): e is [string, string] => !!e[1]))
     return `/admin/leaduri${u.size ? `?${u}` : ''}`
   }
 
@@ -102,16 +99,16 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
     <>
       <h1 className="mt-2 text-[34px] tracking-[-0.03em]">Leaduri</h1>
       <p className="mt-2 max-w-[60em] text-[14.5px] text-muted">
-        Funnel cu preț după formular: {c.features.priceGate ? 'activ' : 'oprit'} · captare în checkout: {c.features.abandonedCheckout ? 'activă' : 'oprită'} · emailuri de recuperare:{' '}
+        Captare în checkout: {c.features.abandonedCheckout ? 'activă' : 'oprită'} · emailuri de recuperare:{' '}
         {c.features.recoveryEmail ? `active (${c.recovery.firstMinutes} min, ${c.recovery.secondHours} h; coș abandonat și ${c.recovery.thirdHours} h)` : 'oprite'}. Recuperarea pleacă doar cu acord de marketing și se oprește la comandă,
         dezabonare sau retragerea acordului. Apeluri AI: {c.calling.enabled ? (c.calling.dryRun ? 'active în dry run (nu se sună nimeni)' : 'ACTIVE') : 'oprite'}
         {c.calling.testMode ? ` · MOD TEST (${c.calling.testDelayMinutes} min)` : ''}
-        {c.calling.testNumbers ? ` · doar numerele de test (${c.calling.testNumbers.length})` : ''} · întârziere coș {c.calling.delays.cart} min, ofertă {c.calling.delays.price_reveal} min · ElevenLabs {c.elevenlabs ? 'configurat' : 'neconfigurat'}. Se sună doar cu acordul separat pentru
+        {c.calling.testNumbers ? ` · doar numerele de test (${c.calling.testNumbers.length})` : ''} · întârziere coș {c.calling.delays.cart} min · ElevenLabs {c.elevenlabs ? 'configurat' : 'neconfigurat'}. Se sună doar cu acordul separat pentru
         apeluri, {c.calling.hours.start}:00–{c.calling.hours.end}:00, maximum {c.calling.maxAttempts} încercări.
       </p>
 
       <p className="mt-4 text-[14px]">
-        Comparația celor două funnel-uri (sesiuni, leaduri, comenzi, venit, recuperare) este în{' '}
+        Sesiunile, leadurile, comenzile, venitul și recuperarea pe perioade sunt în{' '}
         <Link href="/admin/stats" className="font-medium text-ink underline underline-offset-4">
           Stats
         </Link>
@@ -123,12 +120,6 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
         {(Object.keys(VIEWS) as (keyof typeof VIEWS)[]).map((v) => (
           <Link key={v} href={q({ view: v || undefined })} aria-current={(view ?? '') === v ? 'page' : undefined} className={`rounded-full px-3.5 py-1.5 ${(view ?? '') === v ? 'bg-ink text-white' : 'bg-paper text-ink'}`}>
             {VIEWS[v]}
-          </Link>
-        ))}
-        <span className="mx-1 self-center text-line">|</span>
-        {([undefined, 'visible_price', 'gated_price'] as const).map((f) => (
-          <Link key={f ?? 'all'} href={q({ funnel: f })} aria-current={funnel === f ? 'page' : undefined} className={`rounded-full px-3.5 py-1.5 ${funnel === f ? 'bg-ink text-white' : 'bg-paper text-ink'}`}>
-            {f ? (f === 'gated_price' ? 'Acces (formular)' : 'Preț vizibil') : 'Ambele funnel-uri'}
           </Link>
         ))}
         <span className="mx-1 self-center text-line">|</span>
@@ -170,7 +161,6 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
               )}
             </p>
             <dl className="mt-3 grid gap-x-6 gap-y-1 text-[13.5px] sm:grid-cols-2 lg:grid-cols-3">
-              <Item k="Funnel" v={l.funnel === 'gated_price' ? 'Acces (preț după formular)' : 'Preț vizibil'} />
               <Item k="Etapă" v={STAGE[l.stage]} />
               <Item k="Abandon" v={l.abandonment ? ABANDON[l.abandonment] : '–'} />
               <Item k="Acord marketing" v={consentText(l)} />
@@ -178,7 +168,6 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
               <Item k="Apel AI" v={callText(l)} />
               <Item k="Sursa" v={attributionSummary(l.attribution) || (l.landingHost ? l.landingHost : 'direct')} />
               <Item k="GHL" v={l.ghlContactId ? 'sincronizat' : 'în așteptare'} />
-              {l.funnel === 'gated_price' && <Item k="Termeni (formular)" v={l.termsAcceptedAt ? `acceptați ${dt(l.termsAcceptedAt)}` : 'nebifat'} />}
               <Item
                 k="Comanda"
                 v={
@@ -203,7 +192,7 @@ export default async function LeadsPage({ searchParams }: PageProps<'/[lang]/adm
                     <span className="text-muted">
                       Ultimul apel: {dt(call.createdAt)} · {call.status}
                       {call.durationSecs != null && ` · ${call.durationSecs}s`}
-                      {call.scenario && ` · ${call.scenario === 'cart' ? 'coș nefinalizat' : 'ofertă cerută'}`}
+                      {call.scenario === 'cart' && ' · coș nefinalizat'}
                       {call.productInterest && ` · ${call.productInterest}`}
                       {call.outcome ? ` · ${OUTCOME[call.outcome] ?? call.outcome}` : call.agentOutcome ? ` · notat de agent: ${OUTCOME[call.agentOutcome] ?? call.agentOutcome}` : ''}
                       {call.discountCode && ` · cod ${call.discountCode}`}

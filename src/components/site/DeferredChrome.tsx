@@ -10,7 +10,7 @@ const CHAT_START = 'bt-chat-start'
  * The chat and the welcome offer are not part of the first screen. Their modules (the AI SDK in particular)
  * load after the page's own load event, on idle, so they do not compete with the hero photograph.
  * The visit clocks are written here, at once, so a late mount still shows the offer at one minute and the
- * greeting at 30 seconds. On acces the welcome clock stays inside WelcomePopup: it starts at unlock, not at arrival.
+ * greeting at 30 seconds.
  */
 const Assistant = dynamic(() => import('@/components/assistant/Assistant').then((m) => m.Assistant), { ssr: false })
 const WelcomePopup = dynamic(() => import('@/components/site/WelcomePopup').then((m) => m.WelcomePopup), { ssr: false })
@@ -20,7 +20,7 @@ export function DeferredChrome() {
 
   useEffect(() => {
     try {
-      if (!/^acces\./.test(location.hostname) && !sessionStorage.getItem(WELCOME_START)) {
+      if (!sessionStorage.getItem(WELCOME_START)) {
         sessionStorage.setItem(WELCOME_START, String(Date.now()))
       }
       if (!sessionStorage.getItem(CHAT_START)) sessionStorage.setItem(CHAT_START, String(Date.now()))

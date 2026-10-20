@@ -9,7 +9,6 @@ import { useLocale } from '@/i18n/LocaleProvider'
 import { localePath } from '@/i18n/locales'
 import { encodeItem } from '@/lib/purchase'
 import { cashOnDelivery } from '@/config/payments'
-import { GateLabel } from '@/components/gate/GateLabel'
 import { cartStore } from './cart-store'
 
 const COPY = {
@@ -72,9 +71,6 @@ export function BuyNowButton({ productId, variantId, quantity = 1, pay, look = '
   return (
     <a
       href={href}
-      data-buy
-      data-product={productId}
-      data-variant={variantId}
       aria-disabled={pending || undefined}
       aria-label={look === 'primary' ? undefined : label}
       onClick={(e) => {
@@ -89,16 +85,16 @@ export function BuyNowButton({ productId, variantId, quantity = 1, pay, look = '
       {pending ? <span aria-hidden className={look === 'secondary' ? 'spinner !border-line !border-t-ink' : 'spinner'} /> : <Icon aria-hidden />}
       {look === 'bar' ? (
         <span>
-          <GateLabel locked={locale === 'en' ? 'See the price' : 'Vezi prețul'}>{t.short}</GateLabel>
+          {t.short}
         </span>
       ) : look === 'secondary' ? (
         <span className="whitespace-nowrap">
-          <GateLabel locked={locale === 'en' ? 'See the price' : 'Vezi prețul'}>{t.secondary}</GateLabel>
+          {t.secondary}
         </span>
       ) : (
         <span className="flex min-w-0 flex-col items-start text-left leading-tight">
           <span className="text-[16.5px] font-semibold whitespace-normal">
-            <GateLabel locked={locale === 'en' ? 'See the price and offer' : 'Vezi prețul și oferta'}>{pending ? t.opening : title ?? label}</GateLabel>
+            {pending ? t.opening : title ?? label}
           </span>
           <span className="mt-0.5 text-[13px] font-normal whitespace-normal text-white/85">{pay === 'cod' ? t.codSub : cashOnDelivery.enabled ? t.onlineSubCod : t.onlineSub}</span>
         </span>

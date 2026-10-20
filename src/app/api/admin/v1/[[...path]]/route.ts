@@ -162,8 +162,7 @@ async function handle(req: NextRequest, ctx: Ctx, method: 'GET' | 'POST' | 'PUT'
     if (resource === 'leads') {
       if (method === 'GET' && !id) {
         const view = sp.get('view')
-        const funnel = sp.get('funnel')
-        const list = await leads.list(db, { view: view === 'abandoned' || view === 'converted' ? view : undefined, funnel: funnel === 'visible_price' || funnel === 'gated_price' ? funnel : undefined, limit: Math.min(Number(sp.get('limit')) || 100, 500) })
+        const list = await leads.list(db, { view: view === 'abandoned' || view === 'converted' ? view : undefined, limit: Math.min(Number(sp.get('limit')) || 100, 500) })
         return json(list)
       }
       if (method === 'GET' && id && !action) {
@@ -246,7 +245,7 @@ async function handle(req: NextRequest, ctx: Ctx, method: 'GET' | 'POST' | 'PUT'
       if (method === 'POST') {
         if (body.consent !== true) return bad('consent: true is required (the person agreed to the test call)')
         const items = Array.isArray(body.items) ? (body.items as { productId?: unknown; variantId?: unknown; quantity?: unknown }[]).map((i) => ({ productId: String(i.productId ?? ''), variantId: typeof i.variantId === 'string' ? i.variantId : undefined, quantity: Math.min(10, Math.max(1, Math.round(Number(i.quantity) || 1))) })) : []
-        const r = await placeTestCall(db, getConfig(), { phone: String(body.phone ?? ''), firstName: String(body.firstName ?? '').slice(0, 40), scenario: body.scenario === 'price_reveal' ? 'price_reveal' : 'cart', funnel: body.funnel === 'gated_price' ? 'gated_price' : 'visible_price', items, emailSent: body.emailSent !== false }, w.actor)
+        const r = await placeTestCall(db, getConfig(), { phone: String(body.phone ?? ''), firstName: String(body.firstName ?? '').slice(0, 40), items, emailSent: body.emailSent !== false }, w.actor)
         if (!r.ok) return bad(r.message)
         return changed('test_call.place', { id: r.call.id, phone: r.call.phone }, { ok: true, call: r.call })
       }
@@ -306,7 +305,7 @@ const INDEX = {
     'POST /api/admin/v1/orders/{id}/cod-collected {confirm: true, amountLei, reference}',
     'POST /api/admin/v1/orders/{id}/cancel {confirm: true, reason}',
     'POST /api/admin/v1/orders/{id}/refund {confirm: true, amountLei}',
-    'GET  /api/admin/v1/leads?view=abandoned|converted&funnel=&limit=',
+    'GET  /api/admin/v1/leads?view=abandoned|converted&limit=',
     'GET  /api/admin/v1/leads/{id}',
     'POST /api/admin/v1/leads/{id}/call-retry | call-cancel | call-disable',
     'GET  /api/admin/v1/codes',
@@ -315,8 +314,8 @@ const INDEX = {
     'GET  /api/admin/v1/settings',
     'PATCH /api/admin/v1/settings {prices?: {productId: bani | {variantId: bani} | null}, soldOut?: [productId], welcomePopup?, callsPaused?, assistant?}',
     'GET  /api/admin/v1/blocklist · POST {phone, note?} · DELETE /blocklist/{phone}',
-    'GET  /api/admin/v1/test-calls · GET /test-calls/{id} · POST {consent: true, phone, firstName, scenario: cart|price_reveal, funnel?, items: [{productId, variantId?, quantity}], emailSent?}',
-    'GET  /api/admin/v1/series?metric=sessions|views|leads|orders|revenue|units|aov|conversion|calls|welcome|codes&by=none|site|funnel|source|payment|product|outcome|code&days=7|14|30|60|90|180|365&grain=day|week',
+    'GET  /api/admin/v1/test-calls · GET /test-calls/{id} · POST {consent: true, phone, firstName, items: [{productId, variantId?, quantity}], emailSent?}',
+    'GET  /api/admin/v1/series?metric=sessions|views|leads|orders|revenue|units|aov|conversion|calls|welcome|codes&by=none|site|source|payment|product|outcome|code&days=7|14|30|60|90|180|365&grain=day|week',
     'GET  /api/admin/v1/charts · POST {title, metric, by, days, grain, kind: line|bar} · DELETE /charts/{id}',
     'GET  /api/admin/v1/messages',
     'GET  /api/admin/v1/audit',

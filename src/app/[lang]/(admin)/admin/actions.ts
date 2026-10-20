@@ -324,7 +324,7 @@ export async function removeBlockAction(f: FormData) {
 
 export type TestCallState = { error?: string; placed?: string }
 
-/** One test call with an imaginary order; needs the ticked confirmation that the person agreed to it. */
+/** One test call with an imaginary cart; needs the ticked confirmation that the person agreed to it. */
 export async function testCallAction(_: TestCallState, f: FormData): Promise<TestCallState> {
   await guard()
   if (f.get('consent') !== 'da') return { error: 'Bifează că persoana a acceptat apelul de test.' }
@@ -333,7 +333,6 @@ export async function testCallAction(_: TestCallState, f: FormData): Promise<Tes
     const variantId = text(f, `variant:${p.id}`, 40) || p.variants?.[0]?.id
     return quantity ? [{ productId: p.id, variantId, quantity }] : []
   })
-  const scenario = f.get('scenario') === 'price_reveal' ? 'price_reveal' : 'cart'
   const db = await getDb()
   await ensureStoreSettings(0)
   const r = await placeTestCall(
@@ -342,10 +341,7 @@ export async function testCallAction(_: TestCallState, f: FormData): Promise<Tes
     {
       phone: text(f, 'phone', 30),
       firstName: text(f, 'firstName', 40),
-      scenario,
-      funnel: f.get('funnel') === 'gated_price' ? 'gated_price' : 'visible_price',
-      // The price form is about one product: the first one chosen.
-      items: scenario === 'price_reveal' ? items.slice(0, 1).map((i) => ({ ...i, quantity: 1 })) : items,
+      items,
       emailSent: f.get('emailSent') === 'da',
     },
     adminActor(),

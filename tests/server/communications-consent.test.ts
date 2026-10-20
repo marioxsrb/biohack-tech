@@ -1,6 +1,7 @@
 /**
  * The consent section (14.10.2026): Terms required only in the checkout, one optional communications box that
- * names email and AI calls. Every combination on both funnels and in the checkout: what is recorded (two
+ * names email and AI calls. Every combination in the checkout (its contact step and the order, on the main site
+ * and a product landing): what is recorded (two
  * separate consents, with the box's text version), what is never inferred (from the terms, from an older
  * email-only consent), what withdrawal stops, and what the CRM learns. GoHighLevel is mocked; PGlite database.
  */
@@ -24,8 +25,8 @@ const { TAGS, STAGES } = await import('@/server/integrations/ghl')
 const { POST: lead } = await import('@/app/api/lead/route')
 const { POST: checkout } = await import('@/app/api/checkout/route')
 
-const ENV = { ...TEST_ENV, NEXT_PUBLIC_SITE_URL: 'https://biohack-tech.ro', PRICE_GATE_ENABLED: 'true', ABANDONED_CHECKOUT_ENABLED: 'true', RECOVERY_EMAIL_ENABLED: 'true' }
-const GATED = 'acces.biohack-tech.ro'
+const ENV = { ...TEST_ENV, NEXT_PUBLIC_SITE_URL: 'https://biohack-tech.ro', ABANDONED_CHECKOUT_ENABLED: 'true', RECOVERY_EMAIL_ENABLED: 'true' }
+const LANDING = 'calm.biohack-tech.ro'
 const MAIN = 'biohack-tech.ro'
 const ana = { name: 'Ana Popescu', email: 'ana@exemplu.ro', phone: '0722 123 456' }
 const PHONE = '+40722123456'
@@ -55,8 +56,6 @@ afterEach(() => vi.unstubAllGlobals())
 function post(path: string, host: string, body: unknown) {
   return new NextRequest(`https://${host}${path}`, { method: 'POST', headers: { host, 'content-type': 'application/json', 'x-forwarded-for': `10.9.0.${++ip}` }, body: JSON.stringify(body) })
 }
-/** The price form as the page sends it: one box drives both fields. */
-const reveal = (box: boolean) => lead(post('/api/lead', GATED, { action: 'reveal', termsAccepted: true, ...ana, productId: 'balance-wave', marketingConsent: box, callConsent: box, page: '/products/calm' }))
 /** The checkout: the order itself, and the checkout lead the contact step saves (same box, both fields). */
 const order = (host: string, box: boolean, acceptedTerms = true) =>
   checkout(post('/api/checkout', host, { lines: [{ productId: 'balance-wave', quantity: 1 }], order: { ...person, marketingConsent: box, paymentMethod: 'cod' }, acceptedTerms, attemptId: `a-${Math.random()}` }))
@@ -84,11 +83,11 @@ describe('the texts', () => {
   })
 })
 
-describe('price form (acces)', () => {
-  it('box unticked: the price unlocks, nothing is consented, no recovery, no call', async () => {
-    const res = await reveal(false)
+describe('checkout contact step', () => {
+  it('box unticked: the lead is kept, nothing is consented, no recovery, no call', async () => {
+    const res = await checkoutLead(MAIN, false)
     expect(res.status).toBe(200)
-    expect(res.headers.get('set-cookie')).toMatch(/bt_gate2=/)
+    expect(res.headers.get('set-cookie')).not.toMatch(/bt_gate2=/)
     const { leadId } = await res.json()
     const l = (await leads.byId(db, leadId))!
     expect(l).toMatchObject({ marketingConsent: false, callConsent: false })
@@ -100,9 +99,9 @@ describe('price form (acces)', () => {
   })
 
   it('box ticked: two separate consents with the box version; the CRM gets the call tag; calling off means no call', async () => {
-    const { leadId } = await (await reveal(true)).json()
+    const { leadId } = await (await checkoutLead(MAIN, true)).json()
     expect(await marketing.state(db, ana.email)).toMatchObject({ granted: true, version: COMMUNICATIONS_CONSENT_VERSION, source: 'lead_form' })
-    expect(await callConsent.state(db, PHONE)).toMatchObject({ granted: true, version: COMMUNICATIONS_CONSENT_VERSION, source: 'lead_form' })
+    expect(await callConsent.state(db, PHONE)).toMatchObject({ granted: true, version: COMMUNICATIONS_CONSENT_VERSION, source: 'checkout' })
     expect((await leads.byId(db, leadId))!).toMatchObject({ marketingConsent: true, callConsent: true })
     // AI calling stays disabled: the consent is kept, no attempt is ever planned.
     expect(await count(`select count(*)::int as n from jobs where kind = 'call.attempt'`)).toBe(0)
@@ -115,7 +114,7 @@ describe('price form (acces)', () => {
     // A consent given before 14.10.2026 under the email-only wording (as stored then).
     await marketing.grant(db, { email: ana.email, source: 'checkout' })
     await db.query(`update marketing_consent_events set text_version = 'mkt-2026-09-29', consent_text = $2 where email = $1`, [ana.email, MARKETING_CONSENT_TEXTS['mkt-2026-09-29']])
-    await reveal(false)
+    await checkoutLead(MAIN, false)
     expect(await marketing.state(db, ana.email)).toMatchObject({ granted: true, version: 'mkt-2026-09-29' })
     expect(await callConsent.state(db, PHONE)).toBeNull()
     await flush()
@@ -123,8 +122,8 @@ describe('price form (acces)', () => {
   })
 })
 
-describe('checkout (both funnels)', () => {
-  for (const host of [MAIN, GATED])
+describe('checkout order (main site and a product landing)', () => {
+  for (const host of [MAIN, LANDING])
     it(`${host}: the terms are required; accepting them consents to nothing`, async () => {
       const refused = await order(host, false, false)
       expect(refused.status).toBe(422)
@@ -138,7 +137,7 @@ describe('checkout (both funnels)', () => {
       expect(await callConsent.state(db, PHONE)).toBeNull()
     })
 
-  for (const host of [MAIN, GATED])
+  for (const host of [MAIN, LANDING])
     it(`${host}: terms + communications box: the order records both consents, separately`, async () => {
       expect((await order(host, true)).status).toBe(200)
       expect(await marketing.state(db, person.email)).toMatchObject({ granted: true, version: COMMUNICATIONS_CONSENT_VERSION, source: 'checkout' })
@@ -168,7 +167,7 @@ describe('checkout (both funnels)', () => {
 
 describe('withdrawal', () => {
   it('the email unsubscribe withdraws both; the CRM loses the call tag; recovery and calls stop', async () => {
-    await reveal(true)
+    await checkoutLead(MAIN, true)
     await flush()
     expect(await withdrawMarketing(ana.email, 'unsubscribe_link')).toBe(true)
     expect(await marketing.state(db, ana.email)).toMatchObject({ granted: false })
@@ -181,11 +180,11 @@ describe('withdrawal', () => {
   })
 
   it('a later form without the box does not withdraw, and does not re-grant after a withdrawal', async () => {
-    await reveal(true)
-    await reveal(false)
+    await checkoutLead(MAIN, true)
+    await checkoutLead(MAIN, false)
     expect(await callConsent.state(db, PHONE)).toMatchObject({ granted: true })
     await withdrawMarketing(ana.email, 'unsubscribe_link')
-    await reveal(false)
+    await checkoutLead(MAIN, false)
     expect(await marketing.state(db, ana.email)).toMatchObject({ granted: false })
     expect(await callConsent.state(db, PHONE)).toMatchObject({ granted: false })
   })

@@ -201,7 +201,6 @@ export default async function Dashboard({ searchParams }: PageProps<'/[lang]/adm
                 <th className="py-1.5 font-medium">Site</th>
                 <th className="py-1.5 text-right font-medium">Sesiuni</th>
                 <th className="py-1.5 text-right font-medium">Leaduri</th>
-                <th className="py-1.5 text-right font-medium">Preț văzut</th>
                 <th className="py-1.5 text-right font-medium">Checkout</th>
                 <th className="py-1.5 text-right font-medium">Abandonate</th>
                 <th className="py-1.5 text-right font-medium">Comenzi</th>
@@ -214,7 +213,6 @@ export default async function Dashboard({ searchParams }: PageProps<'/[lang]/adm
                   <td className="py-2 font-medium text-ink">{f.funnel}</td>
                   <td className="py-2 text-right">{f.sessions}</td>
                   <td className="py-2 text-right">{f.leads}</td>
-                  <td className="py-2 text-right">{f.priceReveals}</td>
                   <td className="py-2 text-right">{f.checkouts}</td>
                   <td className="py-2 text-right">{f.abandoned}</td>
                   <td className="py-2 text-right font-semibold text-ink">{f.orders}</td>
@@ -336,7 +334,7 @@ export default async function Dashboard({ searchParams }: PageProps<'/[lang]/adm
                       <span className={`rounded-full px-2 py-0.5 text-[12.5px] ${tone(o.status)}`}>{ORDER_LABEL[o.status as keyof typeof ORDER_LABEL] ?? o.status}</span>
                     </td>
                     <td className="py-2 text-muted">
-                      {o.funnel} · {o.source}
+                      {o.source}
                       {o.code && <span className="block text-[12.5px]">cod {o.code}</span>}
                     </td>
                     <td className="py-2 text-right font-semibold text-ink tabular-nums">{L(o.totalLei)}</td>

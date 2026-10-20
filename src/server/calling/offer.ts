@@ -12,11 +12,10 @@ import 'server-only'
 import { addressee } from './names'
 import { getProduct, resolveLine, variantLabel } from '@/content/catalog'
 import { companyLine } from '@/config/company'
-import { gatedOrigin } from '@/lib/lead'
 import { formatLei } from '@/lib/money'
 import { priceLines } from '@/lib/promotions'
 import { shippingFor } from '@/lib/shipping'
-import { CALL_CODE, PROMOTIONS } from '@/config/promotions'
+import { CALL_CODE } from '@/config/promotions'
 import type { Config } from '@/server/config'
 import type { Queryable } from '@/server/db'
 import { deliver } from '@/server/integrations/email/transport'
@@ -32,10 +31,7 @@ export const RECOVERY_PERCENT = 10
 export type OfferEmailStatus = 'sent' | 'sent_on_request' | 'no_consent' | 'failed' | 'not_sent' | 'dry_run'
 
 
-/** Whether the lead has a cart: a checkout, or a price-form lead on acces whose device then filled its cart. */
-export const hasCart = (lead: Pick<Lead, 'productId' | 'cart'>) => lead.productId === CART_INTEREST || !!lead.cart?.length
-
-/** The products a lead is about, with quantities: its cart, or else the one product of the price form. */
+/** The products of a lead's cart, with quantities (an older lead with one product interest: that product). */
 export function leadItems(lead: Pick<Lead, 'productId' | 'variantId' | 'cart'>) {
   const raw = lead.cart?.length ? lead.cart : lead.productId && lead.productId !== CART_INTEREST ? [{ productId: lead.productId, variantId: lead.variantId ?? undefined, quantity: 1 }] : []
   return sanitizeCart(raw).flatMap((l) => {
@@ -44,24 +40,16 @@ export function leadItems(lead: Pick<Lead, 'productId' | 'variantId' | 'cart'>) 
   })
 }
 
-/** A checkout's total at today's prices and promotions, with the delivery (the book's fee); null for a price-form lead (there is no cart). */
+/** A checkout's total at today's prices and promotions, with the delivery (the book's fee); null without products. */
 export function cartTotal(lead: Pick<Lead, 'productId' | 'variantId' | 'cart'>): number | null {
-  if (!hasCart(lead)) return null
   const items = leadItems(lead)
   if (!items.length) return null
   return priceLines(items.map((l, i) => ({ key: String(i), productId: l.productId, quantity: l.quantity, unitAmount: l.unit }))).totalMinor + shippingFor(items)
 }
 
-/**
- * The automatic promotions, in words: for a checkout, what its cart already gets ("10% la 2 buc. NEUROS Calm:
- * −1.276 lei"); for the price form, the promotion available on the product. Empty when there is none.
- */
+/** The automatic promotions the cart already gets, in words ("10% la 2 buc. NEUROS Calm: −1.276 lei"); empty when there is none. */
 export function existingDiscounts(lead: Pick<Lead, 'productId' | 'variantId' | 'cart'>): string {
   const items = leadItems(lead)
-  if (!hasCart(lead)) {
-    const promo = items[0] && PROMOTIONS.find((p) => (p.products as string[]).includes(items[0].productId))
-    return promo ? `promoție disponibilă: ${promo.line}` : ''
-  }
   const pricing = priceLines(items.map((l, i) => ({ key: String(i), productId: l.productId, quantity: l.quantity, unitAmount: l.unit })))
   return pricing.promotions.map((a) => `${a.label}: −${formatLei(a.amountMinor)}`).join('; ')
 }
@@ -72,17 +60,16 @@ export async function recoveryCode(q: Queryable): Promise<PromoCode | null> {
   return code?.active && (!code.endsAt || code.endsAt > new Date()) ? code : null
 }
 
-export function recoveryLink(lead: Pick<Lead, 'funnel' | 'recoveryToken'>, code: string, c: Pick<Config, 'siteUrl'>) {
-  const base = lead.funnel === 'gated_price' ? gatedOrigin(c.siteUrl) : c.siteUrl
-  return `${base}/api/lead/resume?t=${lead.recoveryToken}&cod=${encodeURIComponent(code)}`
+export function recoveryLink(lead: Pick<Lead, 'recoveryToken'>, code: string, c: Pick<Config, 'siteUrl'>) {
+  return `${c.siteUrl}/api/lead/resume?t=${lead.recoveryToken}&cod=${encodeURIComponent(code)}`
 }
 
-export function renderRecoveryOffer(x: { firstName: string | null; items: { name: string; variant: string | null; quantity: number }[]; cart: boolean; code: string; link: string; unsubscribeUrl: string }) {
+export function renderRecoveryOffer(x: { firstName: string | null; items: { name: string; variant: string | null; quantity: number }[]; code: string; link: string; unsubscribeUrl: string }) {
   const what = x.items.length ? [...new Set(x.items.map((i) => i.name))].join(', ') : 'produsele alese'
   const subject = `Codul tău de ${RECOVERY_PERCENT}% pentru ${what}`
   const hello = x.firstName ? `Bună, ${x.firstName}.` : 'Bună.'
-  const intro = x.cart ? 'Cum am vorbit la telefon, comanda ta a rămas nefinalizată. Am păstrat produsele:' : `Cum am vorbit la telefon, îți trimitem codul pentru ${what}.`
-  const list = x.cart ? x.items.map((i) => `${i.quantity} × ${i.name}${i.variant ? ` (${i.variant})` : ''}`) : []
+  const intro = 'Cum am vorbit la telefon, comanda ta a rămas nefinalizată. Am păstrat produsele:'
+  const list = x.items.map((i) => `${i.quantity} × ${i.name}${i.variant ? ` (${i.variant})` : ''}`)
   const how = [
     `Codul tău: ${x.code}`,
     `Îți dă ${RECOVERY_PERCENT}% reducere din prețul întreg.`,
@@ -131,7 +118,6 @@ export async function prepareOffer(q: Queryable, c: Config, lead: Lead, opts: { 
     const mail = renderRecoveryOffer({
       firstName: lead.name?.split(' ')[0] ?? null,
       items,
-      cart: hasCart(lead),
       code: code.code,
       link,
       unsubscribeUrl: `${c.siteUrl}/dezabonare/${token}`,
@@ -141,7 +127,7 @@ export async function prepareOffer(q: Queryable, c: Config, lead: Lead, opts: { 
     await q.query(
       `update leads set recovery_sent = greatest(recovery_sent, 1), last_recovery_at = now(), recovery_status = case when recovery_status = 'stopped' then recovery_status else 'sent' end,
          recovery_reason = 'call offer', abandonment = coalesce(abandonment, $2), updated_at = now() where id = $1`,
-      [lead.id, lead.stage === 'lead' ? 'lead_abandoned' : 'checkout_abandoned'],
+      [lead.id, 'checkout_abandoned'],
     )
     return { code, emailStatus: 'sent', link }
   } catch (e) {
@@ -172,7 +158,7 @@ export function cartInWords(items: { name: string; quantity: number }[]) {
   return parts.length > 1 ? `${parts.slice(0, -1).join(', ')} și ${parts.at(-1)}` : (parts[0] ?? 'produsele noastre')
 }
 
-export function openingLine(x: { firstName: string; name?: string | null; cart: boolean; productNames: string; items?: { name: string; quantity: number }[]; at?: Date }) {
+export function openingLine(x: { firstName: string; name?: string | null; productNames: string; items?: { name: string; quantity: number }[]; at?: Date }) {
   // "Bună ziua" until 18:00, "Bună seara" after, in Bucharest time. The company name spelled the Romanian way,
   // so the Romanian voice does not switch to an English accent.
   const hour = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Bucharest', hour: '2-digit', hourCycle: 'h23' }).format(x.at ?? new Date()))
@@ -181,10 +167,8 @@ export function openingLine(x: { firstName: string; name?: string | null; cart: 
   // Only the given name reaches the voice provider (data minimisation), found among the words when it is known.
   const who = addressee(x.name || x.firstName)
   const hello = `${hour >= 18 || hour < 5 ? 'Bună seara' : 'Bună ziua'}${who ? `, ${who}` : ''}!`
-  // The reason comes first, so "Aveți un minut?" has a context: the cart, or the price asked for.
-  const why = x.cart
-    ? `Am văzut că ați adăugat în coș ${x.items?.length ? cartInWords(x.items) : x.productNames || 'produse de pe site'}.`
-    : `Am văzut că v-ați interesat de prețul pentru ${x.productNames || 'produsele noastre'} pe site-ul nostru și m-am gândit să vă ajut cu informații.`
+  // The reason comes first, so "Aveți un minut?" has a context: the cart.
+  const why = `Am văzut că ați adăugat în coș ${x.items?.length ? cartInWords(x.items) : x.productNames || 'produse de pe site'}.`
   // The AI disclosure and the recording notice come before anything else is said about the person (AI Act art. 50;
   // the recording is announced in the privacy policy, "Apeluri de la asistentul AI").
   return `${hello} Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat, iar apelul este înregistrat. ${why} Aveți un minut?`

@@ -99,50 +99,20 @@ export function wwwRedirect(hostHeader: string | null | undefined, siteUrl: stri
 }
 
 /**
- * The price-gated funnel's hostname: acces.<base> (acces.localhost outside production). Same app and checkout;
- * the proxy maps its short paths onto app/[lang]/(landing)/acces.
+ * The former price-gated funnel (acces.<base>), closed on 20.10.2026: every request goes permanently to the main
+ * site, so links already sent (orders, cart recovery, unsubscribe, ads) keep working. Its old short addresses
+ * (/<slug>, /acces/<slug>, /lp/<slug>) go to that product's page. Null for every other host.
  */
-export const GATED_HOST_LABEL = 'acces'
-
-export function isGatedHostname(hostHeader: string | null | undefined, base = landingBaseDomain(), dev = process.env.NODE_ENV !== 'production'): boolean {
-  if (!hostHeader) return false
-  const host = hostHeader.trim().toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '')
-  return host === `${GATED_HOST_LABEL}.${base}` || (dev && host === `${GATED_HOST_LABEL}.localhost`)
-}
-
-/** Served on the gated hostname even with the gate off: order, recovery and unsubscribe links already sent, legal pages, files. */
-const GATED_PASSTHROUGH = [
-  /^\/comanda(\/[\w-]+)?\/?$/,
-  /^\/reluare(\/[\w-]+)?\/?$/,
-  /^\/dezabonare(\/[\w-]+)?\/?$/,
-  /^\/_next\//,
-  /^\/(terms-of-service|privacy-policy|politica-cookies|politica-livrare|politica-retur|garantie|plati)\/?$/,
-  /^\/retragere(\/confirmare)?\/?$/,
-  /^\/(icon\.svg|favicon\.ico|robots\.txt)$/,
-]
-
-export type GatedRoute = { action: 'site' } | { action: 'redirect'; path: string } | { action: 'main'; path: string }
-
-/**
- * What the gated hostname does with a path. It is the same storefront as the main site (same pages, same
- * components; prices are blurred until the short form, see components/gate): `site` serves the page as the
- * main site would. Old funnel addresses (/<slug>, /acces/<slug>, /lp/<slug>) go to the product page here.
- * The cart and the checkout need the unlocked state (the gate cookie). The admin and the presentation pages
- * live on the main site. `enabled` is PRICE_GATE_ENABLED: off, visitors go to the same page on the main site,
- * while links already sent (orders, recovery, unsubscribe) keep working. Pure, tested without a server.
- */
-export function routeGated(pathname: string, enabled: boolean, unlocked: boolean): GatedRoute {
+export function retiredAccesRedirect(hostHeader: string | null | undefined, siteUrl: string, pathname: string, search: string, base = landingBaseDomain(), dev = process.env.NODE_ENV !== 'production'): string | null {
+  if (!hostHeader) return null
+  const raw = hostHeader.trim().toLowerCase()
+  const host = raw.replace(/:\d+$/, '').replace(/\.$/, '')
+  const local = dev && host === 'acces.localhost'
+  if (host !== `acces.${base}` && !local) return null
   const en = /^\/en(\/|$)/.test(pathname)
-  const prefix = en ? '/en' : ''
   const p = (en ? pathname.slice(3) : pathname).replace(/\/+$/, '') || '/'
-  if (GATED_PASSTHROUGH.some((r) => r.test(p))) return { action: 'site' }
   const old = /^\/(?:acces\/|lp\/)?([\w-]+)$/.exec(p)?.[1]
-  const product = old && isLandingSlug(old) ? `${prefix}/products/${old}` : null
-  if (!enabled) return { action: 'main', path: product ?? (p === '/acces' ? prefix || '/' : pathname) }
-  if (product) return { action: 'redirect', path: product }
-  if (p === '/acces') return { action: 'redirect', path: prefix || '/' }
-  if (p === '/admin' || p.startsWith('/admin/') || p === '/fulfillment' || p.startsWith('/fulfillment/') || p.startsWith('/prezentare') || p.startsWith('/lp/')) return { action: 'main', path: pathname }
-  // The business page shows prices: like the cart and the checkout, it needs the unlocked state here.
-  if ((p === '/cart' || p === '/checkout' || p === '/pentru-companii' || p === '/for-business') && !unlocked) return { action: 'redirect', path: prefix || '/' }
-  return { action: 'site' }
+  const path = old && isLandingSlug(old) ? `${en ? '/en' : ''}/products/${old}` : p === '/acces' ? (en ? '/en' : '/') : pathname
+  const origin = local ? `http://${raw.replace(/^[^.]+\./, '')}` : new URL(siteUrl).origin
+  return `${origin}${path}${search}`
 }

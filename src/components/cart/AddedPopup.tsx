@@ -85,7 +85,7 @@ export function AddedPopup() {
             {!line.variantLabel && line.quantity === 1 ? line.product.purpose : null}
           </span>
         </span>
-        <span data-price className="text-[15px] font-medium text-ink tabular-nums">{fmt(line.unit * line.quantity)}</span>
+        <span className="text-[15px] font-medium text-ink tabular-nums">{fmt(line.unit * line.quantity)}</span>
       </div>
 
       {/* The product page's bundle choices: 2 or 3 at a lower price, picked right here. */}

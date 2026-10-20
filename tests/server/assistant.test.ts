@@ -1,6 +1,6 @@
 /**
  * The website assistant, on an embedded PostgreSQL (PGlite) with emails written to files and a scripted model
- * (no AI key, no network): product answers, the cart, prices hidden on acces before the form, order help only
+ * (no AI key, no network): product answers, the cart with its prices, order help only
  * after the email code, the cancellation button, support requests without duplicates, prompt injection and a
  * failing model. Test orders only exist in this throwaway database.
  */
@@ -20,7 +20,6 @@ const { orders } = await import('@/server/orders/repository')
 const { runDueJobs } = await import('@/server/jobs/runner')
 const { assistantTurn, cleanMessages, verifiedOrders } = await import('@/server/assistant/chat')
 const { scriptedModel } = await import('@/server/assistant/mock-model')
-const { maskAmounts } = await import('@/server/assistant/prompt')
 const { readToken, signToken, requestOrderCode, verifyOrderCode, selfCancellable } = await import('@/server/assistant/orders')
 const { supportRequests } = await import('@/server/assistant/support')
 const { getConfig } = await import('@/server/config')
@@ -38,11 +37,11 @@ beforeEach(async () => {
 })
 
 const user = (text: string, id = String(Math.random())): UIMessage => ({ id, role: 'user', parts: [{ type: 'text', text }] })
-const ctx = (over: Partial<{ locked: boolean; gated: boolean }> = {}) => ({ locked: false, gated: false, locale: 'ro' as const, page: '/', siteUrl: 'https://test.biohack-tech.ro', ...over })
+const ctx = () => ({ locale: 'ro' as const, page: '/', siteUrl: 'https://test.biohack-tech.ro' })
 
 /** Runs one turn and returns the UI stream's events. */
-async function turn(messages: UIMessage[], o: { locked?: boolean; cart?: { productId: string; variantId?: string; quantity: number }[]; model?: InstanceType<typeof MockLanguageModelV4> } = {}) {
-  const res = await assistantTurn({ db, config: getConfig(), context: ctx({ locked: !!o.locked, gated: !!o.locked }), messages, cart: o.cart ?? [], model: o.model ?? scriptedModel() })
+async function turn(messages: UIMessage[], o: { cart?: { productId: string; variantId?: string; quantity: number }[]; model?: InstanceType<typeof MockLanguageModelV4> } = {}) {
+  const res = await assistantTurn({ db, config: getConfig(), context: ctx(), messages, cart: o.cart ?? [], model: o.model ?? scriptedModel() })
   const text = await res.text()
   const events = text
     .split('\n')
@@ -86,29 +85,18 @@ describe('products and cart', () => {
   })
 })
 
-describe('acces before the price form', () => {
-  it('shows no price anywhere: cards, cart, add to cart, model text', async () => {
-    const cards = await turn([user('Ce produs mi se potrivește?')], { locked: true })
-    expect(JSON.stringify(cards.outputs)).not.toMatch(/lei|%/)
-    const add = await turn([user('vreau să adaug în coș')], { locked: true })
-    expect(add.outputs[0]).toMatchObject({ status: 'locked' })
-    const price = await turn([user('Cât costă?')], { locked: true })
-    expect(price.text).not.toMatch(/\d\s*lei|\d\s*%/)
-    expect(price.text).toContain('[prețul după formular]')
-    const cart = await turn([user('coș')], { locked: true, cart: [{ productId: 'balance-wave', quantity: 2 }], model: scriptedModel((p) => (p[p.length - 1].role === 'tool' ? { text: 'ok' } : { tool: { name: 'cart_summary', input: {} } })) })
-    expect(JSON.stringify(cart.outputs)).not.toMatch(/lei/)
-  })
-
-  it('masks amounts split across chunks and keeps VAT and specs', () => {
-    expect(maskAmounts('Costă 6.380 lei, cu 20% reducere')).toBe('Costă [prețul după formular], cu [prețul după formular] reducere')
-    expect(maskAmounts('TVA 21% inclus, 6 diode de 810 nm')).toBe('TVA 21% inclus, 6 diode de 810 nm')
-  })
-
-  it('the prompt has no prices when locked', async () => {
+describe('prices everywhere (the acces price form is gone)', () => {
+  it('the prompt carries the catalog prices and no price form or its tool', async () => {
     const { assistantInstructions } = await import('@/server/assistant/prompt')
-    const locked = assistantInstructions(ctx({ locked: true, gated: true }))
-    expect(locked).not.toMatch(/\d[\d.]* lei/)
-    expect(assistantInstructions(ctx())).toMatch(/6\.380 lei/)
+    const text = assistantInstructions(ctx())
+    expect(text).toMatch(/6\.380 lei/)
+    expect(text).not.toMatch(/show_price_form|Vezi prețul și oferta|acces\./)
+  })
+
+  it('cards and the cart show prices; no tool is ever "locked"', async () => {
+    const cards = await turn([user('Ce produs mi se potrivește?')])
+    expect(JSON.stringify(cards.outputs)).toMatch(/lei/)
+    expect(JSON.stringify(cards.outputs)).not.toMatch(/locked/)
   })
 })
 

@@ -174,7 +174,6 @@ export const TAGS = {
  */
 export const LEAD_TAGS = {
   lead: 'bt-lead',
-  gated: 'bt-lead-acces',
   visible: 'bt-lead-site',
   checkout: 'bt-lead-checkout',
   converted: 'bt-lead-convertit',
@@ -446,11 +445,11 @@ export const ghl = {
   },
 
   /**
-   * A lead (price form or checkout contact step): identity only, like a contact-form sender. No order fields,
+   * A lead (checkout contact step or popup): identity only, like a contact-form sender. No order fields,
    * no pipeline or opportunity, so no ecommerce workflow (W1-W7) can start from it. The contact's own `source`
-   * is never set here, so an existing NEUROS contact keeps its own; the funnel and campaign go in bt- tags.
+   * is never set here, so an existing NEUROS contact keeps its own; the source and campaign go in bt- tags.
    */
-  async upsertLeadContact(c: GhlConfig, l: { name: string | null; email: string; phone: string | null; funnel: string }, knownId?: string | null) {
+  async upsertLeadContact(c: GhlConfig, l: { name: string | null; email: string; phone: string | null }, knownId?: string | null) {
     const [firstName, ...rest] = (l.name ?? '').split(' ')
     return saveContact(
       c,

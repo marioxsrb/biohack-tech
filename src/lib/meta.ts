@@ -65,7 +65,7 @@ function cookieValue(header: string, name: string): string {
   }
 }
 
-/** A host of this store (apex, a landing, acces, or the international site), or undefined. */
+/** A host of this store (apex, a landing, or the international site), or undefined. */
 export function storeHost(hostHeader: string | null | undefined, siteHost: string, base = landingBaseDomain()): string | undefined {
   if (!hostHeader) return
   const host = hostHeader.trim().toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '')

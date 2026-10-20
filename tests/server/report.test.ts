@@ -26,7 +26,7 @@ describe('report', () => {
 
   it('counts traffic, standing orders, products, payments and lists the orders (first name and city only)', async () => {
     const db = await freshDb({ ...TEST_ENV, EMAIL_TRANSPORT: 'none' })
-    for (let i = 0; i < 3; i++) await countVisit(db, 'visible_price', '/products/calm', { session: true, source: 'facebook', campaign: 'toamna' })
+    for (let i = 0; i < 3; i++) await countVisit(db, '/products/calm', { session: true, source: 'facebook', campaign: 'toamna' })
     await svc.placeOrder({ lines: lines([{ productId: 'brainlink-pro', quantity: 2 }]), form: { ...person, paymentMethod: 'cod' }, attemptId: 'r1' })
     await svc.placeOrder({ lines: lines([{ productId: 'brainlink-pro', quantity: 1 }]), form: { ...person, paymentMethod: 'card' }, attemptId: 'r2' }) // unpaid card: not a sale
     const r = await buildReport(db, period('azi'))
@@ -36,10 +36,14 @@ describe('report', () => {
     expect(r.products).toEqual([expect.objectContaining({ units: 2 })])
     expect(r.payments).toEqual([expect.objectContaining({ method: 'cash_on_delivery', orders: 1 })])
     expect(r.sources[0]).toMatchObject({ source: 'facebook', campaign: 'toamna', sessions: 3 })
-    await countVisit(db, 'visible_price', 'calm', { session: true, site: 'calm' })
-    await countVisit(db, 'gated_price', 'calm', { session: true })
-    const bySite = (await buildReport(db, period('azi'))).sites
-    expect(bySite.map((s) => [s.site, s.sessions])).toEqual([['main', 3], ['acces', 1], ['calm', 1], ['focus', 0], ['amber', 0], ['net', 0]])
+    await countVisit(db, 'calm', { session: true, site: 'calm' })
+    // A day counted on the former acces.<domain> (closed 20.10.2026) belongs to the main store.
+    await db.query("insert into visit_stats (day, site, funnel, page, source, campaign, views, sessions) values ((now() at time zone 'Europe/Bucharest')::date, 'acces', 'gated_price', 'calm', '', '', 1, 1)")
+    const report = await buildReport(db, period('azi'))
+    const bySite = report.sites
+    expect(bySite.map((s) => [s.site, s.sessions])).toEqual([['main', 4], ['calm', 1], ['focus', 0], ['amber', 0], ['net', 0]])
+    expect(report.funnels).toEqual([expect.objectContaining({ funnel: 'biohack-tech.ro', sessions: 5, orders: 1 })])
+    expect(JSON.stringify(report)).not.toMatch(/acces|gated|priceReveals/)
     expect(bySite.find((s) => s.site === 'main')).toMatchObject({ orders: 1 })
     expect(r.orders).toHaveLength(2)
     expect(r.orders[0]).toMatchObject({ firstName: 'Ana', city: 'Cluj-Napoca' })

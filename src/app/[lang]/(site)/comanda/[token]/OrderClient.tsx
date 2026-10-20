@@ -23,7 +23,6 @@ export function OrderEffects({
   clearKeys,
   purchase,
   placed,
-  funnel,
 }: {
   orderNumber: string
   clearKeys: string[]
@@ -34,7 +33,6 @@ export function OrderEffects({
   purchase: { orderNumber: string; value: number; items: PurchaseItem[]; paid: boolean } | null
   /** Cash on delivery or a transfer not yet received: an order, not a payment (Meta custom event OrderPlaced). */
   placed?: { orderNumber: string; value: number; payment: 'cod' | 'transfer' } | null
-  funnel?: 'visible_price' | 'gated_price'
 }) {
   useEffect(() => {
     if (!clearKeys.length) return
@@ -95,11 +93,11 @@ export function OrderEffects({
         if (localStorage.getItem(key)) return
         localStorage.setItem(key, '1')
       } catch {}
-      trackFunnel('OrderPlaced', { value: placed.value, payment: placed.payment, funnel }, `placed-${placed.orderNumber}`)
+      trackFunnel('OrderPlaced', { value: placed.value, payment: placed.payment }, `placed-${placed.orderNumber}`)
     }
     report()
     return consentStore.subscribe(report)
-  }, [placed, funnel])
+  }, [placed])
 
   return null
 }

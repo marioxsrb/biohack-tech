@@ -14,7 +14,7 @@ lead (Supabase) → eligibility (at run time) → call.attempt job → ElevenLab
   intervention require the subscriber's **prior express consent**. An AI agent is such a system. Since
   14.10.2026 one optional box (`src/lib/consent/communications.ts`, version `comms-2026-10-14`) names both
   channels, email and AI calls, and records two separate consents; never pre-ticked, never required, never
-  implied by the terms, an older email-only consent, the price form or an order. The conditions are the
+  implied by the terms, an older email-only consent or an order. The conditions are the
   "Comunicări comerciale" section of the terms (`/terms-of-service#comunicari`, linked from the footer). Consent is logged by phone
   number (`call_consent_events`: text version, source, page, time); refusal during a call, an admin, or an
   email unsubscribe withdraw it.
@@ -27,15 +27,14 @@ lead (Supabase) → eligibility (at run time) → call.attempt job → ElevenLab
 - Calling window: weekdays 8–21 Europe/Bucharest (only +40 numbers are called), at most 3 attempts.
 - **A lawyer should confirm** the consent text and the processor setup before real calls start.
 
-## The two scenarios
+## When a lead is called
 
-| Scenario | Lead | First call after the last activity |
-|---|---|---|
-| A: cart (main site, or a checkout on acces) | checkout contact step with a cart, a phone and the calling box | `AI_CALL_DELAY_VISIBLE_MINUTES` (20) |
-| B: price form (acces.biohack-tech.ro) | the price form with a phone and the calling box (no cart needed) | `AI_CALL_DELAY_GATED_MINUTES` (30) |
+| Lead | First call after the last activity |
+|---|---|
+| checkout contact step (biohack-tech.ro or a calm./focus./amber. landing) with a cart, a phone and the calling box | `AI_CALL_DELAY_VISIBLE_MINUTES` (20) |
 
-The agent is told which one it is (`abandonment_type`: `cos_nefinalizat` / `oferta_solicitata`) and opens with a
-sentence built by the server (`opening_line`): for B it names the product asked for and never mentions a cart.
+The agent opens with a sentence built by the server (`opening_line`) that names what is in the cart. The former
+price form on acces.biohack-tech.ro (closed 20.10.2026) is never called.
 
 **Test mode**: `AI_CALLING_TEST_MODE=true` + `AI_CALLING_TEST_NUMBERS=+40…` → only listed numbers are called, and
 only they get the 2-minute delay (`AI_CALLING_TEST_DELAY_MINUTES`, max 10). Test mode without a list calls nobody.
@@ -105,7 +104,7 @@ tests/server/calling.test.ts` after a content change).
 5. Vercel Production: `AI_CALLING_ENABLED=true`, keep `AI_CALLING_DRY_RUN=true` first; check
    /admin/leaduri shows "simulat (dry run)" for a test lead.
 6. Controlled test: `AI_CALLING_TEST_MODE=true`, `AI_CALLING_TEST_NUMBERS=+40…` (the approved test number),
-   `AI_CALLING_DRY_RUN=false`; a cart on biohack-tech.ro (A) and the price form on acces (B) with that number and
+   `AI_CALLING_DRY_RUN=false`; a cart on biohack-tech.ro with that number and
    the call box ticked; each call comes after 2 minutes. Verify the call, the code email, the outcome in admin
    and the GHL tags.
 7. Only after legal confirmation: remove `AI_CALLING_TEST_MODE` and `AI_CALLING_TEST_NUMBERS`.

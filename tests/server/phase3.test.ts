@@ -101,8 +101,6 @@ describe('landing attribution: checkout request → order → CRM', () => {
       landingHost: 'calm.biohack-tech.ro',
       landingPath: '/',
       utm: { utm_source: 'facebook', utm_medium: 'paid', utm_campaign: 'lansare' },
-      // The funnel comes from the hostname the checkout ran on (the main site and its landings: visible price).
-      funnel: 'visible_price',
     })
     await runDueJobs()
     expect(field('bt_last_order_source')).toBe('landing calm · facebook / paid / lansare')
@@ -111,8 +109,8 @@ describe('landing attribution: checkout request → order → CRM', () => {
   it('an order through the main site is recorded as "site"; garbage attribution is dropped', async () => {
     const res = await checkout(req({ lines: [{ productId: 'ochelari-biohack', variantId: 'patrat-maro', quantity: 1 }], order: { ...person, paymentMethod: 'transfer' }, acceptedTerms: true, attemptId: 'site-1', attribution: { lp: '../admin', lp_host: 'evil' } }))
     const order = (await orders.byToken(db, (await res.json()).token))!
-    // Only the server-set funnel remains: the landing fields were invalid.
-    expect(order.attribution).toEqual({ funnel: 'visible_price' })
+    // Nothing remains: the landing fields were invalid.
+    expect(order.attribution ?? {}).toEqual({})
     await runDueJobs()
     expect(field('bt_last_order_source')).toBe('site')
   })

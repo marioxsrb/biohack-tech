@@ -30,7 +30,7 @@ export function Price({
   const amount = variant ? unitPrice(p, variant) : p.price
   if (amount === null) return <span className={`${pendingClassName} ${className}`}>{ui.pricePending}</span>
   return (
-    <span data-price className={`tabular-nums ${className}`}>
+    <span className={`tabular-nums ${className}`}>
       {p.variablePrice && !variant && ui.from}
       {fmt(unit(amount))}
     </span>

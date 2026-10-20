@@ -1,18 +1,18 @@
 /**
  * One turn of the website assistant: the conversation the browser sent (validated, trimmed, stripped of anything
- * that is not plain text or our own tool results), the store's context (locked prices on acces.<domain>, the cart,
+ * that is not plain text or our own tool results), the store's context (the cart, the page,
  * the orders proved with the email code), and a streamed answer from a small, fast Claude model through the
  * Anthropic API (ANTHROPIC_API_KEY, server only; ASSISTANT_MODEL, default claude-haiku-5-5). Nothing of the
  * conversation is stored on the server; only the day's counts (usage.ts).
  */
 import 'server-only'
-import { convertToModelMessages, createUIMessageStreamResponse, isStepCount, streamText, toUIMessageStream, type LanguageModel, type StreamTextTransform, type ToolSet, type UIMessage } from 'ai'
+import { convertToModelMessages, createUIMessageStreamResponse, isStepCount, streamText, toUIMessageStream, type LanguageModel, type UIMessage } from 'ai'
 import type { Config } from '@/server/config'
 import type { Queryable } from '@/server/db'
 import { log, errText } from '@/server/log'
 import { orders } from '@/server/orders/repository'
 import { readToken } from './orders'
-import { assistantSystem, maskAmounts, type AssistantContext } from './prompt'
+import { assistantSystem, type AssistantContext } from './prompt'
 import { assistantUsage, isQuotaError } from './usage'
 import { assistantTools, type CartInput } from './tools'
 
@@ -98,50 +98,6 @@ function withoutSecrets(messages: UIMessage[]): UIMessage[] {
   })) as UIMessage[]
 }
 
-/**
- * On a locked page, amounts in the model's text are blanked before they leave the server. Text is held back until
- * a word boundary (and the last eight words are kept) so "6.380" and "lei" in separate chunks are still caught.
- */
-export function lockedTextGuard<T extends ToolSet>(): StreamTextTransform<T> {
-  return () => {
-    let buffer = ''
-    let id = ''
-    const flush = (controller: TransformStreamDefaultController<never>, all: boolean) => {
-      if (!buffer) return
-      const masked = maskAmounts(buffer)
-      if (all) {
-        controller.enqueue({ type: 'text-delta', id, text: masked } as never)
-        buffer = ''
-        return
-      }
-      // Keep the last words back: an amount may still be completing ("o mie opt sute de lei" is six words).
-      const m = /((?:\S+\s+){0,8}\S*)$/.exec(masked)
-      const cut = m ? masked.length - m[1].length : 0
-      if (cut > 0) {
-        controller.enqueue({ type: 'text-delta', id, text: masked.slice(0, cut) } as never)
-        buffer = masked.slice(cut)
-      } else buffer = masked
-    }
-    return new TransformStream({
-      transform(chunk, controller) {
-        const c = chunk as { type: string; id?: string; text?: string }
-        if (c.type === 'text-delta') {
-          if (buffer && c.id !== id) flush(controller as never, true)
-          id = c.id ?? id
-          buffer += c.text ?? ''
-          flush(controller as never, false)
-          return
-        }
-        flush(controller as never, true)
-        controller.enqueue(chunk)
-      },
-      flush(controller) {
-        flush(controller as never, true)
-      },
-    })
-  }
-}
-
 export type TurnInput = {
   db: Queryable
   config: Config
@@ -173,7 +129,7 @@ export async function assistantTurn(x: TurnInput): Promise<Response> {
     return cannedResponse(UNAVAILABLE[lang])
   }
   const verified = await verifiedOrders(x.db, x.messages)
-  const tools = assistantTools({ db: x.db, config: x.config, locked: x.context.locked, gated: x.context.gated, locale: lang, currency: x.context.currency ?? 'RON', cart: x.cart, verified, onQueued: x.onQueued ?? (() => {}) })
+  const tools = assistantTools({ db: x.db, config: x.config, locale: lang, currency: x.context.currency ?? 'RON', cart: x.cart, verified, onQueued: x.onQueued ?? (() => {}) })
   let quota = false
   const result = streamText({
     model: x.model ?? (await assistantModel()),
@@ -185,7 +141,6 @@ export async function assistantTurn(x: TurnInput): Promise<Response> {
     temperature: 0.3,
     maxRetries: 1,
     timeout: { totalMs: 45_000, firstChunkMs: 20_000, toolMs: 15_000 },
-    ...(x.context.locked && { experimental_transform: lockedTextGuard<typeof tools>() }),
     onError: ({ error }) => {
       quota = isQuotaError(error)
       log.error(quota ? 'assistant.quota' : 'assistant.model_error', { error: errText(error) })

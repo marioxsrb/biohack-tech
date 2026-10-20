@@ -1,4 +1,4 @@
-import { ProductViewed, VisitBeacon } from '@/components/gate/VisitBeacon'
+import { ProductViewed, VisitBeacon } from '@/components/analytics/VisitBeacon'
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { ProductHero } from '@/components/product/ProductHero'

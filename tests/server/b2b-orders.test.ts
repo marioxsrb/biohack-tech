@@ -88,14 +88,11 @@ describe('business orders', () => {
 })
 
 describe('AI knowledge of the business offer', () => {
-  it('the chatbot and the AI caller know the threshold, the mix, the exclusions, the non-stacking and the confirmation; nothing priced when locked', async () => {
+  it('the chatbot and the AI caller know the threshold, the mix, the exclusions, the non-stacking and the confirmation', async () => {
     const { agentKnowledge, agentInstructions } = await import('@/server/calling/agent')
     const k = agentKnowledge('https://biohack-tech.ro')
     for (const s of ['40% reducere la toate bucățile NEUROS Calm și NEUROS Focus', '25 de bucăți', '15 Calm + 10 Focus', '24 Calm + 1 Amber', 'Nu se cumulează cu codurile', '/pentru-companii', 'un coleg Biohack Tech sună clientul', 'Nu există alte reduceri pentru firme'])
       expect(k).toContain(s)
-    const locked = agentKnowledge('https://biohack-tech.ro', { prices: false })
-    expect(locked).toContain('## Comenzi pentru companii')
-    expect(locked).not.toMatch(/40\s?%/)
     expect(agentInstructions()).toContain('nu mai oferi codul')
   })
 })

@@ -1,5 +1,5 @@
 /**
- * The one optional communications box (price form and checkout): it names both channels, email and calls from
+ * The one optional communications box (checkout): it names both channels, email and calls from
  * the AI assistant, so ticking it records two separate consents (email by address, calls by phone number), each
  * with this text and version as proof. Accepting the terms never implies it, and it is never needed to see a
  * price or to order. The conditions it refers to are the "Comunicări comerciale" section of the terms.

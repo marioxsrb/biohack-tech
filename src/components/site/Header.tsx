@@ -34,7 +34,7 @@ export function Header() {
   const [overHero, setOverHero] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const navRef = useRef<HTMLElement>(null)
-  // On acces. and the landing hosts: brand and cart only (the rest is on the main site, with another cart).
+  // On the landing hosts: brand and cart only (the rest is on the main site, with another cart).
   const offMain = useOffMainHost()
   const sheetRef = useRef<HTMLDialogElement>(null)
 
@@ -124,7 +124,6 @@ export function Header() {
             {!offMain && <LanguageSwitch dark={dark} className="mr-2 max-md:mr-1" />}
             <Link
               href="/cart"
-              data-buy
               className={`relative -mr-3 flex h-11 items-center gap-2 rounded-full px-3 transition-colors max-md:mr-0 ${dark ? 'hover:bg-white/10' : 'hover:bg-ink/5'}`}
               aria-label={t.cartLabel(count)}
             >

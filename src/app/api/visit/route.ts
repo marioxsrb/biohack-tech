@@ -1,6 +1,5 @@
 import { isIntlHost } from '@/lib/sites'
 import { NextResponse, type NextRequest } from 'next/server'
-import { funnelForHost, isGatedHost } from '@/lib/lead'
 import { landingForHost } from '@/lib/landing-hosts'
 import { getDb } from '@/server/db'
 import { countVisit } from '@/server/leads'
@@ -13,7 +12,7 @@ const PAGES = new Set(['home', 'calm', 'focus', 'amber', 'products', 'checkout']
 const slug = (v: unknown) => (typeof v === 'string' && /^[\w.-]{1,40}$/.test(v) ? v.toLowerCase() : '')
 
 /**
- * Anonymous page counts per funnel, day, page and campaign, for the admin stats. No cookie, no id, no IP
+ * Anonymous page counts per site, day, page and campaign, for the admin stats. No cookie, no id, no IP
  * stored: counters go up. `session` is true on the first page of a browser session (the browser remembers
  * that locally), so sessions are deduplicated without identifying anyone. Accepts the old plain-text body.
  */
@@ -32,9 +31,9 @@ export async function POST(req: NextRequest) {
   if (!PAGES.has(page)) return new NextResponse(null, { status: 204 })
   try {
     const host = req.headers.get('host')
-    // Which site: a landing's own hostname (calm., focus., amber.), acces, or the main store.
-    const site = landingForHost(host) ?? (isGatedHost(host) ? 'acces' : isIntlHost(host) ? 'net' : 'main')
-    await countVisit(await getDb(), funnelForHost(host), page, { session: body.session === true, source: slug(body.source), campaign: slug(body.campaign), site })
+    // Which site: a landing's own hostname (calm., focus., amber.), the international store, or the main store.
+    const site = landingForHost(host) ?? (isIntlHost(host) ? 'net' : 'main')
+    await countVisit(await getDb(), page, { session: body.session === true, source: slug(body.source), campaign: slug(body.campaign), site })
   } catch {}
   return new NextResponse(null, { status: 204 })
 }

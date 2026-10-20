@@ -10,7 +10,7 @@ import { getConfig, paymentMethods } from '@/server/config'
 import { StripeError, stripe } from '@/server/integrations/stripe'
 import { kickJobs } from '@/server/jobs/runner'
 import { errText, log } from '@/server/log'
-import { cookieFrom, funnelForHost, VISITOR_COOKIE } from '@/lib/lead'
+import { cookieFrom, VISITOR_COOKIE } from '@/lib/lead'
 import { getDb } from '@/server/db'
 import { linkOrder } from '@/server/leads'
 import { customerName } from '@/server/orders/model'
@@ -108,16 +108,14 @@ export async function POST(req: NextRequest) {
   let order
   try {
     // Campaign data is optional and never trusted as sent: unknown landings, hosts and keys are dropped.
-    // The funnel is the hostname's (biohack-tech.ro and its landings, or the price-gated acces.<domain>).
-    const funnel = funnelForHost(req.headers.get('host'))
     const siteHost = new URL(site.url).host
     const sanitized = sanitizeAttribution(body.attribution, siteHost)
     // Cookies and the request, never the body's copy: this is what the Conversions API matches to the pixel.
     const browser = metaBrowser(req.headers, { fbclid: sanitized?.fbclid, siteHost })
-    const attribution = { ...(sanitized ?? {}), funnel, ...(browser && { meta: browser }) }
+    const attribution = { ...(sanitized ?? {}), ...(browser && { meta: browser }) }
     let created: boolean
     ;({ order, created } = await placeOrder({ lines: resolved.lines, form, attemptId, attribution, promoCode, currency, locale, site: siteForHost(req.headers.get('host')) }))
-    // This browser's leads now point to the order (its checkout step and, on acces, its product interests).
+    // This browser's leads now point to the order.
     const visitor = cookieFrom(req.headers.get('cookie'), VISITOR_COOKIE)
     if (created && visitor && /^[0-9a-f-]{36}$/.test(visitor)) {
       const placed = order

@@ -9,7 +9,7 @@ import {
 } from '@/lib/consent/communications'
 
 /**
- * The one optional communications box, the same on the price form and in the checkout: never ticked by
+ * The one optional communications box in the checkout: never ticked by
  * default, its words open the conditions in the terms, and "(opțional)" stays discreet. Ticking it is one
  * decision that the server records as two consents (email and AI calls), because the text names both.
  */
