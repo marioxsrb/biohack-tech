@@ -23,6 +23,8 @@ const TEMPLE_L = 356
 const BRIDGE_TOP = 168
 const BRIDGE_LOW = 6
 const NOSE_TIP = 1
+/** The ridge of the nose, from between the eyes to the tip. */
+const NOSE_RIDGE = [6, 197, 195, 5, 4, 1]
 const FOREHEAD = 10
 const CHIN = 152
 
@@ -69,8 +71,9 @@ export function placement(pts: Landmarks, W: number, H: number, style: FrameStyl
   const offL = dot(sub(iris(IRIS_L, EYE_L, 362), at(fit.lensR, bridge)), down)
   const origin = add(bridge, mul(down, (offR + offL) / 2))
   const o = at([0, 0], origin)
-  // The top of the ear: behind the face's side at eye level.
-  const ear = (t: V3) => add(add(t, mul(back, templeW * 0.3)), mul(down, templeW * 0.04))
+  // Where the temple meets the head: the top of the ear's root, behind the face's side and a little above it
+  // (photographs of the real frames worn, 20.10.2026). The temple ends there; the rest is behind the ear.
+  const ear = (t: V3) => add(add(t, mul(back, templeW * 0.42)), mul(up, templeW * 0.035))
   // A temple shows when its side of the head faces the camera (that side is nearer than the other one).
   const turn = (P(TEMPLE_L)[2] - P(TEMPLE_R)[2]) / templeW
   // Real fronts curve a little around the face: each half turns back by WRAP from the bridge.
@@ -81,7 +84,14 @@ export function placement(pts: Landmarks, W: number, H: number, style: FrameStyl
     const b = at(fit.bridge, origin)
     return [Xh[0], Xh[1], Y[0], Y[1], b[0] - Xh[0] * fit.bridge[0] - Y[0] * fit.bridge[1], b[1] - Xh[1] * fit.bridge[0] - Y[1] * fit.bridge[1]]
   }
+  // On a turned head the nose hides the inner part of the far lens: the ridge of the nose, from the bridge down.
+  const far: 0 | 1 | null = Math.abs(turn) < 0.12 ? null : turn > 0 ? 1 : 0
+  const ridge = NOSE_RIDGE.map((i) => [pts[i].x * W, pts[i].y * H] as Pt)
   return {
+    far,
+    ridge,
+    farDir: (far === 1 ? [across[0], across[1]] : [-across[0], -across[1]]) as Pt,
+    upDir: [up[0], up[1]] as Pt,
     matrix: [X[0], X[1], Y[0], Y[1], o[0], o[1]] as Matrix,
     halves: [half(-1), half(1)] as [Matrix, Matrix],
     // The hinges where the curved front ends (the temples start there).
@@ -103,8 +113,9 @@ function drawFront(ctx: CanvasRenderingContext2D, img: CanvasImageSource, fit: F
     [p.halves[0], 0, fit.bridge[0] + 0.5],
     [p.halves[1], fit.bridge[0] - 0.5, fit.w],
   ]
-  for (const [m, x0, x1] of parts) {
+  for (const [k, [m, x0, x1]] of parts.entries()) {
     ctx.save()
+    if (p.far === k) clipBehindNose(ctx, p)
     ctx.transform(...m)
     ctx.beginPath()
     ctx.rect(x0, 0, x1 - x0, fit.h)
@@ -112,6 +123,27 @@ function drawFront(ctx: CanvasRenderingContext2D, img: CanvasImageSource, fit: F
     ctx.drawImage(img, 0, 0, fit.w, fit.h)
     ctx.restore()
   }
+}
+
+/**
+ * Keeps only what of the far half is not behind the nose: the region on the far side of the ridge (and everything
+ * above the bridge, where the frame rests on the nose and is in front of it).
+ */
+function clipBehindNose(ctx: CanvasRenderingContext2D, p: Placement) {
+  const big = 4000
+  const [fx, fy] = p.farDir
+  const [ux, uy] = p.upDir
+  const top = p.ridge[0]
+  const tip = p.ridge[p.ridge.length - 1]
+  ctx.beginPath()
+  ctx.moveTo(top[0] + ux * big - fx * big, top[1] + uy * big - fy * big)
+  ctx.lineTo(top[0] - fx * 2, top[1] - fy * 2)
+  for (const q of p.ridge) ctx.lineTo(q[0], q[1])
+  ctx.lineTo(tip[0] - ux * big, tip[1] - uy * big)
+  ctx.lineTo(tip[0] - ux * big + fx * big, tip[1] - uy * big + fy * big)
+  ctx.lineTo(top[0] + ux * big + fx * big, top[1] + uy * big + fy * big)
+  ctx.closePath()
+  ctx.clip()
 }
 
 function drawTemple(ctx: CanvasRenderingContext2D, from: Pt, to: Pt, show: number, style: FrameStyle, faceW: number) {

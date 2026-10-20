@@ -42,7 +42,7 @@ const STYLE: Record<string, FrameStyle> = {
   'cat-eye-negru': { temple: '#b99a5e', templeWidth: 0.012, fit: 1.06 },
   'cat-eye-bej': { temple: '#c4a46c', templeWidth: 0.012, fit: 1.06 },
   'patrat-negru': { temple: '#15181a', templeWidth: 0.026, fit: 1.04 },
-  'patrat-maro': { temple: 'rgba(107,74,54,0.93)', templeWidth: 0.026, fit: 1.04 },
+  'patrat-maro': { temple: 'rgba(86,56,38,0.95)', templeWidth: 0.026, fit: 1.04 },
   'subtire-negru': { temple: '#1b1b1b', templeWidth: 0.009, fit: 1.02 },
 }
 /** The lens colour as a filter: what it lets through (multiplied with the face behind it). */
