@@ -27,36 +27,36 @@ export function Totals({ pricing, shippingMinor = 0, totalClassName = 'text-[26p
     <dl className="space-y-2 text-[15.5px]">
       <div className="flex justify-between">
         <dt className="text-muted">{bulk ? t.original : 'Subtotal'}</dt>
-        <dd data-price className="text-ink tabular-nums">{fmt(pricing.subtotalMinor)}</dd>
+        <dd className="text-ink tabular-nums">{fmt(pricing.subtotalMinor)}</dd>
       </div>
       {pricing.promotions.map((p) => (
         <div key={p.id} className="flex justify-between gap-3 font-medium text-cyan-700">
           <dt>{promoText(p.label, locale)}</dt>
-          <dd data-price className="tabular-nums whitespace-nowrap">−{fmt(p.amountMinor)}</dd>
+          <dd className="tabular-nums whitespace-nowrap">−{fmt(p.amountMinor)}</dd>
         </div>
       ))}
       {bulk && (
         <div className="flex justify-between">
           <dt className="text-muted">{t.after}</dt>
-          <dd data-price className="text-ink tabular-nums">{fmt(pricing.totalMinor)}</dd>
+          <dd className="text-ink tabular-nums">{fmt(pricing.totalMinor)}</dd>
         </div>
       )}
       <div className="flex justify-between">
         <dt className="text-muted">{t.delivery}</dt>
         {shippingMinor > 0 ? (
-          <dd data-price className="text-ink tabular-nums">{fmt(shippingMinor)}</dd>
+          <dd className="text-ink tabular-nums">{fmt(shippingMinor)}</dd>
         ) : (
           <dd className="text-ink">{t.free}</dd>
         )}
       </div>
       <div className="flex items-baseline justify-between border-t border-mist-2 pt-3">
         <dt className="font-medium text-ink">Total</dt>
-        <dd data-price className={`${totalClassName} font-medium tracking-[-0.02em] text-ink tabular-nums`}>{fmt(pricing.totalMinor + shippingMinor)}</dd>
+        <dd className={`${totalClassName} font-medium tracking-[-0.02em] text-ink tabular-nums`}>{fmt(pricing.totalMinor + shippingMinor)}</dd>
       </div>
       {bulk && (
         <div className="flex justify-between text-[14px]">
           <dt className="text-muted">{t.vat}</dt>
-          <dd data-price className="text-muted tabular-nums">{fmt(vatIn(pricing.totalMinor + shippingMinor))}</dd>
+          <dd className="text-muted tabular-nums">{fmt(vatIn(pricing.totalMinor + shippingMinor))}</dd>
         </div>
       )}
     </dl>

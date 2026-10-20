@@ -1,4 +1,4 @@
-import { VisitBeacon } from '@/components/gate/VisitBeacon'
+import { VisitBeacon } from '@/components/analytics/VisitBeacon'
 import type { Metadata } from 'next'
 import { Lineup } from '@/components/site/Lineup'
 import { getLocale } from '@/i18n/server'

@@ -12,7 +12,7 @@ import { Wordmark } from './Wordmark'
 
 const page = (slug: string) => legalPages.find((p) => p.slug === slug)!
 
-/** `mainOnly`: pages that exist only on the main host (hidden on acces. and the landing hosts, see MainHostOnly). */
+/** `mainOnly`: pages that exist only on the main host (hidden on the landing hosts, see MainHostOnly). */
 type FooterLink = { href: string; label: Record<Locale, string>; mainOnly?: true; /** The English address when it differs. */ en?: string }
 
 const help: FooterLink[] = [

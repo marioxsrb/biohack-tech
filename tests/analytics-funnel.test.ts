@@ -1,4 +1,4 @@
-/** Meta funnel events: only with marketing consent and a running pixel; Lead is standard, the rest custom; stable ids. */
+/** Meta funnel events: only with marketing consent and a running pixel; custom events with stable ids. */
 import { beforeEach, expect, it, vi } from 'vitest'
 
 let marketing = false
@@ -24,10 +24,10 @@ beforeEach(() => {
 })
 
 it('sends nothing without marketing consent, and queues nothing for later', () => {
-  trackFunnel('Lead', { product: 'balance-wave' }, 'lead-1')
+  trackFunnel('OrderPlaced', { value: 31500, payment: 'cod' }, 'placed-BHT-1')
   track('view_item', { value: 1, items: [] })
   start()
-  trackFunnel('Lead', { product: 'balance-wave' }, 'lead-1')
+  trackFunnel('OrderPlaced', { value: 31500, payment: 'cod' }, 'placed-BHT-1')
   expect(fbq).not.toHaveBeenCalled()
   expect(pending).toEqual([])
 })
@@ -42,15 +42,13 @@ it('with consent, a page’s first event (sent before the consent manager starts
   expect(fbq.mock.calls.map((c) => c[1])).toEqual(['ViewContent'])
 })
 
-it('Lead is a standard event with the lead id as event id; the others are custom; no personal data', () => {
+it('OrderPlaced and RecoveryVisit are custom events with stable ids; no personal data', () => {
   marketing = loaded = true
-  trackFunnel('Lead', { product: 'balance-wave', funnel: 'gated_price' }, 'lead-1')
-  trackFunnel('PriceRevealed', { product: 'balance-wave', funnel: 'gated_price' }, 'reveal-lead-1')
-  trackFunnel('OrderPlaced', { value: 31500, payment: 'cod', funnel: 'visible_price' }, 'placed-BHT-1')
+  trackFunnel('OrderPlaced', { value: 31500, payment: 'cod' }, 'placed-BHT-1')
+  trackFunnel('RecoveryVisit', { product: 'calm' })
   expect(fbq.mock.calls).toEqual([
-    ['track', 'Lead', { content_ids: ['balance-wave'], content_type: 'product', funnel: 'gated_price' }, { eventID: 'lead-1' }],
-    ['trackCustom', 'PriceRevealed', { content_ids: ['balance-wave'], content_type: 'product', funnel: 'gated_price' }, { eventID: 'reveal-lead-1' }],
-    ['trackCustom', 'OrderPlaced', { funnel: 'visible_price', currency: 'RON', value: 315, payment_method: 'cod' }, { eventID: 'placed-BHT-1' }],
+    ['trackCustom', 'OrderPlaced', { currency: 'RON', value: 315, payment_method: 'cod' }, { eventID: 'placed-BHT-1' }],
+    ['trackCustom', 'RecoveryVisit', { content_ids: ['calm'], content_type: 'product' }, undefined],
   ])
   expect(JSON.stringify(fbq.mock.calls)).not.toMatch(/@|07\d{8}/)
 })

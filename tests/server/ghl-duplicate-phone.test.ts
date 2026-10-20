@@ -17,7 +17,7 @@ describe('GHL contact with a phone another contact has', () => {
       if (init.method === 'PUT' && body?.phone) return json({ message: 'This location does not allow duplicated contacts.' }, 400)
       return json({ contact: { id: 'by-email' } })
     })
-    const id = await ghl.upsertLeadContact(c, { name: 'Mario Test', email: 'mario@exemplu.ro', phone: '+40770000000', funnel: 'visible_price' })
+    const id = await ghl.upsertLeadContact(c, { name: 'Mario Test', email: 'mario@exemplu.ro', phone: '+40770000000' })
     expect(id).toBe('by-email')
     const puts = calls.filter((x) => x.method === 'PUT')
     expect(puts.at(-1)!.body).toMatchObject({ email: 'mario@exemplu.ro', firstName: 'Mario' })

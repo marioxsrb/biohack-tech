@@ -1,4 +1,4 @@
-import { VisitBeacon } from '@/components/gate/VisitBeacon'
+import { VisitBeacon } from '@/components/analytics/VisitBeacon'
 import type { Metadata } from 'next'
 import { connection } from 'next/server'
 import { Suspense } from 'react'

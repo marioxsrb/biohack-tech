@@ -5,8 +5,7 @@ import { landingForHost } from '@/lib/landing-hosts'
 
 /**
  * True on the advertising landing hosts (calm., focus., amber.): there the cart lives in that host's own
- * storage and most site pages are on the main host, so links to them would lose the cart. (acces. is the
- * whole storefront, so it keeps everything.) Read after hydration; the server renders the main-site version.
+ * storage and most site pages are on the main host, so links to them would lose the cart. Read after hydration; the server renders the main-site version.
  */
 export function useOffMainHost() {
   const [off, setOff] = useState(false)

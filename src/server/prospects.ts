@@ -1,6 +1,6 @@
 /**
  * Where a person who left an address stands, for the CRM's leads pipeline (one opportunity per address): the
- * furthest step reached across the price form, the 10% popup, the checkout and orders, or "unsubscribed" when the
+ * furthest step reached across the 10% popup, the checkout and orders, or "unsubscribed" when the
  * latest marketing decision is a withdrawal. Computed from our database every time, so a resync is always right.
  */
 import 'server-only'

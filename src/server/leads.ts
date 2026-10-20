@@ -1,10 +1,10 @@
 /**
- * Leads: who asked for the price (price-gated funnel) or reached the checkout's contact step, what for, from
- * which funnel and campaign, and what happened next (checkout, order, payment). Supabase is the source of
+ * Leads: who reached the checkout's contact step, what for, from which site and campaign, and what happened
+ * next (order, payment). Supabase is the source of
  * truth; GoHighLevel gets a copy of the identity and interest tags, never a decision.
  *
- * One lead per visitor, funnel and product interest (a refresh or a second visit updates it; another product
- * is another lead). Abandonment and recovery are decided here, at the moment a step would happen, from the
+ * One lead per visitor and checkout (a refresh or a second visit updates it). Rows with stage 'lead' are the
+ * history of the former price form on acces.<domain> (closed 20.10.2026): nothing new is created or sent for them. Abandonment and recovery are decided here, at the moment a step would happen, from the
  * current data: a recovery email needs the address's email marketing consent (Legea 506/2004 art. 12), so an
  * unfinished checkout alone never allows one. A purchase, an unsubscribe or a stop ends it.
  */
@@ -12,7 +12,7 @@ import 'server-only'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { getProduct, resolveLine } from '@/content/catalog'
 import type { Attribution } from '@/lib/attribution'
-import { GATE_RESET_AT, LEAD_PRIVACY_VERSION, type Funnel, type LeadContact } from '@/lib/lead'
+import { LEAD_PRIVACY_VERSION, type LeadContact } from '@/lib/lead'
 import { getConfig } from '@/server/config'
 import type { Queryable, Row } from '@/server/db'
 import { jobs, type NewJob } from '@/server/jobs/outbox'
@@ -28,7 +28,6 @@ export type CartSnapshot = { productId: string; variantId?: string; quantity: nu
 export type Lead = {
   id: string
   visitorId: string
-  funnel: Funnel
   productId: string
   variantId: string | null
   name: string | null
@@ -44,8 +43,6 @@ export type Lead = {
   privacyVersion: string | null
   marketingConsent: boolean
   callConsent: boolean
-  /** The optional terms box on the price form (the checkout's own acceptance is on the order). */
-  termsAcceptedAt: Date | null
   /** AI calling: none | scheduled | dry_run | dialing | completed | failed | stopped | disabled. */
   callStatus: string
   callAttempts: number
@@ -60,15 +57,12 @@ export type Lead = {
   lastRecoveryAt: Date | null
   recoveryToken: string | null
   ghlContactId: string | null
-  priceRevealedAt: Date | null
   checkoutStartedAt: Date | null
   orderedAt: Date | null
   purchasedAt: Date | null
   lastActivityAt: Date
   createdAt: Date
 }
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
 /** The row for a whole checkout (several products) in the lead table. */
 export const CART_INTEREST = 'cart'
@@ -77,7 +71,6 @@ const d = (v: unknown) => (v ? new Date(v as string) : null)
 const toLead = (r: Row): Lead => ({
   id: r.id as string,
   visitorId: r.visitor_id as string,
-  funnel: r.funnel as Funnel,
   productId: r.product_id as string,
   variantId: (r.variant_id as string) ?? null,
   name: (r.name as string) ?? null,
@@ -92,7 +85,6 @@ const toLead = (r: Row): Lead => ({
   privacyVersion: (r.privacy_version as string) ?? null,
   marketingConsent: !!r.marketing_consent,
   callConsent: !!r.call_consent,
-  termsAcceptedAt: d(r.terms_accepted_at),
   callStatus: (r.call_status as string) ?? 'none',
   callAttempts: Number(r.call_attempts ?? 0),
   callOutcome: (r.call_outcome as string) ?? null,
@@ -106,7 +98,6 @@ const toLead = (r: Row): Lead => ({
   lastRecoveryAt: d(r.last_recovery_at),
   recoveryToken: (r.recovery_token as string) ?? null,
   ghlContactId: (r.ghl_contact_id as string) ?? null,
-  priceRevealedAt: d(r.price_revealed_at),
   checkoutStartedAt: d(r.checkout_started_at),
   orderedAt: d(r.ordered_at),
   purchasedAt: d(r.purchased_at),
@@ -132,9 +123,8 @@ export function sanitizeCart(raw: unknown): CartSnapshot {
 
 export type CaptureInput = {
   visitorId: string
-  funnel: Funnel
-  stage: 'lead' | 'checkout_started'
-  /** A catalog product id, or CART_INTEREST for a checkout. */
+  stage: 'checkout_started'
+  /** CART_INTEREST: the whole checkout. */
   productId: string
   variantId?: string | null
   contact: LeadContact
@@ -145,17 +135,13 @@ export type CaptureInput = {
   attribution?: Attribution | null
   landingHost?: string | null
   page?: string
-  /** The price form's optional terms box. */
-  termsAccepted?: boolean
-  /** See server/device.ts: lets this device see prices again without the form. */
-  deviceKey?: string | null
   /** The visitor's language and site: emails follow the language; the international site never calls. */
   locale?: 'ro' | 'en'
   site?: 'ro' | 'net'
 }
 
 /**
- * Creates or updates the lead for (visitor, funnel, product) in one statement, so two submits at once give one
+ * Creates or updates the lead for (visitor, checkout) in one statement, so two submits at once give one
  * row. A stage only moves forward; an unticked box never removes an earlier consent. Queues the CRM copy and the
  * abandonment checks for a new stage.
  */
@@ -164,9 +150,8 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
   const now = new Date()
   const { rows } = await t.query(
     `insert into leads (id, visitor_id, funnel, product_id, variant_id, name, email, phone, stage, cart, attribution, landing_host, fbclid,
-       privacy_version, marketing_consent, recovery_token, price_revealed_at, checkout_started_at, last_activity_at, created_at, updated_at, call_consent,
-       terms_accepted_at, device_key, locale)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$19,$19,$20,$21,$22,$23)
+       privacy_version, marketing_consent, recovery_token, checkout_started_at, last_activity_at, created_at, updated_at, call_consent, locale)
+     values ($1,$2,'visible_price',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$17,$17,$18,$19)
      on conflict (visitor_id, funnel, product_id) do update set
        variant_id = coalesce(excluded.variant_id, leads.variant_id),
        name = coalesce(nullif(excluded.name, ''), leads.name),
@@ -178,8 +163,6 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
        fbclid = coalesce(leads.fbclid, excluded.fbclid),
        marketing_consent = leads.marketing_consent or excluded.marketing_consent,
        call_consent = leads.call_consent or excluded.call_consent,
-       terms_accepted_at = coalesce(leads.terms_accepted_at, excluded.terms_accepted_at),
-       device_key = coalesce(excluded.device_key, leads.device_key),
        locale = excluded.locale,
        checkout_started_at = coalesce(leads.checkout_started_at, excluded.checkout_started_at),
        last_activity_at = excluded.last_activity_at,
@@ -188,7 +171,6 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
     [
       randomUUID(),
       input.visitorId,
-      input.funnel,
       input.productId,
       input.variantId ?? null,
       input.contact.name || null,
@@ -202,12 +184,9 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
       LEAD_PRIVACY_VERSION,
       input.marketingConsent,
       randomBytes(24).toString('base64url'),
-      input.funnel === 'gated_price' && input.productId !== CART_INTEREST ? now : null,
-      input.stage === 'checkout_started' ? now : null,
+      now,
       now,
       !!input.callConsent && input.site !== 'net',
-      input.termsAccepted ? now : null,
-      input.deviceKey ?? null,
       input.locale ?? 'ro',
     ],
   )
@@ -220,7 +199,7 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
   if (input.marketingConsent) {
     const state = await marketing.state(t, lead.email)
     if (!state?.granted) {
-      const id = await marketing.grant(t, { email: lead.email, source: 'lead_form', page: input.page ?? (input.funnel === 'gated_price' ? 'acces' : '/checkout'), version: consentVersionFor(input.site ?? 'ro', input.locale ?? 'ro') })
+      const id = await marketing.grant(t, { email: lead.email, source: 'lead_form', page: input.page ?? '/checkout', version: consentVersionFor(input.site ?? 'ro', input.locale ?? 'ro') })
       // The consent reaches the CRM like an unsubscribe does: the marketing fields only, on its own job.
       // A minute later, so the lead's own contact sync (ghl.lead) has stored the contact id it updates: GHL's
       // search does not see a brand-new contact for a while, and a second lookup would create a duplicate.
@@ -234,7 +213,7 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
   if (input.callConsent && phone && input.site !== 'net') {
     const state = await callConsent.state(t, phone)
     if (!state?.granted) {
-      const id = await callConsent.grant(t, { phone, email: lead.email, source: input.funnel === 'gated_price' ? 'lead_form' : 'checkout', page: input.page, leadId: lead.id })
+      const id = await callConsent.grant(t, { phone, email: lead.email, source: 'checkout', page: input.page, leadId: lead.id })
       // The CRM tag for calls follows on the same job as the marketing fields (one job when both changed).
       if (c.ghl && !synced) await jobs.enqueue(t, { kind: 'marketing.sync', dedupeKey: `marketing.sync:call:${id}`, payload: { email: lead.email }, runAt: new Date(Date.now() + 60_000) })
     }
@@ -243,36 +222,18 @@ export async function captureLead(t: Queryable, input: CaptureInput): Promise<{ 
   return { lead, created, stageChanged }
 }
 
-/**
- * acces: the cart of a device that gave its details on the price form, kept on that lead (an empty cart clears
- * it). It is activity: the lead's quiet time starts again, and with the call box ticked the AI call is planned
- * for the cart's quiet time (20 minutes) after this change; the attempt itself checks everything again.
- */
-export async function recordGatedCart(t: Queryable, lead: Lead, cart: CartSnapshot) {
-  const { rows } = await t.query('update leads set cart = $2, last_activity_at = now(), updated_at = now() where id = $1 returning *', [lead.id, cart.length ? JSON.stringify(cart) : null])
-  const fresh = toLead(rows[0])
-  const c = getConfig()
-  const phone = romanianE164(fresh.phone)
-  if (cart.length && fresh.callConsent && phone && c.calling.enabled && fresh.callAttempts === 0) {
-    const job = firstCallJob(fresh, c, phone)
-    await jobs.enqueue(t, { ...job, dedupeKey: `${job.dedupeKey}:cart:${Math.floor(Date.now() / 60_000)}` })
-  }
-  return fresh
-}
-
-/** The CRM copy and the two abandonment checks for the lead's current stage. */
+/** The CRM copy and the abandonment checks of an unfinished checkout. */
 function leadJobs(lead: Lead, c = getConfig()): NewJob[] {
   const list: NewJob[] = []
   if (c.ghl) list.push({ kind: 'ghl.lead', dedupeKey: `ghl.lead:${lead.id}:${lead.stage}`, payload: { leadId: lead.id } })
-  if (c.features.abandonedCheckout && (lead.stage === 'lead' || lead.stage === 'checkout_started')) {
+  if (c.features.abandonedCheckout && lead.stage === 'checkout_started') {
     const base = lead.lastActivityAt.getTime()
     list.push(
       { kind: 'lead.recovery', dedupeKey: `lead.recovery:${lead.id}:${lead.stage}:1`, payload: { leadId: lead.id, stage: lead.stage, step: 1 }, runAt: new Date(base + c.recovery.firstMinutes * 60_000) },
       { kind: 'lead.recovery', dedupeKey: `lead.recovery:${lead.id}:${lead.stage}:2`, payload: { leadId: lead.id, stage: lead.stage, step: 2 }, runAt: new Date(base + c.recovery.secondHours * 3_600_000) },
     )
-    // An abandoned cart: a third, last email (the price form keeps two).
-    if (lead.stage === 'checkout_started')
-      list.push({ kind: 'lead.recovery', dedupeKey: `lead.recovery:${lead.id}:${lead.stage}:3`, payload: { leadId: lead.id, stage: lead.stage, step: 3 }, runAt: new Date(base + c.recovery.thirdHours * 3_600_000) })
+    // A third, last email.
+    list.push({ kind: 'lead.recovery', dedupeKey: `lead.recovery:${lead.id}:${lead.stage}:3`, payload: { leadId: lead.id, stage: lead.stage, step: 3 }, runAt: new Date(base + c.recovery.thirdHours * 3_600_000) })
   }
   return list
 }
@@ -291,41 +252,21 @@ export const leads = {
   async forVisitor(q: Queryable, visitorId: string) {
     return (await q.query('select * from leads where visitor_id = $1 order by created_at', [visitorId])).rows.map(toLead)
   },
-  /**
-   * A lead that lets this device see prices again (price form, last GATE_DAYS): by the id the device kept, by its
-   * device key, or by the email the visitor types again. The newest one wins.
-   */
-  async recognize(q: Queryable, by: { id?: string; deviceKey?: string | null; email?: string }, days: number) {
-    const since = new Date(Math.max(Date.now() - days * 86_400_000, GATE_RESET_AT.getTime()))
-    if (by.id && UUID_RE.test(by.id)) {
-      const { rows } = await q.query("select * from leads where id = $1 and funnel = 'gated_price' and created_at > $2", [by.id, since])
-      if (rows[0]) return toLead(rows[0])
-    }
-    if (by.deviceKey) {
-      const { rows } = await q.query("select * from leads where device_key = $1 and funnel = 'gated_price' and created_at > $2 order by created_at desc limit 1", [by.deviceKey, since])
-      if (rows[0]) return toLead(rows[0])
-    }
-    if (by.email) {
-      const { rows } = await q.query("select * from leads where email = $1 and funnel = 'gated_price' and created_at > $2 order by created_at desc limit 1", [by.email, since])
-      if (rows[0]) return toLead(rows[0])
-    }
-    return null
-  },
   /** For /admin: newest first. `view`: abandoned (lead or checkout), converted (ordered or paid), or all. */
-  async list(q: Queryable, f: { funnel?: Funnel; view?: 'abandoned' | 'converted'; limit?: number; unique?: boolean } = {}) {
+  async list(q: Queryable, f: { view?: 'abandoned' | 'converted'; limit?: number; unique?: boolean } = {}) {
     return (await leads.listWithForms(q, f)).map((x) => x.lead)
   },
   /**
    * The same list with, for each row, how many forms the person (email) sent in the filtered set. `unique`: one
    * row per person, their newest form (the duplicate filter); otherwise every form.
    */
-  async listWithForms(q: Queryable, f: { funnel?: Funnel; view?: 'abandoned' | 'converted'; limit?: number; unique?: boolean } = {}) {
+  async listWithForms(q: Queryable, f: { view?: 'abandoned' | 'converted'; limit?: number; unique?: boolean } = {}) {
     const where = f.view === 'abandoned' ? 'and abandonment is not null and order_id is null' : f.view === 'converted' ? "and stage in ('ordered','purchased')" : ''
-    const base = `select *, count(*) over (partition by email)::int as forms from leads where ($1::text is null or funnel = $1) ${where}`
+    const base = `select *, count(*) over (partition by email)::int as forms from leads where true ${where}`
     const sql = f.unique
-      ? `select * from (select distinct on (email) * from (${base}) b order by email, created_at desc) u order by created_at desc limit $2`
-      : `${base} order by created_at desc limit $2`
-    return (await q.query(sql, [f.funnel ?? null, f.limit ?? 200])).rows.map((r) => ({ lead: toLead(r), forms: Number(r.forms) }))
+      ? `select * from (select distinct on (email) * from (${base}) b order by email, created_at desc) u order by created_at desc limit $1`
+      : `${base} order by created_at desc limit $1`
+    return (await q.query(sql, [f.limit ?? 200])).rows.map((r) => ({ lead: toLead(r), forms: Number(r.forms) }))
   },
   update: (q: Queryable, id: string, patch: Record<string, unknown>) => {
     const keys = Object.keys(patch)
@@ -334,8 +275,7 @@ export const leads = {
 }
 
 /**
- * An order was placed from this browser: the visitor's open leads (its checkout and, on the price-gated funnel,
- * its product interests) point to it. Cash on delivery and bank transfer are commitments, so the lead is
+ * An order was placed from this browser: the visitor's open leads point to it. Cash on delivery and bank transfer are commitments, so the lead is
  * "ordered" at once; a card order stays at "checkout started" until Stripe confirms the payment.
  */
 export async function linkOrder(t: Queryable, visitorId: string, o: Order) {
@@ -367,7 +307,6 @@ export async function ensureOrderLead(t: Queryable, o: Order) {
   if (rows.length) return rows[0].id
   const r = await captureLead(t, {
     visitorId: `order:${o.id}`,
-    funnel: o.attribution?.funnel ?? 'visible_price',
     stage: 'checkout_started',
     productId: CART_INTEREST,
     // The person's email consent is already recorded by the checkout itself (marketing_consent_events).
@@ -392,11 +331,11 @@ export async function markLeadsPurchased(t: Queryable, orderId: string) {
 }
 
 export type RecoveryCheck =
-  | { send: true; abandonment: 'lead_abandoned' | 'checkout_abandoned' }
-  | { send: false; reason: string; abandonment?: 'lead_abandoned' | 'checkout_abandoned'; status?: string; later?: Date }
+  | { send: true; abandonment: 'checkout_abandoned' }
+  | { send: false; reason: string; abandonment?: 'checkout_abandoned'; status?: string; later?: Date }
 
 /**
- * Should recovery step `step` (1 or 2) go out now for this lead? Pure: the caller loads everything. The order
+ * Should recovery step `step` (1 to 3) go out now for this lead? Pure: the caller loads everything. The order
  * matters: abandonment is recorded even when no email may go out; consent is checked last, at sending time.
  */
 export function recoveryDecision(
@@ -409,7 +348,7 @@ export function recoveryDecision(
     firstMinutes: number
     /** The second email waits at least half this long after the first, even if the queue ran late. */
     secondHours?: number
-    /** The third (abandoned carts only) waits at least half the time between the second and the third after the second. */
+    /** The third waits at least half the time between the second and the third after the second. */
     thirdHours?: number
     /** An order of this address placed after the lead (any method), or the lead's own order, paid or committed. */
     converted: boolean
@@ -429,6 +368,8 @@ export function recoveryDecision(
   if (!ctx.features.abandonedCheckout) return { send: false, reason: 'abandoned checkout off' }
   if (lead.stage === 'ordered' || lead.stage === 'purchased' || ctx.converted) return { send: false, reason: 'converted', status: 'stopped' }
   if (lead.stage !== ctx.stage) return { send: false, reason: `stage changed to ${lead.stage}` }
+  // The former price form (acces, closed 20.10.2026): no more emails for it.
+  if (lead.stage === 'lead') return { send: false, reason: 'acces closed', status: 'stopped' }
   // The lead's own order, not paid (a card payment left unfinished): cancelled → stop; still within its payment
   // window → wait until it is marked abandoned; abandoned → recovered like any unfinished checkout (the
   // application owns this email; no GoHighLevel workflow sends one).
@@ -442,7 +383,7 @@ export function recoveryDecision(
   // Activity since the step was planned (another visit, the checkout typed into): not abandoned yet.
   const quietFor = ctx.now.getTime() - lead.lastActivityAt.getTime()
   if (ctx.step === 1 && quietFor < ctx.firstMinutes * 60_000) return { send: false, reason: 'still active', later: new Date(lead.lastActivityAt.getTime() + ctx.firstMinutes * 60_000) }
-  const abandonment = lead.stage === 'lead' ? 'lead_abandoned' : 'checkout_abandoned'
+  const abandonment = 'checkout_abandoned'
   if (lead.recoveryStatus === 'stopped') return { send: false, reason: lead.recoveryReason ?? 'stopped', abandonment }
   if (!ctx.features.recoveryEmail) return { send: false, reason: 'recovery email off', abandonment, status: 'disabled' }
   if (ctx.notTestRecipient) return { send: false, reason: 'recovery email in test mode', abandonment, status: 'disabled' }
@@ -453,7 +394,6 @@ export function recoveryDecision(
   if (ctx.step >= 2 && lead.recoverySent < ctx.step - 1 && ctx.now.getTime() - lead.lastActivityAt.getTime() < 7 * 86_400_000)
     return { send: false, reason: `waiting for email ${lead.recoverySent + 1}`, abandonment, later: new Date(ctx.now.getTime() + 12 * 3_600_000) }
   if (lead.recoverySent !== ctx.step - 1) return { send: false, reason: `step ${ctx.step} after ${lead.recoverySent} sent`, abandonment }
-  if (ctx.step === 3 && lead.stage !== 'checkout_started') return { send: false, reason: 'the third email is for abandoned carts', abandonment }
   const spacing = ctx.step === 2 ? ctx.secondHours : ctx.step === 3 && ctx.thirdHours && ctx.secondHours ? ctx.thirdHours - ctx.secondHours : undefined
   if (ctx.step >= 2 && lead.lastRecoveryAt && spacing && spacing > 0) {
     const gap = (spacing * 3_600_000) / 2
@@ -510,11 +450,11 @@ export function interestOf(lead: Pick<Lead, 'productId' | 'cart'>): string[] {
 }
 
 /** One page load (and, for the first page of a browser session, one session) in the anonymous daily counts. */
-export async function countVisit(q: Queryable, funnel: Funnel, page: string, v: { session?: boolean; source?: string; campaign?: string; site?: string } = {}) {
+export async function countVisit(q: Queryable, page: string, v: { session?: boolean; source?: string; campaign?: string; site?: string } = {}) {
   await q.query(
-    `insert into visit_stats (day, site, funnel, page, source, campaign, views, sessions) values ((now() at time zone 'Europe/Bucharest')::date, $6, $1, $2, $3, $4, 1, $5)
+    `insert into visit_stats (day, site, funnel, page, source, campaign, views, sessions) values ((now() at time zone 'Europe/Bucharest')::date, $5, 'visible_price', $1, $2, $3, 1, $4)
      on conflict (day, site, funnel, page, source, campaign) do update set views = visit_stats.views + 1, sessions = visit_stats.sessions + excluded.sessions`,
-    [funnel, page, v.source ?? '', v.campaign ?? '', v.session ? 1 : 0, v.site ?? (funnel === 'gated_price' ? 'acces' : 'main')],
+    [page, v.source ?? '', v.campaign ?? '', v.session ? 1 : 0, v.site ?? 'main'],
   )
 }
 

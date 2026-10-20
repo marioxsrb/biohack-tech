@@ -2,8 +2,7 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { site } from '@/config/site'
 import { ADMIN_COOKIE, checkAdminRequest } from '@/lib/admin-auth'
 import { FULFIL_COOKIE, fulfilAccess } from '@/lib/fulfillment-auth'
-import { DISCONTINUED_PATH, isGatedHostname, isLandingSlug, landingForHost, presentationPath, retiredLandingRedirect, routeGated, routeLanding, wwwRedirect } from '@/lib/landing-hosts'
-import { GATE_COOKIE } from '@/lib/lead'
+import { DISCONTINUED_PATH, isLandingSlug, landingForHost, presentationPath, retiredAccesRedirect, retiredLandingRedirect, routeLanding, wwwRedirect } from '@/lib/landing-hosts'
 import { defaultLocale, splitLocale } from '@/i18n/locales'
 import { isIntlHost } from '@/lib/sites'
 import { PRIVATE_PAGES, privateLink, tokenFreeUrl } from '@/lib/private-links'
@@ -17,14 +16,9 @@ import { PRIVATE_PAGES, privateLink, tokenFreeUrl } from '@/lib/private-links'
  *    is at /prezentare. Landing responses are never indexed. Any other Host, including a forged one, is
  *    simply the main site.
  *
- * 1c. The price-gated funnel (acces.<domain>): the same storefront as the main site (same pages and
- *    components; prices are blurred until a short form, components/gate). The cart and checkout need the
- *    unlocked state; the admin stays on the main site; old funnel addresses go to the product page.
- *    PRICE_GATE_ENABLED off sends its pages to the main site. Never indexed.
- *
  * 0. www.<main host> → 308 to the same path on the main host (one canonical host). The hostname of a retired
- *    landing (a discontinued product) gets the same treatment, and the discontinued product's own pages
- *    answer 410 Gone.
+ *    landing (a discontinued product) and the former acces.<domain> funnel get the same treatment, and the
+ *    discontinued product's own pages answer 410 Gone.
  *
  * 1b. Languages. Romanian keeps the plain URLs, English lives under /en. Every page lives internally under
  *    app/[lang], so a plain path is rewritten to /ro/<path>; /en/<path> passes as it is; a typed /ro/<path>
@@ -67,6 +61,8 @@ export async function proxy(req: NextRequest) {
   if (www) return NextResponse.redirect(www, 308)
   const retired = retiredLandingRedirect(req.headers.get('host'), site.url, `${pathname}${search}`)
   if (retired) return NextResponse.redirect(retired, 308)
+  const acces = retiredAccesRedirect(req.headers.get('host'), site.url, pathname, search)
+  if (acces) return NextResponse.redirect(acces, 308)
   if (NOT_A_PAGE.test(pathname)) return NextResponse.next()
   // 0b. A private link (order, cart recovery, unsubscribe): the token goes into an HttpOnly cookie and the page
   // opens at an address without it, so no analytics or ad tool, and no Referer, ever carries it (lib/private-links).
@@ -86,15 +82,7 @@ export async function proxy(req: NextRequest) {
   // Local *.localhost hosts send the rest to the local main site, not to production.
   const mainOrigin = /\.localhost(:\d+)?$/.test(host) ? `${req.nextUrl.protocol}//${host.replace(/^[^.]+\./, '')}` : site.url
 
-  if (isGatedHostname(host)) {
-    const route = routeGated(pathname, process.env.PRICE_GATE_ENABLED === 'true', !!req.cookies.get(GATE_COOKIE)?.value)
-    if (route.action === 'main') return NextResponse.redirect(new URL(`${route.path}${search}`, mainOrigin), 307)
-    if (route.action === 'redirect') return noindex(NextResponse.redirect(new URL(`${route.path}${search}`, req.url), 307))
-    // The same storefront as the main site, never indexed (prices are gated in the page, see components/gate).
-    return noindex(await storefront(req, pathname, search))
-  }
-
-  // Old price-gated funnel addresses on the main host (/acces/<slug>): the product page.
+  // Old addresses of the former acces funnel on the main host (/acces/<slug>): the product page.
   if (/^\/(ro\/|en\/)?acces(\/|$)/.test(pathname)) {
     const slug = /\/acces\/([\w-]+)\/?$/.exec(pathname)?.[1]
     return NextResponse.redirect(new URL(slug && isLandingSlug(slug) ? `/products/${slug}` : '/', req.url), 307)
@@ -120,7 +108,7 @@ export async function proxy(req: NextRequest) {
   return storefront(req, pathname, search)
 }
 
-/** The main storefront's routing (also used by the gated hostname): presentation previews, languages, admin. */
+/** The main storefront's routing: presentation previews, languages, admin. */
 async function storefront(req: NextRequest, pathname: string, search: string) {
   // Presentation pages on the main host: /lp/<slug>/prezentare, for previews. Never indexed.
   const presentation = /^\/lp\/([\w-]+)\/prezentare\/?$/.exec(pathname)?.[1]

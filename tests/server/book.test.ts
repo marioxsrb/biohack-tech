@@ -460,20 +460,16 @@ describe('CRM, assistant, AI caller and the iOS app', () => {
     expect(digitalTags({ status: 'revoked', emailsSent: 1, downloads: 0 }).remove).toEqual(['bt-carte-pdf-acces'])
   })
 
-  it('the shared knowledge (chat + calls) knows the book, its delivery and the PDF rules; no amounts when prices are hidden', () => {
+  it('the shared knowledge (chat + calls) knows the book, its delivery and the PDF rules', () => {
     const k = agentKnowledge('https://biohack-tech.ro')
     for (const s of ['Știu. Vreau. DE CE NU POT?', 'Diana L. Palotaș', '120 lei', '12,10 lei', 'Ramburs (plata la livrare): după ce coletul este livrat', 'Transfer bancar: după ce echipa confirmă', 'linkurile expiră', 'EEG și QEEG pe înțelesul tuturor'])
       expect(k).toContain(s)
-    const locked = agentKnowledge('https://biohack-tech.ro', { prices: false })
-    expect(locked).toContain('Știu. Vreau. DE CE NU POT?')
-    expect(locked).not.toMatch(/\d[\d.,]*\s?lei/)
-    const prompt = assistantStableInstructions({ locked: true, gated: true, locale: 'ro', page: '/', siteUrl: 'https://test.biohack-tech.ro' })
+    const prompt = assistantStableInstructions({ locale: 'ro', page: '/', siteUrl: 'https://test.biohack-tech.ro' })
     expect(prompt).toMatch(/Nu trimiți niciodată în chat fișierul, un link de descărcare/)
-    expect(prompt).not.toMatch(/\d[\d.]* lei/)
   })
 
   it('the assistant\'s tools show the book and price its cart with the delivery', async () => {
-    const tools = assistantTools({ db, config: getConfig(), locked: false, gated: false, locale: 'ro', currency: 'RON', cart: [{ productId: BOOK, quantity: 2 }], verified: new Map(), onQueued: () => {} })
+    const tools = assistantTools({ db, config: getConfig(), locale: 'ro', currency: 'RON', cart: [{ productId: BOOK, quantity: 2 }], verified: new Map(), onQueued: () => {} })
     const opts = { toolCallId: 't', messages: [], context: {} } as never
     const shown = (await tools.show_products.execute!({ productIds: [BOOK] }, opts)) as { products: { id: string; price?: string }[] }
     expect(shown.products[0]).toMatchObject({ id: BOOK, price: '120 lei' })

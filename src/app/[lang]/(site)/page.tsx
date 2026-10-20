@@ -1,5 +1,5 @@
 import { BookFeature } from '@/components/home/BookFeature'
-import { VisitBeacon } from '@/components/gate/VisitBeacon'
+import { VisitBeacon } from '@/components/analytics/VisitBeacon'
 import type { Metadata } from 'next'
 import { ContactSection } from '@/components/home/ContactSection'
 import { Discover } from '@/components/home/Discover'

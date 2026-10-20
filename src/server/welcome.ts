@@ -1,5 +1,5 @@
 /**
- * The website's 10% popup (main site and landings, never acces): an address typed there gets the code
+ * The website's 10% popup (main site and landings): an address typed there gets the code
  * LONGEVITY10 by email, once. Sending the address is the email marketing consent the popup states (its own text
  * version, source "popup"); AI calls are never implied. The email goes out through the outbox.
  */

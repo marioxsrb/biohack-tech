@@ -238,13 +238,13 @@ function AmberPairs({ slots, placement, onClose }: { slots: number; placement: U
               </>
             )}
             <dt className="text-muted">{t.amberSubtotal}</dt>
-            <dd data-price className="text-right tabular-nums">{fmt(totals.subtotalMinor)}</dd>
+            <dd className="text-right tabular-nums">{fmt(totals.subtotalMinor)}</dd>
             <dt className="font-medium text-ink">{t.amberShort}</dt>
-            <dd data-price className="text-right font-medium text-ink tabular-nums">{totals.discountMinor ? `−${fmt(totals.discountMinor)}` : fmt(0)}</dd>
+            <dd className="text-right font-medium text-ink tabular-nums">{totals.discountMinor ? `−${fmt(totals.discountMinor)}` : fmt(0)}</dd>
             <dt className="pt-1 text-[16px] font-semibold text-ink">Total</dt>
-            <dd data-price className="pt-1 text-right text-[20px] font-medium tracking-[-0.02em] text-ink tabular-nums">{fmt(totals.totalMinor)}</dd>
+            <dd className="pt-1 text-right text-[20px] font-medium tracking-[-0.02em] text-ink tabular-nums">{fmt(totals.totalMinor)}</dd>
           </dl>
-          <button type="button" data-buy data-product="ochelari-biohack" onClick={add} disabled={!ready} className="cta w-full">
+          <button type="button" onClick={add} disabled={!ready} className="cta w-full">
             <Lock /> {cta}
           </button>
           <p className="text-center text-[13px] text-muted" aria-live="polite">
@@ -253,7 +253,7 @@ function AmberPairs({ slots, placement, onClose }: { slots: number; placement: U
         </div>
       }
     >
-      <p data-price className="text-[15px] text-text">{t.amberIntro(fmt(unit))}</p>
+      <p className="text-[15px] text-text">{t.amberIntro(fmt(unit))}</p>
       <ol className="mt-4 space-y-3">
         {picks.map((pick, i) => {
           const activeModel = models.find((m) => m.id === (modelDraft[i] ?? modelOf(pick)?.id))
@@ -342,9 +342,6 @@ function VariantPicker({ productId, placement, onClose }: { productId: ProductId
       footer={
         <button
           type="button"
-          data-buy
-          data-product={p.id}
-          data-variant={v?.id}
           disabled={!v}
           onClick={() => {
             if (v && add(p.id, v.id, 1, sourceFor(placement, 'variant'))) {
@@ -360,7 +357,7 @@ function VariantPicker({ productId, placement, onClose }: { productId: ProductId
         >
           {v ? (
             <>
-              {ui.addToCart} · <span data-price>{fmt(unit(price ?? 0))}</span>
+              {ui.addToCart} · <span>{fmt(unit(price ?? 0))}</span>
             </>
           ) : (
             t.chooseVariant
@@ -382,7 +379,7 @@ function VariantPicker({ productId, placement, onClose }: { productId: ProductId
               className={`flex flex-col items-start rounded-[16px] bg-paper p-4 text-left transition-shadow ${on ? 'shadow-[inset_0_0_0_2px_var(--color-ink)]' : 'shadow-[inset_0_0_0_1px_var(--color-line)]'}`}
             >
               <span className="text-[17px] font-semibold text-ink">{variantLabel(p, x)}</span>
-              <span data-price className="mt-2 text-[18px] font-medium tabular-nums">{xp !== null ? fmt(unit(xp)) : ''}</span>
+              <span className="mt-2 text-[18px] font-medium tabular-nums">{xp !== null ? fmt(unit(xp)) : ''}</span>
             </button>
           )
         })}
@@ -467,7 +464,7 @@ function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose:
             {ready && (
               <>
                 <dt className="truncate text-text">{pickLabel(pick, locale)} × {pick.quantity}</dt>
-                <dd data-price className="text-right tabular-nums">{fmt(unit(unitPrice(getProduct(pick.productId!)!, getProduct(pick.productId!)!.variants?.find((v) => v.id === pick.variantId)) ?? 0) * pick.quantity)}</dd>
+                <dd className="text-right tabular-nums">{fmt(unit(unitPrice(getProduct(pick.productId!)!, getProduct(pick.productId!)!.variants?.find((v) => v.id === pick.variantId)) ?? 0) * pick.quantity)}</dd>
               </>
             )}
             {have > 0 && (
@@ -477,13 +474,13 @@ function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose:
               </>
             )}
             <dt className="text-muted">Subtotal</dt>
-            <dd data-price className="text-right tabular-nums">{fmt(totals.subtotalMinor)}</dd>
+            <dd className="text-right tabular-nums">{fmt(totals.subtotalMinor)}</dd>
             <dt className="font-medium text-ink">{t.discount(totals.percent)}</dt>
-            <dd data-price className="text-right font-medium text-ink tabular-nums">{totals.discountMinor ? `−${fmt(totals.discountMinor)}` : fmt(0)}</dd>
+            <dd className="text-right font-medium text-ink tabular-nums">{totals.discountMinor ? `−${fmt(totals.discountMinor)}` : fmt(0)}</dd>
             <dt className="pt-1 text-[16px] font-semibold text-ink">{t.totalAfter}</dt>
-            <dd data-price className="pt-1 text-right text-[20px] font-medium tracking-[-0.02em] text-ink tabular-nums">{fmt(totals.totalMinor)}</dd>
+            <dd className="pt-1 text-right text-[20px] font-medium tracking-[-0.02em] text-ink tabular-nums">{fmt(totals.totalMinor)}</dd>
           </dl>
-          <button type="button" data-buy onClick={add} disabled={!ready} className="cta w-full">
+          <button type="button" onClick={add} disabled={!ready} className="cta w-full">
             <Lock /> {t.addSelection}
           </button>
           <p className="text-center text-[13px] text-muted" aria-live="polite">
@@ -510,7 +507,7 @@ function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose:
                 <Image src={p.cutout.src} alt="" fill sizes="120px" className="object-contain" />
               </span>
               <span className="mt-1.5 text-[13.5px] leading-tight font-semibold text-ink">{p.name.replace('NEUROS ', '')}</span>
-              <span data-price className="text-[12.5px] text-muted tabular-nums">
+              <span className="text-[12.5px] text-muted tabular-nums">
                 {p.variablePrice ? ui.from : ''}
                 {fmt(unit(p.price ?? 0))}
               </span>
@@ -532,7 +529,7 @@ function BundlePicker({ placement, onClose }: { placement: UiPlacement; onClose:
                 className={`flex min-h-14 flex-col items-center justify-center rounded-[12px] px-1 py-2 text-center transition-colors ${on ? 'bg-ink text-white' : 'bg-paper text-ink shadow-[inset_0_0_0_1px_var(--color-line)] hover:shadow-[inset_0_0_0_1px_var(--color-ink)]'}`}
               >
                 <span className="text-[14.5px] font-semibold">{variantLabel(product, v)}</span>
-                <span data-price className={`text-[12.5px] tabular-nums ${on ? 'text-white/80' : 'text-muted'}`}>{fmt(unit(unitPrice(product, v) ?? 0))}</span>
+                <span className={`text-[12.5px] tabular-nums ${on ? 'text-white/80' : 'text-muted'}`}>{fmt(unit(unitPrice(product, v) ?? 0))}</span>
               </button>
             )
           })}

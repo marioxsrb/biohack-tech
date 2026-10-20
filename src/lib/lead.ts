@@ -1,35 +1,10 @@
 /**
- * Leads: the contact details a visitor gives before checkout, on the price-gated funnel (acces.<domain>) to
- * see the price, or in the checkout's contact step. Shared by the form (what the visitor reads and is checked
- * against) and the server (what is stored as proof), so the recorded text is the text on screen.
- *
- * The price gate is a conversion experiment, not a secret: prices are public on the main site.
+ * Leads: the contact details a visitor types in the checkout's contact step. Shared by the form (what the
+ * visitor reads and is checked against) and the server (what is stored as proof).
  */
 
-import { GATED_HOST_LABEL, isGatedHostname } from './landing-hosts'
-
-/** Where the price-gated funnel lives: acces.<domain> (acces.localhost locally). Any other Host is the main site. */
-export const GATED_SUBDOMAIN = GATED_HOST_LABEL
-export const isGatedHost = (host: string | null | undefined) => isGatedHostname(host)
-
-/** The price-gated funnel's origin for a site URL: https://biohack-tech.ro → https://acces.biohack-tech.ro. */
-export function gatedOrigin(siteUrl: string) {
-  const u = new URL(siteUrl)
-  return `${u.protocol}//${GATED_SUBDOMAIN}.${u.host.replace(/^www\./, '')}`
-}
-
-export type Funnel = 'visible_price' | 'gated_price'
-export const funnelForHost = (host: string | null | undefined): Funnel => (isGatedHost(host) ? 'gated_price' : 'visible_price')
-
-/** First-party cookies. Set only after the visitor submits a form (or by a recovery link they received). */
-export const GATE_COOKIE = 'bt_gate2'
-/**
- * Every device unlocked before this moment sees the form again (renamed cookie and storage key, and recognition
- * only of forms sent after it). To reset all acces sessions again: bump the names and this date.
- */
-export const GATE_RESET_AT = new Date('2026-10-15T16:03:00Z')
+/** First-party cookies. */
 export const VISITOR_COOKIE = 'bt_vid'
-export const GATE_DAYS = 90
 
 /** Why we ask, shown under the form. Changing it means a new version (stored with each lead). */
 export const LEAD_PRIVACY_TEXTS = {

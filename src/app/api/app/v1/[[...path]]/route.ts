@@ -117,7 +117,6 @@ function detail(o: Order, events: { type: string; source: string; created_at: st
     cancelReason: o.cancelReason,
     returnStatus: o.returnStatus,
     source: o.attribution?.utm?.utm_source ?? null,
-    funnel: o.attribution?.funnel ?? null,
     history: events.map((e) => ({ type: e.type, source: e.source, at: new Date(e.created_at).toISOString() })),
     digital: digitalOf(o, e),
   }
@@ -187,7 +186,8 @@ async function handle(req: NextRequest, ctx: Ctx, method: 'GET' | 'POST' | 'PATC
 
     if (a === 'stats' && method === 'GET') {
       const r = await buildReport(db, period(req.nextUrl.searchParams.get('period') ?? '30'))
-      return json({ period: r.period, totals: r.totals, previous: r.previous, changePct: r.changePct, funnels: r.funnels, payments: r.payments, products: r.products, sites: r.sites, sources: r.sources, daily: r.daily, codes: r.codes })
+      // priceReveals: 0 keeps the shape the app builds already in TestFlight decode (the price form is gone).
+      return json({ period: r.period, totals: r.totals, previous: r.previous, changePct: r.changePct, funnels: r.funnels.map((f) => ({ ...f, priceReveals: 0 })), payments: r.payments, products: r.products, sites: r.sites, sources: r.sources, daily: r.daily, codes: r.codes })
     }
 
     if (a === 'devices') {

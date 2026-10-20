@@ -1,6 +1,6 @@
 /**
- * AI call recovery: the two scenarios (a cart on the main site after 20 minutes, the price form on acces after
- * 30), test mode (2 minutes, listed numbers only), the personal 10% code (one use, own address, 24 hours, never
+ * AI call recovery: an unfinished checkout (the main site or a product landing) called 20 minutes after the
+ * cart's last change, test mode (2 minutes, listed numbers only), the personal 10% code (one use, own address, 24 hours, never
  * after a purchase, added to the automatic promotions like every code), its email before the call (only with consent,
  * never twice), and the agent's server tools. ElevenLabs, GoHighLevel and SMTP are mocked; PGlite.
  */
@@ -47,7 +47,6 @@ const ENV = {
   SMTP_PASSWORD: 'not-a-real-password',
   EMAIL_FROM: 'contact@biohack-tech.ro',
   NOTIFY_EMAIL: 'orders@biohack-tech.ro',
-  PRICE_GATE_ENABLED: 'true',
   ABANDONED_CHECKOUT_ENABLED: 'true',
   RECOVERY_EMAIL_ENABLED: 'true',
   AI_CALLING_ENABLED: 'true',
@@ -62,7 +61,6 @@ const ENV = {
   ELEVENLABS_API_BASE: 'https://el.test',
 }
 const MAIN = 'biohack-tech.ro'
-const GATED = 'acces.biohack-tech.ro'
 const ana = { name: 'Ana Popescu', email: 'ana@exemplu.ro', phone: '0722 123 456' }
 const PHONE = '+40722123456'
 
@@ -96,11 +94,10 @@ afterEach(() => vi.unstubAllGlobals())
 function post(path: string, host: string, body: unknown) {
   return new NextRequest(`https://${host}${path}`, { method: 'POST', headers: { host, 'content-type': 'application/json', 'x-forwarded-for': `10.8.0.${++ip}` }, body: JSON.stringify(body) })
 }
-const checkout = async (cart: unknown[], extra: Record<string, unknown> = {}) => {
-  await lead(post('/api/lead', MAIN, { action: 'checkout', ...ana, cart, callConsent: true, marketingConsent: true, ...extra }))
+const checkout = async (cart: unknown[], extra: Record<string, unknown> = {}, host = MAIN) => {
+  await lead(post('/api/lead', host, { action: 'checkout', ...ana, cart, callConsent: true, marketingConsent: true, ...extra }))
   return (await db.query<{ id: string }>(`select id from leads where product_id = '${CART_INTEREST}' order by created_at desc limit 1`)).rows[0].id
 }
-const reveal = async (extra: Record<string, unknown> = {}) => (await (await lead(post('/api/lead', GATED, { action: 'reveal', termsAccepted: true, ...ana, productId: 'balance-wave', callConsent: true, ...extra }))).json()) as { leadId: string }
 async function later() {
   await runDueJobs()
   await db.query("update jobs set run_at = now() where status in ('pending','retry')")
@@ -120,7 +117,7 @@ const useTool = (name: string, body: Record<string, unknown>, secret: string | n
     params: Promise.resolve({ tool: name }),
   })
 
-describe('scenario A: a cart on the main site', () => {
+describe('an unfinished checkout', () => {
   it('called 20 minutes after the last cart activity, about the real cart; the code email goes out before the call, once', async () => {
     const leadId = await checkout([{ productId: 'balance-wave', quantity: 2 }])
     expect(await firstCallIn(leadId)).toBe(20)
@@ -128,9 +125,9 @@ describe('scenario A: a cart on the main site', () => {
     await later()
     expect(dials()).toHaveLength(1)
     const vars = varsOf()
+    expect(vars).not.toHaveProperty('funnel_type')
+    expect(vars).not.toHaveProperty('abandonment_type')
     expect(vars).toMatchObject({
-      funnel_type: 'visible_price',
-      abandonment_type: 'cos_nefinalizat',
       product_names: 'NEUROS Calm',
       product_quantities: '2 × NEUROS Calm',
       cart_total: '11.484 lei', // 2 × 6.380 lei with the 10% for two
@@ -147,10 +144,21 @@ describe('scenario A: a cart on the main site', () => {
     expect(sent[0].text).toMatch(/20% \+ 10% = 30%/)
     expect(sent[0].text).toMatch(/dezabonare/)
     const [call] = await calls.forLeads(db, [leadId])
-    expect(call).toMatchObject({ scenario: 'cart', funnel: 'visible_price', productInterest: '2 × NEUROS Calm', emailStatus: 'sent', discountCode: vars.recovery_code })
+    expect(call).toMatchObject({ scenario: 'cart', productInterest: '2 × NEUROS Calm', emailStatus: 'sent', discountCode: vars.recovery_code })
     await later()
     expect(sent).toHaveLength(1)
     expect(dials()).toHaveLength(1)
+  })
+
+  it('a cart left on a product landing (calm.) is the same call; its link goes to the main site', async () => {
+    const leadId = await checkout([{ productId: 'balance-wave', quantity: 1 }], {}, 'calm.biohack-tech.ro')
+    expect((await leads.byId(db, leadId))!.landingHost).toBe('calm.biohack-tech.ro')
+    expect(await firstCallIn(leadId)).toBe(20)
+    await quiet(25)
+    await later()
+    expect(dials()).toHaveLength(1)
+    expect(varsOf()).toMatchObject({ product_quantities: '1 × NEUROS Calm', cart_total: '6.380 lei' })
+    expect(String(varsOf().checkout_recovery_url)).toMatch(/^https:\/\/biohack-tech\.ro\/api\/lead\/resume\?t=[\w-]+&cod=BIOHACK10$/)
   })
 
   it('a cart without a phone, or without the calling box, is never called', async () => {
@@ -181,31 +189,19 @@ describe('the caller’s code switched off', () => {
   })
 })
 
-describe('scenario B: the price form on acces', () => {
-  it('called 30 minutes after the form, about the product viewed (no cart, no total)', async () => {
-    const { leadId } = await reveal()
-    expect(await firstCallIn(leadId)).toBe(30)
-    await quiet(35)
-    await later()
-    expect(varsOf()).toMatchObject({ abandonment_type: 'oferta_solicitata', product_names: 'NEUROS Calm', product_quantities: '', cart_total: '' })
-  })
-})
-
 describe('test mode', () => {
   const TEST = { ...ENV, AI_CALLING_TEST_MODE: 'true', AI_CALLING_TEST_NUMBERS: PHONE }
 
-  it('a listed number: 2 minutes for both scenarios', async () => {
+  it('a listed number: 2 minutes', async () => {
     await setup(TEST)
-    const { leadId } = await reveal()
-    expect(await firstCallIn(leadId)).toBe(2)
     const cartId = await checkout([{ productId: 'brainlink-pro', quantity: 1 }])
     expect(await firstCallIn(cartId)).toBe(2)
   })
 
   it('any other number keeps the real delay and is never called', async () => {
     await setup(TEST)
-    const { leadId } = await reveal({ phone: '0733 999 888', email: 'client@exemplu.ro' })
-    expect(await firstCallIn(leadId)).toBe(30)
+    const leadId = await checkout([{ productId: 'balance-wave', quantity: 1 }], { phone: '0733 999 888', email: 'client@exemplu.ro' })
+    expect(await firstCallIn(leadId)).toBe(20)
     await quiet()
     await later()
     expect(dials()).toEqual([])
@@ -214,8 +210,8 @@ describe('test mode', () => {
 
   it('test mode without a list calls nobody', async () => {
     await setup({ ...ENV, AI_CALLING_TEST_MODE: 'true' })
-    const { leadId } = await reveal()
-    expect(await firstCallIn(leadId)).toBe(30)
+    const leadId = await checkout([{ productId: 'balance-wave', quantity: 1 }])
+    expect(await firstCallIn(leadId)).toBe(20)
     await quiet()
     await later()
     expect(dials()).toEqual([])
@@ -224,7 +220,7 @@ describe('test mode', () => {
 
   it('a SIP trunk number dials through the SIP endpoint', async () => {
     await setup({ ...TEST, ELEVENLABS_PHONE_PROVIDER: 'sip_trunk' })
-    await reveal()
+    await checkout([{ productId: 'balance-wave', quantity: 1 }])
     await quiet()
     await later()
     expect(dials().map((d) => d.url)).toEqual(['https://el.test/v1/convai/sip-trunk/outbound-call'])
@@ -291,7 +287,6 @@ describe('the agent’s server tools', () => {
     const ctx = await (await useTool('get_recovery_context', { call_id: call.id })).json()
     expect(ctx).toMatchObject({
       customer_first_name: 'Ana',
-      abandonment_type: 'cos_nefinalizat',
       product_quantities: '1 × NEUROS Calm',
       cart_total: '6.380 lei',
       discount: { eligible: true, percent: 10, code: call.discountCode, combinable_with_promotions: true },
@@ -336,37 +331,6 @@ describe('the agent’s server tools', () => {
   })
 })
 
-describe('acces: the cart of an unlocked device', () => {
-  const cartOn = (leadId: string, vid: string, cart: unknown[]) =>
-    lead(new NextRequest(`https://${GATED}/api/lead`, { method: 'POST', headers: { host: GATED, 'content-type': 'application/json', cookie: `bt_vid=${vid}; bt_gate2=${leadId}` }, body: JSON.stringify({ action: 'cart', cart }) }))
-
-  it('form only: called after 30 minutes about the product; a cart filled later: called 20 minutes after the change, about the cart', async () => {
-    const res = await lead(post('/api/lead', GATED, { action: 'reveal', termsAccepted: true, ...ana, productId: 'balance-wave', callConsent: true, marketingConsent: true }))
-    const { leadId } = (await res.json()) as { leadId: string }
-    const vid = res.cookies.get('bt_vid')!.value
-    expect(await firstCallIn(leadId)).toBe(30)
-    expect((await cartOn(leadId, vid, [{ productId: 'balance-wave', quantity: 2 }])).status).toBe(200)
-    const jobs = (await db.query<{ run_at: string }>(`select run_at from jobs where kind = 'call.attempt' and payload->>'leadId' = $1 order by id`, [leadId])).rows
-    expect(Math.round((new Date(jobs.at(-1)!.run_at).getTime() - Date.now()) / 60_000)).toBe(20)
-    expect((await leads.byId(db, leadId))!.cart).toEqual([{ productId: 'balance-wave', quantity: 2 }])
-    await quiet(25)
-    await later()
-    expect(dials()).toHaveLength(1) // two planned attempts, one call
-    expect(varsOf()).toMatchObject({ abandonment_type: 'cos_nefinalizat', product_quantities: '2 × NEUROS Calm', cart_total: '11.484 lei', funnel_type: 'gated_price' })
-    // Somebody else's cookie, or no unlocked lead: refused.
-    expect((await cartOn(leadId, crypto.randomUUID(), [])).status).toBe(403)
-  })
-
-  it('an emptied cart goes back to the product of the form', async () => {
-    const res = await lead(post('/api/lead', GATED, { action: 'reveal', termsAccepted: true, ...ana, productId: 'balance-wave', callConsent: true }))
-    const { leadId } = (await res.json()) as { leadId: string }
-    const vid = res.cookies.get('bt_vid')!.value
-    await cartOn(leadId, vid, [{ productId: 'brainlink-pro', quantity: 1 }])
-    await cartOn(leadId, vid, [])
-    expect((await leads.byId(db, leadId))!.cart).toBeNull()
-  })
-})
-
 describe('the website popup: 10% by email (LONGEVITY10)', () => {
   const join = (email: string, host = MAIN, extra: Record<string, unknown> = {}) =>
     welcome(new NextRequest(`https://${host}/api/welcome`, { method: 'POST', headers: { host, 'content-type': 'application/json', 'x-forwarded-for': `10.9.0.${++ip}` }, body: JSON.stringify({ email, page: '/products/calm', ...extra }) }))
@@ -385,10 +349,10 @@ describe('the website popup: 10% by email (LONGEVITY10)', () => {
     expect(sent).toHaveLength(1)
   })
 
-  it('also from acces; a bad address is refused; a bot (hidden field) records nothing', async () => {
-    expect((await join('acces@exemplu.ro', GATED)).status).toBe(200)
+  it('also from a product landing; a bad address is refused; a bot (hidden field) records nothing', async () => {
+    expect((await join('landing@exemplu.ro', 'calm.biohack-tech.ro')).status).toBe(200)
     await later()
-    expect(sent.map((m) => m.to)).toEqual(['acces@exemplu.ro'])
+    expect(sent.map((m) => m.to)).toEqual(['landing@exemplu.ro'])
     sent = []
     expect((await join('nu-e-email')).status).toBe(422)
     expect((await join('bot@exemplu.ro', MAIN, { website: 'spam' })).status).toBe(200)
@@ -412,7 +376,7 @@ describe('the do-not-call list', () => {
 })
 
 describe('test calls from the admin', () => {
-  const input = { phone: '0733 111 222', firstName: 'Mario', scenario: 'cart' as const, funnel: 'visible_price' as const, items: [{ productId: 'balance-wave', quantity: 3 }], emailSent: true }
+  const input = { phone: '0733 111 222', firstName: 'Mario', items: [{ productId: 'balance-wave', quantity: 3 }], emailSent: true }
 
   it('calls with the imaginary order (today’s prices and promotions); tools answer from it; the result lands on the test only', async () => {
     const r = await placeTestCall(db, getConfig(), input, 'admin:test')
@@ -443,17 +407,18 @@ describe('test calls from the admin', () => {
 describe('the agent’s first sentence', () => {
   it('„Bună ziua” until 18:00 and „Bună seara” after, Bucharest time; Maria, with the AI disclosure', async () => {
     const { openingLine } = await import('@/server/calling/offer')
-    expect(openingLine({ firstName: 'Ana', cart: true, productNames: 'NEUROS Calm', items: [{ name: 'NEUROS Calm', quantity: 2 }, { name: 'NEUROS Amber', quantity: 1 }], at: new Date('2026-10-15T07:00:00Z') })).toBe(
+    expect(openingLine({ firstName: 'Ana', productNames: 'NEUROS Calm', items: [{ name: 'NEUROS Calm', quantity: 2 }, { name: 'NEUROS Amber', quantity: 1 }], at: new Date('2026-10-15T07:00:00Z') })).toBe(
       'Bună ziua, doamna Ana! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat, iar apelul este înregistrat. Am văzut că ați adăugat în coș două bucăți de NEUROS Calm și NEUROS Amber. Aveți un minut?',
     )
-    expect(openingLine({ firstName: 'Ana', cart: false, productNames: 'NEUROS Focus', at: new Date('2026-10-15T07:00:00Z') })).toBe(
-      'Bună ziua, doamna Ana! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat, iar apelul este înregistrat. Am văzut că v-ați interesat de prețul pentru NEUROS Focus pe site-ul nostru și m-am gândit să vă ajut cu informații. Aveți un minut?',
+    // Without the items: the product names.
+    expect(openingLine({ firstName: 'Ana', productNames: 'NEUROS Focus', at: new Date('2026-10-15T07:00:00Z') })).toBe(
+      'Bună ziua, doamna Ana! Numele meu este Maria și vă sun din partea magazinului Baiohec Tec. Sunt un asistent automat, iar apelul este înregistrat. Am văzut că ați adăugat în coș NEUROS Focus. Aveți un minut?',
     )
-    expect(openingLine({ firstName: 'Ana', cart: true, productNames: 'NEUROS Calm', at: new Date('2026-10-15T18:00:00Z') })).toMatch(/^Bună seara, doamna Ana!/) // 21:00
+    expect(openingLine({ firstName: 'Ana', productNames: 'NEUROS Calm', at: new Date('2026-10-15T18:00:00Z') })).toMatch(/^Bună seara, doamna Ana!/) // 21:00
     // The whole name with domnule/doamna when the given name is known; the name alone when it is not; none for junk.
-    expect(openingLine({ firstName: 'Popescu', name: 'popescu ion', cart: false, productNames: 'NEUROS Focus', at: new Date('2026-10-15T07:00:00Z') })).toMatch(/^Bună ziua, domnule Ion! /)
-    expect(openingLine({ firstName: 'Alex', name: 'Alex Ionescu', cart: false, productNames: 'NEUROS Focus', at: new Date('2026-10-15T07:00:00Z') })).toMatch(/^Bună ziua, Alex! /)
-    expect(openingLine({ firstName: '', name: 'x1@y.ro', cart: false, productNames: 'NEUROS Focus', at: new Date('2026-10-15T07:00:00Z') })).toMatch(/^Bună ziua! /)
+    expect(openingLine({ firstName: 'Popescu', name: 'popescu ion', productNames: 'NEUROS Focus', at: new Date('2026-10-15T07:00:00Z') })).toMatch(/^Bună ziua, domnule Ion! /)
+    expect(openingLine({ firstName: 'Alex', name: 'Alex Ionescu', productNames: 'NEUROS Focus', at: new Date('2026-10-15T07:00:00Z') })).toMatch(/^Bună ziua, Alex! /)
+    expect(openingLine({ firstName: '', name: 'x1@y.ro', productNames: 'NEUROS Focus', at: new Date('2026-10-15T07:00:00Z') })).toMatch(/^Bună ziua! /)
   })
 
   it('domnule/doamna also for given names off the lists, by their Romanian ending; never a guess against a unisex name or a contradiction', async () => {

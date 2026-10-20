@@ -13,13 +13,14 @@ const { charts } = await import('@/server/charts')
 describe('series', () => {
   it('days without data are zeros; split by site; orders by payment; conversion as a rate', async () => {
     const db = await freshDb({ ...TEST_ENV, EMAIL_TRANSPORT: 'none' })
-    await countVisit(db, 'visible_price', 'home', { session: true })
-    await countVisit(db, 'visible_price', 'calm', { session: true, site: 'calm' })
-    await countVisit(db, 'gated_price', 'calm', { session: true })
+    await countVisit(db, 'home', { session: true })
+    await countVisit(db, 'calm', { session: true, site: 'calm' })
+    // A visit counted on the former acces.<domain> (closed 20.10.2026) belongs to the main store.
+    await db.query("insert into visit_stats (day, site, funnel, page, source, campaign, views, sessions) values ((now() at time zone 'Europe/Bucharest')::date, 'acces', 'gated_price', 'calm', '', '', 1, 1)")
     await svc.placeOrder({ lines: lines([{ productId: 'brainlink-pro', quantity: 1 }]), form: { ...person, paymentMethod: 'cod' }, attemptId: 's1' })
     const visits = await buildSeries(db, parseSeriesQuery({ metric: 'sessions', by: 'site', days: 7 }))
     expect(visits.buckets).toHaveLength(7)
-    expect(visits.series.map((s) => [s.label, s.values.at(-1)]).sort()).toEqual([['acces.biohack-tech.ro', 1], ['biohack-tech.ro', 1], ['calm.biohack-tech.ro', 1]])
+    expect(visits.series.map((s) => [s.label, s.values.at(-1)]).sort()).toEqual([['biohack-tech.ro', 2], ['calm.biohack-tech.ro', 1]])
     const pay = await buildSeries(db, parseSeriesQuery({ metric: 'orders', by: 'payment', days: 7 }))
     expect(pay.series).toEqual([{ key: 'cash_on_delivery', label: 'ramburs', values: [0, 0, 0, 0, 0, 0, 1] }])
     const rate = await buildSeries(db, parseSeriesQuery({ metric: 'conversion', by: 'none', days: 7 }))

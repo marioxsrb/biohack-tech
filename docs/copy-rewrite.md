@@ -4,7 +4,7 @@ Textele pe care le citește clientul pornesc de la ce simte și ce primește: ma
 
 Formulările de rezultat sunt la intensitatea „te ajută să” și „susține”. Fără „mulți utilizatori simt”: site-ul nu publică ce spun utilizatorii fără sursă. Fără promisiuni de vindecare și fără garanții de rezultat. Numele produselor, prețurile, checkout-ul, textele legale și tracking-ul nu s-au schimbat.
 
-Engleza (`/en` și biohack-tech.net) urmărește același sens. `acces.` folosește aceleași pagini ca magazinul, deci primește același copy. NEUROS Flow (Brain Flow) nu mai are pagină de client.
+Engleza (`/en` și biohack-tech.net) urmărește același sens. NEUROS Flow (Brain Flow) nu mai are pagină de client.
 
 Descrierea scurtă NEUROS Calm este exact **Stimularea nervului vag, a relaxării**. Formularea „dispozitiv cu lumină roșie, purtat la gât” a ieșit.
 

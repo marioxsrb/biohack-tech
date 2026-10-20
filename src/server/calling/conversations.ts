@@ -28,7 +28,7 @@ export async function recentConversations(q: Queryable, c: ElevenLabsConfig, n =
   const ids = conversations.map((x) => x.conversation_id)
   const { rows } = ids.length
     ? await q.query(
-        `select c.provider_call_id, c.phone, c.outcome, c.error, c.funnel, c.scenario, l.name, l.landing_host
+        `select c.provider_call_id, c.phone, c.outcome, c.error, c.scenario, l.name, l.landing_host
            from calls c left join leads l on l.id = c.lead_id where c.provider_call_id = any($1)`,
         [ids],
       )
@@ -64,9 +64,8 @@ export async function recentConversations(q: Queryable, c: ElevenLabsConfig, n =
   )
 }
 
-/** "biohack-tech.ro · coș nefinalizat", "acces.biohack-tech.ro · preț ascuns, ofertă cerută", or the landing host. */
+/** "biohack-tech.ro · coș nefinalizat", or the landing host the cart was left on ("calm.biohack-tech.ro · coș nefinalizat"). */
 function funnelLabel(r: Record<string, unknown>) {
-  const site = (r.landing_host as string) || (r.funnel === 'gated_price' ? 'acces.biohack-tech.ro' : 'biohack-tech.ro')
-  const what = r.scenario === 'cart' ? 'coș nefinalizat' : r.scenario ? 'ofertă cerută' : ''
-  return [site, r.funnel === 'gated_price' ? 'preț ascuns' : '', what].filter(Boolean).join(' · ')
+  const site = (r.landing_host as string) || 'biohack-tech.ro'
+  return [site, r.scenario === 'cart' ? 'coș nefinalizat' : ''].filter(Boolean).join(' · ')
 }

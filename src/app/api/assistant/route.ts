@@ -1,12 +1,10 @@
 import { NextResponse, type NextRequest } from 'next/server'
-import { cookieFrom, GATE_COOKIE, isGatedHost } from '@/lib/lead'
 import { isIntlHost, siteOrigin } from '@/lib/sites'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { assistantEnabled, assistantTurn, cleanMessages } from '@/server/assistant/chat'
 import type { CartInput } from '@/server/assistant/tools'
 import { kickJobs } from '@/server/jobs/runner'
-import { leads } from '@/server/leads'
 import { errText, log } from '@/server/log'
 import { clientIp, rateLimit } from '@/server/rate-limit'
 import { ensureStoreSettings } from '@/server/store-settings'
@@ -40,17 +38,12 @@ export async function POST(req: NextRequest) {
     const c = getConfig()
     const db = await getDb()
     await ensureStoreSettings()
-    // Locked: the price-gated host, the gate on, and no lead behind this browser's gate cookie.
-    const gated = isGatedHost(req.headers.get('host')) && c.features.priceGate
-    const locked = gated && !(await leads.byId(db, cookieFrom(req.headers.get('cookie'), GATE_COOKIE) ?? ''))
     const locale: 'ro' | 'en' = body.locale === 'en' ? 'en' : 'ro'
     const page = typeof body.page === 'string' && /^\/[\w\-/.]{0,150}$/.test(body.page) ? body.page : '/'
     return await assistantTurn({
       db,
       config: c,
       context: {
-        locked,
-        gated,
         locale,
         // Romanian pages are in lei; English pages in euro unless the visitor picked dollars (same rule as the checkout).
         currency: locale === 'ro' ? 'RON' : body.currency === 'USD' ? 'USD' : 'EUR',

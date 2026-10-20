@@ -63,7 +63,7 @@ export async function recoveryCart(token: string, now = new Date()) {
   if (!/^[\w-]{20,64}$/.test(token)) return null
   const db = await getDb()
   const o = await orders.byRecoveryToken(db, token)
-  // A lead's recovery link (price form or checkout contact step): its own selection, only what is still sold.
+  // A lead's recovery link (checkout contact step): its own selection, only what is still sold.
   if (!o) return (await leadRecoveryCart(db, token))?.cart ?? null
   if (o.status !== 'abandoned' || o.paymentMethod !== 'card' || isPaid(o.paymentStatus)) return null
   if (!o.recoveryExpiresAt || o.recoveryExpiresAt.getTime() <= now.getTime()) return null

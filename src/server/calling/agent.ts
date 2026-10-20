@@ -32,29 +32,21 @@ function legalSection(slug: string, title: string) {
   return `## ${title}\n${body.join('\n')}`
 }
 
-/**
- * Everything the agent may say about the products and the shop, in Romanian. Without prices (`prices: false`, the
- * website assistant on acces.<domain> before the price form): no price, no promotion amount, no payment details
- * page (which repeats the promotions); everything else is the same.
- */
-export function agentKnowledge(siteUrl: string = site.url, opts: { prices: boolean; currency?: Currency } = { prices: true }): string {
+/** Everything the agent (and the website assistant) may say about the products and the shop, in Romanian. */
+export function agentKnowledge(siteUrl: string = site.url, opts: { currency?: Currency } = {}): string {
   // Prices in lei (the call agent), or in the website visitor's euro or dollars (whole units, like the site).
   const cur = opts.currency ?? 'RON'
   const money = (bani: number) => formatMoney(convertUnit(bani, cur), cur)
   const products = productsIn('ro').map((p) => {
     const c = getProductContent(p.id, 'ro')
-    const variants = (p.variants ?? []).map((v) => `- ${variantLabel(p, v)}${opts.prices ? `: ${money(unitPrice(p, v) ?? p.price ?? 0)}` : ''}`)
-    const promo = opts.prices ? PROMOTIONS.find((x) => (x.products as string[]).includes(p.id)) : undefined
+    const variants = (p.variants ?? []).map((v) => `- ${variantLabel(p, v)}: ${money(unitPrice(p, v) ?? p.price ?? 0)}`)
+    const promo = PROMOTIONS.find((x) => (x.products as string[]).includes(p.id))
     return [
       `## ${p.name} (${p.kind})`,
       `Pentru ce este: ${p.purpose}. ${p.tagline}`,
       isBook(p.id)
-        ? opts.prices
-          ? `Preț: ${p.price !== null ? money(p.price) : 'nu are încă preț'} (${terms.vat}). Livrare: ${money(BOOK_SHIPPING_RON)}, o singură dată pe comandă, oricâte cărți sau alte produse are comanda.`
-          : 'Preț: se vede după formularul „Vezi prețul și oferta”. Livrarea se plătește o singură dată pe comandă (suma apare tot după formular).'
-        : opts.prices
-          ? `Preț: ${p.price !== null ? `${p.variablePrice ? 'de la ' : ''}${money(p.price)}` : 'nu are încă preț'} (${terms.vat}, ${cur === 'RON' ? terms.shipping.toLowerCase() : 'livrare gratuită oriunde în lume'}).`
-          : `Preț: se vede după formularul „Vezi prețul și oferta” (${terms.shipping.toLowerCase()}).`,
+        ? `Preț: ${p.price !== null ? money(p.price) : 'nu are încă preț'} (${terms.vat}). Livrare: ${money(BOOK_SHIPPING_RON)}, o singură dată pe comandă, oricâte cărți sau alte produse are comanda.`
+        : `Preț: ${p.price !== null ? `${p.variablePrice ? 'de la ' : ''}${money(p.price)}` : 'nu are încă preț'} (${terms.vat}, ${cur === 'RON' ? terms.shipping.toLowerCase() : 'livrare gratuită oriunde în lume'}).`,
       ...(variants.length ? ['Variante:', ...variants] : []),
       ...(promo ? [`Promoție: ${promo.line}`] : []),
       `Pagina produsului: ${siteUrl}/products/${p.slug}`,
@@ -75,16 +67,15 @@ export function agentKnowledge(siteUrl: string = site.url, opts: { prices: boole
     `# Biohack Tech`,
     `Magazin online din România care vinde dispozitivele NEUROS${book ? ' și cartea Dianei L. Palotaș' : ''}. Site: ${siteUrl}. Email: ${site.email}. Telefon: ${site.phone}. Răspundem ${terms.responseTime}.`,
     `Produse vândute acum: ${productsIn('ro').map((p) => p.name).join(', ')}. NEUROS Flow nu se mai vinde.`,
-    ...(book ? [`Livrare: gratuită pentru comenzile fără carte. O comandă care conține cartea plătește livrarea o singură dată${opts.prices ? ` (${money(BOOK_SHIPPING_RON)}, adică 10 lei + TVA)` : ''}, oricâte produse are. Livrarea nu primește reduceri și nu intră în codurile promoționale.`] : []),
+    ...(book ? [`Livrare: gratuită pentru comenzile fără carte. O comandă care conține cartea plătește livrarea o singură dată (${money(BOOK_SHIPPING_RON)}, adică 10 lei + TVA), oricâte produse are. Livrarea nu primește reduceri și nu intră în codurile promoționale.`] : []),
     ...products,
     ...(book ? [bookKnowledge()] : []),
-    opts.prices ? bulkKnowledge(siteUrl) : '## Comenzi pentru companii\nExistă o ofertă pentru comenzile de la 25 de bucăți NEUROS Calm și Focus; procentul și sumele apar după formularul „Vezi prețul și oferta”.',
+    bulkKnowledge(siteUrl),
     cur === 'RON'
       ? `## Plată\nMetode: ${[cashOnDelivery.enabled && 'ramburs (plata la livrare, curierului)', 'card bancar online prin Stripe', 'transfer bancar'].filter(Boolean).join(', ')}. Datele cardului se introduc doar pe site, niciodată la telefon.`
       : `## Plată\nÎn ${cur}: doar card bancar online prin Stripe (rambursul și transferul sunt pentru comenzile în lei, cu livrare în România). Datele cardului se introduc doar pe site.`,
-    opts.prices ? legalSection('plati', 'Plăți (detalii)') : '',
-    // Without prices (acces before the form), the delivery page's amounts (the book's fee) are left out too.
-    opts.prices ? legalSection('politica-livrare', 'Livrare') : legalSection('politica-livrare', 'Livrare').replace(/\d+(?:[.,]\d+)?\s*lei(?:\s*\([^)]*\))?/g, '(suma apare după formular)'),
+    legalSection('plati', 'Plăți (detalii)'),
+    legalSection('politica-livrare', 'Livrare'),
     legalSection('politica-retur', 'Retur și drept de retragere'),
     legalSection('garantie', 'Garanție și reclamații'),
   ]
@@ -166,20 +157,19 @@ Ești asistentul cu inteligență artificială al magazinului Biohack Tech, care
 
 # Ce știi despre apel (din sistem; nu inventa nimic în plus)
 - Prenumele: {{customer_first_name}}
-- Situația: {{abandonment_type}} (cos_nefinalizat = are produse în coș și nu a finalizat comanda; oferta_solicitata = a completat formularul ca să vadă prețul, fără coș)
-- Funnel: {{funnel_type}}
+- Situația: are produse în coș și nu a finalizat comanda
 - Produse: {{product_names}}
-- Cantități (doar la coș): {{product_quantities}}
-- Valoarea comenzii, cu promoțiile de azi (doar la coș): {{cart_total}}
+- Cantități: {{product_quantities}}
+- Valoarea comenzii, cu promoțiile de azi: {{cart_total}}
 - Reduceri existente: {{existing_discounts}}
 - Reducerea de la tine: {{recovery_discount_percent}}%, codul {{recovery_code}}
 - Emailul cu codul a fost trimis: {{recovery_email_sent}} (da sau nu)
 
-Un câmp gol înseamnă că nu știi: nu îl pomenești. La oferta_solicitata nu există comandă și nici coș: vorbești despre produsul care l-a interesat. Nu inventezi produse, sume, coduri, termene sau reduceri. Despre cod nu spui niciun termen de valabilitate.
+Un câmp gol înseamnă că nu știi: nu îl pomenești. Nu inventezi produse, sume, coduri, termene sau reduceri. Despre cod nu spui niciun termen de valabilitate.
 
 # Cum vinzi
-Prima frază ai spus-o deja: ai salutat, ai spus că te numești Maria, că suni din partea magazinului Baiohec Tec, că ești un asistent automat și că apelul este înregistrat, ai spus de ce suni (la coș: ce a adăugat în coș; la ofertă: că s-a interesat de preț) și ai întrebat dacă are un minut. Nu repeta motivul. Apoi:
-1. Dacă are un minut, mergi direct la întrebare, folosind prenumele dacă îl ai. La coș: „Ce v-a oprit să finalizați comanda?” La ofertă: „Ce v-ar ajuta să vă decideți?” sau „Aveți vreo întrebare despre {{product_names}}?”
+Prima frază ai spus-o deja: ai salutat, ai spus că te numești Maria, că suni din partea magazinului Baiohec Tec, că ești un asistent automat și că apelul este înregistrat, ai spus de ce suni (ce a adăugat în coș) și ai întrebat dacă are un minut. Nu repeta motivul. Apoi:
+1. Dacă are un minut, mergi direct la întrebare, folosind prenumele dacă îl ai: „Ce v-a oprit să finalizați comanda?”
 2. Asculți obiecția și răspunzi la ea concret, în două fraze: întâi arăți că o înțelegi, apoi dai un motiv real din cunoștințe.
    - Preț: ce primește concret pentru banii ăștia și că plătește ramburs, la livrare, și are 14 zile să-l returneze dacă nu e mulțumit.
    - Încredere sau „nu știu dacă merge la mine”: retur în 14 zile, garanție 2 ani, plată la livrare.
@@ -229,7 +219,7 @@ Restul detaliilor (beneficii, specificații, utilizare, întrebări frecvente, l
 export const AGENT_INSTRUCTIONS = agentInstructions()
 export const AGENT_INSTRUCTIONS_NOW = agentInstructions
 
-/** Said first, built by the server per call (a cart or the price form), with the AI disclosure in it. */
+/** Said first, built by the server per call (the cart), with the AI disclosure in it. */
 export const AGENT_FIRST_MESSAGE = '{{opening_line}}'
 
 /** The structured outcomes ElevenLabs extracts after each call; read by the webhook (server/calling/calls.ts). */
@@ -289,10 +279,8 @@ export function agentTools(siteUrl: string = site.url) {
 
 export const SAMPLE_VARIABLES = {
   call_id: 'test',
-  opening_line: openingLine({ firstName: 'Ana', cart: true, productNames: 'NEUROS Calm', items: [{ name: 'NEUROS Calm', quantity: 1 }], at: new Date('2026-10-15T09:00:00Z') }),
+  opening_line: openingLine({ firstName: 'Ana', productNames: 'NEUROS Calm', items: [{ name: 'NEUROS Calm', quantity: 1 }], at: new Date('2026-10-15T09:00:00Z') }),
   customer_first_name: 'Ana',
-  funnel_type: 'visible_price',
-  abandonment_type: 'cos_nefinalizat',
   product_names: 'NEUROS Calm',
   product_quantities: '1 × NEUROS Calm',
   cart_total: '6.380 lei',
@@ -355,5 +343,5 @@ export function agentDefinition() {
   }
 }
 
-/** Public pages the knowledge base reads too (the gated acces site shows no prices without the form). */
+/** Public pages the knowledge base reads too. */
 export const KNOWLEDGE_URLS = ['https://biohack-tech.ro', 'https://calm.biohack-tech.ro', 'https://focus.biohack-tech.ro', 'https://amber.biohack-tech.ro']

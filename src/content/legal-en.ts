@@ -10,7 +10,7 @@ import { CONSENT_MAX_AGE_DAYS } from '@/lib/consent/cookies'
 import { configuredVendors } from '@/lib/consent/vendors'
 import type { LegalPage, LegalSection } from './legal'
 
-const UPDATED = '19 octombrie 2026'
+const UPDATED = '20 octombrie 2026'
 const processingDays = terms.processingDays.replace(' zile', ' days')
 const transitDays = terms.transitDays.replace(' zile', ' days')
 const contactLine = `Write to us at ${site.email} or call ${site.phone}. We reply within 24 hours.`
@@ -104,7 +104,7 @@ export const legalPagesEn: LegalPage[] = [
         heading: 'Commercial communications',
         id: 'comunicari',
         body: [
-          `We send you commercial communications only if you tick, in the price form or at checkout, the box: “${COMMUNICATIONS_CONSENT_TEXT_EN}” The box is optional and is not pre-ticked. Without it you see the prices and order in the same way. Accepting these terms does not mean consent to communications.`,
+          `We send you commercial communications only if you tick, at checkout, the box: “${COMMUNICATIONS_CONSENT_TEXT_EN}” The box is optional and is not pre-ticked. Without it you see the prices and order in the same way. Accepting these terms does not mean consent to communications.`,
           'The box covers two channels, which we record separately (the text, the date and the page), for the email address and for the phone number:',
           {
             list: [
@@ -156,8 +156,6 @@ export const legalPagesEn: LegalPage[] = [
                 ['We process and deliver the order and write to you about it', 'Name, email, phone, delivery and billing address, the products ordered, notes', 'The contract (Art. 6(1)(b) GDPR)'],
                 ['We invoice and keep the accounting records', 'Billing details; for companies, the name, tax ID (CUI) and Trade Register number', 'Legal obligation (Art. 6(1)(c))'],
                 ['We collect payment and prevent fraud', 'The payment result from Stripe; for transfers, the details in the bank statement', 'The contract and the legitimate interest in preventing fraud (points b and f)'],
-                ['We show you the price and the offer, on acces.biohack-tech.ro, after the short form', 'Name, email, phone, the chosen product, the source of the visit (e.g. the ad you came from)', 'Steps prior to a contract, at your request (point b)'],
-                ['We recognise the device you used to fill in the price form, so we do not ask you for it again (another browser, private window, deleted cookie); if no form was filled in, we keep nothing', 'A code derived from device characteristics (screen, time zone, language, system) and from the network address, kept only as a cryptographic value; we do not keep the IP address and do not use it for anything else', 'Steps prior to a contract, at your request (point b); strictly necessary for the service requested'],
                 ['We keep what you wrote in the contact step of the order before you submit it, so we know how many orders remain unfinished and can restore your cart', 'Name, email, phone, the products in the cart', 'Our legitimate interest in understanding and improving the ordering process (point f)'],
                 ['We send you news, offers, recommendations and a reminder about an unfinished order or offer', 'Email, name, the products you were interested in', 'Your consent, given by ticking the box (point a)'],
                 ['Our AI assistant calls you about the chosen product, if you did not finish your order', 'Phone, first name, the chosen product, the outcome of the call', 'Your separate consent to calls, given by ticking the box (point a)'],
@@ -168,7 +166,6 @@ export const legalPagesEn: LegalPage[] = [
             },
           },
           'Without the order data we cannot process and deliver the order. Marketing emails are optional: ordering works the same without them.',
-          'The data in the price form is not used for ads and we do not call you based on it. You receive a reminder email only if you ticked the consent to marketing emails. We use your phone number only for questions about an order you place.',
           'We do not make automated decisions with legal effects on you.',
         ],
       },
@@ -176,7 +173,7 @@ export const legalPagesEn: LegalPage[] = [
         heading: 'Marketing emails',
         id: 'marketing',
         body: [
-          `We send you marketing emails only if you tick, when ordering or in the price form, the optional box: “${COMMUNICATIONS_CONSENT_TEXT_EN}” The conditions are in the [Terms and Conditions, Commercial communications](/terms-of-service#comunicari). Accepting the terms of sale does not mean consent to marketing.`,
+          `We send you marketing emails only if you tick, when ordering, the optional box: “${COMMUNICATIONS_CONSENT_TEXT_EN}” The conditions are in the [Terms and Conditions, Commercial communications](/terms-of-service#comunicari). Accepting the terms of sale does not mean consent to marketing.`,
           internationalNote,
           'We keep proof of consent: the text you saw, the date and the order or form in which you gave it.',
           'If you do not finish an order or an offer and you ticked the consent box, we may send you at most two reminder emails, without invented discounts. They stop as soon as you order, unsubscribe or withdraw your consent.',
@@ -221,7 +218,7 @@ export const legalPagesEn: LegalPage[] = [
               'Orders and invoices: as long as accounting and tax laws require.',
               'Marketing consent and unsubscription: as long as you receive emails and afterwards for as long as they may be requested from us as proof.',
               'Your messages and requests: for as long as the resolution takes and the period during which they may be requested from us as proof.',
-              'The data in the price form and in the contact step of an unsubmitted order: at most 12 months from your last activity, after which we delete it automatically. If you place an order, it remains linked to the order.',
+              'The data in the contact step of an unsubmitted order (and in the price form on acces.biohack-tech.ro, used until 20 October 2026): at most 12 months from your last activity, after which we delete it automatically. If you place an order, it remains linked to the order.',
               'Consent to calls and its refusal: for as long as they may be requested from us as proof. Call outcomes: together with the request they relate to. The audio recording, transcript and analysis of a call: 30 days, at ElevenLabs, then deleted automatically.',
             ],
           },
@@ -229,7 +226,7 @@ export const legalPagesEn: LegalPage[] = [
       },
       {
         heading: 'What we store in your browser',
-        body: ['The cart, the unfinished order form, your cookie choice and, on acces.biohack-tech.ro, the fact that you filled in the price form (including device recognition). The details are in the [Cookie Policy](/politica-cookies).'],
+        body: ['The cart, the unfinished order form and your cookie choice. The details are in the [Cookie Policy](/politica-cookies).'],
       },
       {
         heading: 'Your rights',
@@ -267,13 +264,8 @@ export const legalPagesEn: LegalPage[] = [
                 ['biohack-checkout-draft', 'Session storage', 'Keeps what you filled in on the order form', 'Until you close the tab'],
                 ['bt-cart-cleared-*', 'Local storage', 'Remembers that the products of an order were removed from the cart', 'Until you delete the site data'],
                 ['bt-consent-v1', 'Local storage', 'Remembers your cookie choice', `${Math.round(CONSENT_MAX_AGE_DAYS / 30)} months`],
-                ['bt_vid', 'Cookie (only after a form)', 'A random code that links the price form or the contact step to the order placed from the same browser, so it does not appear twice', '90 days'],
-                ['bt_gate2', 'Cookie, on acces.biohack-tech.ro', 'Remembers that you filled in the price form, so we do not ask you for it again', '90 days'],
-                ['bt-gate2', 'Local storage, on acces.biohack-tech.ro', 'The same information, in case the cookie is deleted', '90 days (checked by the server)'],
-                ['bt-gate-checked', 'Session storage', 'We check only once per session whether the device has already filled in the form', 'Until you close the tab'],
-                ['Device recognition', 'Reading certain device characteristics (screen, time zone, language, system)', 'When you open acces.biohack-tech.ro without the cookie, we check once whether the device has already filled in the price form, so we do not ask you for it again. We send only a cryptographic code, not the characteristics; if you have not filled in the form, we keep nothing', '90 days'],
+                ['bt_vid', 'Cookie (only after a form)', 'A random code that links the contact step to the order placed from the same browser, so it does not appear twice', '90 days'],
                 ['bt-visit', 'Session storage', 'Counts the visit only once per session, for our aggregate statistics; it does not send any identifier', 'Until you close the tab'],
-                ['bt-interest-*', 'Session storage', 'Remembers the products already viewed in the current session on acces.biohack-tech.ro', 'Until you close the tab'],
                 ['__stripe_mid, __stripe_sid', 'Stripe cookie, only on the payment page', 'Payment security and fraud prevention', '1 year and 30 minutes, respectively'],
               ],
             },

@@ -147,7 +147,7 @@ export default async function CallsPage() {
                     <td className="py-2 tabular-nums">{t.phone}</td>
                     <td className="py-2">
                       {String(t.vars.product_quantities || t.vars.product_names)}
-                      <span className="block text-[12.5px] text-muted">{t.scenario === 'cart' ? `coș · ${t.vars.cart_total}` : 'a cerut prețul'}</span>
+                      <span className="block text-[12.5px] text-muted">{t.vars.cart_total ? `coș · ${t.vars.cart_total}` : 'coș'}</span>
                     </td>
                     <td className="py-2">{STATUS[t.status] ?? t.status}</td>
                     <td className="py-2">

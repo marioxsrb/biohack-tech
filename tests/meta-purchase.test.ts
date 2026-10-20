@@ -36,14 +36,14 @@ it('reads fbp, fbc, ip and user agent from the checkout request, and builds fbc 
     cookie: '_fbp=fb.1.1700000000000.1234567890; _ga=1',
     'user-agent': 'Mozilla/5.0 MetaTest',
     'x-forwarded-for': '203.0.113.9, 10.0.0.1',
-    host: 'acces.biohack-tech.ro',
+    host: 'calm.biohack-tech.ro',
   })
   expect(metaBrowser(headers, { fbclid: 'IwAR0abcdefghij', siteHost: 'biohack-tech.ro', now: 1700000000001 })).toEqual({
     fbp: 'fb.1.1700000000000.1234567890',
     fbc: 'fb.1.1700000000001.IwAR0abcdefghij',
     ip: '203.0.113.9',
     ua: 'Mozilla/5.0 MetaTest',
-    host: 'acces.biohack-tech.ro',
+    host: 'calm.biohack-tech.ro',
   })
   expect(metaBrowser(new Headers({ 'x-forwarded-for': '203.0.113.9' }), { siteHost: 'biohack-tech.ro' })).toBeNull()
   expect(metaPhoneDigits('0722 123 456')).toBe('40722123456')

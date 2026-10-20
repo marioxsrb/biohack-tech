@@ -111,9 +111,9 @@ export function CartView() {
                       {l.product.name}
                     </Link>
                     <p className="text-[15px] text-muted">{l.variantLabel ?? l.product.purpose}</p>
-                    <p data-price className="mt-0.5 text-[14px] text-muted tabular-nums">{fmt(l.unit)} {t.each}</p>
+                    <p className="mt-0.5 text-[14px] text-muted tabular-nums">{fmt(l.unit)} {t.each}</p>
                   </div>
-                  <p data-price className="flex-none text-[17px] font-medium text-ink tabular-nums">{fmt(l.unit * l.quantity)}</p>
+                  <p className="flex-none text-[17px] font-medium text-ink tabular-nums">{fmt(l.unit * l.quantity)}</p>
                 </div>
                 <div className="mt-4 flex items-center justify-between gap-3 max-sm:mt-2.5">
                   <QuantityStepper size="sm" max={maxQtyFor(l.product.id)} value={l.quantity} onChange={(q) => setQuantity(l.key, q)} label={t.quantity(l.product.name)} />

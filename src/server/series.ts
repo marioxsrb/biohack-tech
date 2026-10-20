@@ -1,6 +1,6 @@
 /**
  * Time series for the admin's custom charts: one metric, per day or week, optionally split by one dimension
- * (site, funnel, source, payment, product, call outcome), over a range of Bucharest days. Aggregates only;
+ * (site, source, payment, product, call outcome), over a range of Bucharest days. Aggregates only;
  * nothing personal. The same orders count as in the report (server/report.ts): standing orders only.
  */
 import 'server-only'
@@ -11,11 +11,11 @@ const TZ = 'Europe/Bucharest'
 const STANDS = `o.kind = 'checkout' and o.status not in ('cancelled', 'abandoned') and (o.payment_method <> 'card' or o.payment_status in ('paid', 'partially_refunded', 'refunded'))`
 
 export const METRICS = {
-  sessions: { label: 'Vizite (sesiuni)', unit: 'count', by: ['site', 'funnel', 'source'] },
-  views: { label: 'Afișări de pagini', unit: 'count', by: ['site', 'funnel', 'source'] },
-  leads: { label: 'Leaduri', unit: 'count', by: ['site', 'funnel', 'source', 'product'] },
-  orders: { label: 'Comenzi valide', unit: 'count', by: ['site', 'funnel', 'payment', 'source'] },
-  revenue: { label: 'Valoare comenzi (lei)', unit: 'lei', by: ['site', 'funnel', 'payment', 'source', 'product'] },
+  sessions: { label: 'Vizite (sesiuni)', unit: 'count', by: ['site', 'source'] },
+  views: { label: 'Afișări de pagini', unit: 'count', by: ['site', 'source'] },
+  leads: { label: 'Leaduri', unit: 'count', by: ['site', 'source', 'product'] },
+  orders: { label: 'Comenzi valide', unit: 'count', by: ['site', 'payment', 'source'] },
+  revenue: { label: 'Valoare comenzi (lei)', unit: 'lei', by: ['site', 'payment', 'source', 'product'] },
   units: { label: 'Bucăți vândute', unit: 'count', by: ['product', 'site'] },
   aov: { label: 'Coș mediu (lei)', unit: 'lei', by: ['site', 'payment'] },
   conversion: { label: 'Conversie (comenzi / sesiuni, %)', unit: 'percent', by: ['site'] },
@@ -25,11 +25,10 @@ export const METRICS = {
 } as const
 
 export type Metric = keyof typeof METRICS
-export type Breakdown = 'none' | 'site' | 'funnel' | 'source' | 'payment' | 'product' | 'outcome' | 'code'
+export type Breakdown = 'none' | 'site' | 'source' | 'payment' | 'product' | 'outcome' | 'code'
 export const BREAKDOWNS: Record<Breakdown, string> = {
   none: 'Fără împărțire',
   site: 'Pe site',
-  funnel: 'Pe funnel',
   source: 'Pe sursă (utm_source)',
   payment: 'Pe metoda de plată',
   product: 'Pe produs',
@@ -43,12 +42,13 @@ export type SeriesResult = { metric: Metric; label: string; unit: string; bucket
 const SITE_LABEL = Object.fromEntries(SITES.map((s) => [s.site, s.label]))
 const LABELS: Record<string, Record<string, string>> = {
   site: SITE_LABEL,
-  funnel: { visible_price: 'preț vizibil', gated_price: 'acces (preț ascuns)' },
   payment: { cash_on_delivery: 'ramburs', card: 'card', bank_transfer: 'transfer' },
 }
 
-const LEAD_SITE = `case when funnel = 'gated_price' then 'acces' when coalesce(landing_host,'') like '%biohack-tech.net' or coalesce(landing_host,'') like 'net.localhost%' then 'net' when split_part(coalesce(landing_host,''), '.', 1) in ('calm','focus','amber') then split_part(landing_host, '.', 1) else 'main' end`
-const ORDER_SITE = `case when o.site = 'net' then 'net' when o.attribution->>'landing' in ('calm','focus','amber') then o.attribution->>'landing' when coalesce(o.attribution->>'funnel','') = 'gated_price' then 'acces' else 'main' end`
+/** Visits counted on the former acces.<domain> (closed 20.10.2026) belong to the main store now. */
+const VISIT_SITE = `case when site = 'acces' then 'main' else site end`
+const LEAD_SITE = `case when coalesce(landing_host,'') like '%biohack-tech.net' or coalesce(landing_host,'') like 'net.localhost%' then 'net' when split_part(coalesce(landing_host,''), '.', 1) in ('calm','focus','amber') then split_part(landing_host, '.', 1) else 'main' end`
+const ORDER_SITE = `case when o.site = 'net' then 'net' when o.attribution->>'landing' in ('calm','focus','amber') then o.attribution->>'landing' else 'main' end`
 
 /** The validated query (unknown values fall back to safe defaults) . */
 export function parseSeriesQuery(raw: Record<string, unknown>): SeriesQuery {
@@ -68,11 +68,11 @@ function sqlFor(q: SeriesQuery): string {
   switch (q.metric) {
     case 'sessions':
     case 'views': {
-      const key = q.by === 'site' ? 'site' : q.by === 'funnel' ? 'funnel' : `coalesce(nullif(source,''),'(direct)')`
+      const key = q.by === 'site' ? VISIT_SITE : `coalesce(nullif(source,''),'(direct)')`
       return `select ${b('day')} as bucket, ${k(key)} as key, sum(${q.metric})::float as value from visit_stats where day >= $1::date and day <= $2::date group by 1, 2`
     }
     case 'leads': {
-      const key = q.by === 'site' ? LEAD_SITE : q.by === 'funnel' ? 'funnel' : q.by === 'product' ? `case when product_id = 'cart' then 'coș' else product_id end` : `coalesce(nullif(attribution->'utm'->>'utm_source',''),'(direct)')`
+      const key = q.by === 'site' ? LEAD_SITE : q.by === 'product' ? `case when product_id = 'cart' then 'coș' else product_id end` : `coalesce(nullif(attribution->'utm'->>'utm_source',''),'(direct)')`
       return `select ${b(localTs('created_at'))} as bucket, ${k(key)} as key, count(*)::float as value from leads where ${localTs('created_at')}::date between $1::date and $2::date group by 1, 2`
     }
     case 'orders':
@@ -80,7 +80,7 @@ function sqlFor(q: SeriesQuery): string {
     case 'aov':
     case 'codes': {
       const key =
-        q.by === 'site' ? ORDER_SITE : q.by === 'funnel' ? `coalesce(o.attribution->>'funnel','visible_price')` : q.by === 'payment' ? 'o.payment_method' : q.by === 'code' ? `coalesce(o.promo_code,'')` : `coalesce(nullif(o.attribution->'utm'->>'utm_source',''),'(direct)')`
+        q.by === 'site' ? ORDER_SITE : q.by === 'payment' ? 'o.payment_method' : q.by === 'code' ? `coalesce(o.promo_code,'')` : `coalesce(nullif(o.attribution->'utm'->>'utm_source',''),'(direct)')`
       if (q.metric === 'revenue' && q.by === 'product')
         return `select ${b(localTs('o.created_at'))} as bucket, i.product_name as key, sum(i.line_total_minor * o.fx_rate)::float / 100 as value from order_items i join orders o on o.id = i.order_id
                 where ${STANDS} and ${localTs('o.created_at')}::date between $1::date and $2::date group by 1, 2`

@@ -80,11 +80,10 @@ export type Config = {
   transferExpiryDays: number | null
   /**
    * Conversion engine switches, each independent and off unless set to "true":
-   *   priceGate          acces.<domain> shows products with the price behind a short form (off: it sends visitors to the main site)
    *   abandonedCheckout  leads from the checkout's contact step, and abandonment marking for every lead
    *   recoveryEmail      recovery emails (still only with marketing consent; off: leads are kept, nothing is sent)
    */
-  features: { priceGate: boolean; abandonedCheckout: boolean; recoveryEmail: boolean }
+  features: { abandonedCheckout: boolean; recoveryEmail: boolean }
   /**
    * When the recovery emails go out after the last activity (defaults 30 min, 24 h); an abandoned cart also gets
    * a third, last one (default 48 h), so the sequence is about a day apart.
@@ -130,10 +129,10 @@ export type CallingConfig = {
   provider: 'elevenlabs'
   maxAttempts: number
   /**
-   * Minutes of quiet after the lead's last activity before the first call: `cart` = a checkout with a cart
-   * (AI_CALL_DELAY_VISIBLE_MINUTES, default 20), `price_reveal` = the price form (AI_CALL_DELAY_GATED_MINUTES, 30).
+   * Minutes of quiet after the checkout's last activity before the first call (AI_CALL_DELAY_VISIBLE_MINUTES,
+   * default 20).
    */
-  delays: { cart: number; price_reveal: number }
+  delays: { cart: number }
   /**
    * Controlled testing (AI_CALLING_TEST_MODE=true): only `testNumbers` can be called, and only they get the short
    * `testDelayMinutes` (2). Test mode without a list calls nobody.
@@ -281,7 +280,7 @@ function readCalling(issues: ConfigIssue[], isolated: boolean): { calling: Calli
     dryRun: str('AI_CALLING_DRY_RUN') !== 'false',
     provider: 'elevenlabs',
     maxAttempts: Math.min(positiveInt(str('AI_CALLING_MAX_ATTEMPTS')) ?? 3, 3),
-    delays: { cart: positiveInt(str('AI_CALL_DELAY_VISIBLE_MINUTES')) ?? 20, price_reveal: positiveInt(str('AI_CALL_DELAY_GATED_MINUTES')) ?? 30 },
+    delays: { cart: positiveInt(str('AI_CALL_DELAY_VISIBLE_MINUTES')) ?? 20 },
     testMode: flag('AI_CALLING_TEST_MODE'),
     testDelayMinutes: Math.min(positiveInt(str('AI_CALLING_TEST_DELAY_MINUTES')) ?? 2, 10),
     retryHours: positiveInt(str('AI_CALLING_RETRY_HOURS')) ?? 1,
@@ -480,7 +479,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     cronSecret,
     abandonAfterMinutes: positiveInt(str('ABANDON_AFTER_MINUTES')) ?? 60,
     transferExpiryDays: positiveInt(str('TRANSFER_EXPIRY_DAYS')),
-    features: { priceGate: flag('PRICE_GATE_ENABLED'), abandonedCheckout: flag('ABANDONED_CHECKOUT_ENABLED'), recoveryEmail: flag('RECOVERY_EMAIL_ENABLED') },
+    features: { abandonedCheckout: flag('ABANDONED_CHECKOUT_ENABLED'), recoveryEmail: flag('RECOVERY_EMAIL_ENABLED') },
     recovery: {
       firstMinutes: positiveInt(str('RECOVERY_FIRST_MINUTES')) ?? 30,
       secondHours: positiveInt(str('RECOVERY_SECOND_HOURS')) ?? 24,

@@ -1,14 +1,13 @@
 'use client'
 
-import { startTransition, useActionState, useState } from 'react'
+import { startTransition, useActionState } from 'react'
 import { testCallAction, type TestCallState } from '../actions'
 
 type P = { id: string; name: string; price: number | null; variants: { id: string; label: string }[] }
 
-/** An imaginary order and a number: the agent calls with exactly that context (nothing real is changed). */
+/** An imaginary cart and a number: the agent calls with exactly that context (nothing real is changed). */
 export function TestCallForm({ products }: { products: P[] }) {
   const [state, action, pending] = useActionState<TestCallState, FormData>(testCallAction, {})
-  const [scenario, setScenario] = useState<'cart' | 'price_reveal'>('cart')
   return (
     <form
       onSubmit={(e) => {
@@ -29,23 +28,7 @@ export function TestCallForm({ products }: { products: P[] }) {
         </label>
       </div>
       <fieldset className="grid gap-2">
-        <legend className="mb-1 font-medium text-ink">Situația</legend>
-        <label className="flex items-center gap-2">
-          <input type="radio" name="scenario" value="cart" checked={scenario === 'cart'} onChange={() => setScenario('cart')} className="accent-[var(--color-ink)]" /> Coș nefinalizat (are produse în coș)
-        </label>
-        <label className="flex items-center gap-2">
-          <input type="radio" name="scenario" value="price_reveal" checked={scenario === 'price_reveal'} onChange={() => setScenario('price_reveal')} className="accent-[var(--color-ink)]" /> A cerut prețul pe acces (fără coș: primul produs ales)
-        </label>
-      </fieldset>
-      <label className="grid gap-1.5 sm:max-w-[320px]">
-        <span className="font-medium text-ink">Funnel</span>
-        <select name="funnel" defaultValue={scenario === 'price_reveal' ? 'gated_price' : 'visible_price'} key={scenario} className="field !w-auto">
-          <option value="visible_price">biohack-tech.ro (preț vizibil)</option>
-          <option value="gated_price">acces.biohack-tech.ro (preț ascuns)</option>
-        </select>
-      </label>
-      <fieldset className="grid gap-2">
-        <legend className="mb-1 font-medium text-ink">Comanda imaginară</legend>
+        <legend className="mb-1 font-medium text-ink">Coșul imaginar (coș nefinalizat)</legend>
         {products.map((p, i) => (
           <div key={p.id} className="flex flex-wrap items-center gap-3 rounded-[12px] bg-mist px-3 py-2">
             <input name={`qty:${p.id}`} type="number" min={0} max={10} defaultValue={i === 0 ? 1 : 0} className="field !min-h-10 !w-[76px] !py-1.5" aria-label={`Cantitate ${p.name}`} />

@@ -17,7 +17,7 @@ export type LegalBlock = string | { list: string[] } | { table: { head: string[]
 export type LegalSection = { heading: string; id?: string; body: LegalBlock[] }
 export type LegalPage = { slug: string; title: string; shortTitle: string; description: string; updated: string; sections: LegalSection[] }
 
-const UPDATED = '19 octombrie 2026'
+const UPDATED = '20 octombrie 2026'
 const contactLine = `Scrie-ne la ${site.email} sau sună la ${site.phone}. Răspundem ${terms.responseTime}.`
 
 const identity = (): LegalSection => ({
@@ -108,7 +108,7 @@ export const legalPages: LegalPage[] = [
         heading: 'Comunicări comerciale',
         id: 'comunicari',
         body: [
-          `Îți trimitem comunicări comerciale doar dacă bifezi, în formularul de preț sau la finalizarea comenzii, căsuța: „${COMMUNICATIONS_CONSENT_TEXT}” Bifa este opțională și nu este bifată dinainte. Fără ea vezi prețurile și comanzi la fel. Acceptarea acestor termeni nu înseamnă acord pentru comunicări.`,
+          `Îți trimitem comunicări comerciale doar dacă bifezi, la finalizarea comenzii, căsuța: „${COMMUNICATIONS_CONSENT_TEXT}” Bifa este opțională și nu este bifată dinainte. Fără ea vezi prețurile și comanzi la fel. Acceptarea acestor termeni nu înseamnă acord pentru comunicări.`,
           'Bifa acoperă două canale, pe care le înregistrăm separat (textul, data și pagina), pentru adresa de email și pentru numărul de telefon:',
           {
             list: [
@@ -159,8 +159,6 @@ export const legalPages: LegalPage[] = [
                 ['Procesăm, livrăm și îți scriem despre comandă', 'Nume, email, telefon, adresă de livrare și facturare, produsele comandate, observații', 'Contractul (art. 6 alin. 1 lit. b GDPR)'],
                 ['Facturăm și ținem evidența contabilă', 'Datele de facturare; pentru firme, denumirea, CUI și nr. Reg. Com.', 'Obligație legală (art. 6 alin. 1 lit. c)'],
                 ['Încasăm plata și prevenim frauda', 'Rezultatul plății de la Stripe; la transfer, datele din extrasul de cont', 'Contractul și interesul legitim de a preveni frauda (lit. b și f)'],
-                ['Îți arătăm prețul și oferta, pe acces.biohack-tech.ro, după formularul scurt', 'Nume, email, telefon, produsul ales, sursa vizitei (de ex. reclama din care ai venit)', 'Pași înaintea unui contract, la cererea ta (lit. b)'],
-                ['Recunoaștem dispozitivul cu care ai completat formularul de preț, ca să nu ți-l cerem din nou (alt browser, fereastră privată, cookie șters); fără formular completat nu păstrăm nimic', 'Un cod derivat din caracteristici ale dispozitivului (ecran, fus orar, limbă, sistem) și din adresa de rețea, păstrat doar ca valoare criptografică; nu păstrăm adresa IP și nu îl folosim la altceva', 'Pași înaintea unui contract, la cererea ta (lit. b); strict necesar pentru serviciul cerut'],
                 ['Păstrăm ce ai scris în pasul de contact al comenzii înainte să o trimiți, ca să știm câte comenzi rămân neterminate și să îți putem reface coșul', 'Nume, email, telefon, produsele din coș', 'Interesul nostru legitim de a înțelege și îmbunătăți comanda (lit. f)'],
                 ['Îți trimitem noutăți, oferte, recomandări și un memento pentru o comandă sau o ofertă nefinalizată', 'Email, nume, produsele de care ai fost interesat', 'Consimțământul tău, dat prin bifă (lit. a)'],
                 ['Te sună asistentul nostru AI despre produsul ales, dacă nu ai finalizat comanda', 'Telefon, prenume, produsul ales, rezultatul apelului', 'Consimțământul tău separat pentru apeluri, dat prin bifă (lit. a)'],
@@ -171,7 +169,6 @@ export const legalPages: LegalPage[] = [
             },
           },
           'Fără datele de comandă nu putem procesa și livra comanda. Emailurile de marketing sunt opționale: comanda funcționează la fel și fără ele.',
-          'Datele din formularul de preț nu sunt folosite pentru reclame și nu te sunăm pe baza lor. Un email de reamintire primești doar dacă ai bifat acordul pentru emailuri de marketing. Telefonul îl folosim doar pentru întrebări despre o comandă pe care o plasezi.',
           'Nu luăm decizii automate cu efecte juridice asupra ta.',
         ],
       },
@@ -179,7 +176,7 @@ export const legalPages: LegalPage[] = [
         heading: 'Emailuri de marketing',
         id: 'marketing',
         body: [
-          `Îți trimitem emailuri de marketing doar dacă bifezi, la comandă sau în formularul de preț, căsuța opțională: „${COMMUNICATIONS_CONSENT_TEXT}” Condițiile sunt în [Termeni și condiții, Comunicări comerciale](/terms-of-service#comunicari). Acceptarea termenilor de vânzare nu înseamnă acord pentru marketing.`,
+          `Îți trimitem emailuri de marketing doar dacă bifezi, la comandă, căsuța opțională: „${COMMUNICATIONS_CONSENT_TEXT}” Condițiile sunt în [Termeni și condiții, Comunicări comerciale](/terms-of-service#comunicari). Acceptarea termenilor de vânzare nu înseamnă acord pentru marketing.`,
           'Păstrăm dovada acordului: textul pe care l-ai văzut, data și comanda sau formularul în care l-ai dat.',
           'Dacă nu finalizezi o comandă sau o ofertă și ai bifat acordul, îți putem trimite cel mult două emailuri de reamintire, fără reduceri inventate. Ele se opresc imediat ce comanzi, te dezabonezi sau retragi acordul.',
           'Te poți dezabona oricând din linkul din fiecare email de marketing sau scriindu-ne. Emailurile despre comenzi (confirmare, plată, factură, livrare, rambursare) vin în continuare, pentru că sunt necesare comenzii.',
@@ -223,7 +220,7 @@ export const legalPages: LegalPage[] = [
               'Comenzile și facturile: cât cer legile contabile și fiscale.',
               'Acordul pentru marketing și dezabonarea: cât timp primești emailuri și apoi cât ne pot fi cerute ca dovadă.',
               'Mesajele și cererile tale: cât durează rezolvarea și termenul în care ne pot fi cerute ca dovadă.',
-              'Datele din formularul de preț și din pasul de contact al unei comenzi netrimise: cel mult 12 luni de la ultima ta activitate, apoi le ștergem automat. Dacă plasezi o comandă, rămân legate de comandă.',
+              'Datele din pasul de contact al unei comenzi netrimise (și cele din formularul de preț de pe acces.biohack-tech.ro, folosit până la 20 octombrie 2026): cel mult 12 luni de la ultima ta activitate, apoi le ștergem automat. Dacă plasezi o comandă, rămân legate de comandă.',
               'Acordul pentru apeluri și refuzul lui: cât timp ne pot fi cerute ca dovadă. Rezultatele apelurilor: împreună cu solicitarea de care țin. Înregistrarea audio, transcriptul și analiza unui apel: 30 de zile, la ElevenLabs, apoi se șterg automat.',
             ],
           },
@@ -231,7 +228,7 @@ export const legalPages: LegalPage[] = [
       },
       {
         heading: 'Ce stocăm în browserul tău',
-        body: ['Coșul, formularul de comandă neterminat, alegerea privind cookie-urile și, pe acces.biohack-tech.ro, faptul că ai completat formularul de preț (inclusiv recunoașterea dispozitivului). Detaliile sunt în [Politica de cookies](/politica-cookies).'],
+        body: ['Coșul, formularul de comandă neterminat și alegerea privind cookie-urile. Detaliile sunt în [Politica de cookies](/politica-cookies).'],
       },
       {
         heading: 'Drepturile tale',
@@ -269,13 +266,8 @@ export const legalPages: LegalPage[] = [
                 ['biohack-checkout-draft', 'Stocare de sesiune', 'Păstrează ce ai completat în formularul de comandă', 'Până închizi fila'],
                 ['bt-cart-cleared-*', 'Stocare locală', 'Ține minte că produsele unei comenzi au fost scoase din coș', 'Până ștergi datele site-ului'],
                 ['bt-consent-v1', 'Stocare locală', 'Ține minte alegerea ta privind cookie-urile', `${Math.round(CONSENT_MAX_AGE_DAYS / 30)} luni`],
-                ['bt_vid', 'Cookie (doar după un formular)', 'Un cod aleator care leagă formularul de preț sau pasul de contact de comanda plasată din același browser, ca să nu apară de două ori', '90 de zile'],
-                ['bt_gate2', 'Cookie, pe acces.biohack-tech.ro', 'Ține minte că ai completat formularul de preț, ca să nu ți-l cerem din nou', '90 de zile'],
-                ['bt-gate2', 'Stocare locală, pe acces.biohack-tech.ro', 'Aceeași informație, dacă cookie-ul se șterge', '90 de zile (verificat de server)'],
-                ['bt-gate-checked', 'Stocare de sesiune', 'Verificăm o singură dată pe sesiune dacă dispozitivul a mai completat formularul', 'Până închizi fila'],
-                ['Recunoașterea dispozitivului', 'Citirea unor caracteristici ale dispozitivului (ecran, fus orar, limbă, sistem)', 'Când deschizi acces.biohack-tech.ro fără cookie, verificăm o dată dacă dispozitivul a completat deja formularul de preț, ca să nu ți-l cerem din nou. Trimitem doar un cod criptografic, nu caracteristicile; dacă nu ai completat formularul, nu păstrăm nimic', '90 de zile'],
+                ['bt_vid', 'Cookie (doar după un formular)', 'Un cod aleator care leagă pasul de contact de comanda plasată din același browser, ca să nu apară de două ori', '90 de zile'],
                 ['bt-visit', 'Stocare de sesiune', 'Numără vizita o singură dată pe sesiune, pentru statisticile noastre agregate; nu trimite niciun identificator', 'Până închizi fila'],
-                ['bt-interest-*', 'Stocare de sesiune', 'Ține minte produsele deja văzute în sesiunea curentă pe acces.biohack-tech.ro', 'Până închizi fila'],
                 ['__stripe_mid, __stripe_sid', 'Cookie Stripe, doar pe pagina de plată', 'Securitatea plății și prevenirea fraudei', '1 an, respectiv 30 de minute'],
               ],
             },

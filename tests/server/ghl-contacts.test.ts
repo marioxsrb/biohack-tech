@@ -27,7 +27,7 @@ beforeEach(() => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
-const lead = { name: 'Ana Popescu', email: 'Ana@Exemplu.ro', phone: null, funnel: 'gated_price' }
+const lead = { name: 'Ana Popescu', email: 'Ana@Exemplu.ro', phone: null }
 
 it('an address GHL already has: its oldest contact is updated, nothing is created, its source is kept', async () => {
   existing = 'old-contact'

@@ -2,11 +2,9 @@
  * Where an order came from. The landing puts its slug and the campaign's UTM parameters on the
  * checkout link; the checkout sends them with the order; the server keeps only what this file
  * accepts. Nothing is stored in the browser: no cookie, no localStorage. Meta's click id (fbclid) is
- * kept with the order for campaign measurement (gclid is not collected). The funnel (visible or
- * price-gated) is set by the server from the hostname, never from what the browser says.
+ * kept with the order for campaign measurement (gclid is not collected).
  */
 import type { MetaBrowser } from './meta'
-import type { Funnel } from './lead'
 import { isLandingSlug, landingBaseDomain, landingHost, type LandingSlug } from './landing-hosts'
 import { ENTRY_LABEL, isEntrySource, type EntrySource } from './purchase'
 
@@ -24,8 +22,6 @@ export type Attribution = {
   entry?: EntrySource
   /** Meta click id from the ad link. */
   fbclid?: string
-  /** visible_price (biohack-tech.ro and its landings) or gated_price (acces.<domain>). Server-set. */
-  funnel?: Funnel
   /**
    * Browser signals for the Conversions API, captured by the server from the checkout request.
    * Never taken from the body (sanitizeAttribution does not copy this).
@@ -98,7 +94,6 @@ export function sanitizeAttribution(raw: unknown, mainHost?: string, base = land
 export function attributionSummary(a: Attribution | null | undefined): string {
   if (!a) return 'site'
   const parts = [a.landing ? `landing ${a.landing}` : a.entry ? `site, ${ENTRY_LABEL[a.entry]}` : 'site']
-  if (a.funnel === 'gated_price') parts[0] = `acces (preț după formular), ${parts[0]}`
   const u = a.utm
   if (u && (u.utm_source || u.utm_medium || u.utm_campaign)) parts.push([u.utm_source || '-', u.utm_medium || '-', u.utm_campaign || '-'].join(' / '))
   return parts.join(' · ').slice(0, 250)

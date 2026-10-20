@@ -17,7 +17,6 @@ import { deliver, EmailError } from '@/server/integrations/email/transport'
 import { NOTIFICATIONS, renderNotification, type NotifyEvent } from '@/server/notifications'
 import { CART_INTEREST, interestOf, leads, recoveryDecision, recoveryFacts } from '@/server/leads'
 import { renderLeadRecovery } from '@/server/leads-email'
-import { gatedOrigin } from '@/lib/lead'
 import { isIntlHost, siteOrigin } from '@/lib/sites'
 import { marketing } from '@/server/marketing/consent'
 import { CALL_TAGS, INTEREST_TAG, LEAD_TAGS, attributionTags, callOutcomeTag, siteTag } from '@/server/integrations/ghl'
@@ -25,7 +24,7 @@ import { prospectFor } from '@/server/prospects'
 import { replies } from '@/server/replies'
 import { deliverPush, stillTrue, type PushEvent } from '@/server/app/push'
 import { callConsent } from '@/server/calling/consent'
-import { hasCart, leadItems, recoveryCode, recoveryLink, renderRecoveryOffer, RECOVERY_PERCENT } from '@/server/calling/offer'
+import { leadItems, recoveryCode, recoveryLink, renderRecoveryOffer, RECOVERY_PERCENT } from '@/server/calling/offer'
 import { renderCartRecovery } from '@/server/cart-email'
 import { givenName } from '@/server/calling/names'
 import { getProduct } from '@/content/catalog'
@@ -240,7 +239,7 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const products = lead.productId && lead.productId !== CART_INTEREST ? [lead.productId] : (lead.cart ?? []).map((l) => l.productId)
     await ghl.addTags(c.ghl, contactId, [
       LEAD_TAGS.lead,
-      lead.funnel === 'gated_price' ? LEAD_TAGS.gated : LEAD_TAGS.visible,
+      LEAD_TAGS.visible,
       ...(lead.stage !== 'lead' ? [LEAD_TAGS.checkout] : []),
       ...(lead.stage === 'ordered' || lead.stage === 'purchased' ? [LEAD_TAGS.converted] : []),
       ...products.map((p) => INTEREST_TAG[p]).filter(Boolean),
@@ -257,7 +256,7 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const db = await getDb()
     const email = String(j.payload.email ?? '').trim().toLowerCase()
     if (!email) throw new Permanent('no email')
-    const contactId = await ghl.upsertLeadContact(c.ghl, { name: null, email, phone: null, funnel: 'popup' }, await knownContactId(db, email))
+    const contactId = await ghl.upsertLeadContact(c.ghl, { name: null, email, phone: null }, await knownContactId(db, email))
     await ghl.addTags(c.ghl, contactId, [LEAD_TAGS.lead, LEAD_TAGS.popup])
     await syncProspect(db, c.ghl, email, contactId, j.payload.site === 'net' ? 'net' : 'ro')
     return contactId
@@ -299,13 +298,13 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
       throw new Skip(d.reason)
     }
     const token = await marketing.unsubscribeToken(db, lead.email)
-    // The site the visitor used: acces.<domain>, the international biohack-tech.net, or the main site.
+    // The site the visitor used: the international biohack-tech.net, or the main site.
     const intl = isIntlHost(lead.landingHost)
-    const base = lead.funnel === 'gated_price' ? gatedOrigin(c.siteUrl) : intl ? siteOrigin('net', c.siteUrl) : c.siteUrl
     const origin = intl ? siteOrigin('net', c.siteUrl) : c.siteUrl
+    const base = origin
     const unsubscribeUrl = `${origin}${lead.locale === 'en' ? '/en' : ''}/dezabonare/${token}`
     // An abandoned cart: the designed three-email sequence, with the cart, today's prices and the recovery code.
-    const cartItems = d.abandonment === 'checkout_abandoned' && hasCart(lead) ? leadItems(lead) : []
+    const cartItems = leadItems(lead)
     if (cartItems.length) {
       await ensureStoreSettings()
       const code = await recoveryCode(db)
@@ -330,14 +329,13 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
       await leads.update(db, lead.id, { abandonment: lead.abandonment ?? d.abandonment, recovery_status: 'sent', recovery_reason: `step ${step}`, recovery_sent: step, last_recovery_at: now })
       return ref
     }
-    if (step === 3) throw new Skip('the third email is for abandoned carts')
+    if (step === 3) throw new Skip('the third email needs the cart')
     const mail = renderLeadRecovery({
       locale: lead.locale,
       siteUrl: intl ? siteOrigin('net', c.siteUrl) : c.siteUrl,
       step,
       firstName: lead.name?.split(' ')[0] ?? null,
       products: interestOf(lead),
-      abandonment: d.abandonment,
       link: `${base}/api/lead/resume?t=${lead.recoveryToken}`,
       unsubscribeUrl,
     })
@@ -371,7 +369,7 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
       const code = await promoCodes.get(db, call.discountCode)
       if (!code?.active) throw new Skip('code switched off')
       const token = await marketing.unsubscribeToken(db, lead.email)
-      const mail = renderRecoveryOffer({ firstName: lead.name?.split(' ')[0] ?? null, items: leadItems(lead), cart: hasCart(lead), code: code.code, link: recoveryLink(lead, code.code, c), unsubscribeUrl: `${c.siteUrl}/dezabonare/${token}` })
+      const mail = renderRecoveryOffer({ firstName: lead.name?.split(' ')[0] ?? null, items: leadItems(lead), code: code.code, link: recoveryLink(lead, code.code, c), unsubscribeUrl: `${c.siteUrl}/dezabonare/${token}` })
       const ref = await deliver(c, { ...mail, to: lead.email, name: `call-offer-request-${call.id}` })
       await calls.update(db, call.id, { email_status: 'sent_on_request' })
       // It is the lead's first recovery email: the regular sequence skips its own first one (one email with the code).
@@ -382,9 +380,8 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
       )
       return ref
     }
-    // The recovery link restores the context (an unlocked price on acces, or the cart of a checkout).
-    const base = lead.funnel === 'gated_price' ? gatedOrigin(c.siteUrl) : c.siteUrl
-    const mail = renderCallLink({ firstName: lead.name?.split(' ')[0] ?? null, productName: product.name, link: `${base}/api/lead/resume?t=${lead.recoveryToken}`, company: companyLine() || null })
+    // The recovery link puts the checkout's cart back.
+    const mail = renderCallLink({ firstName: lead.name?.split(' ')[0] ?? null, productName: product.name, link: `${c.siteUrl}/api/lead/resume?t=${lead.recoveryToken}`, company: companyLine() || null })
     return deliver(c, { ...mail, to: lead.email, name: `call-link-${call.id}` })
   },
 

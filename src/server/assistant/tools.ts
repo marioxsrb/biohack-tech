@@ -33,8 +33,6 @@ export type CartInput = { productId: string; variantId?: string; quantity: numbe
 export type ToolContext = {
   db: Queryable
   config: Config
-  locked: boolean
-  gated: boolean
   locale: 'ro' | 'en'
   /** The visitor's currency (lei on Romanian pages, euro or dollar on English ones): every price is shown in it. */
   currency: Currency
@@ -50,7 +48,7 @@ const productId = z.enum(PRODUCT_IDS)
 const variantId = z.string().regex(/^[\w-]{1,60}$/).optional()
 const orderNumber = z.string().min(5).max(40)
 
-/** One product as the chat card shows it; the price only when prices may be shown. Null when it is not in the store. */
+/** One product as the chat card shows it. Null when it is not in the store. */
 function card(id: ProductId, ctx: ToolContext) {
   const p = getProduct(id, ctx.locale)
   if (!p) return null
@@ -62,8 +60,8 @@ function card(id: ProductId, ctx: ToolContext) {
     tagline: p.tagline,
     href: `${ctx.locale === 'en' ? '/en' : ''}/products/${p.slug}`,
     soldOut: !!p.soldOut,
-    ...(!ctx.locked && p.price !== null && { price: `${p.variablePrice ? (ctx.locale === 'en' ? 'from ' : 'de la ') : ''}${money(ctx, p.price)}` }),
-    ...(!ctx.locked && promo && { promotion: promoText(promo.badge, ctx.locale) }),
+    ...(p.price !== null && { price: `${p.variablePrice ? (ctx.locale === 'en' ? 'from ' : 'de la ') : ''}${money(ctx, p.price)}` }),
+    ...(promo && { promotion: promoText(promo.badge, ctx.locale) }),
     ...(p.variants?.length && { variants: p.variants.map((v) => ({ id: v.id, label: variantLabel(p, v) })) }),
   }
 }
@@ -78,9 +76,9 @@ export function assistantTools(ctx: ToolContext) {
 
   return {
     show_products: tool({
-      description: 'Arată cardurile produselor (imagine, scop, preț dacă e permis). Pentru recomandări și comparații.',
+      description: 'Arată cardurile produselor (imagine, scop, preț). Pentru recomandări și comparații.',
       inputSchema: z.object({ productIds: z.array(productId).min(1).max(3) }),
-      execute: async ({ productIds }) => ({ locked: ctx.locked, products: [...new Set(productIds)].map((id) => card(id, ctx)).filter((c) => c !== null) }),
+      execute: async ({ productIds }) => ({ products: [...new Set(productIds)].map((id) => card(id, ctx)).filter((c) => c !== null) }),
     }),
 
     propose_add_to_cart: tool({
@@ -89,7 +87,6 @@ export function assistantTools(ctx: ToolContext) {
       execute: async ({ productId, variantId, quantity }) => {
         const p = getProduct(productId, ctx.locale)
         if (!p) return { status: 'unavailable' as const, productId, name: productId }
-        if (ctx.locked) return { status: 'locked' as const, productId, name: p.name, message: 'Pe această pagină coșul se deschide după formularul „Vezi prețul și oferta”. Vizitatorul vede acum butonul formularului (nu un buton de coș).' }
         if (p.soldOut) return { status: 'sold_out' as const, productId, name: p.name }
         // No frame chosen, or one that does not exist: the card lets the visitor pick.
         if (p.variants?.length && (!variantId || !p.variants.some((v) => v.id === variantId))) return { status: 'choose_variant' as const, productId, name: p.name, quantity, variants: p.variants.map((v) => ({ id: v.id, label: variantLabel(p, v), price: money(ctx, unitPrice(p, v) ?? 0) })) }
@@ -117,7 +114,6 @@ export function assistantTools(ctx: ToolContext) {
         })
         if (!lines.length) return { empty: true as const }
         const items = lines.map((l) => `${l.quantity} × ${l.r.product.name}${l.r.variant ? ` (${variantLabel(l.r.product, l.r.variant)})` : ''}${l.r.unit === null ? ' (indisponibil)' : ''}`)
-        if (ctx.locked) return { empty: false as const, locked: true as const, items }
         const priced = lines.filter((l) => l.r.unit !== null).map((l) => ({ key: l.key, productId: l.r.product.id, quantity: l.quantity, unitAmount: convertUnit(l.r.unit!, ctx.currency) }))
         const p = priceLines(priced)
         // Free, or the book's fee once per order (lib/shipping.ts); never discounted.
@@ -144,14 +140,6 @@ export function assistantTools(ctx: ToolContext) {
         if (page === 'checkout') return { page, href: `${base}/checkout`, label: ctx.locale === 'en' ? 'Go to checkout' : 'Mergi la finalizarea comenzii' }
         return { page: 'cart' as const, href: `${base}/cart`, label: ctx.locale === 'en' ? 'Open cart' : 'Deschide coșul' }
       },
-    }),
-
-    ...(ctx.gated && {
-      show_price_form: tool({
-        description: 'Afișează butonul care deschide formularul „Vezi prețul și oferta” (doar pe pagina cu prețuri ascunse).',
-        inputSchema: z.object({ productId: productId.optional() }),
-        execute: async ({ productId }) => ({ locked: ctx.locked, productId, message: ctx.locked ? 'Butonul „Vezi prețul și oferta” este afișat vizitatorului în chat; formularul se deschide când apasă pe el.' : 'Prețurile sunt deja vizibile pe această pagină.' }),
-      }),
     }),
 
     request_order_code: tool({

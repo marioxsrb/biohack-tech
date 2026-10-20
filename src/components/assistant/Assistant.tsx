@@ -8,7 +8,6 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from 
 import { cartStore } from '@/components/cart/cart-store'
 import { useCart } from '@/components/cart/CartProvider'
 import { Thumb } from '@/components/cart/Thumb'
-import { useGate } from '@/components/gate/Gate'
 import { Arrow, Check, Close } from '@/components/ui/icons'
 import { getProduct, type ProductId } from '@/content/catalog'
 import { useLocale } from '@/i18n/LocaleProvider'
@@ -48,7 +47,6 @@ const COPY = {
     added: 'Adăugat în coș',
     notNow: 'Nu acum',
     chooseFrame: 'Alege rama:',
-    seePrice: 'Vezi prețul și oferta',
     soldOut: 'Stoc epuizat',
     cart: 'Vezi coșul',
     checkout: 'Finalizează comanda',
@@ -89,7 +87,6 @@ const COPY = {
     added: 'Added to cart',
     notNow: 'Not now',
     chooseFrame: 'Choose the frame:',
-    seePrice: 'See price and offer',
     soldOut: 'Sold out',
     cart: 'View cart',
     checkout: 'Checkout',
@@ -580,7 +577,6 @@ function Card({ children }: { children: ReactNode }) {
 
 function ToolView({ name, id, output, t, done, mark }: { name: string; id: string; output: Record<string, unknown>; t: Copy; done: Record<string, string>; mark: (k: string, v: string) => void }) {
   const locale = useLocale()
-  const gate = useGate()
   const { add, dismissConfirmation } = useCart()
   const base = locale === 'en' ? '/en' : ''
   const addLine = (productId: string, variantId: string | undefined, quantity: number) => {
@@ -613,10 +609,6 @@ function ToolView({ name, id, output, t, done, mark }: { name: string; id: strin
           const key = `${id}:${p.id}`
           const action = p.soldOut ? (
             <span className="text-[12.5px] text-muted">{t.soldOut}</span>
-          ) : output.locked ? (
-            <SmallBtn primary onClick={() => gate.open({ productId: p.id as ProductId })}>
-              {t.seePrice}
-            </SmallBtn>
           ) : done[key] === 'added' ? (
             <span className="inline-flex items-center gap-1 text-[12.5px] font-medium text-[#167a4a]">
               <Check className="h-4 w-4" /> {t.added}
@@ -660,17 +652,6 @@ function ToolView({ name, id, output, t, done, mark }: { name: string; id: strin
   if (name === 'propose_add_to_cart') {
     const o = output as { status: string; productId: string; variantId?: string; variant?: string; name: string; quantity?: number; unitPrice?: string; variants?: { id: string; label: string; price: string }[] }
     const product = getProduct(o.productId, locale)
-    if (o.status === 'locked')
-      return (
-        <Card>
-          <p className="font-medium text-ink">{o.name}</p>
-          <div className="mt-2">
-            <Btn primary onClick={() => gate.open({ productId: o.productId as ProductId })}>
-              {t.seePrice}
-            </Btn>
-          </div>
-        </Card>
-      )
     if (o.status === 'sold_out' || o.status === 'unavailable')
       return (
         <Card>
@@ -715,7 +696,7 @@ function ToolView({ name, id, output, t, done, mark }: { name: string; id: strin
     )
   }
 
-  if (name === 'cart_summary' && !output.empty && !output.locked) {
+  if (name === 'cart_summary' && !output.empty) {
     const o = output as { items: string[]; promotions: string[]; total: string }
     return (
       <Card>
@@ -752,15 +733,6 @@ function ToolView({ name, id, output, t, done, mark }: { name: string; id: strin
       </div>
     )
   }
-
-  if (name === 'show_price_form' && output.locked)
-    return (
-      <div>
-        <Btn primary onClick={() => gate.open({ productId: (output.productId as ProductId) || undefined })}>
-          {t.seePrice}
-        </Btn>
-      </div>
-    )
 
   if ((name === 'verify_order_code' || name === 'get_order_status') && output.verified && output.order) {
     const o = output.order as { orderNumber: string; status: string; payment: string; items: string[]; total: string; awb?: string; courier?: string; trackingUrl?: string }

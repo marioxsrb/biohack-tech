@@ -90,21 +90,18 @@ export function trackUi(event: UiEvent, params: { placement: UiPlacement; produc
 }
 
 /**
- * Funnel events for Meta (marketing consent and a running pixel, like everything else). `Lead` is Meta's
- * standard event and fires only after the server stored the lead, with the lead id as event id (Meta drops a
- * repeat). The others are custom: the price button, the form opened, the price shown, an order placed without
- * card payment (cash on delivery or transfer: not a Purchase until the money arrives), a visit from a recovery link.
- * No personal data is ever sent.
+ * Custom funnel events for Meta (marketing consent and a running pixel, like everything else): an order placed
+ * without card payment (cash on delivery or transfer: not a Purchase until the money arrives), and a visit from a
+ * recovery link. No personal data is ever sent.
  */
-export type FunnelEvent = 'PriceRevealClick' | 'LeadFormStart' | 'Lead' | 'PriceRevealed' | 'OrderPlaced' | 'RecoveryVisit'
+export type FunnelEvent = 'OrderPlaced' | 'RecoveryVisit'
 
-export function trackFunnel(event: FunnelEvent, params: { product?: string; funnel?: 'visible_price' | 'gated_price'; value?: number; payment?: 'cod' | 'transfer' } = {}, eventId?: string) {
+export function trackFunnel(event: FunnelEvent, params: { product?: string; value?: number; payment?: 'cod' | 'transfer' } = {}, eventId?: string) {
   if (typeof window === 'undefined' || !metaOn()) return
   const data = {
     ...(params.product && { content_ids: [params.product], content_type: 'product' }),
-    ...(params.funnel && { funnel: params.funnel }),
     ...(params.value !== undefined && { currency: 'RON', value: lei(params.value) }),
     ...(params.payment && { payment_method: params.payment }),
   }
-  whenLoaded('meta', () => (window as unknown as { fbq?: (...a: unknown[]) => void }).fbq?.(event === 'Lead' ? 'track' : 'trackCustom', event, data, eventId ? { eventID: eventId } : undefined))
+  whenLoaded('meta', () => (window as unknown as { fbq?: (...a: unknown[]) => void }).fbq?.('trackCustom', event, data, eventId ? { eventID: eventId } : undefined))
 }

@@ -46,7 +46,7 @@ export function LineOffer({ line, className = '' }: { line: ResolvedLine; classN
       <span aria-hidden className="flex h-4.5 w-4.5 flex-none items-center justify-center rounded-full bg-cyan-700 text-[12px] leading-none text-white">
         +
       </span>
-      <span data-price className="underline-offset-4 group-hover:underline">
+      <span className="underline-offset-4 group-hover:underline">
         {text}
       </span>
     </button>
