@@ -44,6 +44,8 @@ type Props = {
   pay: 'cod' | 'online'
   /** `primary`: the red two-line button. `secondary`: outlined, one line. `bar`: the compact sticky bar. */
   look?: 'primary' | 'secondary' | 'bar'
+  /** Replaces the primary button's title. Checkout, payment and the sticky bar stay as they are. */
+  title?: string
   className?: string
 }
 
@@ -53,7 +55,7 @@ type Props = {
  * with the same `?item=` and the payment method preselected (`?plata=`), so a new tab or a reload works too.
  * The checkout and the server price the order again; nothing here carries a price.
  */
-export function BuyNowButton({ productId, variantId, quantity = 1, pay, look = 'primary', className = '' }: Props) {
+export function BuyNowButton({ productId, variantId, quantity = 1, pay, look = 'primary', title, className = '' }: Props) {
   const router = useRouter()
   const locale = useLocale()
   const t = COPY[locale]
@@ -96,7 +98,7 @@ export function BuyNowButton({ productId, variantId, quantity = 1, pay, look = '
       ) : (
         <span className="flex min-w-0 flex-col items-start text-left leading-tight">
           <span className="text-[16.5px] font-semibold whitespace-normal">
-            <GateLabel locked={locale === 'en' ? 'See the price and offer' : 'Vezi prețul și oferta'}>{pending ? t.opening : label}</GateLabel>
+            <GateLabel locked={locale === 'en' ? 'See the price and offer' : 'Vezi prețul și oferta'}>{pending ? t.opening : title ?? label}</GateLabel>
           </span>
           <span className="mt-0.5 text-[13px] font-normal whitespace-normal text-white/85">{pay === 'cod' ? t.codSub : cashOnDelivery.enabled ? t.onlineSubCod : t.onlineSub}</span>
         </span>
