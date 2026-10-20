@@ -11,6 +11,8 @@ import { useLocale } from '@/i18n/LocaleProvider'
 import { Availability, BundleOffer, ContactOrder, Highlights, PriceBlock, SocialProof, TrustRow } from './BuyBox'
 import { Gallery } from './Gallery'
 import { BusinessStrip } from '@/components/b2b/BusinessStrip'
+import { CalmEvening } from '@/components/calm/CalmEvening'
+import { terms } from '@/config/site'
 import { BULK_OFFER } from '@/config/promotions'
 
 const COPY = {
@@ -49,6 +51,8 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
   const t = COPY[locale]
   const product = getProduct(productId, locale)!
   const purchasable = isPurchasable(product)
+  // Romanian Calm only: the evening headline, and the story that sits between the trust row and the business strip.
+  const calmStory = locale === 'ro' && product.id === 'balance-wave'
 
   const [selected, setSelected] = useState<Record<string, string>>(() => product.variants?.[0]?.options ?? {})
   const [quantity, setQuantity] = useState(1)
@@ -125,9 +129,13 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
 
         <div className="md:col-span-5 md:pt-2">
           <SocialProof className="mb-4" />
-          <p className="text-[16px] font-medium text-cyan-700">{product.purpose}</p>
-          <h1 className="mt-1 text-[clamp(38px,4.2vw,58px)] leading-[0.98] tracking-[-0.045em]">{title ?? product.name}</h1>
-          <p className="mt-3 max-w-[30em] text-[17px] leading-snug text-text">{product.tagline}</p>
+          <p className="text-[16px] font-medium text-cyan-700">{calmStory ? product.name : product.purpose}</p>
+          <h1 className={calmStory ? 'mt-2 max-w-[13em] text-[clamp(32px,3.4vw,48px)] leading-[1.05] tracking-[-0.04em]' : 'mt-1 text-[clamp(38px,4.2vw,58px)] leading-[0.98] tracking-[-0.045em]'}>
+            {title ?? (calmStory ? 'Seara, când casa tace și gândurile pornesc.' : product.name)}
+          </h1>
+          <p className="mt-3 max-w-[32em] text-[17px] leading-snug text-text">
+            {calmStory ? 'Te ajută să lași stresul zilei în urmă și să treci mai ușor spre somn. Câteva minute, apoi se oprește singur.' : product.tagline}
+          </p>
 
           <Highlights items={highlights} className="mt-5" />
 
@@ -186,13 +194,19 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
 
               {/* Four buttons in rows of 1, 2, 1: order (card or transfer preselected), phone and WhatsApp, add to cart. */}
               <div ref={buyRef} className="mt-5 grid gap-2.5">
-                <BuyNowButton productId={product.id} variantId={variant?.id} quantity={quantity} pay="online" />
+                <BuyNowButton productId={product.id} variantId={variant?.id} quantity={quantity} pay="online" title={calmStory ? 'Vreau serile mai liniștite' : undefined} />
                 <ContactOrder productId={product.id} variantId={variant?.id} quantity={quantity} />
                 <AddToCartButton productId={product.id} variantId={variant?.id} quantity={quantity} tone="secondary" className="!min-h-[52px] w-full" onAdded={() => setQuantity(1)} />
               </div>
 
+              {calmStory && (
+                <p className="mt-4 text-[13.5px] leading-relaxed text-muted">
+                  Plată la livrare. Garanție {terms.warrantyYears} ani. Diana Palotaș, fondatoarea Neuros Europe, psiholog cu peste 20 de ani de experiență.
+                </p>
+              )}
+
               <TrustRow className="mt-7" productId={product.id} />
-              {(BULK_OFFER.products as string[]).includes(product.id) && <BusinessStrip locale={locale} compact className="mt-6" />}
+              {!calmStory && (BULK_OFFER.products as string[]).includes(product.id) && <BusinessStrip locale={locale} compact className="mt-6" />}
             </>
           ) : (
             <div className="mt-6 grid gap-2.5">
@@ -202,8 +216,19 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
             </div>
           )}
 
-          <p className="mt-7 max-w-[32em] border-t border-mist-2 pt-6 text-[16.5px] leading-relaxed text-text">{intro}</p>
+          {!calmStory && <p className="mt-7 max-w-[32em] border-t border-mist-2 pt-6 text-[16.5px] leading-relaxed text-text">{intro}</p>}
         </div>
+
+        {calmStory && (
+          <div className="min-w-0 md:col-span-12">
+            <CalmEvening
+              cta={<BuyNowButton productId={product.id} variantId={variant?.id} quantity={quantity} pay="online" title="Vreau serile mai liniștite" className="!w-auto max-md:!w-full" />}
+              note={<p className="text-[13.5px] leading-relaxed text-muted">Plată la livrare. Garanție {terms.warrantyYears} ani.</p>}
+            />
+            {(BULK_OFFER.products as string[]).includes(product.id) && <BusinessStrip locale={locale} compact className="mt-8" />}
+            <p className="mt-7 max-w-[32em] border-t border-mist-2 pt-6 text-[16.5px] leading-relaxed text-text">{intro}</p>
+          </div>
+        )}
       </div>
 
       {purchasable && (
