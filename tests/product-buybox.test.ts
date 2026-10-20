@@ -54,7 +54,7 @@ describe('bundle offers on the product page', () => {
     expect(at(4).discountMinor).toBe(510400) // 3+ stays 20%
   })
   it('NEUROS Amber: 3 pairs, one free', () => {
-    const amber = PRICES_RON['ochelari-biohack'] as number
+    const amber = (PRICES_RON['ochelari-biohack'] as Record<string, number>)['cat-eye-negru']
     expect([at(3, 'ochelari-biohack', amber).totalMinor, at(3, 'ochelari-biohack', amber).discountMinor]).toEqual([63000, 31500])
     expect(at(2, 'ochelari-biohack', amber).discountMinor).toBe(0)
   })

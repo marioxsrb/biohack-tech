@@ -23,7 +23,7 @@ describe('resolveOrderLines (server side)', () => {
           productId: 'ochelari-biohack',
           variantId: 'patrat-maro',
           name: 'NEUROS Amber',
-          description: 'Unisex pătrat · Maro',
+          description: 'Unisex pătrat · Maro · Galbene',
           quantity: 2,
           unitAmount: 19950,
           discountMinor: 0,

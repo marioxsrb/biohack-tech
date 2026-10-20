@@ -695,3 +695,8 @@ textarea.field { resize: vertical; }
 @keyframes focus-rise { 0%, 100% { top: 70%; } 50% { top: 18%; } }
 .focus-rise { animation: focus-rise 4s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .focus-rise { animation: none; top: 40%; } }
+
+/* NEUROS Amber: how far each lens stops the spectrum, drawn once and then held. */
+@keyframes amber-sweep { from { width: 0; } to { width: var(--to); } }
+.amber-sweep { width: var(--to); animation: amber-sweep 1.6s var(--ease-brand) both; }
+@media (prefers-reduced-motion: reduce) { .amber-sweep { animation: none; } }

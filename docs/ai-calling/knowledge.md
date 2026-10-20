@@ -82,28 +82,40 @@ R: Stări precum concentrarea și relaxarea, ca să te ajute să le recunoști. 
 R: Încarci casca, instalezi Neuros Game pe tabletă și o conectezi. Apoi alegi un joc scurt. Pentru întrebări, ne scrii sau ne suni.
 
 ## NEUROS Amber (Pentru seri mai liniștite)
-Pentru ce este: Pentru ochi odihniți. Te ajută să termini ziua mai calm. Lumina ecranelor se simte mai blândă, și susține ochi mai odihniți. Alegi din patru rame.
-Preț: 315 lei (TVA 21% inclus, livrare gratuită în românia).
+Pentru ce este: Pentru seară și pentru somn. Două perechi pentru aceeași seară: lentilele galbene de la apus, cele roșii în ultima oră înainte de somn. Aceeași ramă, doar lentila diferă.
+Preț: de la 315 lei (TVA 21% inclus, livrare gratuită în românia).
 Variante:
-- Cat eye · Negru: 315 lei
-- Cat eye · Bej: 315 lei
-- Unisex pătrat · Negru: 315 lei
-- Unisex pătrat · Maro: 315 lei
+- Cat eye · Negru · Galbene: 315 lei
+- Cat eye · Negru · Roșii: 315 lei
+- Cat eye · Negru · Pachet galbene + roșii: 567 lei
+- Cat eye · Bej · Galbene: 315 lei
+- Cat eye · Bej · Roșii: 315 lei
+- Cat eye · Bej · Pachet galbene + roșii: 567 lei
+- Unisex pătrat · Negru · Galbene: 315 lei
+- Unisex pătrat · Negru · Roșii: 315 lei
+- Unisex pătrat · Negru · Pachet galbene + roșii: 567 lei
+- Unisex pătrat · Maro · Galbene: 315 lei
+- Unisex pătrat · Maro · Roșii: 315 lei
+- Unisex pătrat · Maro · Pachet galbene + roșii: 567 lei
+- Ramă subțire · Negru · Galbene: 315 lei
+- Ramă subțire · Negru · Roșii: 315 lei
+- Ramă subțire · Negru · Pachet galbene + roșii: 567 lei
 Promoție: La fiecare 3 perechi NEUROS Amber, una este gratuită. Poți combina ramele.
 Pagina produsului: https://biohack-tech.ro/products/amber
-Pe scurt: Te ajută să stai la ecran cu o lumină mai blândă. Susține ochi mai odihniți și seri mai liniștite. Rama e ușoară, pentru toată ziua.
+Pe scurt: Seara are două părți. De la apus porți lentilele galbene, care opresc cea mai mare parte din lumina albastră. În ultima oră înainte de somn treci la cele roșii, care opresc și o parte din verde. Aceeași ramă, doar lentila diferă.
 Ce oferă:
-- Te ajută să termini ziua mai calm
-- Lumina ecranelor se simte mai blândă
-- Susține ochi mai odihniți
-- Patru rame, pe care le porți cu plăcere
+- Lentile galbene pentru seară, roșii înainte de somn
+- Lumina ecranelor și a becurilor se simte mai blândă
+- Te ajută ca seara să se așeze mai ușor
+- Cinci rame, le poți proba live pe cameră
 - Ochi mai odihniți: Te ajută în orele lungi de la birou, în fața ecranului.
 - Seri mai liniștite: Lumina telefonului și a laptopului devine mai blândă.
 - Un stil al tău: Patru rame. Alegi forma și culoarea care îți plac.
 Specificații:
-- Modele: Cat eye, unisex pătrat
-- Culori: Cat eye: negru, bej. Unisex pătrat: negru, maro
-- Lentile: Filtru pentru lumina albastră, nuanță chihlimbar
+- Modele: Cat eye, unisex pătrat, ramă subțire de metal
+- Culori: Cat eye: negru, bej. Unisex pătrat: negru, maro. Ramă subțire: negru
+- Lentile: Galbene, pentru seară: opresc cea mai mare parte din lumina albastră. Roșii, pentru ultima oră înainte de somn: opresc albastrul și o parte din verde
+- Pachet: Ambele perechi ale aceleiași rame, galbenă și roșie
 - Dioptrie: Fără dioptrie. Nu se pot face pe rețetă sau cu lentile progresive
 - Ramă: Ușoară, pentru purtare zilnică
 - Garanție: 2 ani

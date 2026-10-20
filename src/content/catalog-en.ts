@@ -22,7 +22,7 @@ export const productTextEn: Record<ProductId, ProductText> = {
   'ochelari-biohack': {
     kind: 'For calmer evenings',
     purpose: 'For rested eyes',
-    tagline: 'It helps you end the day more calmly. Screen light feels softer, and it supports more rested eyes. Choose from four frames.',
+    tagline: 'Two pairs for the same evening: the yellow lenses from sunset, the red ones in the last hour before sleep. The same frame, only the lens differs.',
     chooseLabel: 'Choose the frame',
   },
   // The book is written in Romanian (print and PDF): its title stays the Romanian one; NEUROS's English title is
@@ -44,6 +44,14 @@ export const optionLabelEn: Record<string, string> = {
   Negru: 'Black',
   Bej: 'Beige',
   Maro: 'Brown',
+  'Ramă subțire': 'Thin frame',
+  Lentile: 'Lenses',
+  Galbene: 'Yellow',
+  Roșii: 'Red',
+  'Pachet galbene + roșii': 'Set: yellow + red',
+  'Seara, de la apus, la ecrane și sub lumina din casă.': 'In the evening, from sunset, at screens and under the lights at home.',
+  'În ultima oră înainte de somn, în pat, la telefon sau la citit.': 'In the last hour before sleep, in bed, on the phone or reading.',
+  'Ambele perechi ale ramei, pentru toată seara. 10% mai puțin decât separat.': 'Both pairs of the frame, for the whole evening. 10% less than separately.',
 }
 
 const ALT: Record<string, string> = {
@@ -78,6 +86,9 @@ const ALT: Record<string, string> = {
 }
 
 const AMBER_FRAME: [RegExp, string][] = [
+  [/cu ramă subțire neagră/g, 'with the thin black frame'],
+  [/ și lentile roșii/g, ' and red lenses'],
+  [/ cu lentile roșii/g, ' with red lenses'],
   [/unisex pătrat/g, 'unisex square'],
   [/\bnegru\b/g, 'in black'],
   [/\bbej\b/g, 'in beige'],

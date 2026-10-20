@@ -41,6 +41,48 @@ import glSeara from '@/assets/img/glasses/result-seara.webp'
 import glNoptiera from '@/assets/img/glasses/audience-seara.webp'
 import glBirou from '@/assets/img/glasses/audience-birou.webp'
 import glToate from '@/assets/img/glasses/audience-stil.webp'
+import glSubNegru1 from '@/assets/img/glasses/subtire-negru-1.webp'
+import glSubNegru2 from '@/assets/img/glasses/subtire-negru-2.webp'
+import glSubNegru3 from '@/assets/img/glasses/subtire-negru-3.webp'
+import glSubNegru4 from '@/assets/img/glasses/subtire-negru-4.webp'
+import glSubPat from '@/assets/img/glasses/subtire-pat-rosu.webp'
+import glSubBirou from '@/assets/img/glasses/subtire-birou.webp'
+import glSubNoptiera from '@/assets/img/glasses/subtire-noptiera-set.webp'
+import glSubCanapea from '@/assets/img/glasses/subtire-canapea.webp'
+/** The same frames with the orange-red lens (only the lens recoloured, the frame untouched), October 2026. */
+import rCatNegru1 from '@/assets/img/glasses/rosu/cat-eye-negru-1.webp'
+import rCatNegru2 from '@/assets/img/glasses/rosu/cat-eye-negru-2.webp'
+import rCatNegru3 from '@/assets/img/glasses/rosu/cat-eye-negru-3.webp'
+import rCatNegru4 from '@/assets/img/glasses/rosu/cat-eye-negru-4.webp'
+import rCatNegru5 from '@/assets/img/glasses/rosu/cat-eye-negru-5.webp'
+import rCatBej1 from '@/assets/img/glasses/rosu/cat-eye-bej-1.webp'
+import rCatBej2 from '@/assets/img/glasses/rosu/cat-eye-bej-2.webp'
+import rCatBej3 from '@/assets/img/glasses/rosu/cat-eye-bej-3.webp'
+import rCatBej4 from '@/assets/img/glasses/rosu/cat-eye-bej-4.webp'
+import rSqNegru1 from '@/assets/img/glasses/rosu/patrat-negru-1.webp'
+import rSqNegru2 from '@/assets/img/glasses/rosu/patrat-negru-2.webp'
+import rSqNegru3 from '@/assets/img/glasses/rosu/patrat-negru-3.webp'
+import rSqNegru4 from '@/assets/img/glasses/rosu/patrat-negru-4.webp'
+import rSqMaro1 from '@/assets/img/glasses/rosu/patrat-maro-1.webp'
+import rSqMaro2 from '@/assets/img/glasses/rosu/patrat-maro-2.webp'
+import rSqMaro3 from '@/assets/img/glasses/rosu/patrat-maro-3.webp'
+import rSqMaro4 from '@/assets/img/glasses/rosu/patrat-maro-4.webp'
+import rSubNegru1 from '@/assets/img/glasses/rosu/subtire-negru-1.webp'
+import rSubNegru2 from '@/assets/img/glasses/rosu/subtire-negru-2.webp'
+import rSubNegru3 from '@/assets/img/glasses/rosu/subtire-negru-3.webp'
+import rSubNegru4 from '@/assets/img/glasses/rosu/subtire-negru-4.webp'
+import rTerasa from '@/assets/img/glasses/rosu/lifestyle-terasa.webp'
+import rPortret from '@/assets/img/glasses/rosu/result-stil.webp'
+import rSeara from '@/assets/img/glasses/rosu/result-seara.webp'
+import rNoptiera from '@/assets/img/glasses/rosu/audience-seara.webp'
+import rBirou from '@/assets/img/glasses/rosu/audience-birou.webp'
+import rToate from '@/assets/img/glasses/rosu/audience-stil.webp'
+/** Both pairs of one frame, yellow above red (the "pachet"). */
+import glSetCatNegru from '@/assets/img/glasses/set-cat-eye-negru.webp'
+import glSetCatBej from '@/assets/img/glasses/set-cat-eye-bej.webp'
+import glSetSqNegru from '@/assets/img/glasses/set-patrat-negru.webp'
+import glSetSqMaro from '@/assets/img/glasses/set-patrat-maro.webp'
+import glSetSubNegru from '@/assets/img/glasses/set-subtire-negru.webp'
 
 import bwActiv from '@/assets/img/balance-wave/dispozitiv-activ.webp'
 import bwPurtat from '@/assets/img/balance-wave/result-echilibru.webp'
@@ -98,7 +140,8 @@ export type Variant = {
 export type ProductOption = {
   id: string
   label: string
-  values: { id: string; label: string; swatch?: string }[]
+  /** `hint`: one line under the picker when this value is chosen (NEUROS Amber's lenses: when you wear them). */
+  values: { id: string; label: string; swatch?: string; hint?: string }[]
 }
 
 export type ProductId = 'ochelari-biohack' | 'balance-wave' | 'brainlink-pro' | 'carte-diana'
@@ -168,6 +211,181 @@ function priced(p: Omit<Product, 'price'>, entry: PriceEntry | undefined = PRICE
   return { ...p, variants, price: known.length ? Math.min(...known) : null, variablePrice: new Set(known).size > 1 }
 }
 
+/**
+ * NEUROS Amber (20.10.2026): five frames, each with two lenses. The same frame, only the lens differs: yellow
+ * ("galben") for the evening, from sunset; orange-red ("roșu") for the last hour before sleep. "Pachet" is both
+ * pairs of that frame. The yellow variants keep their original ids (cat-eye-negru, ...): they are in past orders.
+ */
+const AMBER_OPTIONS: ProductOption[] = [
+  {
+    id: 'model',
+    label: 'Model',
+    values: [
+      { id: 'cat-eye', label: 'Cat eye' },
+      { id: 'patrat', label: 'Unisex pătrat' },
+      { id: 'subtire', label: 'Ramă subțire' },
+    ],
+  },
+  {
+    id: 'culoare',
+    label: 'Culoare',
+    values: [
+      { id: 'negru', label: 'Negru', swatch: '#15181A' },
+      { id: 'bej', label: 'Bej', swatch: '#C9A193' },
+      { id: 'maro', label: 'Maro', swatch: '#6B4A36' },
+    ],
+  },
+  {
+    id: 'lentila',
+    label: 'Lentile',
+    values: [
+      { id: 'galben', label: 'Galbene', hint: 'Seara, de la apus, la ecrane și sub lumina din casă.', swatch: '#F2C21B' },
+      { id: 'rosu', label: 'Roșii', hint: 'În ultima oră înainte de somn, în pat, la telefon sau la citit.', swatch: '#E2492B' },
+      { id: 'pachet', label: 'Pachet galbene + roșii', hint: 'Ambele perechi ale ramei, pentru toată seara. 10% mai puțin decât separat.', swatch: 'linear-gradient(135deg,#F2C21B 50%,#E2492B 50%)' },
+    ],
+  },
+]
+
+type AmberFrame = { id: string; model: string; culoare: string; name: string; galben: ProductImage[]; rosu: ProductImage[]; set: StaticImageData; extra?: ProductImage[] }
+
+const AMBER_FRAMES: AmberFrame[] = [
+  {
+    id: 'cat-eye-negru',
+    model: 'cat-eye',
+    culoare: 'negru',
+    name: 'cat eye negru',
+    set: glSetCatNegru,
+    galben: [
+      cut(glCatNegru1, 'NEUROS Amber cat eye negru, din față'),
+      cut(glCatNegru2, 'NEUROS Amber cat eye negru, din unghi'),
+      cut(glCatNegru5, 'NEUROS Amber cat eye negru, din lateral'),
+      cut(glCatNegru3, 'NEUROS Amber cat eye negru, de sus'),
+      cut(glCatNegru4, 'NEUROS Amber cat eye negru, din spate'),
+      photo(glToate, 'Cele patru rame NEUROS Amber, printre ele cat eye negru'),
+    ],
+    rosu: [
+      cut(rCatNegru1, 'NEUROS Amber cat eye negru cu lentile roșii, din față'),
+      cut(rCatNegru2, 'NEUROS Amber cat eye negru cu lentile roșii, din unghi'),
+      cut(rCatNegru5, 'NEUROS Amber cat eye negru cu lentile roșii, din lateral'),
+      cut(rCatNegru3, 'NEUROS Amber cat eye negru cu lentile roșii, de sus'),
+      cut(rCatNegru4, 'NEUROS Amber cat eye negru cu lentile roșii, din spate'),
+      photo(rToate, 'Ramele NEUROS Amber cu lentile roșii, printre ele cat eye negru'),
+    ],
+  },
+  {
+    id: 'cat-eye-bej',
+    model: 'cat-eye',
+    culoare: 'bej',
+    name: 'cat eye bej',
+    set: glSetCatBej,
+    galben: [
+      cut(glCatBej1, 'NEUROS Amber cat eye bej, din față'),
+      photo(glPortret, 'Femeie purtând NEUROS Amber cat eye bej'),
+      cut(glCatBej2, 'NEUROS Amber cat eye bej, din unghi'),
+      cut(glCatBej3, 'NEUROS Amber cat eye bej, din lateral'),
+      cut(glCatBej4, 'NEUROS Amber cat eye bej, din spate'),
+      photo(glTerasa, 'Femeie pe o terasă, purtând NEUROS Amber cat eye bej'),
+    ],
+    rosu: [
+      cut(rCatBej1, 'NEUROS Amber cat eye bej cu lentile roșii, din față'),
+      photo(rPortret, 'Femeie purtând NEUROS Amber cat eye bej cu lentile roșii'),
+      cut(rCatBej2, 'NEUROS Amber cat eye bej cu lentile roșii, din unghi'),
+      cut(rCatBej3, 'NEUROS Amber cat eye bej cu lentile roșii, din lateral'),
+      cut(rCatBej4, 'NEUROS Amber cat eye bej cu lentile roșii, din spate'),
+      photo(rTerasa, 'Femeie pe o terasă, purtând NEUROS Amber cat eye bej cu lentile roșii'),
+    ],
+  },
+  {
+    id: 'patrat-negru',
+    model: 'patrat',
+    culoare: 'negru',
+    name: 'unisex pătrat negru',
+    set: glSetSqNegru,
+    galben: [
+      cut(glSqNegru1, 'NEUROS Amber unisex pătrat negru, din față'),
+      photo(glSeara, 'Femeie în pat, seara, purtând NEUROS Amber pătrat negru'),
+      cut(glSqNegru3, 'NEUROS Amber unisex pătrat negru, din unghi'),
+      cut(glSqNegru2, 'NEUROS Amber unisex pătrat negru, din lateral'),
+      cut(glSqNegru4, 'NEUROS Amber unisex pătrat negru, din spate'),
+      photo(glNoptiera, 'NEUROS Amber pătrat negru pe noptieră, lângă laptop'),
+    ],
+    rosu: [
+      cut(rSqNegru1, 'NEUROS Amber unisex pătrat negru cu lentile roșii, din față'),
+      photo(rSeara, 'Femeie în pat, înainte de somn, purtând NEUROS Amber pătrat negru cu lentile roșii'),
+      cut(rSqNegru3, 'NEUROS Amber unisex pătrat negru cu lentile roșii, din unghi'),
+      cut(rSqNegru2, 'NEUROS Amber unisex pătrat negru cu lentile roșii, din lateral'),
+      cut(rSqNegru4, 'NEUROS Amber unisex pătrat negru cu lentile roșii, din spate'),
+      photo(rNoptiera, 'NEUROS Amber pătrat negru cu lentile roșii pe noptieră'),
+    ],
+  },
+  {
+    id: 'patrat-maro',
+    model: 'patrat',
+    culoare: 'maro',
+    name: 'unisex pătrat maro',
+    set: glSetSqMaro,
+    galben: [
+      cut(glSqMaro1, 'NEUROS Amber unisex pătrat maro, din față'),
+      photo(glBirou, 'NEUROS Amber pătrat maro pe un birou, lângă tastatură'),
+      cut(glSqMaro2, 'NEUROS Amber unisex pătrat maro, din unghi'),
+      cut(glSqMaro3, 'NEUROS Amber unisex pătrat maro, din lateral'),
+      cut(glSqMaro4, 'NEUROS Amber unisex pătrat maro, din spate'),
+    ],
+    rosu: [
+      cut(rSqMaro1, 'NEUROS Amber unisex pătrat maro cu lentile roșii, din față'),
+      photo(rBirou, 'NEUROS Amber pătrat maro cu lentile roșii pe un birou'),
+      cut(rSqMaro2, 'NEUROS Amber unisex pătrat maro cu lentile roșii, din unghi'),
+      cut(rSqMaro3, 'NEUROS Amber unisex pătrat maro cu lentile roșii, din lateral'),
+      cut(rSqMaro4, 'NEUROS Amber unisex pătrat maro cu lentile roșii, din spate'),
+    ],
+  },
+  {
+    // The thin metal frame, added 20.10.2026: studio shots generated from photographs of the real frame.
+    id: 'subtire-negru',
+    model: 'subtire',
+    culoare: 'negru',
+    name: 'ramă subțire neagră',
+    set: glSetSubNegru,
+    galben: [
+      cut(glSubNegru1, 'NEUROS Amber cu ramă subțire neagră, din față'),
+      photo(glSubBirou, 'Femeie la laptop, seara, purtând NEUROS Amber cu ramă subțire'),
+      cut(glSubNegru2, 'NEUROS Amber cu ramă subțire neagră, din unghi'),
+      cut(glSubNegru3, 'NEUROS Amber cu ramă subțire neagră, din lateral'),
+      cut(glSubNegru4, 'NEUROS Amber cu ramă subțire neagră, din spate'),
+      photo(glSubCanapea, 'Bărbat pe canapea, seara, purtând NEUROS Amber cu ramă subțire'),
+    ],
+    rosu: [
+      cut(rSubNegru1, 'NEUROS Amber cu ramă subțire neagră și lentile roșii, din față'),
+      photo(glSubPat, 'Bărbat în pat, înainte de somn, purtând NEUROS Amber cu ramă subțire și lentile roșii'),
+      cut(rSubNegru2, 'NEUROS Amber cu ramă subțire neagră și lentile roșii, din unghi'),
+      cut(rSubNegru3, 'NEUROS Amber cu ramă subțire neagră și lentile roșii, din lateral'),
+      cut(rSubNegru4, 'NEUROS Amber cu ramă subțire neagră și lentile roșii, din spate'),
+    ],
+    extra: [photo(glSubNoptiera, 'Cele două perechi NEUROS Amber cu ramă subțire, galbenă și roșie, pe noptieră')],
+  },
+]
+
+/** Fifteen variants: every frame with the yellow lens (original id), the red lens (-rosu) and both (-pachet). */
+function amberVariants(): Variant[] {
+  return AMBER_FRAMES.flatMap((f) => {
+    const options = { model: f.model, culoare: f.culoare }
+    return [
+      { id: f.id, options: { ...options, lentila: 'galben' }, images: f.galben },
+      { id: `${f.id}-rosu`, options: { ...options, lentila: 'rosu' }, images: f.rosu },
+      {
+        id: `${f.id}-pachet`,
+        options: { ...options, lentila: 'pachet' },
+        images: [cut(f.set, `NEUROS Amber ${f.name}, cele două perechi: lentile galbene și lentile roșii`), f.galben[0], f.rosu[0], ...(f.extra ?? []), ...f.galben.slice(1, 3), ...f.rosu.slice(1, 3)],
+      },
+    ]
+  })
+}
+
+/** Amber variant ids, for prices and the try-on (frame id + lens). */
+export const AMBER_FRAME_IDS = AMBER_FRAMES.map((f) => f.id)
+export const amberFrameOf = (variantId: string) => variantId.replace(/-(rosu|pachet)$/, '')
+export const amberLensOf = (variantId: string): 'galben' | 'rosu' | 'pachet' => (variantId.endsWith('-rosu') ? 'rosu' : variantId.endsWith('-pachet') ? 'pachet' : 'galben')
+
 /** Display order. Calm is the lead product on the source site. */
 const catalog: Omit<Product, 'price'>[] = [
   {
@@ -220,79 +438,13 @@ const catalog: Omit<Product, 'price'>[] = [
     model: 'Amber',
     name: 'NEUROS Amber',
     kind: 'Pentru seri mai liniștite',
-    purpose: 'Pentru ochi odihniți',
-    tagline: 'Te ajută să termini ziua mai calm. Lumina ecranelor se simte mai blândă, și susține ochi mai odihniți. Alegi din patru rame.',
-    cutout: cut(glCatNegru1, 'NEUROS Amber cat eye, ramă neagră, lentile chihlimbar'),
+    purpose: 'Pentru seară și pentru somn',
+    tagline: 'Două perechi pentru aceeași seară: lentilele galbene de la apus, cele roșii în ultima oră înainte de somn. Aceeași ramă, doar lentila diferă.',
+    cutout: cut(glSetCatNegru, 'NEUROS Amber cat eye negru, cu lentile galbene și cu lentile roșii'),
     lifestyle: photo(glTerasa, 'Femeie pe o terasă, purtând NEUROS Amber cat eye bej'),
     images: [photo(glToate, 'Cele patru rame NEUROS Amber, așezate pe o masă')],
-    options: [
-      {
-        id: 'model',
-        label: 'Model',
-        values: [
-          { id: 'cat-eye', label: 'Cat eye' },
-          { id: 'patrat', label: 'Unisex pătrat' },
-        ],
-      },
-      {
-        id: 'culoare',
-        label: 'Culoare',
-        values: [
-          { id: 'negru', label: 'Negru', swatch: '#15181A' },
-          { id: 'bej', label: 'Bej', swatch: '#C9A193' },
-          { id: 'maro', label: 'Maro', swatch: '#6B4A36' },
-        ],
-      },
-    ],
-    variants: [
-      {
-        id: 'cat-eye-negru',
-        options: { model: 'cat-eye', culoare: 'negru' },
-        images: [
-          cut(glCatNegru1, 'NEUROS Amber cat eye negru, din față'),
-          cut(glCatNegru2, 'NEUROS Amber cat eye negru, din unghi'),
-          cut(glCatNegru5, 'NEUROS Amber cat eye negru, din lateral'),
-          cut(glCatNegru3, 'NEUROS Amber cat eye negru, de sus'),
-          cut(glCatNegru4, 'NEUROS Amber cat eye negru, din spate'),
-          photo(glToate, 'Cele patru rame NEUROS Amber, printre ele cat eye negru'),
-        ],
-      },
-      {
-        id: 'cat-eye-bej',
-        options: { model: 'cat-eye', culoare: 'bej' },
-        images: [
-          cut(glCatBej1, 'NEUROS Amber cat eye bej, din față'),
-          photo(glPortret, 'Femeie purtând NEUROS Amber cat eye bej'),
-          cut(glCatBej2, 'NEUROS Amber cat eye bej, din unghi'),
-          cut(glCatBej3, 'NEUROS Amber cat eye bej, din lateral'),
-          cut(glCatBej4, 'NEUROS Amber cat eye bej, din spate'),
-          photo(glTerasa, 'Femeie pe o terasă, purtând NEUROS Amber cat eye bej'),
-        ],
-      },
-      {
-        id: 'patrat-negru',
-        options: { model: 'patrat', culoare: 'negru' },
-        images: [
-          cut(glSqNegru1, 'NEUROS Amber unisex pătrat negru, din față'),
-          photo(glSeara, 'Femeie în pat, seara, purtând NEUROS Amber pătrat negru'),
-          cut(glSqNegru3, 'NEUROS Amber unisex pătrat negru, din unghi'),
-          cut(glSqNegru2, 'NEUROS Amber unisex pătrat negru, din lateral'),
-          cut(glSqNegru4, 'NEUROS Amber unisex pătrat negru, din spate'),
-          photo(glNoptiera, 'NEUROS Amber pătrat negru pe noptieră, lângă laptop'),
-        ],
-      },
-      {
-        id: 'patrat-maro',
-        options: { model: 'patrat', culoare: 'maro' },
-        images: [
-          cut(glSqMaro1, 'NEUROS Amber unisex pătrat maro, din față'),
-          photo(glBirou, 'NEUROS Amber pătrat maro pe un birou, lângă tastatură'),
-          cut(glSqMaro2, 'NEUROS Amber unisex pătrat maro, din unghi'),
-          cut(glSqMaro3, 'NEUROS Amber unisex pătrat maro, din lateral'),
-          cut(glSqMaro4, 'NEUROS Amber unisex pătrat maro, din spate'),
-        ],
-      },
-    ],
+    options: AMBER_OPTIONS,
+    variants: amberVariants(),
     chooseLabel: 'Alege rama',
   },
   {
@@ -332,7 +484,7 @@ const allEn: Product[] = allRo.map((p) => ({
   cutout: enImage(p.cutout),
   lifestyle: enImage(p.lifestyle),
   images: p.images.map(enImage),
-  options: p.options?.map((o) => ({ ...o, label: optionLabelEn[o.label] ?? o.label, values: o.values.map((v) => ({ ...v, label: optionLabelEn[v.label] ?? v.label })) })),
+  options: p.options?.map((o) => ({ ...o, label: optionLabelEn[o.label] ?? o.label, values: o.values.map((v) => ({ ...v, label: optionLabelEn[v.label] ?? v.label, hint: v.hint && (optionLabelEn[v.hint] ?? v.hint) })) })),
   variants: p.variants?.map((v) => ({ ...v, images: v.images.map(enImage) })),
 }))
 

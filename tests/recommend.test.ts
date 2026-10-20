@@ -106,8 +106,9 @@ describe('recommendations: one engine, deterministic', () => {
 describe('NEUROS Amber 2+1 picker', () => {
   it('offers only frames that exist: cat eye (negru, bej), unisex pătrat (negru, maro)', () => {
     expect(amberModels().map((m) => [m.id, m.colours.map((c) => c.variantId)])).toEqual([
-      ['cat-eye', ['cat-eye-negru', 'cat-eye-bej']],
-      ['patrat', ['patrat-negru', 'patrat-maro']],
+      ['cat-eye', ['cat-eye-negru', 'cat-eye-negru-rosu', 'cat-eye-bej', 'cat-eye-bej-rosu']],
+      ['patrat', ['patrat-negru', 'patrat-negru-rosu', 'patrat-maro', 'patrat-maro-rosu']],
+      ['subtire', ['subtire-negru', 'subtire-negru-rosu']],
     ])
   })
 

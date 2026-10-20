@@ -20,8 +20,15 @@ export const PRICES_RON: Record<ProductId, PriceEntry> = {
   'balance-wave': 638000,
   // NEUROS Focus. Set 19.10.2026: 3.225 lei, 21% VAT included (a new list price, not a reduction: no comparison price is shown).
   'brainlink-pro': 322500,
-  // NEUROS Amber, all four frames. Approved 26.09.2026: 315 lei.
-  'ochelari-biohack': 31500,
+  // NEUROS Amber. One pair, yellow or red lens, any of the five frames: 315 lei (approved 26.09.2026). The "pachet"
+  // (both pairs of one frame): 567 lei, two pairs less 10% (20.10.2026, PROPOSED, to be confirmed before it goes live).
+  'ochelari-biohack': Object.fromEntries(
+    ['cat-eye-negru', 'cat-eye-bej', 'patrat-negru', 'patrat-maro', 'subtire-negru'].flatMap((f) => [
+      [f, 31500],
+      [`${f}-rosu`, 31500],
+      [`${f}-pachet`, 56700],
+    ]),
+  ),
   // NEUROS Flow was discontinued on 13.10.2026: no price, so it can never be charged.
   // Diana L. Palotaș's book, print edition + PDF. Set 16.10.2026: 120 lei with 21% VAT (base 99,17 lei + VAT 20,83 lei).
   'carte-diana': 12000,
