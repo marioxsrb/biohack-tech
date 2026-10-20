@@ -207,13 +207,4 @@ export const studies: Study[] = [
       ],
     },
   },
-  {
-    tag: 'Lumina',
-    title: 'Un studiu nou, la Boston',
-    text: 'Brigham and Women’s Hospital pregătește un studiu despre felul în care lumina roșie și infraroșie influențează HRV, adică activitatea nervului vag, în timpul unui test de stres. Studiul nu a început încă.',
-    cite: 'Brigham and Women’s Hospital, NCT07475858',
-    url: 'https://clinicaltrials.gov/study/NCT07475858',
-    visual: 'hrv',
-    upcoming: true,
-  },
 ]

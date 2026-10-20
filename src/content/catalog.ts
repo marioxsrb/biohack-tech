@@ -43,13 +43,22 @@ import glBirou from '@/assets/img/glasses/audience-birou.webp'
 import glToate from '@/assets/img/glasses/audience-stil.webp'
 
 import bwActiv from '@/assets/img/balance-wave/dispozitiv-activ.webp'
-import bwDispozitiv from '@/assets/img/balance-wave/dispozitiv.webp'
-import bwCutie from '@/assets/img/balance-wave/cutie.webp'
 import bwPurtat from '@/assets/img/balance-wave/result-echilibru.webp'
 import bwCanapea from '@/assets/img/balance-wave/lifestyle-canapea.webp'
-/** Unboxing, animated (WebP): the lid comes off, the manual, the device in the box, the device lit. */
+/**
+ * Studio product shots on white, generated from photographs of the real box, device and cable
+ * (October 2026), checked against them: box text, logo, cord and the cable's three connectors.
+ * cutie-deschidere is the same sequence animated (WebP): box, lid off, open, out of the box, lit.
+ */
 import bwDeschidere from '@/assets/img/balance-wave/cutie-deschidere.webp'
-import bwContinut from '@/assets/img/balance-wave/cutie-continut.webp'
+import bwAprins from '@/assets/img/balance-wave/aprins-fata.webp'
+import bwInchisa from '@/assets/img/balance-wave/cutie-inchisa.webp'
+import bwCapac from '@/assets/img/balance-wave/cutie-capac.webp'
+import bwDeschisa from '@/assets/img/balance-wave/cutie-deschisa.webp'
+import bwIese from '@/assets/img/balance-wave/iese-din-cutie.webp'
+import bwContinut from '@/assets/img/balance-wave/ce-e-in-cutie.webp'
+import bwCablu from '@/assets/img/balance-wave/cablu.webp'
+import bwButon from '@/assets/img/balance-wave/aprins-buton.webp'
 
 import blCasca from '@/assets/img/brainlink/casca.webp'
 import blLateral from '@/assets/img/brainlink/casca-lateral.webp'
@@ -72,6 +81,8 @@ export type ProductImage = {
   kind: ImageKind
   /** The product is cropped at this edge in the source photo; frames anchor it there. */
   bleed?: 'bottom'
+  /** A studio shot on white: shown whole, never cropped (the square phone frame would cut its sides). */
+  studio?: boolean
 }
 
 export type Variant = {
@@ -144,6 +155,7 @@ const NEEDS_RELEASE: string[] = [BOOK_ID]
 
 const cut = (src: StaticImageData, alt: string, bleed?: 'bottom'): ProductImage => ({ src, alt, kind: 'cutout', bleed })
 const photo = (src: StaticImageData, alt: string): ProductImage => ({ src, alt, kind: 'photo' })
+const studio = (src: StaticImageData, alt: string): ProductImage => ({ src, alt, kind: 'photo', studio: true })
 
 /** Applies a price entry (config/prices.ts, or the admin's override) to a product: one price, or one per variant plus the lowest as "de la". */
 function priced(p: Omit<Product, 'price'>, entry: PriceEntry | undefined = PRICES_RON[p.id as ProductId]): Product {
@@ -167,13 +179,16 @@ const catalog: Omit<Product, 'price'>[] = [
     cutout: cut(bwActiv, 'NEUROS Calm, dispozitivul cu luminile roșii aprinse și cordonul de prindere'),
     lifestyle: photo(bwCanapea, 'Femeie relaxată pe canapea, purtând NEUROS Calm la gât'),
     images: [
-      photo(bwDeschidere, 'Cutia NEUROS Calm se deschide: înăuntru, manualul și aparatul'),
-      cut(bwActiv, 'NEUROS Calm, dispozitivul cu luminile roșii aprinse și cordonul de prindere'),
+      studio(bwDeschidere, 'Cutia NEUROS Calm se deschide, aparatul iese din cutie și se aprinde'),
+      studio(bwAprins, 'NEUROS Calm pornit, cu cele două panouri de lumină roșie aprinse'),
+      studio(bwInchisa, 'Cutia NEUROS Calm, închisă'),
+      studio(bwCapac, 'Capacul se ridică și se vede NEUROS Calm în cutie'),
+      studio(bwDeschisa, 'Cutia deschisă: NEUROS Calm și manualul de utilizare'),
+      studio(bwIese, 'NEUROS Calm iese din cutie'),
+      studio(bwContinut, 'Ce primești în cutie: aparatul, manualul și cablul de încărcare'),
+      studio(bwCablu, 'Cablul de încărcare, lângă NEUROS Calm'),
+      studio(bwButon, 'NEUROS Calm văzut din spate, cu butonul de pornire'),
       photo(bwPurtat, 'Femeie cu ochii închiși, purtând NEUROS Calm la gât'),
-      cut(bwDispozitiv, 'NEUROS Calm văzut din spate, cu butonul de pornire'),
-      photo(bwContinut, 'NEUROS Calm în cutie, așa cum îl primești'),
-      cut(bwCutie, 'NEUROS Calm lângă cutia produsului'),
-      photo(bwCanapea, 'Femeie relaxată pe canapea, purtând NEUROS Calm'),
     ],
   },
   {

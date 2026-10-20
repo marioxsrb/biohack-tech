@@ -98,7 +98,7 @@ export function Gallery({ images, label, wide }: Props) {
                     preload={i === 0}
                     fetchPriority={i === 0 ? 'high' : 'low'}
                     placeholder={img.kind === 'photo' ? 'blur' : 'empty'}
-                    className={img.kind === 'photo' ? 'object-cover' : `object-contain ${img.bleed === 'bottom' ? 'object-bottom' : ''}`}
+                    className={img.studio ? 'object-contain' : img.kind === 'photo' ? 'object-cover' : `object-contain ${img.bleed === 'bottom' ? 'object-bottom' : ''}`}
                   />
                 </div>
               </div>
