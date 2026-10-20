@@ -9,6 +9,7 @@ import { useLocale } from '@/i18n/LocaleProvider'
 import { WELCOME_CONSENT_TEXT, WELCOME_CONSENT_TEXT_EN } from '@/lib/consent/marketing'
 import { getProduct } from '@/content/catalog'
 import { AmberGate } from './AmberGate'
+import { FocusGate } from './FocusGate'
 
 /** One minute on the site (anywhere, across pages of the same visit) before the offer shows (business decision 16.10.2026). */
 const AFTER_MS = 60_000
@@ -89,8 +90,10 @@ export function WelcomePopup() {
   // NEUROS Amber's pages (also amber.<domain>, whose "/" is the product page): the drag-the-bar scene comes first.
   // (This component runs only in the browser: DeferredChrome loads it without server rendering.)
   const amber = /\/products\/amber\/?$/.test(pathname) || window.location.hostname.startsWith('amber.')
+  // NEUROS Focus's pages: a one-obstacle tap game comes first.
+  const focus = /\/products\/focus\/?$/.test(pathname) || window.location.hostname.startsWith('focus.')
   const [passed, setPassed] = useState(false)
-  const gate = amber && !passed
+  const gate = (amber || focus) && !passed
   // After the Amber scene the offer shows the glasses; everywhere else, NEUROS Focus.
   const photo = getProduct(amber ? 'ochelari-biohack' : 'brainlink-pro', locale)!.lifestyle
 
@@ -170,7 +173,7 @@ export function WelcomePopup() {
     return (
       <div className="welcome-in fixed inset-0 z-[280] flex items-center justify-center p-4 max-sm:p-3" onKeyDown={(e) => e.key === 'Escape' && close()}>
         <button type="button" aria-label={t.close} tabIndex={-1} onClick={close} className="absolute inset-0 cursor-default bg-[rgb(8_17_19/0.7)] backdrop-blur-[3px]" />
-        <AmberGate onDone={() => setPassed(true)} onClose={close} />
+        {amber ? <AmberGate onDone={() => setPassed(true)} onClose={close} /> : <FocusGate onDone={() => setPassed(true)} onClose={close} />}
       </div>
     )
 
