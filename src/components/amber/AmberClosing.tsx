@@ -1,6 +1,6 @@
 /**
  * The end of the Romanian NEUROS Amber page: the details, the questions before ordering, and a closing block on the
- * evening scene with both pairs that sends the visitor back to the buy area.
+ * evening scene that sends the visitor back to the buy area.
  */
 import Image from 'next/image'
 
@@ -8,7 +8,7 @@ import { Faq } from '@/components/ui/Faq'
 import { site, terms } from '@/config/site'
 import { amberFaq } from '@/content/amber-story'
 import type { ProductContent } from '@/content/product-content'
-import perechi from '@/assets/img/glasses/subtire-noptiera-set.webp'
+import perechi from '@/assets/img/glasses/result-seara.webp'
 
 const titleClass = 'text-[clamp(30px,3.2vw,46px)] leading-[1.05] tracking-[-0.04em] text-balance'
 
@@ -46,13 +46,13 @@ export function AmberClosing({ specs }: { specs: ProductContent['specs'] }) {
 
       <section id="buy-again" aria-labelledby="final-amber" className="wrap pb-10">
         <div className="relative isolate overflow-hidden rounded-[32px] bg-dark text-white">
-          <Image src={perechi} alt="" fill placeholder="blur" sizes="(min-width: 1152px) 1104px, 100vw" className="-z-10 object-cover object-[50%_78%]" />
+          <Image src={perechi} alt="" fill placeholder="blur" sizes="(min-width: 1152px) 1104px, 100vw" className="-z-10 object-cover object-[60%_center]" />
           <div aria-hidden className="absolute inset-0 -z-10 bg-[linear-gradient(90deg,rgba(11,19,22,0.88)_0%,rgba(11,19,22,0.7)_45%,rgba(11,19,22,0.2)_100%)] max-md:bg-[linear-gradient(180deg,rgba(11,19,22,0.45)_0%,rgba(11,19,22,0.9)_60%)]" />
           <div className="max-w-[34em] px-[clamp(24px,5vw,72px)] py-[clamp(56px,8vw,112px)] max-md:pt-[44vw]">
             <h2 id="final-amber" className="text-[clamp(32px,3.8vw,54px)] leading-[1.04] tracking-[-0.04em] !text-white text-balance">
-              Galben de la apus. Roșu în ultima oră.
+              Seri mai liniștite, cu lumina mai blândă.
             </h2>
-            <p className="mt-5 text-[18px] leading-relaxed text-white/85">Alegi rama și iei pachetul cu ambele perechi, cu 20% reducere. Sau doar una dintre ele.</p>
+            <p className="mt-5 text-[18px] leading-relaxed text-white/85">Alegi una din cele cinci rame. La 3 perechi, una este gratuită.</p>
             <a href="#cumpara" className="cta mt-8 max-sm:!w-full">
               Alege-ți perechea
             </a>

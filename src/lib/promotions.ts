@@ -13,7 +13,7 @@
 import { BULK_OFFER, PROMOTIONS, type BulkOffer, type BundlePercent, type BundleTier, type Promotion } from '@/config/promotions'
 import { getProduct } from '@/content/catalog'
 
-/** `variantId`: needed only by promotions limited to some variants (the NEUROS Amber pachet); lines without it count as the base variant. */
+/** `variantId`: needed only by promotions limited to some variants; lines without it count as the base variant. */
 export type PricedLine = { key: string; productId: string; variantId?: string; quantity: number; unitAmount: number }
 
 export type AppliedPromotion = { id: string; label: string; amountMinor: number }

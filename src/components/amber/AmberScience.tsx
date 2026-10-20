@@ -59,13 +59,12 @@ function Visual({ kind }: { kind: NonNullable<AmberStudy['visual']> }) {
     return (
       <div className={soft}>
         <div className="w-full max-w-[240px]">
-          {/* The visible spectrum; the yellow lens stops the blue end, the red lens also most of the green. */}
+          {/* The visible spectrum; the yellow lens stops most of the blue end. */}
           <div className="h-5 w-full rounded-full bg-[linear-gradient(90deg,#6a3fd1_0%,#2f6fe0_18%,#22a7c8_30%,#3fb34a_45%,#c9d42b_58%,#f4c21b_66%,#f08a1c_78%,#e2492b_90%,#b5221f_100%)]" />
           <div className="relative mt-2 h-8 text-[11px] font-semibold text-muted">
-            <span className="amber-sweep absolute top-0 left-0 h-2 rounded-full bg-[#F2C21B]" style={{ ['--to' as string]: '33%' }} />
-            <span className="amber-sweep absolute top-3 left-0 h-2 rounded-full bg-[#E2492B]" style={{ ['--to' as string]: '55%' }} />
+            <span className="amber-sweep absolute top-1 left-0 h-2.5 rounded-full bg-[#F2C21B]" style={{ ['--to' as string]: '33%' }} />
           </div>
-          <p className="text-center text-[12px] text-muted">Galben: oprește albastrul. Roșu: și o parte din verde.</p>
+          <p className="text-center text-[12px] text-muted">Lentila galbenă oprește cea mai mare parte din albastru.</p>
         </div>
       </div>
     )
