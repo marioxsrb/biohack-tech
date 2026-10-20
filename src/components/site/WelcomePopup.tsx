@@ -8,6 +8,7 @@ import { Close } from '@/components/ui/icons'
 import { useLocale } from '@/i18n/LocaleProvider'
 import { WELCOME_CONSENT_TEXT, WELCOME_CONSENT_TEXT_EN } from '@/lib/consent/marketing'
 import { getProduct } from '@/content/catalog'
+import { AmberGate } from './AmberGate'
 
 /** One minute on the site (anywhere, across pages of the same visit) before the offer shows (business decision 16.10.2026). */
 const AFTER_MS = 60_000
@@ -85,10 +86,21 @@ export function WelcomePopup() {
   const [state, setState] = useState<'idle' | 'busy' | 'done' | 'already' | 'error'>('idle')
   const [error, setError] = useState('')
   const hiddenHere = HIDDEN.test(pathname)
-  const photo = getProduct('brainlink-pro', locale)!.lifestyle
+  // NEUROS Amber's pages (also amber.<domain>, whose "/" is the product page): the drag-the-bar scene comes first.
+  // (This component runs only in the browser: DeferredChrome loads it without server rendering.)
+  const amber = /\/products\/amber\/?$/.test(pathname) || window.location.hostname.startsWith('amber.')
+  const [passed, setPassed] = useState(false)
+  const gate = amber && !passed
+  // After the Amber scene the offer shows the glasses; everywhere else, NEUROS Focus.
+  const photo = getProduct(amber ? 'ochelari-biohack' : 'brainlink-pro', locale)!.lifestyle
 
   useEffect(() => {
     if (hiddenHere || window.__BT_STORE__?.welcomePopup === false) return
+    // ?oferta=1: shows the offer at once, whatever was chosen before (to see it, or from a link).
+    if (new URLSearchParams(window.location.search).has('oferta')) {
+      const t = setTimeout(() => setOpen(true), 400)
+      return () => clearTimeout(t)
+    }
     const s = read(STATE_KEY)
     if (s === 'sent' || (s && Number(s) > Date.now())) return
     // One minute after the visit's first page.
@@ -153,6 +165,14 @@ export function WelcomePopup() {
       setError(err instanceof Error && err.message ? err.message : t.failed)
     }
   }
+
+  if (gate)
+    return (
+      <div className="welcome-in fixed inset-0 z-[280] flex items-center justify-center p-4 max-sm:p-3" onKeyDown={(e) => e.key === 'Escape' && close()}>
+        <button type="button" aria-label={t.close} tabIndex={-1} onClick={close} className="absolute inset-0 cursor-default bg-[rgb(8_17_19/0.7)] backdrop-blur-[3px]" />
+        <AmberGate onDone={() => setPassed(true)} onClose={close} />
+      </div>
+    )
 
   return (
     <div className="welcome-in fixed inset-0 z-[280] flex items-center justify-center p-4 max-sm:items-end max-sm:p-3" onKeyDown={(e) => e.key === 'Escape' && close()}>
