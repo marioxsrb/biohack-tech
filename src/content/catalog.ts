@@ -47,6 +47,9 @@ import bwDispozitiv from '@/assets/img/balance-wave/dispozitiv.webp'
 import bwCutie from '@/assets/img/balance-wave/cutie.webp'
 import bwPurtat from '@/assets/img/balance-wave/result-echilibru.webp'
 import bwCanapea from '@/assets/img/balance-wave/lifestyle-canapea.webp'
+/** Unboxing, animated (WebP): the lid comes off, the manual, the device in the box, the device lit. */
+import bwDeschidere from '@/assets/img/balance-wave/cutie-deschidere.webp'
+import bwContinut from '@/assets/img/balance-wave/cutie-continut.webp'
 
 import blCasca from '@/assets/img/brainlink/casca.webp'
 import blLateral from '@/assets/img/brainlink/casca-lateral.webp'
@@ -164,9 +167,11 @@ const catalog: Omit<Product, 'price'>[] = [
     cutout: cut(bwActiv, 'NEUROS Calm, dispozitivul cu luminile roșii aprinse și cordonul de prindere'),
     lifestyle: photo(bwCanapea, 'Femeie relaxată pe canapea, purtând NEUROS Calm la gât'),
     images: [
+      photo(bwDeschidere, 'Cutia NEUROS Calm se deschide: înăuntru, manualul și aparatul'),
       cut(bwActiv, 'NEUROS Calm, dispozitivul cu luminile roșii aprinse și cordonul de prindere'),
       photo(bwPurtat, 'Femeie cu ochii închiși, purtând NEUROS Calm la gât'),
       cut(bwDispozitiv, 'NEUROS Calm văzut din spate, cu butonul de pornire'),
+      photo(bwContinut, 'NEUROS Calm în cutie, așa cum îl primești'),
       cut(bwCutie, 'NEUROS Calm lângă cutia produsului'),
       photo(bwCanapea, 'Femeie relaxată pe canapea, purtând NEUROS Calm'),
     ],
