@@ -700,3 +700,6 @@ textarea.field { resize: vertical; }
 @keyframes amber-sweep { from { width: 0; } to { width: var(--to); } }
 .amber-sweep { width: var(--to); animation: amber-sweep 1.6s var(--ease-brand) both; }
 @media (prefers-reduced-motion: reduce) { .amber-sweep { animation: none; } }
+
+/* The popup's gift box, while the server opens it. */
+@keyframes gift-shake { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }

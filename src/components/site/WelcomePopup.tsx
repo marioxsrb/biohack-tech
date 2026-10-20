@@ -6,10 +6,11 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Close } from '@/components/ui/icons'
 import { useLocale } from '@/i18n/LocaleProvider'
-import { WELCOME_CONSENT_TEXT, WELCOME_CONSENT_TEXT_EN } from '@/lib/consent/marketing'
+import { WELCOME_CONSENT_TEXT, WELCOME_CONSENT_TEXT_EN, WELCOME_GIFT_CONSENT_TEXT } from '@/lib/consent/marketing'
 import { getProduct } from '@/content/catalog'
 import { AmberGate } from './AmberGate'
 import { FocusGate } from './FocusGate'
+import { GiftGate, savedGift, type Gift } from './GiftGate'
 
 /** One minute on the site (anywhere, across pages of the same visit) before the offer shows (business decision 16.10.2026). */
 const AFTER_MS = 60_000
@@ -92,8 +93,11 @@ export function WelcomePopup() {
   const amber = /\/products\/amber\/?$/.test(pathname) || window.location.hostname.startsWith('amber.')
   // NEUROS Focus's pages: a one-obstacle tap game comes first.
   const focus = /\/products\/focus\/?$/.test(pathname) || window.location.hostname.startsWith('focus.')
+  // Everywhere else on the Romanian site (the main site, NEUROS Calm): three gift boxes, the server draws the gift.
+  const gifts = !amber && !focus && locale === 'ro'
   const [passed, setPassed] = useState(false)
-  const gate = (amber || focus) && !passed
+  const [gift, setGift] = useState<Gift | null>(null)
+  const gate = (amber || focus || gifts) && !passed
   // After the Amber scene the offer shows the glasses; everywhere else, NEUROS Focus.
   const photo = getProduct(amber ? 'ochelari-biohack' : 'brainlink-pro', locale)!.lifestyle
 
@@ -157,7 +161,7 @@ export function WelcomePopup() {
       const res = await fetch('/api/welcome', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ email: value, page: pathname, locale, website: (e.currentTarget.elements.namedItem('website') as HTMLInputElement | null)?.value ?? '' }),
+        body: JSON.stringify({ email: value, page: pathname, locale, gift: (gift ?? savedGift())?.id, website: (e.currentTarget.elements.namedItem('website') as HTMLInputElement | null)?.value ?? '' }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.message ?? t.failed)
@@ -173,7 +177,19 @@ export function WelcomePopup() {
     return (
       <div className="welcome-in fixed inset-0 z-[280] flex items-center justify-center p-4 max-sm:p-3" onKeyDown={(e) => e.key === 'Escape' && close()}>
         <button type="button" aria-label={t.close} tabIndex={-1} onClick={close} className="absolute inset-0 cursor-default bg-[rgb(8_17_19/0.7)] backdrop-blur-[3px]" />
-        {amber ? <AmberGate onDone={() => setPassed(true)} onClose={close} /> : <FocusGate onDone={() => setPassed(true)} onClose={close} />}
+        {amber ? (
+          <AmberGate onDone={() => setPassed(true)} onClose={close} />
+        ) : focus ? (
+          <FocusGate onDone={() => setPassed(true)} onClose={close} />
+        ) : (
+          <GiftGate
+            onDone={(g) => {
+              setGift(g)
+              setPassed(true)
+            }}
+            onClose={close}
+          />
+        )}
       </div>
     )
 
@@ -191,7 +207,7 @@ export function WelcomePopup() {
           <Image src={photo.src} alt="" fill sizes="(max-width: 640px) 100vw, 360px" className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-[rgb(8_17_19/0.75)] via-transparent to-transparent sm:bg-gradient-to-r sm:from-transparent sm:to-[rgb(8_17_19/0.15)]" />
           <span className="absolute bottom-4 left-4 rounded-full bg-red-dark px-4 py-2 text-[18px] font-extrabold tracking-[0.04em] text-white uppercase sm:top-4 sm:bottom-auto">
-            {t.badge}
+            {gift ? gift.badge : t.badge}
           </span>
         </div>
         <div className="flex flex-col justify-center p-9 max-sm:p-5">
@@ -200,18 +216,18 @@ export function WelcomePopup() {
           </button>
           <p className="text-[13px] font-semibold tracking-[0.12em] text-cyan-700 uppercase">{t.kicker}</p>
           <p id="welcome-title" className="mt-2 text-[42px] leading-[1.02] font-semibold tracking-[-0.035em] text-ink max-sm:text-[30px]">
-            {t.title}
+            {gift ? `${gift.title} la prima comandă` : t.title}
           </p>
           {state === 'done' || state === 'already' ? (
             <div role="status" className="mt-4">
-              <p className="text-[16px] leading-snug text-text">{state === 'already' ? t.already : t.done}</p>
+              <p className="text-[16px] leading-snug text-text">{state === 'already' ? (gift ? 'Pe această adresă am trimis deja un cod de reducere. Caută emailul de la Biohack Tech (și în Promoții sau Spam).' : t.already) : gift ? `Gata! Ți-am trimis codul pentru ${gift.title} pe email. Dacă nu îl vezi în câteva minute, uită-te și în Spam sau Promoții.` : t.done}</p>
               <button type="button" onClick={close} className="cta mt-5 w-full">
                 {t.continue}
               </button>
             </div>
           ) : (
             <form onSubmit={submit} noValidate className="mt-3">
-              <p className="text-[16px] leading-snug text-text">{t.lead}</p>
+              <p className="text-[16px] leading-snug text-text">{gift ? `Lasă-ne adresa de email și îți trimitem codul imediat: ${gift.detail}. Se adaugă peste ofertele din coș.` : t.lead}</p>
               <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
               <label className="sr-only" htmlFor="welcome-email">
                 {t.placeholder}
@@ -241,7 +257,7 @@ export function WelcomePopup() {
                 {t.noThanks}
               </button>
               <p className="mt-2 text-[11.5px] leading-snug text-faint">
-                {locale === 'en' ? WELCOME_CONSENT_TEXT_EN : WELCOME_CONSENT_TEXT}{' '}
+                {locale === 'en' ? WELCOME_CONSENT_TEXT_EN : gift ? WELCOME_GIFT_CONSENT_TEXT : WELCOME_CONSENT_TEXT}{' '}
                 <Link href="/privacy-policy" target="_blank" className="underline underline-offset-2 hover:text-ink">
                   {t.privacy}
                 </Link>

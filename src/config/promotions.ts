@@ -145,3 +145,16 @@ export const promoText = (ro: string, locale: Locale = 'ro'): string => {
  */
 export const CALL_CODE = 'BIOHACK10'
 export const WELCOME_CODE = 'LONGEVITY10'
+
+/**
+ * The three gifts of the website popup on the main site (20.10.2026): the visitor opens one of three boxes and the
+ * server draws what is inside, one in three each. Each is a code (migration 030), once per address, sent by email.
+ * The 100 lei are off any product except the book. NEUROS Amber and Focus keep their own games and the 10% code.
+ */
+export type WelcomeGift = 'p10' | 'p1233' | 'lei100'
+export const WELCOME_GIFTS: Record<WelcomeGift, { code: string; title: string; badge: string; detail: string }> = {
+  p10: { code: WELCOME_CODE, title: '10% reducere', badge: '−10%', detail: '10% din prețul întreg, la orice produs' },
+  p1233: { code: 'CADOU1233', title: '12,33% reducere', badge: '−12,33%', detail: '12,33% din prețul întreg, la orice produs' },
+  lei100: { code: 'CADOU100', title: '100 lei reducere', badge: '−100 lei', detail: '100 lei din comandă, la orice produs, mai puțin cartea' },
+}
+export const isWelcomeGift = (v: unknown): v is WelcomeGift => typeof v === 'string' && v in WELCOME_GIFTS

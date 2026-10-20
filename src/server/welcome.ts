@@ -5,7 +5,8 @@
  */
 import 'server-only'
 import { companyLine } from '@/config/company'
-import { WELCOME_CODE } from '@/config/promotions'
+import { randomBytes, randomInt } from 'node:crypto'
+import { WELCOME_CODE, WELCOME_GIFTS, type WelcomeGift } from '@/config/promotions'
 import { WELCOME_CONSENT_TEXT } from '@/lib/consent/marketing'
 import type { Queryable } from '@/server/db'
 import { emailShell, esc } from '@/server/integrations/email/shell'
@@ -14,28 +15,63 @@ import { marketing } from '@/server/marketing/consent'
 
 export { WELCOME_CONSENT_TEXT }
 
-/** Records the signup and queues the code email; a second signup of the same address sends nothing more. */
-export async function welcomeSignup(t: Queryable, email: string, page: string | null, locale: 'ro' | 'en' = 'ro', site: 'ro' | 'net' = 'ro') {
+const GIFT_IDS: WelcomeGift[] = ['p10', 'p1233', 'lei100']
+
+/** Opens a box: the server draws the gift (one in three each) and keeps it under a random id until an address claims it. */
+export async function drawGift(t: Queryable): Promise<{ id: string; gift: WelcomeGift }> {
+  const id = randomBytes(12).toString('base64url')
+  const gift = GIFT_IDS[randomInt(GIFT_IDS.length)]
+  await t.query("delete from welcome_gifts where claimed_by is null and created_at < now() - interval '7 days'")
+  await t.query('insert into welcome_gifts (id, gift) values ($1, $2)', [id, gift])
+  return { id, gift }
+}
+
+/** The gift behind an opened box, claimed by this address (once); null for an unknown or already claimed box. */
+async function claimGift(t: Queryable, id: string, email: string): Promise<WelcomeGift | null> {
+  if (!/^[A-Za-z0-9_-]{16}$/.test(id)) return null
+  const { rows } = await t.query<{ gift: WelcomeGift }>('update welcome_gifts set claimed_by = $2 where id = $1 and claimed_by is null returning gift', [id, email])
+  return rows[0]?.gift ?? null
+}
+
+/**
+ * Records the signup and queues the code email; a second signup of the same address sends nothing more. With an
+ * opened box (`giftId`), the email carries that gift's code; without one, the 10% code.
+ */
+export async function welcomeSignup(t: Queryable, email: string, page: string | null, locale: 'ro' | 'en' = 'ro', site: 'ro' | 'net' = 'ro', giftId?: string) {
   const addr = email.trim().toLowerCase()
   const { rows } = await t.query('insert into welcome_signups (email, page) values ($1, $2) on conflict (email) do nothing returning email', [addr, page?.slice(0, 80) ?? null])
   if (!rows.length) return { created: false, already: true }
+  const gift = (giftId && (await claimGift(t, giftId, addr))) || 'p10'
+  if (gift !== 'p10') await t.query('update welcome_signups set gift = $2 where email = $1', [addr, gift])
   const state = await marketing.state(t, addr)
   // An address that unsubscribed before chose so: signing up again here is a new, explicit consent.
-  if (!state?.granted) await marketing.grant(t, { email: addr, source: 'popup', page: page ?? undefined, version: locale === 'en' ? 'welcome-en-2026-10-16' : 'welcome-2026-10-15' })
-  await jobs.enqueue(t, { kind: 'email.welcome', dedupeKey: `email.welcome:${addr}`, payload: { email: addr, locale, site } })
+  if (!state?.granted) await marketing.grant(t, { email: addr, source: 'popup', page: page ?? undefined, version: locale === 'en' ? 'welcome-en-2026-10-16' : giftId ? 'welcome-cadou-2026-10-20' : 'welcome-2026-10-15' })
+  await jobs.enqueue(t, { kind: 'email.welcome', dedupeKey: `email.welcome:${addr}`, payload: { email: addr, locale, site, gift } })
   // The address in the CRM (contact, lead tags, leads pipeline) for the team's follow-up and remarketing.
   await jobs.enqueue(t, { kind: 'ghl.welcome', dedupeKey: `ghl.welcome:${addr}`, payload: { email: addr, site } })
   return { created: true }
 }
 
-export function renderWelcome(x: { siteUrl: string; unsubscribeUrl: string; code?: string; locale?: 'ro' | 'en' }) {
+export function renderWelcome(x: { siteUrl: string; unsubscribeUrl: string; code?: string; locale?: 'ro' | 'en'; gift?: WelcomeGift }) {
   const code = x.code ?? WELCOME_CODE
   if (x.locale === 'en') return renderWelcomeEn({ ...x, code })
-  const subject = `Codul tău de 10%: ${code}`
-  const lines = [
-    'Mulțumim că ne-ai lăsat adresa. Acesta este codul tău de 10% reducere:',
-    'Scrie-l la „Cod promoțional”, în pagina de comandă. Îți dă 10% din prețul întreg și se adaugă peste promoțiile din coș (de exemplu 20% la 3 bucăți + 10%). Pe o comandă merge un singur cod.',
-  ]
+  const g = WELCOME_GIFTS[x.gift ?? 'p10']
+  const subject = x.gift && x.gift !== 'p10' ? `Cadoul tău, ${g.title}: ${code}` : `Codul tău de 10%: ${code}`
+  const lines =
+    x.gift === 'lei100'
+      ? [
+          'Mulțumim că ne-ai lăsat adresa. Cadoul tău este 100 lei reducere, cu acest cod:',
+          'Scrie-l la „Cod promoțional”, în pagina de comandă. Scade 100 lei din comandă, la orice produs, mai puțin cartea, și se adaugă peste promoțiile din coș. Pe o comandă merge un singur cod.',
+        ]
+      : x.gift === 'p1233'
+        ? [
+            'Mulțumim că ne-ai lăsat adresa. Cadoul tău este 12,33% reducere, cu acest cod:',
+            'Scrie-l la „Cod promoțional”, în pagina de comandă. Îți dă 12,33% din prețul întreg și se adaugă peste promoțiile din coș. Pe o comandă merge un singur cod.',
+          ]
+        : [
+            'Mulțumim că ne-ai lăsat adresa. Acesta este codul tău de 10% reducere:',
+            'Scrie-l la „Cod promoțional”, în pagina de comandă. Îți dă 10% din prețul întreg și se adaugă peste promoțiile din coș (de exemplu 20% la 3 bucăți + 10%). Pe o comandă merge un singur cod.',
+          ]
   const footer = `Primești acest email pentru că ți-ai lăsat adresa pe biohack-tech.ro. Te poți dezabona oricând: ${x.unsubscribeUrl}`
   const company = companyLine()
   const text = ['Bună!', '', lines[0], code, '', lines[1], '', `Mergi la magazin: ${x.siteUrl}`, '', 'Echipa Biohack Tech', '', footer, ...(company ? [company] : [])].join('\n')
@@ -45,7 +81,7 @@ ${p(lines[0])}
 <div style="margin:6px 0 18px;padding:16px 18px;border:1px dashed #0e7490;border-radius:14px;background:#f2f9fb;text-align:center">
 <div style="font-size:13px;color:#5a6870;letter-spacing:.4px">CODUL TĂU</div>
 <div style="font-size:26px;font-weight:800;letter-spacing:3px;color:#0b1316;padding:4px 0">${esc(code)}</div>
-<div style="font-size:14px;color:#27343a">10% reducere din prețul întreg</div>
+<div style="font-size:14px;color:#27343a">${esc(g.detail)}</div>
 </div>
 ${p(lines[1])}
 <p style="margin:22px 0 0"><a href="${esc(x.siteUrl)}" style="display:inline-block;background:#d23b3b;color:#ffffff;text-decoration:none;font-weight:600;font-size:15px;padding:13px 22px;border-radius:12px">Mergi la magazin</a></p>`
