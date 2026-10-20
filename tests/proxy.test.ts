@@ -20,7 +20,7 @@ describe('proxy', () => {
   it('serves the landing at the root of its hostname, never indexed, keeping the campaign query', async () => {
     const res = await run('https://focus.biohack-tech.ro/?utm_source=meta', 'focus.biohack-tech.ro')
     expect(isRewrite(res)).toBe(true)
-    expect(getRewrittenUrl(res)).toBe('https://focus.biohack-tech.ro/ro/lp/focus?utm_source=meta')
+    expect(getRewrittenUrl(res)).toBe('https://focus.biohack-tech.ro/ro/products/focus?utm_source=meta')
     expect(res.headers.get('x-robots-tag')).toBe('noindex, nofollow')
   })
 

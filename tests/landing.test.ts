@@ -60,7 +60,7 @@ describe('landing hostnames (explicit allowlist)', () => {
 
 describe('what a landing hostname serves', () => {
   it('its landing at "/", the whole purchase path on the same origin, and a redirect to the main site for the rest', () => {
-    expect(routeLanding('focus', '/')).toEqual({ action: 'rewrite', path: '/lp/focus' })
+    expect(routeLanding('focus', '/')).toEqual({ action: 'rewrite', path: '/products/focus' })
     expect(routeLanding('focus', '/lp/focus')).toEqual({ action: 'redirect', path: '/' })
     // The cart lives in this origin's storage: cart, checkout and the product pages the cart links to stay here.
     for (const p of ['/checkout', '/cart', '/products', '/products/amber', '/comanda/abc_DEF-123', '/api/checkout', '/api/consent', '/api/contact', '/_next/static/x.js', '/politica-retur', '/retragere', '/retragere/confirmare', '/terms-of-service']) {
