@@ -21,8 +21,13 @@ describe('social proof', () => {
   it('the number is written nowhere else', () => {
     for (const f of ['src/components/product/BuyBox.tsx', 'src/components/product/ProductHero.tsx', 'src/lib/social-proof.ts']) expect(read(f)).not.toMatch(/\b500\b/)
   })
-  it('no star rating or review count is shown', () => {
-    expect(read('src/components/product/BuyBox.tsx')).not.toMatch(/rating|stele|stars|recenzi/i)
+  // Stars beside the customer line since 20.10.2026 (business decision). They come only from the confirmed
+  // average in config/social-proof.ts: no rating typed into the component, and no review count.
+  it('the star rating comes only from config/social-proof.ts, with no review count', () => {
+    const src = read('src/components/product/BuyBox.tsx')
+    expect(src).toContain('socialProof.averageRating')
+    expect(src).not.toMatch(/\b4[.,]9\b|\b5[.,]0\b/)
+    expect(src).not.toMatch(/recenzi|reviews?\b/i)
   })
 })
 
