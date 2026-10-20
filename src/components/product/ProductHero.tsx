@@ -228,7 +228,6 @@ export function ProductHero({ productId, intro, highlights, media, title }: Prop
             />
             <CalmUse pairCta={<BuyNowButton productId={product.id} variantId={variant?.id} quantity={2} pay="online" title="Comandă 2 bucăți" className="w-full" />} />
             {(BULK_OFFER.products as string[]).includes(product.id) && <BusinessStrip locale={locale} compact className="mt-8" />}
-            <p className="mt-7 max-w-[32em] border-t border-mist-2 pt-6 text-[16.5px] leading-relaxed text-text">{intro}</p>
           </div>
         )}
       </div>

@@ -82,7 +82,7 @@ function PartIcon({ k }: { k: (typeof science.how)[number]['key'] }) {
 function HowItWorks() {
   return (
     <div className="mt-10 grid overflow-hidden rounded-[28px] bg-paper md:mt-14 md:grid-cols-12">
-      <div className="relative aspect-[4/3] md:col-span-5 md:aspect-auto md:min-h-[520px]">
+      <div className="relative aspect-[4/3] md:col-span-5 md:aspect-auto md:min-h-[440px]">
         <Image src={nervVag} alt="Ilustrație: nervul vag pornește din creier și ajunge la inimă, plămâni și stomac" fill placeholder="blur" sizes="(min-width: 768px) 460px, 100vw" className="object-cover" />
       </div>
       <div className="p-[clamp(24px,4.5vw,56px)] md:col-span-7">
@@ -240,7 +240,7 @@ export function CalmScience() {
 
       <HowItWorks />
 
-      <div className="mt-14 flex items-end justify-between gap-6 md:mt-20">
+      <div className="mt-12 flex items-end justify-between gap-6 md:mt-14">
         <h3 className="text-[clamp(24px,2.4vw,32px)] leading-tight tracking-[-0.03em] text-ink">{science.studiesTitle}</h3>
         <RowArrows edge={edge} step={step} />
       </div>

@@ -114,7 +114,7 @@ export function Gallery({ images, label, wide }: Props) {
             <button type="button" onClick={() => go(active + 1)} className="gal-arrow right-4" aria-label={t.next}>
               <Arrow className="h-4 w-4" />
             </button>
-            {/* Phones: which image this is, in numbers, plus dots. Thumbnails are hidden there. */}
+            {/* Phones: which image this is, in numbers, plus dots; the thumbnails sit under the photo. */}
             <span className="absolute top-3 right-3 rounded-full bg-mist/95 px-2.5 py-1 text-[13px] font-medium text-ink tabular-nums sm:hidden" aria-hidden>
               {active + 1} / {images.length}
             </span>
@@ -128,9 +128,9 @@ export function Gallery({ images, label, wide }: Props) {
       </div>
 
       {images.length > 1 && (
-        <ul className="mt-3 flex gap-2 max-sm:hidden" aria-label={t.pick}>
+        <ul className="mt-3 grid grid-cols-5 gap-1.5 sm:flex sm:gap-2" aria-label={t.pick}>
           {images.map((img, i) => (
-            <li key={img.src.src} className="max-w-[88px] min-w-0 flex-1">
+            <li key={img.src.src} className="min-w-0 sm:max-w-[88px] sm:flex-1">
               <button
                 type="button"
                 onClick={() => go(i)}

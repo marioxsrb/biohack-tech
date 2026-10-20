@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from '@/components/ui/Link'
 import { AddToCartButton } from '@/components/cart/AddToCartButton'
 import { Price } from '@/components/cart/Price'
+import { CalmClosing } from '@/components/calm/CalmClosing'
 import { Faq } from '@/components/ui/Faq'
 import { Arrow, External } from '@/components/ui/icons'
 import { isPurchasable, type Product } from '@/content/catalog'
@@ -24,15 +25,15 @@ type Copy = (typeof COPY)['ro']
  */
 export function ProductSections({ product, content: c, locale }: Props) {
   const t = COPY[locale]
+  // Romanian NEUROS Calm: the page ends with its own sections (what's in the box, questions, closing).
+  if (locale === 'ro' && product.id === 'balance-wave') return <CalmClosing productId={product.id} specs={c.specs} />
   return (
     <>
       <Cinematic story={c.scene} />
       <Benefits items={c.benefits} t={t} />
-      {/* On the Romanian Calm page the use steps live under the evening story (components/calm/CalmUse). */}
-      {c.use && !(locale === 'ro' && product.id === 'balance-wave') && <Use use={c.use} />}
+      {c.use && <Use use={c.use} />}
       {c.lookbook && <Lookbook lookbook={c.lookbook} t={t} />}
-      {/* Romanian Calm: "Cum susține calmul" is replaced by the science section, shown right after "Știai că?" (page.tsx). */}
-      {c.explain && !(locale === 'ro' && product.id === 'balance-wave') && <Explain explain={c.explain} t={t} />}
+      {c.explain && <Explain explain={c.explain} t={t} />}
       {c.moments.length > 0 && (
         <div className="py-[calc(var(--sec)*0.5)]">
           {c.moments.map((s, i) => (

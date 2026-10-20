@@ -32,10 +32,10 @@ const STEPS = [
 
 function OneButton() {
   return (
-    <section aria-labelledby="un-singur-buton" className="pt-16 md:pt-24">
+    <section aria-labelledby="un-singur-buton" className="pt-12 md:pt-16">
       <div className="grid overflow-hidden rounded-[28px] bg-paper md:grid-cols-12">
         {/* The device, lit: the red light the second step talks about. */}
-        <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-[radial-gradient(60%_55%_at_50%_55%,#fde3e1_0%,#fbf3f1_55%,#ffffff_100%)] md:col-span-5 md:aspect-auto md:min-h-[460px]">
+        <div className="relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-[radial-gradient(60%_55%_at_50%_55%,#fde3e1_0%,#fbf3f1_55%,#ffffff_100%)] md:col-span-5 md:aspect-auto md:min-h-[400px]">
           <div aria-hidden className="calm-pulse absolute top-1/2 left-1/2 h-[46%] w-[46%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#ef4444]/25 blur-3xl" />
           <Image src={activ} alt="NEUROS Calm pornit, cu lumina roșie aprinsă" placeholder="blur" sizes="(min-width: 768px) 420px, 80vw" className="relative w-[70%] max-w-[380px] drop-shadow-[0_24px_40px_rgba(11,19,22,0.18)]" />
           <span className="absolute top-5 left-5 rounded-full bg-white/85 px-3 py-1.5 text-[13px] font-semibold text-ink shadow-[0_4px_14px_rgba(11,19,22,0.08)] backdrop-blur">Un singur buton</span>
@@ -124,7 +124,7 @@ function WhenYouWear({ pairCta }: { pairCta?: ReactNode }) {
   const { row, edge, step } = useRow()
   const card = rowCard
   return (
-    <section aria-labelledby="cand-il-porti" className="pt-16 md:pt-24">
+    <section aria-labelledby="cand-il-porti" className="pt-12 md:pt-16">
       <div className="flex items-end justify-between gap-6">
         <div>
           <h2 id="cand-il-porti" className={`${titleClass} max-w-[14em]`}>

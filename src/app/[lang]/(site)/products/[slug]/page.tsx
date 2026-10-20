@@ -106,7 +106,7 @@ export default async function ProductPage({ params }: PageProps<'/[lang]/product
       {/* The book has its own editorial page; the devices keep their product story. */}
       {isBook(product.id) ? <BookSections product={product} locale={locale} /> : <ProductSections product={product} content={content} locale={locale} />}
 
-      {!isBook(product.id) && (
+      {!isBook(product.id) && !calmRo && (
         <p className="wrap py-8 text-[13px] leading-relaxed text-muted">
           {t.note(product.name)}
         </p>

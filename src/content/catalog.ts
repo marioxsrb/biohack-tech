@@ -47,7 +47,7 @@ import bwPurtat from '@/assets/img/balance-wave/result-echilibru.webp'
 import bwCanapea from '@/assets/img/balance-wave/lifestyle-canapea.webp'
 /**
  * Studio product shots on white, generated from photographs of the real box, device and cable
- * (October 2026), checked against them: box text, logo, cord and the cable's three connectors.
+ * (October 2026), checked against them: box text, logo, cord and the nose cord's three connectors.
  * cutie-deschidere is the same sequence animated (WebP): box, lid off, open, out of the box, lit.
  */
 import bwDeschidere from '@/assets/img/balance-wave/cutie-deschidere.webp'
@@ -180,15 +180,15 @@ const catalog: Omit<Product, 'price'>[] = [
     lifestyle: photo(bwCanapea, 'Femeie relaxată pe canapea, purtând NEUROS Calm la gât'),
     images: [
       studio(bwDeschidere, 'Cutia NEUROS Calm se deschide, aparatul iese din cutie și se aprinde'),
+      photo(bwPurtat, 'Femeie cu ochii închiși, purtând NEUROS Calm la gât'),
       studio(bwAprins, 'NEUROS Calm pornit, cu cele două panouri de lumină roșie aprinse'),
       studio(bwInchisa, 'Cutia NEUROS Calm, închisă'),
       studio(bwCapac, 'Capacul se ridică și se vede NEUROS Calm în cutie'),
       studio(bwDeschisa, 'Cutia deschisă: NEUROS Calm și manualul de utilizare'),
       studio(bwIese, 'NEUROS Calm iese din cutie'),
-      studio(bwContinut, 'Ce primești în cutie: aparatul, manualul și cablul de încărcare'),
-      studio(bwCablu, 'Cablul de încărcare, lângă NEUROS Calm'),
+      studio(bwContinut, 'Ce primești în cutie: aparatul, ghidul de folosire și cordonul pentru nas'),
+      studio(bwCablu, 'Cordonul de prindere la nas, lângă NEUROS Calm'),
       studio(bwButon, 'NEUROS Calm văzut din spate, cu butonul de pornire'),
-      photo(bwPurtat, 'Femeie cu ochii închiși, purtând NEUROS Calm la gât'),
     ],
   },
   {
