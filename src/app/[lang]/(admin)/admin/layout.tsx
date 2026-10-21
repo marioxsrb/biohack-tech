@@ -11,13 +11,14 @@ async function waiting(): Promise<Record<string, number>> {
   try {
     if ((await checkAdminSession((await cookies()).get(ADMIN_COOKIE)?.value)) !== 'ok') return {}
     const db = await getDb()
-    const { rows } = await db.query<{ e: number; s: number }>(
+    const { rows } = await db.query<{ e: number; s: number; r: number }>(
       `select (select count(*)::int from enquiries e where e.status = 'new'
                  or exists (select 1 from inbound_emails i where i.thread_kind = 'enquiry' and i.thread_id = e.id and i.read_at is null)) as e,
               (select count(*)::int from support_requests s where s.status = 'open'
-                 or exists (select 1 from inbound_emails i where i.thread_kind = 'support' and i.thread_id = s.id and i.read_at is null)) as s`,
+                 or exists (select 1 from inbound_emails i where i.thread_kind = 'support' and i.thread_id = s.id and i.read_at is null)) as s,
+              (select count(*)::int from orders o where o.risk_review = 'pending' and o.status not in ('cancelled', 'abandoned')) as r`,
     )
-    return { '/admin/mesaje': rows[0]?.e ?? 0, '/admin/suport': rows[0]?.s ?? 0 }
+    return { '/admin/mesaje': rows[0]?.e ?? 0, '/admin/suport': rows[0]?.s ?? 0, '/admin/verificare': rows[0]?.r ?? 0 }
   } catch {
     return {}
   }

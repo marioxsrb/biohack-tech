@@ -34,6 +34,9 @@ export type NotifyContext = { siteUrl: string; parentNumber?: string | null; job
 
 /** A business order still waiting for a person's call: what every "new order" note asks first. */
 const CONFIRM_FIRST = 'COMANDĂ COMPANIE: sună clientul și confirmă cantitățile și livrarea, apoi apasă „Confirmă comanda” în /admin/companii. Până atunci nu se pregătește.'
+/** An order the checkout's risk check flagged: verified by a person before anything is prepared (no signals here). */
+const REVIEW_FIRST = 'NECESITĂ VERIFICARE: sună clientul și confirmă comanda în /admin/verificare. Până atunci nu se pregătește.'
+const reviewFirst = (o: Order) => (o.riskReview === 'pending' ? `${REVIEW_FIRST} ` : '')
 const paid = (o: Order) => o.paymentStatus === 'paid' || o.paymentStatus === 'partially_refunded'
 const preparing = (o: Order) => o.status === 'confirmed' || o.status === 'processing'
 
@@ -41,12 +44,12 @@ const preparing = (o: Order) => o.status === 'confirmed' || o.status === 'proces
 export const NOTIFICATIONS: Record<NotifyEvent, { title: string; action: (o: Order, x: NotifyContext) => string; stillTrue: (o: Order, x: NotifyContext) => boolean }> = {
   new_card_paid: {
     title: 'comandă nouă plătită cu cardul',
-    action: () => 'Pregătește coletul. Marchează „în pregătire”, apoi „expediată” cu AWB în /admin.',
+    action: (o) => `${reviewFirst(o)}Pregătește coletul. Marchează „în pregătire”, apoi „expediată” cu AWB în /admin.`,
     stillTrue: (o) => o.status !== 'cancelled',
   },
   new_transfer: {
     title: 'comandă nouă, așteaptă transferul',
-    action: (o) => `${o.teamConfirmation === 'awaiting' ? `${CONFIRM_FIRST} ` : ''}Verifică extrasul. Când suma de ${formatMoney(o.totalMinor, o.currency)} apare cu referința ${o.orderNumber}, apasă „Plata a fost primită” în /admin.`,
+    action: (o) => `${reviewFirst(o)}${o.teamConfirmation === 'awaiting' ? `${CONFIRM_FIRST} ` : ''}Verifică extrasul. Când suma de ${formatMoney(o.totalMinor, o.currency)} apare cu referința ${o.orderNumber}, apasă „Plata a fost primită” în /admin.`,
     stillTrue: (o) => o.paymentStatus === 'awaiting_transfer' && o.status !== 'cancelled',
   },
   transfer_paid: {
@@ -57,9 +60,10 @@ export const NOTIFICATIONS: Record<NotifyEvent, { title: string; action: (o: Ord
   new_cod: {
     title: 'comandă nouă cu plata la livrare',
     action: (o) =>
-      o.teamConfirmation === 'awaiting'
+      reviewFirst(o) +
+      (o.teamConfirmation === 'awaiting'
         ? `${CONFIRM_FIRST} Curierul va încasa ${formatMoney(o.codAmountMinor ?? o.totalMinor, o.currency)}.`
-        : `Pregătește coletul. Curierul încasează ${formatMoney(o.codAmountMinor ?? o.totalMinor, o.currency)}. Marchează „expediată” cu AWB în /admin.`,
+        : `Pregătește coletul. Curierul încasează ${formatMoney(o.codAmountMinor ?? o.totalMinor, o.currency)}. Marchează „expediată” cu AWB în /admin.`),
     stillTrue: (o) => o.status !== 'cancelled',
   },
   upsell_paid: {

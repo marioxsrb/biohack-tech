@@ -74,6 +74,11 @@ function toOrder(r: Row, items: OrderItem[]): Order {
     preparedAt: date(r.prepared_at),
     fulfillmentIssue: (r.fulfillment_issue as string) ?? null,
     fulfillmentIssueAt: date(r.fulfillment_issue_at),
+    riskReview: (r.risk_review as Order['riskReview']) ?? null,
+    riskScore: r.risk_score == null ? null : Number(r.risk_score),
+    riskReasons: Array.isArray(r.risk_reasons) ? (r.risk_reasons as string[]) : [],
+    riskReviewedAt: date(r.risk_reviewed_at),
+    riskReviewedBy: (r.risk_reviewed_by as string) ?? null,
     items,
   }
 }
@@ -122,8 +127,10 @@ export const QUEUES = {
   transfer: { label: 'Așteaptă transferul', where: `payment_status = 'awaiting_transfer' and status <> 'cancelled'` },
   // A business order waiting for the team's call is not ready for preparation (state.ts canFulfil).
   companii: { label: 'Companii: de confirmat', where: `team_confirmation = 'awaiting' and status <> 'cancelled'` },
-  pregatire: { label: 'Plătite, de pregătit', where: `status in ('confirmed', 'processing') and payment_status in ('paid', 'partially_refunded') and team_confirmation is distinct from 'awaiting'` },
-  ramburs: { label: 'Ramburs, de pregătit', where: `status in ('confirmed', 'processing') and payment_status = 'awaiting_collection' and team_confirmation is distinct from 'awaiting'` },
+  // An order flagged by the checkout's risk check waits for a person too (server/risk.ts, /admin/verificare).
+  verificare: { label: 'Necesită verificare', where: `risk_review = 'pending' and status <> 'cancelled'` },
+  pregatire: { label: 'Plătite, de pregătit', where: `status in ('confirmed', 'processing') and payment_status in ('paid', 'partially_refunded') and team_confirmation is distinct from 'awaiting' and risk_review is distinct from 'pending'` },
+  ramburs: { label: 'Ramburs, de pregătit', where: `status in ('confirmed', 'processing') and payment_status = 'awaiting_collection' and team_confirmation is distinct from 'awaiting' and risk_review is distinct from 'pending'` },
   expediate: { label: 'Expediate', where: `status = 'shipped'` },
   incasare: { label: 'Ramburs de încasat', where: `payment_status = 'awaiting_collection' and status in ('shipped', 'delivered')` },
   // A cash-on-delivery parcel that left and came back unpaid (refused or not picked up), cancelled by a person; nothing automatic.
@@ -194,6 +201,12 @@ export const orders = {
     return withItems(q, rows)
   },
 
+  /** Orders the checkout's risk check flagged (pending or cleared), newest first: /admin/verificare. */
+  async risk(q: Queryable, limit = 200) {
+    const { rows } = await q.query(`select * from orders where risk_review is not null order by created_at desc limit $1`, [limit])
+    return withItems(q, rows)
+  },
+
   async list(q: Queryable, opts: { limit?: number; search?: string; queue?: QueueKey } = {}) {
     const params: unknown[] = [opts.limit ?? 100]
     const where: string[] = []
@@ -242,7 +255,7 @@ export const orders = {
 
   async insert(
     q: Queryable,
-    o: Omit<Order, 'createdAt' | 'updatedAt' | 'refundedMinor' | 'paidAt' | 'cancelledAt' | 'cancelReason' | 'refundedAt' | 'fgoInvoiceSeries' | 'fgoInvoiceNumber' | 'fgoInvoiceLink' | 'fgoStornoNumber' | 'ghlContactId' | 'ghlOpportunityId' | 'courier' | 'trackingNumber' | 'trackingUrl' | 'shippedAt' | 'deliveredAt' | 'stripePaymentIntentId' | 'recoveryStatus' | 'recoveryReason' | 'recoveryToken' | 'recoveryExpiresAt' | 'returnStatus' | 'returnRequestedAt' | 'returnReceivedAt' | 'stripeCustomerId' | 'stripePaymentMethodId' | 'upsellStatus' | 'upsellExpiresAt' | 'codAmountMinor' | 'codReference' | 'teamConfirmation' | 'teamConfirmedAt' | 'teamConfirmedBy' | 'preparedAt' | 'fulfillmentIssue' | 'fulfillmentIssueAt'>,
+    o: Omit<Order, 'createdAt' | 'updatedAt' | 'refundedMinor' | 'paidAt' | 'cancelledAt' | 'cancelReason' | 'refundedAt' | 'fgoInvoiceSeries' | 'fgoInvoiceNumber' | 'fgoInvoiceLink' | 'fgoStornoNumber' | 'ghlContactId' | 'ghlOpportunityId' | 'courier' | 'trackingNumber' | 'trackingUrl' | 'shippedAt' | 'deliveredAt' | 'stripePaymentIntentId' | 'recoveryStatus' | 'recoveryReason' | 'recoveryToken' | 'recoveryExpiresAt' | 'returnStatus' | 'returnRequestedAt' | 'returnReceivedAt' | 'stripeCustomerId' | 'stripePaymentMethodId' | 'upsellStatus' | 'upsellExpiresAt' | 'codAmountMinor' | 'codReference' | 'teamConfirmation' | 'teamConfirmedAt' | 'teamConfirmedBy' | 'preparedAt' | 'fulfillmentIssue' | 'fulfillmentIssueAt' | 'riskReview' | 'riskScore' | 'riskReasons' | 'riskReviewedAt' | 'riskReviewedBy'>,
     idempotencyKey: string,
     termsAcceptedAt: Date,
   ) {

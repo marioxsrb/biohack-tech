@@ -66,7 +66,7 @@ export function AmberHow() {
           </h2>
           <div className="mt-5 max-w-[28em] space-y-4 text-[17px] leading-relaxed text-white/80">
             <p>Te ajută să stai la ecran cu ochi mai odihniți, ziua și seara.</p>
-            <p>Monitorul, telefonul și becurile LED emit lumină albastră. Lentilele chihlimbar o filtrează, iar lumina devine mai blândă.</p>
+            <p>Monitorul, telefonul și becurile LED emit lumină albastră. Lentilele galbene o filtrează, iar lumina devine mai blândă.</p>
             <p>Rama este ușoară. O porți toată ziua.</p>
           </div>
         </div>
@@ -122,7 +122,7 @@ export function AmberWhy() {
             O lumină mai blândă, pentru seri mai calme.
           </Title>
           <p className="mt-5 max-w-[30em] text-[17.5px] leading-relaxed text-[var(--lp-muted)]">
-            Te ajută să stai pe telefon sau la laptop cu o seară mai liniștită. Monitorul, telefonul și becurile LED emit lumină albastră. Lentilele chihlimbar o filtrează, iar lumina devine mai blândă. Rama e ușoară: o porți toată ziua.
+            Te ajută să stai pe telefon sau la laptop cu o seară mai liniștită. Monitorul, telefonul și becurile LED emit lumină albastră. Lentilele galbene o filtrează, iar lumina devine mai blândă. Rama e ușoară: o porți toată ziua.
           </p>
           <ul className="mt-9 divide-y divide-[var(--lp-line)] border-y border-[var(--lp-line)]">
             {[

@@ -140,7 +140,7 @@ export function AmberSelector({ slug, productId }: { slug: LandingSlug; productI
           </h2>
         </div>
         <p className="max-w-[26em] text-[17px] leading-relaxed text-[var(--lp-muted)]">
-          Combină ramele cum vrei: una pentru birou, una pentru seară. Toate au aceleași lentile chihlimbar. O pereche costă {formatLei(unitPrice(product, variants[0]) ?? 0)}.
+          Combină ramele cum vrei: una pentru birou, una pentru seară. Toate au aceleași lentile galbene. O pereche costă {formatLei(unitPrice(product, variants[0]) ?? 0)}.
         </p>
       </div>
 

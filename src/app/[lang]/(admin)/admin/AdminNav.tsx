@@ -9,6 +9,7 @@ const GROUPS: { title: string; items: { href: string; label: string }[] }[] = [
     title: 'Operațional',
     items: [
       { href: '/admin/comenzi', label: 'Comenzi' },
+      { href: '/admin/verificare', label: 'Comenzi de verificat' },
       { href: '/admin/companii', label: 'Comenzi companii' },
       { href: '/fulfillment', label: 'Fulfillment (depozit) ↗' },
       { href: '/admin/livrare-digitala', label: 'Livrare digitală' },

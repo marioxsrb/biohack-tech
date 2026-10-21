@@ -318,7 +318,7 @@ const catalog: Omit<Product, 'price'>[] = [
     name: 'NEUROS Focus',
     kind: 'Pentru focus și claritate',
     purpose: 'Pentru concentrare',
-    tagline: 'Te ajută să-ți aduni atenția. Vine cu tabletă inclusă, 10 jocuri și 20 de ședințe gratuite. Jocul merge înainte când ești atent.',
+    tagline: 'Te ajută să-ți aduni atenția. Vine cu tabletă inclusă, peste 10 jocuri și 20 de ședințe gratuite. Jocul merge înainte când ești atent.',
     cutout: cut(blCasca, 'NEUROS Focus, casca văzută din unghi'),
     lifestyle: photo(blTableta, 'Tânăr pe canapea, purtând NEUROS Focus și jucând pe tabletă'),
     images: [
@@ -340,7 +340,7 @@ const catalog: Omit<Product, 'price'>[] = [
     kind: 'Pentru seri mai liniștite',
     purpose: 'Pentru seară și pentru somn',
     tagline: 'Lentile galbene pentru seară: lumina ecranelor și a becurilor se simte mai blândă, iar seara se așază mai ușor. Alegi din cinci rame.',
-    cutout: cut(glCatNegru1, 'NEUROS Amber cat eye, ramă neagră, lentile chihlimbar'),
+    cutout: cut(glCatNegru1, 'NEUROS Amber cat eye, ramă neagră, lentile galbene'),
     lifestyle: photo(glTerasa, 'Femeie pe o terasă, purtând NEUROS Amber cat eye bej'),
     images: [photo(glToate, 'Cele patru rame NEUROS Amber, așezate pe o masă')],
     options: AMBER_OPTIONS,

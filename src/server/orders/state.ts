@@ -38,11 +38,16 @@ export const awaitsCollection = (o: Pick<Order, 'paymentMethod' | 'paymentStatus
 /** A business order (cash on delivery or transfer) that a person has not confirmed yet. */
 export const awaitsTeam = (o: { teamConfirmation?: Order['teamConfirmation'] }) => o.teamConfirmation === 'awaiting'
 
+/** An order the checkout's risk check flagged ("Necesită verificare") that a person has not cleared yet. */
+export const awaitsReview = (o: { riskReview?: Order['riskReview'] }) => o.riskReview === 'pending'
+
 /**
  * The order may be prepared and shipped: paid, or cash on delivery (the courier collects at the door), and, for a
- * business order paid by cash on delivery or transfer, confirmed by a person first.
+ * business order paid by cash on delivery or transfer, confirmed by a person first; an order flagged by the risk
+ * check, cleared by a person first.
  */
-export const canFulfil = (o: Pick<Order, 'paymentMethod' | 'paymentStatus'> & { teamConfirmation?: Order['teamConfirmation'] }) => (isPaid(o.paymentStatus) || awaitsCollection(o)) && !awaitsTeam(o)
+export const canFulfil = (o: Pick<Order, 'paymentMethod' | 'paymentStatus'> & { teamConfirmation?: Order['teamConfirmation']; riskReview?: Order['riskReview'] }) =>
+  (isPaid(o.paymentStatus) || awaitsCollection(o)) && !awaitsTeam(o) && !awaitsReview(o)
 
 /**
  * The customer has the product and owes or has paid for it: what a withdrawal and a return need.

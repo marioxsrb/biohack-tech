@@ -33,6 +33,7 @@ import { orders } from './repository'
 import { ensureOrderLead, markLeadsPurchased } from '@/server/leads'
 import { syncEntitlement } from '@/server/digital/entitlements'
 import { autoEmailJob } from '@/server/digital/delivery'
+import { FAILED_CARD_LIMIT, ipKey, riskSignals, scoreRisk } from '@/server/risk'
 
 export type Source = 'checkout' | 'stripe.webhook' | 'stripe.reconcile' | 'upsell' | 'admin' | 'system' | 'assistant' | 'fulfillment'
 
@@ -50,6 +51,8 @@ type PlaceInput = {
   /** The checkout's language and site (emails and pages follow them). */
   locale?: 'ro' | 'en'
   site?: OrderSite
+  /** Where the checkout came from, for the risk check only (server/risk.ts); never part of the idempotency key. */
+  source?: { ip: string | null; visitor: string | null }
 }
 
 /** The promo code cannot be used for this order (the checkout shows why, next to the code field). */
@@ -72,6 +75,16 @@ const addressOf = (f: OrderForm, ship: boolean): Address =>
   ship && !f.sameAddress
     ? { address: f.shipAddress, city: f.shipCity, county: f.shipCounty, postalCode: f.shipPostalCode, country: f.shipCountry || 'RO' }
     : { address: f.address, city: f.city, county: f.county, postalCode: f.postalCode, country: f.country || 'RO' }
+
+/**
+ * A card payment refused before any order is written: this contact, browser or network already had
+ * FAILED_CARD_LIMIT failed card payments in the last 24 hours. The other methods stay open.
+ */
+export class CardAttemptsError extends Error {
+  constructor() {
+    super('too many failed card payments')
+  }
+}
 
 export async function placeOrder(input: PlaceInput): Promise<{ order: Order; created: boolean }> {
   const db = await getDb()
@@ -101,6 +114,11 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
       }
       const pricing = priceLines(lines, undefined, rule)
       if (pricing.code?.problem) throw new PromoError(pricing.code.problem, rule)
+      // The risk check (server/risk.ts) reads what happened before this order; it never blocks on one signal.
+      const riskInput = { email: f.email, phone: f.phone, firstName: f.firstName, lastName: f.lastName, ip: ipKey(input.source?.ip), visitor: input.source?.visitor ?? null }
+      const signals = await riskSignals(t, riskInput)
+      if (method === 'card' && signals.failedCards >= FAILED_CARD_LIMIT && !signals.known) throw new CardAttemptsError()
+      const risk = scoreRisk(signals)
       const subtotal = pricing.subtotalMinor
       const discount = pricing.discountMinor
       const now = new Date()
@@ -162,6 +180,15 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
       if (cod) await orders.update(t, id, { cod_amount_minor: subtotal - discount + shipping })
       // A business order paid at the door or by transfer is called and confirmed by a person before preparation.
       if (isBulk(pricing.promotions) && method !== 'card') await orders.update(t, id, { team_confirmation: 'awaiting' })
+      // The risk signals are kept for the next checks; a high score waits for a person ("Necesită verificare").
+      await orders.update(t, id, {
+        risk_ip: riskInput.ip,
+        risk_visitor: riskInput.visitor,
+        risk_score: risk.score,
+        ...(risk.reasons.length && { risk_reasons: JSON.stringify(risk.reasons) }),
+        ...(risk.review && { risk_review: 'pending' }),
+      })
+      if (risk.review) await orders.event(t, id, 'risk.flagged', 'checkout', { score: risk.score, reasons: risk.reasons })
       await orders.event(t, id, 'order.created', 'checkout', {
         method,
         total: subtotal - discount + shipping,
@@ -515,6 +542,26 @@ export function confirmByTeam(orderId: string, source: Source, by: string) {
     if (o.teamConfirmation !== 'awaiting') return { skip: `team_${o.teamConfirmation ?? 'none'}` }
     if (o.status === 'cancelled') return { skip: 'status_cancelled' }
     return { patch: { team_confirmation: 'confirmed', team_confirmed_at: new Date(), team_confirmed_by: by.slice(0, 100) }, event: 'order.team_confirmed', data: { by: by.slice(0, 100) } }
+  })
+}
+
+/**
+ * A person checked an order flagged by the risk check and found it legitimate: it may be prepared, and its
+ * recovery emails and AI calls resume where eligible. Idempotent; payment and order status are untouched.
+ */
+export function clearRisk(orderId: string, source: Source, by: string, note?: string) {
+  return transition(orderId, source, async (o) => {
+    if (o.riskReview !== 'pending') return { skip: `risk_${o.riskReview ?? 'none'}` }
+    const n = note?.trim().slice(0, 300) || undefined
+    return { patch: { risk_review: 'cleared', risk_reviewed_at: new Date(), risk_reviewed_by: by.slice(0, 100) }, event: 'risk.cleared', data: { by: by.slice(0, 100), ...(n && { note: n }) } }
+  })
+}
+
+/** A person looked at a flagged order and keeps it in review (with what they found); nothing else changes. */
+export function holdRisk(orderId: string, source: Source, by: string, note: string) {
+  return transition(orderId, source, async (o) => {
+    if (o.riskReview !== 'pending') return { skip: `risk_${o.riskReview ?? 'none'}` }
+    return { patch: { risk_reviewed_at: new Date(), risk_reviewed_by: by.slice(0, 100) }, event: 'risk.held', data: { by: by.slice(0, 100), note: note.trim().slice(0, 300) || 'menținută în verificare' } }
   })
 }
 

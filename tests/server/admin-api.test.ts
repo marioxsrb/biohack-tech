@@ -34,7 +34,7 @@ describe('store settings', () => {
     const { order } = await svc.placeOrder({ lines: (r as unknown as { lines: never }).lines, form: { ...person, paymentMethod: 'cod' }, attemptId: 'price-1' })
     expect(order.totalMinor).toBe(69000)
     await saveStoreSettings(db, DEFAULT_SETTINGS, 'test')
-    expect(getProduct('brainlink-pro')!.price).toBe(333700)
+    expect(getProduct('brainlink-pro')!.price).toBe(322500)
     expect((await db.query("select count(*)::int as n from admin_audit where action = 'settings.update'")).rows[0].n).toBe(2)
   })
 

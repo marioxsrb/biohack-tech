@@ -126,7 +126,7 @@ export const amberScience = {
   title: 'Ce spune știința, pe înțelesul tuturor',
   intro: 'Seara, corpul se pregătește de somn și produce melatonină. Lumina albastră, iar într-o măsură mai mică și cea verde, îi spune ceasului din creier că e încă zi. Lentilele galbene opresc o mare parte din această lumină.',
   studiesTitle: 'Studiile, explicate simplu',
-  footnote: 'Studiile privesc lentilele chihlimbar și portocalii în general și lumina de seară, nu ochelarii NEUROS Amber în sine. Rezultatele diferă de la un studiu la altul: o analiză Cochrane din 2023 a găsit rezultate amestecate pentru somn. NEUROS Amber este un produs de wellness, nu un dispozitiv medical, și nu înlocuiește un tratament.',
+  footnote: 'Studiile privesc lentilele galbene și portocalii în general și lumina de seară, nu ochelarii NEUROS Amber în sine. Rezultatele diferă de la un studiu la altul: o analiză Cochrane din 2023 a găsit rezultate amestecate pentru somn. NEUROS Amber este un produs de wellness, nu un dispozitiv medical, și nu înlocuiește un tratament.',
 }
 
 export type AmberStudy = {
@@ -143,16 +143,16 @@ export type AmberStudy = {
 export const amberStudies: AmberStudy[] = [
   {
     tag: 'Somn',
-    title: 'Ochelari chihlimbar, 3 ore înainte de somn',
-    text: '20 de adulți au purtat seara, timp de 2 săptămâni, fie ochelari chihlimbar, fie ochelari care nu opreau lumina albastră. Cei cu lentile chihlimbar au spus că au dormit mai bine și s-au simțit mai bine dispuși.',
+    title: 'Ochelari cu lentile galbene, 3 ore înainte de somn',
+    text: '20 de adulți au purtat seara, timp de 2 săptămâni, fie ochelari cu lentile galbene, fie ochelari care nu opreau lumina albastră. Cei cu lentile galbene au spus că au dormit mai bine și s-au simțit mai bine dispuși.',
     cite: 'Burkhart și Phelps, 2009, Chronobiology International',
     url: doi('10.3109/07420520903523719'),
     visual: 'clock',
   },
   {
     tag: 'Somn',
-    title: 'O săptămână cu lentile chihlimbar',
-    text: '14 adulți care dormeau greu au purtat 2 ore înainte de culcare, câte o săptămână, lentile chihlimbar și lentile transparente. Cu cele chihlimbar au dormit mai mult și au spus că somnul a fost mai bun.',
+    title: 'O săptămână cu lentile galbene',
+    text: '14 adulți care dormeau greu au purtat 2 ore înainte de culcare, câte o săptămână, lentile galbene și lentile transparente. Cu cele galbene au dormit mai mult și au spus că somnul a fost mai bun.',
     cite: 'Shechter și colegii, 2018, Journal of Psychiatric Research',
     url: doi('10.1016/j.jpsychires.2017.10.015'),
     visual: 'clock',
@@ -223,7 +223,7 @@ export const amberStudies: AmberStudy[] = [
   {
     tag: 'Somn',
     title: '29 de studii, puse cap la cap',
-    text: 'O analiză a 29 de publicații despre ochelarii chihlimbar purtați seara a găsit cele mai multe dovezi pentru adormirea mai rapidă, inclusiv la oameni care lucrează în ture sau care schimbă fusul orar.',
+    text: 'O analiză a 29 de publicații despre ochelarii cu lentile galbene purtați seara a găsit cele mai multe dovezi pentru adormirea mai rapidă, inclusiv la oameni care lucrează în ture sau care schimbă fusul orar.',
     cite: 'Hester și colegii, 2021, Chronobiology International',
     url: doi('10.1080/07420528.2021.1930029'),
     visual: 'clock',
@@ -252,7 +252,7 @@ export const amberFaq: { q: string; a: string }[] = [
   },
   {
     q: 'Se pot face cu dioptrie sau cu lentile progresive?',
-    a: 'Din păcate, nu. NEUROS Amber vine doar cu lentilele lui, fără dioptrie, așa că nu le putem face după rețetă și nici cu lentile progresive. Dacă ai întrebări despre cum ți s-ar potrivi, scrie-ne și te ajutăm cu drag.',
+    a: 'Din păcate, nu. NEUROS Amber vine doar cu lentilele galbene, fără dioptrie, așa că nu le putem face după rețetă și nici cu lentile progresive. Dacă ai întrebări despre cum ți s-ar potrivi, scrie-ne și te ajutăm cu drag.',
   },
   {
     q: 'Îi pot purta peste ochelarii de vedere?',

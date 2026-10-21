@@ -17,7 +17,7 @@ export const productTextEn: Record<ProductId, ProductText> = {
   'brainlink-pro': {
     kind: 'For focus and clarity',
     purpose: 'For concentration',
-    tagline: 'It helps you gather your attention. It comes with a tablet, 10 games and 20 free sessions. The game moves forward when you focus.',
+    tagline: 'It helps you gather your attention. It comes with a tablet, over 10 games and 20 free sessions. The game moves forward when you focus.',
   },
   'ochelari-biohack': {
     kind: 'For calmer evenings',
@@ -66,7 +66,7 @@ const ALT: Record<string, string> = {
   'Femeie în pat, seara, citind pe tabletă cu NEUROS Amber': 'Woman in bed in the evening, reading on a tablet with NEUROS Amber',
   'Femeie în pat, seara, purtând NEUROS Calm': 'Woman in bed in the evening, wearing NEUROS Calm',
   'Femeie meditând în grădină, purtând NEUROS Focus': 'Woman meditating in a garden, wearing NEUROS Focus',
-  'NEUROS Amber cat eye, ramă neagră, lentile chihlimbar': 'NEUROS Amber cat eye, black frame, amber lenses',
+  'NEUROS Amber cat eye, ramă neagră, lentile galbene': 'NEUROS Amber cat eye, black frame, yellow lenses',
   'NEUROS Amber pătrat maro pe un birou, lângă tastatură': 'NEUROS Amber square in brown on a desk, next to a keyboard',
   'NEUROS Amber pătrat negru pe noptieră, lângă laptop': 'NEUROS Amber square in black on a bedside table, next to a laptop',
   'NEUROS Calm lângă cutia produsului': 'NEUROS Calm next to its box',
