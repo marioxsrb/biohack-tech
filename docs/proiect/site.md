@@ -17,7 +17,7 @@ Situația la 21.10.2026, citită din codul site-ului.
 | Produs | Preț | Ce include |
 |---|---|---|
 | NEUROS Calm | 6.380 | Dispozitivul, cordonul de nas, cablul, ghidul |
-| NEUROS Focus | 3.337 | Casca, tabletă, 10 jocuri, 20 de ședințe gratuite |
+| NEUROS Focus | 3.225 | Casca, tabletă, 10 jocuri, 20 de ședințe gratuite (vezi nota de preț din produse/neuros-focus.md) |
 | NEUROS Amber | 315 / pereche | 5 rame, lentile galbene |
 | Cartea „Știu. Vreau. DE CE NU POT?” | 120 + 12,10 livrare | Tipărită + PDF |
 

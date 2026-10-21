@@ -4,6 +4,8 @@ Verificat pe 21 octombrie 2026. Prețurile se schimbă des (promoții, stoc), de
 
 **Cursuri folosite** (BNR, 21.10.2026, rotunjite): 1 EUR = 5,33 lei, 1 USD = 4,75 lei, 1 GBP = 6,36 lei. Sursa: [adevarul.ro, curs BNR 21.10.2026](https://adevarul.ro/economie/curs-valutar-bnr-21-octombrie-2026-euro-a-2565496.html). Conversiile sunt aproximative și **nu includ taxe vamale/TVA de import** pentru produsele trimise din afara UE (SUA, Marea Britanie). Pentru un cumpărător din România, un produs din SUA iese de obicei cu 20–30% mai scump decât conversia simplă.
 
+> Notă (21.10): prețul Focus pe site e acum 3.225 lei (schimbat de Mario pe 20.10 seara); comparațiile de mai jos au fost făcute cu 3.337 lei și rămân valabile ca ordin de mărime.
+
 **Prețurile noastre** (TVA inclus, livrare gratuită, ramburs, garanție 2 ani, retur 14 zile): NEUROS Calm 6.380 lei, NEUROS Focus 3.337 lei (cu tabletă, 10 jocuri, 20 de sesiuni), NEUROS Amber 315 lei/pereche (2+1 gratuit, deci 210 lei/pereche la 3 bucăți).
 
 „Neverificat” = nu am putut confirma cifra pe pagina sursei la data verificării.

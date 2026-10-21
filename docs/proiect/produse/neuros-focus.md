@@ -1,6 +1,6 @@
 # NEUROS Focus, fișă tehnică
 
-**Preț:** 3.337 lei (TVA inclus), din 20.10.2026, cu tableta inclusă. 10% la 2 bucăți, 20% la 3+. Pagina: biohack-tech.ro/products/focus și focus.biohack-tech.ro.
+**Preț:** 3.225 lei (TVA inclus), cu tableta inclusă. **De confirmat:** pe 20.10 s-a pus 3.337 lei (cererea lui Ako), apoi aceeași seară Mario (agent Cursor, PR #10) a pus 3.225 lei „confirmat”; site-ul live arată 3.225. 10% la 2 bucăți, 20% la 3+. Pagina: biohack-tech.ro/products/focus și focus.biohack-tech.ro.
 **Cod intern:** `brainlink-pro`.
 
 ## Ce este
