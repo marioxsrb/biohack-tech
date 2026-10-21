@@ -35,6 +35,7 @@ const TABS = ['active', 'used', 'expired', 'revoked'] as const
 export default async function VouchersPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await connection()
   const sp = await searchParams
+  const message = String(sp.mesaj ?? '').slice(0, 200)
   const status = (TABS as readonly string[]).includes(String(sp.status)) ? (String(sp.status) as VoucherStatus) : undefined
   const db = await getDb()
   const [list, rewards, videos] = await Promise.all([listVouchers(db, { status }), listRewards(db), listVideoReviews(db)])
@@ -48,6 +49,8 @@ export default async function VouchersPage({ searchParams }: { searchParams: Pro
         {formatLei(VOUCHER_VALUE['brainlink-pro'])}, NEUROS Amber {formatLei(VOUCHER_VALUE['ochelari-biohack'])} pe fiecare pereche plătită (la 2+1: 60 lei). O comandă anulată, o plată cu cardul nefinalizată sau o rambursare integrală îl
         eliberează. Workflow-urile de email: {workflowsMode() === 'off' ? 'oprite' : 'simulare (nu se trimite nimic)'}.
       </p>
+
+      {message && <p className="mt-4 rounded-[12px] bg-cyan-50 px-4 py-3 text-[14.5px] text-cyan-700">{message}</p>}
 
       <h2 className="mt-8 text-[22px] tracking-[-0.02em]">Emite manual</h2>
       <form action={issueVoucherAction} className="mt-3 flex flex-wrap items-end gap-3 rounded-[16px] bg-paper p-5 text-[14px]">
@@ -113,7 +116,7 @@ export default async function VouchersPage({ searchParams }: { searchParams: Pro
             {(v.status === 'active' || v.status === 'expired') && (
               <form action={revokeVoucherAction} className="mt-3 flex flex-wrap items-center gap-2 text-[13.5px]">
                 <input type="hidden" name="id" value={v.id} />
-                <input name="reason" placeholder="Motivul revocării" maxLength={300} className="field max-w-[22em]" />
+                <input name="reason" placeholder="Motivul revocării" required minLength={3} maxLength={300} className="field max-w-[22em]" />
                 <label className="flex items-center gap-2">
                   <input type="checkbox" name="confirm" value="da" required className="h-4 w-4" /> Confirm
                 </label>

@@ -144,13 +144,19 @@ describe('single actions from /admin', () => {
     const o = await place('cod')
     const ship = form({ id: o.id, courier: 'Fan Courier', tracking: 'AWB3' })
     await Promise.all([actions.shipAction(ship), actions.shipAction(ship)])
+    // Delivery is final: without the ticked box nothing changes.
     await actions.deliveredAction(form({ id: o.id }))
-    await actions.deliveredAction(form({ id: o.id }))
+    expect((await eventsOf(o.id)).filter((x) => x.type === 'order.delivered')).toHaveLength(0)
+    await actions.deliveredAction(form({ id: o.id, confirm: 'da' }))
+    await actions.deliveredAction(form({ id: o.id, confirm: 'da' }))
     const e = await eventsOf(o.id)
     expect(e.filter((x) => x.type === 'order.shipped')).toHaveLength(1)
     expect(e.filter((x) => x.type === 'order.delivered')).toHaveLength(1)
     expect(e.find((x) => x.type === 'order.shipped')!.data).toMatchObject({ courier: 'Fan Courier', trackingNumber: 'AWB3' })
     expect(await reload(o.id)).toMatchObject({ status: 'delivered', courier: 'Fan Courier', trackingNumber: 'AWB3' })
+    // Every change made from the page is in the admin audit too (once, like the API's).
+    const audited = (await db.query(`select action from admin_audit where details->>'orderId' = $1 order by id`, [o.id])).rows.map((r) => r.action)
+    expect(audited).toEqual(['order.shipped', 'order.delivered'])
   })
 
   it('without valid credentials nothing happens, confirmed or not', async () => {

@@ -39,7 +39,7 @@ import {
   type PaymentMethod,
 } from '@/lib/checkout'
 import { useMoney } from '@/i18n/currency'
-import { cardOnly } from '@/lib/currency'
+import { cardOnly, rateFor } from '@/lib/currency'
 import { countryOptions, isCountry } from '@/lib/countries'
 import { localePath } from '@/i18n/locales'
 import { onIntlSite } from '@/lib/sites'
@@ -352,6 +352,8 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
   const gift = !!(withCode && !withCode.code?.problem && promo.rule?.freeUnits && withCode.code?.amountMinor)
   const shipping = useMemo(() => shippingFor(priced, currency, undefined, { gift }), [priced, currency, gift])
   const total = pricing.totalMinor + shipping
+  // What analytics receive is always in lei (like the item prices and the Purchase): an order in euro or dollars at its rate.
+  const totalLei = currency === 'RON' ? total : Math.round(total * rateFor(currency))
   // The summary stays in view only when it fits the window; a taller one scrolls with the page, so its lower part
   // (consents, the pay button) is never out of reach.
   const summaryRef = useRef<HTMLDivElement>(null)
@@ -385,7 +387,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
   }, [form])
 
   useEffect(() => {
-    track('begin_checkout', { value: total, items: lines })
+    track('begin_checkout', { value: totalLei, items: lines })
     // Once per visit of the page.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -456,7 +458,7 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
         const problem = await card.current.validate()
         if (problem) throw new Error(problem)
       }
-      track('add_payment_info', { value: total, items: lines, payment_type: form.paymentMethod === 'card' ? 'card' : form.paymentMethod === 'cod' ? 'ramburs' : 'transfer bancar' })
+      track('add_payment_info', { value: totalLei, items: lines, payment_type: form.paymentMethod === 'card' ? 'card' : form.paymentMethod === 'cod' ? 'ramburs' : 'transfer bancar' })
 
       const res = await fetch('/api/checkout', {
         method: 'POST',

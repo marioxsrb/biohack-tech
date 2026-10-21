@@ -488,7 +488,7 @@ Provide: **beneficiary** (legal name of the company), **IBAN** (RON account), **
 
 ### 15.1 Cookie consent (built)
 - **Categories.** *Necessary* is always on: cart (`biohack-cart-v1`), checkout draft (sessionStorage), `bt-cart-cleared-*`, the choice itself (`bt-consent-v1`), and Stripe's fraud-prevention cookies on the checkout page only. *Analytics* and *Marketing* are off until the visitor says yes.
-- **Banner.** It appears only when at least one optional tool is configured (`NEXT_PUBLIC_GA4_ID`, `NEXT_PUBLIC_CLARITY_ID`, `NEXT_PUBLIC_META_PIXEL_ID`) and there is no current choice. With no tool configured there is nothing to ask. The site then uses only strictly necessary storage, and “Setări cookies” says so.
+- **Banner.** It appears only when at least one optional tool is configured (`NEXT_PUBLIC_GA4_ID`, `NEXT_PUBLIC_CLARITY_ID`, and the Meta pixel with `META_PIXEL_ENABLED=true`, read at build time: changing it needs a redeploy) and there is no current choice. With no tool configured there is nothing to ask. The site then uses only strictly necessary storage, and “Setări cookies” says so.
   - The first layer has *Refuz opționalele* and *Accept toate* in the same style, plus *Aleg eu ce accept*.
   - The dialog has one switch per category, off by default, and *Salvez alegerea*.
 - **Real blocking.** No optional script is in the HTML. `src/lib/consent/vendors.ts` adds a tool's script only after its category is allowed.
@@ -524,7 +524,7 @@ Provide: **beneficiary** (legal name of the company), **IBAN** (RON account), **
   - Paying a new order closes earlier abandoned attempts of that address in the same transaction (`order.superseded`), then removes the tag.
 
 ### 15.4 Analytics tools (YOU)
-Decide the tools and set their ids. Events sent with consent: `view_cart`, `begin_checkout`, `add_payment_info`, `purchase` (once per order, only when paid). They contain products and amounts only. Set Clarity's masking to *Strict*. In Meta Events Manager, keep automatic advanced matching off.
+Decide the tools and set their ids. Events sent with consent: `view_item`, `add_to_cart`, `view_cart`, `begin_checkout`, `add_payment_info`, `purchase` (once per order, only when paid). They contain products and amounts only. Set Clarity's masking to *Strict*. In Meta Events Manager, keep automatic advanced matching off.
 
 ## 16. Legal pages and checkout information
 

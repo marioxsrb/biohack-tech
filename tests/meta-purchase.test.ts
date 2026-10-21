@@ -1,6 +1,6 @@
 /** Browser Purchase: lei not bani, the live pixel, and consent that does not drop the event for good. */
 import { readFileSync } from 'node:fs'
-import { expect, it } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { VENDORS } from '@/lib/consent/vendors'
 import { activeMetaPixelId, metaBrowser, metaPhoneDigits, META_PIXEL_ID, purchaseChannels, purchaseLei, RETIRED_META_PIXEL_ID } from '@/lib/meta'
 
@@ -52,4 +52,15 @@ it('reads fbp, fbc, ip and user agent from the checkout request, and builds fbc 
 
 it('Amber landing sends ViewContent', () => {
   expect(readFileSync('src/components/landing/AmberSelector.tsx', 'utf8')).toContain("track('view_item'")
+})
+
+describe('the store hosts the Conversions API reports (event_source_url)', async () => {
+  const { storeHost } = await import('@/lib/meta')
+  it('the main site, its landings and the international site keep their own host; others are dropped', () => {
+    expect(storeHost('biohack-tech.ro', 'biohack-tech.ro', 'biohack-tech.ro')).toBe('biohack-tech.ro')
+    expect(storeHost('calm.biohack-tech.ro', 'biohack-tech.ro', 'biohack-tech.ro')).toBe('calm.biohack-tech.ro')
+    expect(storeHost('www.biohack-tech.net', 'biohack-tech.ro', 'biohack-tech.ro')).toBe('www.biohack-tech.net')
+    expect(storeHost('biohack-tech.net:443', 'biohack-tech.ro', 'biohack-tech.ro')).toBe('biohack-tech.net')
+    expect(storeHost('evil.example', 'biohack-tech.ro', 'biohack-tech.ro')).toBeUndefined()
+  })
 })

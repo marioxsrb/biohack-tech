@@ -13,6 +13,12 @@ const start = new Date('2026-11-02T10:00:00Z')
 const facts = (over: Partial<Facts> = {}): Facts => ({ now: start, consent: true, purchasedSince: [], activeOther: [], promoSent: [], ...over })
 
 describe('the 14 workflows, 59 emails, approved timings', () => {
+  it('the emails per workflow, as approved in Email Studio', () => {
+    expect(Object.fromEntries(Object.values(WORKFLOWS).map((w) => [w.id, w.steps.length]))).toEqual({
+      'abandoned-cart': 4, 'post-purchase': 4, 'landing-calm': 5, 'landing-focus': 5, 'landing-amber': 3, referral: 1, vip: 1,
+      welcome: 9, educatie: 8, 'win-back': 2, nudge: 2, 'black-friday': 5, craciun: 4, 'anul-nou': 6,
+    })
+  })
   it('14 workflows and 59 distinct templates', () => {
     expect(Object.keys(WORKFLOWS)).toHaveLength(14)
     expect(ALL_TEMPLATES).toHaveLength(59)

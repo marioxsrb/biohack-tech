@@ -689,6 +689,8 @@ export function markReturnReceived(orderId: string, source: Source) {
 /** Stripe reports the cumulative refunded amount; repeated reports of the same amount change nothing. */
 export function recordRefund(orderId: string, source: Source, refundedMinor: number) {
   return transition(orderId, source, async (o) => {
+    // Card money goes back only through Stripe, which reports it (charge.refunded): a person never records it here.
+    if (source === 'admin' && o.paymentMethod === 'card') return { skip: 'card_refund_reported_by_stripe_only' }
     if (refundedMinor <= o.refundedMinor) return { skip: 'refund_already_recorded' }
     const to = refundedMinor >= o.totalMinor ? 'refunded' : 'partially_refunded'
     if (!canMovePayment(o.paymentStatus, to)) return { skip: `payment_${o.paymentStatus}` }

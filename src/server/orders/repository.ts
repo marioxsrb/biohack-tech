@@ -122,6 +122,7 @@ export const QUEUES = {
     where: `(status = 'cancelled' and payment_status in ('paid', 'partially_refunded'))
       or (fgo_invoice_number is not null and fgo_storno_number is null and (status = 'cancelled' or payment_status = 'refunded'))
       or invoice_status = 'failed' or return_status = 'requested'
+      or (return_status = 'received' and payment_status in ('paid', 'partially_refunded'))
       or exists (select 1 from jobs j where j.order_id = orders.id and j.status in ('failed', 'retry') and j.kind <> 'push.send')`,
   },
   noi: { label: 'Noi (48 h)', where: `created_at >= now() - interval '48 hours' and status <> 'cancelled' and (payment_method <> 'card' or payment_status in ('paid', 'partially_refunded'))` },
@@ -303,9 +304,11 @@ export const orders = {
    * ours the webhook could not apply (stored as "attention:<reason>").
    */
   async followUps(q: Queryable) {
-    const due = await q.query<{ id: string; order_number: string; status: string; payment_status: string; fgo_invoice_number: string | null; total_minor: number; refunded_minor: number }>(
-      `select id, order_number, status, payment_status, fgo_invoice_number, total_minor, refunded_minor from orders
+    // A received return still paid is money to give back too (the product came back, the refund has not been recorded).
+    const due = await q.query<{ id: string; order_number: string; status: string; payment_status: string; return_status: string | null; fgo_invoice_number: string | null; total_minor: number; refunded_minor: number; currency: string }>(
+      `select id, order_number, status, payment_status, return_status, fgo_invoice_number, total_minor, refunded_minor, currency from orders
         where (status = 'cancelled' and payment_status in ('paid', 'partially_refunded'))
+           or (return_status = 'received' and payment_status in ('paid', 'partially_refunded'))
            or (fgo_invoice_number is not null and fgo_storno_number is null and (status = 'cancelled' or payment_status = 'refunded'))
         order by updated_at desc limit 50`,
     )
@@ -316,9 +319,11 @@ export const orders = {
       orders: due.rows.map((r) => ({
         id: r.id,
         orderNumber: r.order_number,
-        refund: r.status === 'cancelled' && (r.payment_status === 'paid' || r.payment_status === 'partially_refunded'),
+        refund: (r.status === 'cancelled' || r.return_status === 'received') && (r.payment_status === 'paid' || r.payment_status === 'partially_refunded'),
         storno: !!r.fgo_invoice_number,
         outstandingMinor: Number(r.total_minor) - Number(r.refunded_minor),
+        currency: r.currency,
+        returned: r.status !== 'cancelled' && r.return_status === 'received',
       })),
       payments: payments.rows.map((r) => ({ eventId: r.event_id, type: r.type, reason: r.outcome.slice('attention:'.length), receivedAt: new Date(r.received_at) })),
     }

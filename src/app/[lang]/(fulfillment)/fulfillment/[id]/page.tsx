@@ -1,4 +1,5 @@
-import { isGiftLine } from '@/lib/orders/gifts'
+import { countryName } from '@/lib/countries'
+import { giftNote } from '@/lib/orders/gifts'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -73,7 +74,7 @@ export default async function FulfillmentOrder({ params }: PageProps<'/[lang]/fu
                   <span className="block text-[16px] font-semibold text-ink">{i.productName}</span>
                   <span className="text-[14px] text-muted">
                     {i.variantName ?? 'Fără variantă'} · {i.sku}
-                    {isGiftLine(o, i) ? ' · cadou (recompensă)' : ''}
+                    {giftNote(o, i) ? ` · ${giftNote(o, i)}` : ''}
                   </span>
                 </span>
                 <span className="text-[22px] font-semibold text-ink tabular-nums">×{i.quantity}</span>
@@ -91,6 +92,7 @@ export default async function FulfillmentOrder({ params }: PageProps<'/[lang]/fu
           <p className="text-ink">
             {o.shippingAddress.postalCode} {o.shippingAddress.city}, jud. {o.shippingAddress.county}
           </p>
+          {o.shippingAddress.country && o.shippingAddress.country !== 'RO' && <p className="font-semibold text-ink">{countryName(o.shippingAddress.country)}</p>}
           <a href={`tel:${o.phone.replace(/\s/g, '')}`} className="mt-1 inline-block font-semibold text-ink underline underline-offset-4 tabular-nums">
             {o.phone}
           </a>

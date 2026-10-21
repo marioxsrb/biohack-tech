@@ -235,8 +235,16 @@ describe('landing popups: fixed voucher instead of 10% (prepared, off)', () => {
     expect(await welcomeJobs()).toBe(1)
     expect((await db.query('select count(*)::int n from vouchers')).rows[0].n).toBe(0)
   })
+  it('POPUP_VOUCHERS=on alone (no sub-account to send the voucher email): still the 10% email', async () => {
+    vi.stubEnv('POPUP_VOUCHERS', 'on')
+    await db.tx((t) => welcomeSignup(t, 'z@exemplu.ro', '/products/calm', 'ro', 'ro', undefined, 'calm'))
+    expect(await welcomeJobs()).toBe(1)
+    expect((await db.query('select count(*)::int n from vouchers')).rows[0].n).toBe(0)
+  })
   it('on: the product voucher and its landing sequence instead; a contact who bought the product gets the 10% email', async () => {
     vi.stubEnv('POPUP_VOUCHERS', 'on')
+    vi.stubEnv('GHL_WF_TOKEN', 'pit-sub')
+    vi.stubEnv('GHL_WF_LOCATION_ID', 'loc-sub')
     await db.tx((t) => welcomeSignup(t, 'b@exemplu.ro', '/', 'ro', 'ro', undefined, 'focus'))
     expect(await welcomeJobs()).toBe(0)
     expect((await db.query("select product_id, amount_minor, source from vouchers")).rows).toEqual([{ product_id: 'brainlink-pro', amount_minor: 32500, source: 'landing-focus' }])

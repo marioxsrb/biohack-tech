@@ -252,7 +252,8 @@ const RELEASE_ON = new Set(['order.cancelled', 'order.abandoned', 'order.superse
 /**
  * Keeps a voucher in step with its order, in the order's transaction (orders/service.ts transition()):
  *   released: the order stops standing (cancelled, abandoned, its card payment cancelled, fully refunded);
- *   taken back: a released voucher whose order is paid after all (a late card payment), when still free.
+ *   taken back: a released voucher whose order is paid after all (a late card payment), when still free; never by a
+ *               payment that arrives after the order was cancelled (that money is refunded).
  */
 export async function syncVoucher(q: Queryable, o: Order, ev: string, now = new Date()): Promise<'released' | 'expired' | 'retaken' | 'conflict' | null> {
   if (!o.voucherId) return null
@@ -265,7 +266,8 @@ export async function syncVoucher(q: Queryable, o: Order, ev: string, now = new 
     await event(q, v.id, past ? 'expired' : 'released', 'system', { via: ev }, o.id)
     return past ? 'expired' : 'released'
   }
-  if ((ev === 'payment.confirmed' || ev === 'payment.after_cancel') && v.orderId !== o.id) {
+  // (A payment that arrives after the order was cancelled is refunded, never served: the voucher stays free.)
+  if (ev === 'payment.confirmed' && v.orderId !== o.id) {
     if (v.status === 'active') {
       await q.query(`update vouchers set status = 'used', order_id = $2, used_at = now() where id = $1`, [v.id, o.id])
       await event(q, v.id, 'used', 'system', { via: ev, late: true }, o.id)

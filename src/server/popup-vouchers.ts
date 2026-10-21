@@ -17,8 +17,15 @@ import type { LandingSlug } from '@/lib/landing-hosts'
 import type { Queryable } from '@/server/db'
 import { issueVoucher } from '@/server/vouchers'
 import { enroll } from '@/server/workflows/engine'
+import { ghlWorkflowsConfig } from '@/server/workflows/ghl-map'
 
-export const popupVouchersOn = (env: Record<string, string | undefined> = process.env) => env.POPUP_VOUCHERS === 'on'
+/**
+ * On only with POPUP_VOUCHERS=on AND the Biohack Tech GHL sub-account configured (GHL_WF_TOKEN, GHL_WF_LOCATION_ID):
+ * the voucher replaces the 10% email, so the landing sequence's first email (sent by the sub-account) must exist,
+ * or the customer would get a voucher and no email at all. Switching it on also needs that sending live (§5 of
+ * docs/VOUCHERS-WORKFLOWS.md) and the new popup texts approved.
+ */
+export const popupVouchersOn = (env: Record<string, string | undefined> = process.env) => env.POPUP_VOUCHERS === 'on' && !!ghlWorkflowsConfig(env)
 
 const BY_SLUG: Record<LandingSlug, { product: VoucherProduct; workflow: WorkflowId & `landing-${string}` }> = {
   calm: { product: 'balance-wave', workflow: 'landing-calm' },

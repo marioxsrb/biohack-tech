@@ -367,8 +367,9 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                 </form>
               )}
               {canMoveOrder(o.status, 'delivered') && (
-                <form action={deliveredAction}>
+                <form action={deliveredAction} className="space-y-2">
                   <input type="hidden" name="id" value={o.id} />
+                  <Confirm text="Coletul a ajuns la client (confirmat de curier). Nu se mai poate anula." />
                   <button className="btn-secondary sm w-full">Marchează livrată</button>
                 </form>
               )}

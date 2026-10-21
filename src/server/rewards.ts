@@ -144,6 +144,11 @@ export async function reviewVideo(q: Queryable, id: string, to: 'in_review' | 'a
   const { rows } = await q.query('select * from video_reviews where id = $1 for update', [id])
   const r = rows[0]
   if (!r || r.status === 'approved' || r.status === to) return { changed: false, reward: null }
+  // A reward only for an order that still stands (not cancelled, not refunded or returned since the video came in).
+  if (to === 'approved') {
+    const o = await q.query(`select 1 from orders where id = $1 and status <> 'cancelled' and payment_status in ('paid','partially_refunded') and return_status is null`, [r.order_id])
+    if (!o.rows.length) return { changed: false, reward: null, reason: 'order_not_standing' as const }
+  }
   await q.query('update video_reviews set status = $2, reviewed_at = now(), reviewed_by = $3, reject_reason = $4 where id = $1', [id, to, actor, to === 'rejected' ? (reason ?? '').slice(0, 300) : null])
   const reward = to === 'approved' ? (await grantReward(q, { email: r.email as string, source: 'review', sourceRef: r.order_id as string })).reward : null
   return { changed: true, reward }

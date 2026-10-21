@@ -50,27 +50,39 @@ Items marked **YOU** need a decision, a credential or approved copy.
 
 **"Contul tău Biohack Tech".** The balance is the contact's active vouchers (`vouchersFor`). Nobody can see another person's vouchers by typing an email. The code reaches the customer only by email or by the link that brings it into the checkout (`/api/lead/resume?...&cod=` already exists). **YOU:** a customer-facing "my vouchers" page is a new visual component; it needs a design and copy decision. The data function exists.
 
-## 3. NEUROS Amber 2+1 + 30 lei per paid pair
+## 3. NEUROS Amber 2+1 + 30 lei per paid pair (final rule, 21.10.2026)
 
-Price of one pair: 315 lei. Example with 3 pairs: 315 + 315 + 0 − 30 − 30 = **570 lei**. The free pair never gets the 30 lei.
+The 2+1 offer and the 30 lei per paid pair add up. The 30 lei come with the contact's eligible **Amber voucher** (`audience: 'voucher'`). There is **no global cap**: `maxPairs: null`.
 
-Tested from 1 to 7 pairs, with mixed frames. With frames at different prices, the cheapest pair is the free one.
+**Grouping rules (as built and tested):**
+1. Every complete group of 3 pairs has one free pair. Free = floor(units / 3); a mixed selection counts together.
+2. The free pairs are the cheapest units. Today all frames cost 315 lei, so any pair can be the free one.
+3. Paid pairs = units − free. Each paid pair gets 30 lei off; the free pair never does.
+4. The 2+1 amount and the voucher amount are spread over the Amber lines, so every invoice line adds up to what was paid.
 
-`AMBER_PAIR_DISCOUNT` in `src/config/vouchers.ts`:
-- `perPairMinor: 3000`
-- `maxPairs: 2`: "60 lei reducere la comandă", as landing-amber-03 says.
-- `audience: 'voucher'` (built): the 30 lei per paid pair is what the contact's **Amber voucher** gives on top of the automatic 2+1. So 1 pair = −30 and 3 pairs = 570 lei.
-- `audience: 'all'`: every Amber order gets it automatically. This is a live price change. If an Amber voucher is also used, it adds nothing (never twice).
+**At 315 lei per pair:**
 
-**YOU:** confirm `audience` and `maxPairs`. Six pairs with the cap at 2 = −60. Without the cap it is −30 per paid pair (4 paid pairs = −120).
+| Pairs | Free | Paid | Total |
+|---|---|---|---|
+| 1 | 0 | 1 | 285 lei |
+| 2 | 0 | 2 | 570 lei |
+| 3 | 1 | 2 | **570 lei** |
+| 4 | 1 | 3 | 855 lei |
+| 5 | 1 | 4 | 1.140 lei |
+| 6 | 2 | 4 | 1.140 lei |
+| 7 | 2 | 5 | 1.425 lei |
+| 9 | 3 | 6 | 1.710 lei |
 
-**YOU:** confirm the mixed-cart reading. Calm + Amber with the Calm voucher gives 640 lei on Calm and the plain 2+1 on Amber. The 30 lei per pair would need the Amber voucher, and only one voucher fits an order. If the 30 lei per pair should come on top of another voucher, switch `audience` to `'all'`.
+Tested in the engine (1–7 and 9 pairs, mixed frames, different prices), through the checkout (3, 4, 6 and 7 pairs: order, Stripe, FGO lines), and in Stripe TEST mode (3 pairs = 570 lei).
+
+Without the voucher, Amber keeps the plain 2+1. `audience: 'all'` (every Amber order) exists, but it is a live price change and stays off.
+
+Note for the copy (not changed): landing-amber-03 says "Și mai primești 60 lei reducere la comandă". That is exact for 3 pairs. For 4 or more pairs the reduction is higher (30 lei per paid pair).
 
 ## 4. Decisions to confirm (**YOU**)
 
 | Decision | Built default | Where |
 |---|---|---|
-| Amber per-pair audience and cap | voucher only, 2 pairs | `AMBER_PAIR_DISCOUNT` |
 | Validity outside the landings (abandoned 7, win-back 14, nudge 14, Crăciun 10, Anul Nou 14, rewards 30 days) | as listed | `VOUCHER_VALIDITY_DAYS` |
 | Delivery fee of a gift order (free delivery otherwise) | 12,10 lei (the book's fee) | `GIFT_SHIPPING_RON` |
 | A voucher on top of the quantity discount (2 Calm: 10% + 640 lei) | stacks, like today's 10% codes | engine |
@@ -151,7 +163,65 @@ An email is never sendable while one of its variables has no value (`missingValu
 - Stripe: no change. The amount is the order total, so a gift order charges the delivery only. A card order can never go below 2 lei: it is refused before Stripe.
 - No deploy, no push, no GHL, Stripe, FGO or Meta call, no email, no real voucher.
 
-## 9. Tests
+## 9. Popups: what changes when vouchers replace the 10% (texts to approve, not changed)
+
+**How it works today.**
+- On the Calm, Focus and Amber pages (and their landings), the gate game leads to the 10% window: code LONGEVITY10 by email.
+- Everywhere else on the Romanian site, three gift boxes: LONGEVITY10 10%, CADOU1233 12,33% or CADOU100 100 lei.
+- On the English site: plain 10%.
+- Once per address (`welcome_signups`).
+
+**What switching on changes.**
+- `POPUP_VOUCHERS=on` acts only on the three product popups, Romanian site only, and the gift boxes stay as they are.
+- It takes effect only when the Biohack Tech GHL sub-account is configured too (`GHL_WF_TOKEN`, `GHL_WF_LOCATION_ID`). Without the sub-account, the customer would get a voucher and no email, so the 10% email goes as today.
+- A contact who already bought the product, or used its voucher, gets the 10% email.
+
+**Texts to approve before switching it on** (`src/components/site/WelcomePopup.tsx`, Romanian):
+1. Title: „10% reducere la prima comandă” and the product variant „10% reducere la {produs}”.
+2. Lead: „Lasă-ne adresa de email și îți trimitem imediat codul. Se adaugă peste ofertele din coș.” and the product variant „… Îl folosești la {produs} (și la orice alt produs), peste ofertele din coș.” The voucher is for that product only.
+3. Done: „Gata! Ți-am trimis codul de 10% pe email…”.
+4. Already sent: „Pe această adresă am trimis deja codul de 10%…”.
+5. The badge „−10%”.
+6. Optionally the voucher's own sentence on the popup. Today the voucher is stated only by landing-*-01, which is already approved: „Ți-am adăugat X lei în contul tău Biohack Tech.”
+7. The checkout's messages for vouchers reuse the promo-code ones: „Codul este personal…”, „Codul a expirat.”, „Ai folosit deja acest cod.”, „Codul nu mai este activ.” Approve them as they are, or provide voucher-specific ones.
+
+The codes already promised (LONGEVITY10, BIOHACK10, CADOU1233, CADOU100) stay valid either way.
+
+## 10. Audit 21.10.2026 (second pass): fixed
+
+| Area | Problem (confirmed in code) | Fix |
+|---|---|---|
+| Vouchers | A card payment arriving after the order was cancelled took the voucher back for a cancelled order | That money is refunded; the voucher stays free (test) |
+| Amber | A cap of 2 paid pairs that was never decided | Removed: 30 lei on every paid pair (tests up to 9 pairs) |
+| Popups | `POPUP_VOUCHERS=on` without a sender would have left a voucher with no email | Needs the GHL sub-account too (test) |
+| Meta | InitiateCheckout / AddPaymentInfo on .net sent euro labelled RON | Value in lei, like Purchase |
+| Meta | CAPI `event_source_url` of .net orders pointed to .ro | .net hosts kept (test) |
+| Meta | A test event code left in production went unnoticed | Config warning in /api/health |
+| Meta docs | Traffic Permissions omitted .net; the pixel switch was named wrong | Docs corrected |
+| Admin | Order actions from the page (paid, collected, shipped, delivered, cancelled, refund) and promo code changes were not in `admin_audit` | Audited, like the API (test) |
+| Admin | "Marchează livrată" was one irreversible click | Needs the ticked box, like cancel and refund (test) |
+| Admin | A card refund could be recorded by hand, with no money moved in Stripe | Refused: Stripe reports card refunds |
+| Admin | Basic Auth on /admin and /fulfillment had no limit on wrong passwords | 10 failures per address per 15 min, then 429 (test) |
+| Admin | Money to settle showed euro refunds in lei; a received, unrefunded return disappeared from "Atenție" | Order currency; returns listed (and named "produs returnat") |
+| Admin | Dashboard funnel, order count and cancelled count were capped at the 100 listed orders | Aggregated over the whole period (test with 104 orders) |
+| Admin | Revenue by payment method ignored refunds; products counted at full price; vouchers absent from the codes card | Net of refunds and discounts; vouchers and gifts listed (test) |
+| Admin | /admin/stats counted cancelled orders, and money paid after a cancellation, as sales | Excluded |
+| Admin | The vouchers page never showed its result messages; the revoke reason was not required | Shown; required |
+| Admin | Promo codes could be created in the shapes reserved for vouchers and referrals (BTV…, BTG…, BTR…) | Refused |
+| Fulfillment | A gift on a line of ×2 marked the whole line | "1 din 2 cadou (recompensă)" |
+| Print | Orders abroad (.net) printed no country | Country printed when not Romania; Romanian orders unchanged |
+| Rewards | A review video of a cancelled, refunded or returned order could still earn a reward | Approval needs the order to stand |
+| E2E script | `scripts/stripe-e2e.mjs` did not follow the private order link (token → cookie) | Follows it; 19/19 |
+
+**Not changed (decisions or larger work):**
+- Upsell orders are left out of dashboard revenue. Is that intended?
+- `refunded` card orders still count as "comenzi valide".
+- An AWB cannot be corrected after shipping.
+- The admin login and the fulfillment login rate limits are separate and in memory per instance.
+- CAPI sends hashed email and phone for every paid order, whatever the cookie choice. This needs a legal review.
+- There is no Meta event for refunds.
+
+## 11. Tests
 
 New test files:
 - `tests/vouchers-engine.test.ts`: engine, Amber 1–7 pairs, mixed carts, gifts.
@@ -159,3 +229,47 @@ New test files:
 - `tests/server/vouchers.test.ts`: checkout end to end, personal check, concurrency, release, late payment, refund, expiry, FGO, Stripe, gifts.
 - `tests/server/workflows-rewards.test.ts`: mode off, Abandoned Cart vs failed payment, Post-Purchase dedupe, weekly limit, unsubscribe, Review Video, Referral, VIP, popup switch.
 - `tests/server/postgres.test.ts`: voucher race on real PostgreSQL.
+
+Results on 21.10.2026 (second pass):
+- typecheck ok; lint 0 errors, 0 warnings; production build ok;
+- vitest: 826 passed, 14 skipped (the real-PostgreSQL files, run separately);
+- real PostgreSQL 17: 13 passed, including the voucher race (10 orders, one gets it);
+- Stripe TEST mode against the built app (temporary PostgreSQL, FGO, GHL and SMTP off, emails to files):
+  - `scripts/stripe-e2e.mjs`: 19/19;
+  - voucher e2e: 16/16, covering Calm voucher, Amber 570 lei, a declined then retried card, the gift at 12,10 lei, PJ by transfer, partial and full refund, a forged webhook, idempotency and a cancelled PaymentIntent.
+- A note on running both e2e back to back: on one database and one local address, the checkout's risk check flags the repeated test contacts (score ≥ 40). It then asks 3D Secure for every card, which the test cards don't complete. Run each suite on a fresh database, or clear `orders.risk_ip` between them.
+
+## 12. Staging and activation, step by step
+
+1. **Review.** You review and approve this branch.
+2. **Preview deploy.** Push the branch and use the Preview deployment, on its own database (Preview is isolated). Migration 032 runs on boot. Set no switch.
+3. **Verify on Preview.**
+   - `/api/health` is ok.
+   - `/admin/vouchere` opens.
+   - A test voucher issued by hand on Preview works in the checkout with a Stripe TEST card.
+   - The FGO test environment accepts a gift line at 0 lei (one test invoice there).
+4. **Production deploy, switches off.** Merge to main; production deploys with every switch off. Nothing changes for customers. Check `/api/health`, one normal order and the cron.
+5. **Dry run.** Set `WORKFLOWS_MODE=dry_run` on Production for a week. Read `email_sends` and the decisions; nothing is sent.
+6. **GHL sub-account.** Create the sub-account, its fields, tags and the 59 email workflows (§7). Test with internal addresses only.
+7. **Sending stage.** A separate change, approved by you: the sub-account sends what the planner decides. In the same step, the old recovery emails go off (`RECOVERY_EMAIL_ENABLED`).
+8. **Popups.** Once the new texts (§9) are approved and the landing emails send: `POPUP_VOUCHERS=on`.
+9. **Rollback at each step.** Unset the switch. Vouchers already issued stay valid until they expire, or a person revokes them in `/admin/vouchere`.
+
+## 13. GO / NO-GO
+
+| # | Check | State |
+|---|---|---|
+| 1 | Typecheck, lint, tests, build, real PostgreSQL, Stripe TEST e2e | GO |
+| 2 | Migration 032 additive, applied on real PostgreSQL | GO |
+| 3 | Every switch off by default (`WORKFLOWS_MODE`, `POPUP_VOUCHERS`, video storage, `audience: 'voucher'`) | GO |
+| 4 | Antifraud unchanged; Roxana's order and the 4 flagged attempts untouched | GO (no data touched) |
+| 5 | Validity days of the vouchers outside the landings | NO-GO until you decide (§4) |
+| 6 | Gift delivery fee (12,10 lei proposed) | NO-GO until you decide |
+| 7 | FGO accepts a 0-lei gift line | NO-GO until tested in FGO's test environment |
+| 8 | GHL sub-account credentials, fields, tags, 59 workflows | NO-GO (not created) |
+| 9 | Copy: popup texts (§9), failed-payment emails, post-purchase guides and the 01 subject rule | NO-GO until approved |
+| 10 | Customer pages (my vouchers, reward choice, video upload, referral link) | NO-GO (design and copy needed) |
+| 11 | Meta: Traffic Permissions include .net; deduplication and match quality checked in Events Manager | NO-GO until checked with Business Manager access |
+| 12 | Legal: CAPI without cookie consent; review video advertising consent text | NO-GO until reviewed |
+
+The infrastructure (items 1–4) is GO for a deploy with everything off. Activating vouchers and workflows for customers is NO-GO until items 5–12 are settled.

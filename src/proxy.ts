@@ -108,6 +108,31 @@ export async function proxy(req: NextRequest) {
   return storefront(req, pathname, search)
 }
 
+/**
+ * Failed Basic Auth attempts on /admin and /fulfillment, per client address (per instance, like server/rate-limit.ts):
+ * after BASIC_MAX failures in BASIC_WINDOW_MS the address gets 429 until the window ends, so a password cannot be
+ * guessed by retrying the header. A session cookie or a correct header below the limit is never affected.
+ */
+const BASIC_MAX = 10
+const BASIC_WINDOW_MS = 15 * 60_000
+const basicFailures = new Map<string, { n: number; reset: number }>()
+const clientAddress = (req: NextRequest) => req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || req.headers.get('x-real-ip') || 'unknown'
+function basicBlocked(req: NextRequest) {
+  if (!/^Basic\s/i.test(req.headers.get('authorization') ?? '')) return false
+  const h = basicFailures.get(clientAddress(req))
+  return !!h && h.reset > Date.now() && h.n >= BASIC_MAX
+}
+function basicFailed(req: NextRequest) {
+  if (!/^Basic\s/i.test(req.headers.get('authorization') ?? '')) return
+  const key = clientAddress(req)
+  const now = Date.now()
+  const h = basicFailures.get(key)
+  if (!h || h.reset < now) basicFailures.set(key, { n: 1, reset: now + BASIC_WINDOW_MS })
+  else h.n++
+  if (basicFailures.size > 5000) for (const [k, v] of basicFailures) if (v.reset < now) basicFailures.delete(k)
+}
+const tooMany = () => new NextResponse('Too many attempts', { status: 429, headers: { 'Retry-After': String(BASIC_WINDOW_MS / 1000), 'Cache-Control': 'no-store' } })
+
 /** The main storefront's routing: presentation previews, languages, admin. */
 async function storefront(req: NextRequest, pathname: string, search: string) {
   // Presentation pages on the main host: /lp/<slug>/prezentare, for previews. Never indexed.
@@ -123,8 +148,10 @@ async function storefront(req: NextRequest, pathname: string, search: string) {
   }
 
   if (path === '/admin' || path.startsWith('/admin/')) {
+    if (basicBlocked(req)) return tooMany()
     const auth = await checkAdminRequest(req.cookies.get(ADMIN_COOKIE)?.value, req.headers.get('authorization'))
     if (auth === 'disabled') return new NextResponse('Not found', { status: 404 })
+    if (auth !== 'ok') basicFailed(req)
     const admin = (res: NextResponse) => {
       res.headers.set('X-Robots-Tag', 'noindex, nofollow')
       res.headers.set('Cache-Control', 'no-store')
@@ -140,7 +167,9 @@ async function storefront(req: NextRequest, pathname: string, search: string) {
 
   // The fulfillment portal: its own session (or an admin's); the login page is the only page open without one.
   if (path === '/fulfillment' || path.startsWith('/fulfillment/')) {
+    if (basicBlocked(req)) return tooMany()
     const actor = await fulfilAccess(req.cookies.get(FULFIL_COOKIE)?.value, req.cookies.get(ADMIN_COOKIE)?.value, req.headers.get('authorization'))
+    if (!actor) basicFailed(req)
     const portal = (res: NextResponse) => {
       res.headers.set('X-Robots-Tag', 'noindex, nofollow')
       res.headers.set('Cache-Control', 'no-store')

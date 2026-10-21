@@ -145,7 +145,7 @@ export async function lifetimeTotals(q: Queryable) {
 
 export async function buildReport(q: Queryable, p: Period) {
   const range = [p.from, p.to]
-  const [now, before, visits, pages, sources, leadRows, orderRows, payments, products, calls, outcomes, emails, codes, signups, queues, daily, siteVisits, siteLeads, siteOrders] = await Promise.all([
+  const [now, before, visits, pages, sources, leadRows, orderRows, payments, products, calls, outcomes, emails, codes, signups, queues, daily, siteVisits, siteLeads, siteOrders, counts] = await Promise.all([
     totals(q, p),
     totals(q, previous(p)),
     q.query(
@@ -179,9 +179,11 @@ export async function buildReport(q: Queryable, p: Period) {
        from orders o where o.kind = 'checkout' and o.created_at >= $1 and o.created_at < $2 order by o.created_at desc limit 100`,
       range,
     ),
-    q.query(`select o.payment_method as method, count(*)::int as orders, coalesce(sum(o.total_minor * o.fx_rate),0)::bigint as value from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1`, range),
+    // Net of refunds, like the KPIs and the sites table.
+    q.query(`select o.payment_method as method, count(*)::int as orders, coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate),0)::bigint as value from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1`, range),
     q.query(
-      `select i.product_name as product, sum(i.quantity)::int as units, coalesce(sum(i.line_total_minor * o.fx_rate),0)::bigint as value
+      // What each product brought after its discounts (promotions, codes, vouchers; a gift counts at 0).
+      `select i.product_name as product, sum(i.quantity)::int as units, coalesce(sum((i.line_total_minor - i.discount_minor) * o.fx_rate),0)::bigint as value
        from order_items i join orders o on o.id = i.order_id where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1 order by units desc`,
       range,
     ),
@@ -196,7 +198,12 @@ export async function buildReport(q: Queryable, p: Period) {
     q.query(`select count(*) filter (where last_recovery_at >= $1 and last_recovery_at < $2)::int as recovery from leads`, range),
     q.query(
       `select r.code, count(*)::int as uses, coalesce(sum(r.discount_minor * o.fx_rate),0)::bigint as discount from promo_redemptions r join orders o on o.id = r.order_id
-       where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1 order by uses desc`,
+       where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1
+       union all
+       select case when v.kind = 'gift' then 'cadouri (recompense)' else 'vouchere personale' end, count(*)::int,
+              coalesce(sum((select sum(i.code_discount_minor) from order_items i where i.order_id = o.id) * o.fx_rate),0)::bigint
+       from orders o join vouchers v on v.id = o.voucher_id where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1
+       order by 2 desc`,
       range,
     ),
     q.query(`select count(*)::int as n from welcome_signups where created_at >= $1 and created_at < $2`, range),
@@ -218,10 +225,19 @@ export async function buildReport(q: Queryable, p: Period) {
     ),
     q.query(`select ${LEAD_SITE} as site, count(*)::int as leads from leads where created_at >= $1 and created_at < $2 group by 1`, range),
     q.query(`select ${ORDER_SITE} as site, count(*)::int as orders, coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate),0)::bigint as revenue from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1`, range),
+    // The funnel's and the list's counts over the whole period (the list itself shows the latest 100 only).
+    q.query(
+      `select count(*)::int as placed, count(*) filter (where ${STANDS})::int as standing,
+              coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate) filter (where ${STANDS}),0)::bigint as revenue,
+              count(*) filter (where o.status = 'cancelled')::int as cancelled,
+              count(*) filter (where o.payment_method = 'card' and o.payment_status not in ('paid','partially_refunded','refunded'))::int as unpaid_card
+       from orders o where o.kind = 'checkout' and o.created_at >= $1 and o.created_at < $2`,
+      range,
+    ),
   ])
 
   // The store's one funnel, all sites together: visits → leads (checkout contact step) → checkouts → orders.
-  const standing = orderRows.rows.filter((r) => r.status !== 'cancelled' && r.status !== 'abandoned' && (r.payment_method !== 'card' || ['paid', 'partially_refunded', 'refunded'].includes(r.payment_status as string)))
+  const c = counts.rows[0] ?? {}
   const funnels = [
     {
       funnel: 'biohack-tech.ro',
@@ -229,8 +245,8 @@ export async function buildReport(q: Queryable, p: Period) {
       leads: n(leadRows.rows[0]?.leads),
       checkouts: n(leadRows.rows[0]?.checkouts),
       abandoned: n(leadRows.rows[0]?.abandoned),
-      orders: standing.length,
-      revenueLei: lei(standing.reduce((s, r) => s + n(r.total_minor), 0)),
+      orders: n(c.standing),
+      revenueLei: lei(c.revenue),
     },
   ]
 
@@ -273,9 +289,9 @@ export async function buildReport(q: Queryable, p: Period) {
     }),
     sources: sources.rows.map((r) => ({ source: r.source as string, campaign: r.campaign as string, sessions: n(r.sessions) })),
     orders: list,
-    ordersPlacedAll: list.length,
-    cancelled: list.filter((o) => o.status === 'cancelled').length,
-    unpaidCard: list.filter((o) => o.payment === 'card' && !['paid', 'partially_refunded', 'refunded'].includes(o.paymentStatus)).length,
+    ordersPlacedAll: n(c.placed),
+    cancelled: n(c.cancelled),
+    unpaidCard: n(c.unpaid_card),
     payments: payments.rows.map((r) => ({ method: r.method as string, orders: n(r.orders), valueLei: lei(r.value) })),
     products: products.rows.map((r) => ({ product: r.product as string, units: n(r.units), valueLei: lei(r.value) })),
     calls: { ...Object.fromEntries(Object.entries(calls.rows[0] ?? {}).map(([k, v]) => [k, n(v)])), outcomes: outcomes.rows.map((r) => ({ outcome: r.outcome as string, n: n(r.n) })) } as {

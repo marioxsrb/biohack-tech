@@ -61,6 +61,13 @@ async function waitFor(orderNumber, ok, ms = 45_000) {
     await sleep(750)
   }
 }
+// The order link moves its token into a cookie and redirects to /comanda (src/lib/private-links.ts): follow it like a browser.
+async function orderPage(token) {
+  const first = await fetch(`${BASE}/comanda/${token}`, { redirect: 'manual' })
+  const cookie = (first.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).join('; ')
+  const to = first.headers.get('location')
+  return to ? (await fetch(new URL(to, BASE), { headers: { cookie } })).text() : first.text()
+}
 const events = async (id) => (await db.query('select type from order_events where order_id = $1 order by id', [id])).rows.map((r) => r.type)
 
 try {
@@ -78,7 +85,7 @@ try {
   check('payment.confirmed recorded once', (await events(ra.id)).filter((t) => t === 'payment.confirmed').length === 1)
 
   // 2. The order page afterwards shows the server state.
-  const page = await (await fetch(`${BASE}/comanda/${a.body.token}`)).text()
+  const page = await orderPage(a.body.token)
   check('order page shows the paid order', page.includes(a.body.orderNumber) && !page.includes('Se verifică plata'))
 
   // 3. Double submit of the same attempt.
@@ -129,7 +136,7 @@ try {
   if (t.status === 200) {
     const rt = await row(t.body.orderNumber)
     check('bank transfer → awaiting transfer, not paid', rt.payment_status === 'awaiting_transfer' && rt.status === 'pending' && !rt.paid_at)
-    const tp = await (await fetch(`${BASE}/comanda/${t.body.token}`)).text()
+    const tp = await orderPage(t.body.token)
     check('transfer page shows IBAN and the order number', tp.includes('IBAN') && tp.includes(t.body.orderNumber))
   } else {
     console.log(`SKIP  bank transfer (${t.status}: ${t.body.message ?? ''})`)

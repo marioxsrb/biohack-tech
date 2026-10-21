@@ -80,7 +80,7 @@ describe('issuing', () => {
     const focus = await issue('brainlink-pro', { source: 'landing-focus', now })
     const amber = await issue('ochelari-biohack', { source: 'landing-amber', now })
     expect([calm.amountMinor, focus.amountMinor, amber.amountMinor]).toEqual([64000, 32500, 3000])
-    expect(amber.perPaidUnit && amber.maxUnits).toBe(2)
+    expect([amber.perPaidUnit, amber.maxUnits]).toEqual([true, null])
     expect(calm.expiresAt.getTime() - now.getTime()).toBe(7 * 86_400_000)
     for (const x of [calm, focus, amber]) expect(x.code).toMatch(/^BTV[CFA][A-Z0-9]{8}$/)
     expect(await history(calm.id)).toEqual(['issued'])
@@ -141,6 +141,19 @@ describe('using a voucher in the checkout', () => {
     expect(piAmounts.at(-1)).toBe(57000)
     const lines = invoicePayload(getConfig().fgo!, o).Continut
     expect(Math.round(lines.reduce((s, l) => s + l.PretTotal * 100, 0))).toBe(57000)
+  })
+
+  it.each([
+    [4, 3 * 31500 - 3 * 3000],
+    [6, 4 * 31500 - 4 * 3000],
+    [7, 5 * 31500 - 5 * 3000],
+  ])('NEUROS Amber %i pairs with the voucher: one free per complete group of 3, 30 lei on every paid pair (no cap)', async (q, total) => {
+    const amber = await issue('ochelari-biohack', { source: 'landing-amber' })
+    const { data } = await buy([AMBER(q - 1), AMBER(1, 'subtire-negru')], amber.code, { method: 'card' })
+    const o = await order(data.orderNumber)
+    expect(o.totalMinor).toBe(total)
+    expect(piAmounts.at(-1)).toBe(total)
+    expect(Math.round(invoicePayload(getConfig().fgo!, o).Continut.reduce((s, l) => s + l.PretTotal * 100, 0))).toBe(total)
   })
 
   it('personal: another address cannot use it, in the order nor in the preview', async () => {
@@ -220,6 +233,16 @@ describe('the voucher follows its order', () => {
     expect(now.orderId).toBe(b.id)
     expect(await history(calm.id)).toContain('conflict')
     expect((await orders.events(db, a.id)).map((e) => e.type)).toContain('voucher.conflict')
+  })
+
+  it('paid after the order was cancelled (to refund): the voucher stays free for the customer', async () => {
+    const calm = await issue('balance-wave')
+    const o = await order((await buy([CALM(1)], calm.code, { method: 'card' })).data.orderNumber)
+    await svc.attachPaymentIntent(o.id, 'pi_1')
+    await svc.cancelOrder(o.id, 'admin', 'test')
+    await svc.confirmPayment(o.id, 'stripe.webhook', { amountMinor: o.totalMinor, currency: 'RON', paymentIntentId: 'pi_1' })
+    expect((await orders.byId(db, o.id))!.paymentStatus).toBe('paid')
+    expect((await v.voucherById(db, calm.id))!.status).toBe('active')
   })
 
   it('a full refund gives it back; a partial one keeps it used; past its expiry it becomes expired', async () => {

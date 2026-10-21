@@ -1,3 +1,4 @@
+import { countryName } from '@/lib/countries'
 import Link from 'next/link'
 import { connection } from 'next/server'
 import { companyLine } from '@/config/company'
@@ -76,6 +77,8 @@ export async function OrderDocuments({
                 <p>
                   {s.address.postalCode} {s.address.city}, jud. {s.address.county}
                 </p>
+                {/* An order abroad (the international site): the country, never left out. Romania prints as before. */}
+                {s.address.country && s.address.country !== 'RO' && <p className="font-semibold">{countryName(s.address.country)}</p>}
                 <p className="font-semibold">Tel. {s.phone}</p>
                 <div className="mt-[3mm] flex justify-between border-t border-black pt-[2mm] text-[10pt]">
                   <span>Comanda {o.orderNumber}</span>
@@ -172,6 +175,7 @@ export async function OrderDocuments({
                       {o.shippingAddress.city}, jud. {o.shippingAddress.county}
                     </p>
                     <p>Cod poștal {o.shippingAddress.postalCode}</p>
+                    {o.shippingAddress.country && o.shippingAddress.country !== 'RO' && <p className="font-semibold">{countryName(o.shippingAddress.country)}</p>}
                     <p className="font-semibold">Telefon {o.phone}</p>
                     <p>{o.email}</p>
                   </div>

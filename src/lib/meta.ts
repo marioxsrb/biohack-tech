@@ -2,6 +2,7 @@
  * Meta (Facebook) measurement shared by the browser pixel and the Conversions API.
  * Amounts here are lei (RON), never bani. The pixel id is public; the access token is not in this file.
  */
+import { isIntlHost } from './sites'
 import { landingBaseDomain } from './landing-hosts'
 
 /** Biohack Tech's live dataset. The previous id 826932839766824 is blocked by Meta traffic permissions. */
@@ -72,6 +73,8 @@ export function storeHost(hostHeader: string | null | undefined, siteHost: strin
   if (!host || host === 'localhost' || host.endsWith('.localhost')) return
   const apex = siteHost.toLowerCase().replace(/:\d+$/, '')
   if (host === apex || host === `www.${apex}` || host === base || host.endsWith(`.${base}`)) return host
+  // The international site (biohack-tech.net): its Purchase reports its own address, not the .ro one.
+  if (isIntlHost(host, false)) return host
   return
 }
 

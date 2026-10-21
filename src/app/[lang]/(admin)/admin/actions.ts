@@ -23,7 +23,8 @@ import { isChatSound, type ChatSound } from '@/lib/chat-sounds'
 import { cancelScheduledCalls, disableCalling, retryCall } from '@/server/calling/admin'
 import { getConfig } from '@/server/config'
 import { CODE_RE, normalizeCode, promoCodes } from '@/server/promo'
-import { issueVoucher, restoreVoucher, revokeVoucher } from '@/server/vouchers'
+import { issueVoucher, restoreVoucher, revokeVoucher, VOUCHER_CODE_RE } from '@/server/vouchers'
+import { REFERRAL_CODE_RE } from '@/server/referrals'
 import { reviewVideo } from '@/server/rewards'
 import { isVoucherProduct } from '@/config/vouchers'
 import { products } from '@/content/catalog'
@@ -48,8 +49,13 @@ const redirectWith = (path: string, message: string): never => redirect(`${path}
 /** Money and cancellations need the ticked confirmation box; without it nothing changes. */
 const confirmed = (f: FormData) => f.get('confirm') === 'da'
 
-async function done(id: string, action: string, changed: boolean) {
+/**
+ * After an order action: the log, the admin audit (every change a person made from this page, like the API's), the
+ * queue, the pages. `audit: false` for the actions that write their own audit entry.
+ */
+async function done(id: string, action: string, changed: boolean, details: Record<string, unknown> | false = {}) {
   log.info('admin.action', { orderId: id, action, changed })
+  if (changed && details) await audit(await getDb(), adminActor(), `order.${action}`, { orderId: id, ...details })
   await runDueJobs()
   revalidatePath(`/admin/orders/${id}`)
   revalidatePath('/admin')
@@ -75,7 +81,7 @@ export async function codCollectedAction(f: FormData) {
   const reference = text(f, 'reference', 120)
   if (!confirmed(f) || !Number.isFinite(lei) || lei <= 0 || reference.length < 3) return
   const r = await confirmPayment(id, 'admin', { amountMinor: Math.round(lei * 100), currency: 'RON', reference })
-  await done(id, 'cod_collected', r.changed)
+  await done(id, 'cod_collected', r.changed, { amountMinor: Math.round(lei * 100), reference })
 }
 
 /**
@@ -88,7 +94,7 @@ export async function confirmTeamAction(f: FormData) {
   if (!confirmed(f)) return
   const r = await confirmByTeam(id, 'admin', 'admin')
   if (r.changed) await audit(await getDb(), 'admin', 'order.team_confirmed', { orderId: id, orderNumber: r.order?.orderNumber })
-  await done(id, 'team_confirmed', r.changed)
+  await done(id, 'team_confirmed', r.changed, false)
   revalidatePath('/admin/companii')
 }
 
@@ -103,7 +109,7 @@ export async function clearRiskAction(f: FormData) {
   if (!confirmed(f)) return
   const r = await clearRisk(id, 'admin', 'admin', text(f, 'note', 300))
   if (r.changed) await audit(await getDb(), 'admin', 'order.risk_cleared', { orderId: id, orderNumber: r.order?.orderNumber })
-  await done(id, 'risk_cleared', r.changed)
+  await done(id, 'risk_cleared', r.changed, false)
   revalidatePath('/admin/verificare')
 }
 
@@ -114,7 +120,7 @@ export async function holdRiskAction(f: FormData) {
   if (!confirmed(f)) return
   const r = await holdRisk(id, 'admin', 'admin', note)
   if (r.changed) await audit(await getDb(), 'admin', 'order.risk_held', { orderId: id, orderNumber: r.order?.orderNumber })
-  await done(id, 'risk_held', r.changed)
+  await done(id, 'risk_held', r.changed, false)
   revalidatePath('/admin/verificare')
 }
 
@@ -132,7 +138,7 @@ export async function shipAction(f: FormData) {
   const url = text(f, 'trackingUrl', 400)
   if (!courierName || !trackingNumber) return
   const trackingUrl = /^https:\/\//.test(url) ? url : courier().trackingUrl(courierName, trackingNumber)
-  await done(id, 'shipped', (await markShipped(id, 'admin', { courier: courierName, trackingNumber, trackingUrl })).changed)
+  await done(id, 'shipped', (await markShipped(id, 'admin', { courier: courierName, trackingNumber, trackingUrl })).changed, { courier: courierName, trackingNumber })
 }
 
 export async function returnRequestedAction(f: FormData) {
@@ -147,9 +153,11 @@ export async function returnReceivedAction(f: FormData) {
   await done(id, 'return_received', (await markReturnReceived(id, 'admin')).changed)
 }
 
+/** Final (a delivered order cannot go back, and it grants the PDF, the follow-up): needs the ticked box. */
 export async function deliveredAction(f: FormData) {
   await guard()
   const id = text(f, 'id')
+  if (!confirmed(f)) return
   await done(id, 'delivered', (await markDelivered(id, 'admin')).changed)
 }
 
@@ -158,7 +166,7 @@ export async function cancelAction(f: FormData) {
   const id = text(f, 'id')
   if (!confirmed(f)) return
   const reason = text(f, 'reason', 300) || 'anulată de echipă'
-  await done(id, 'cancel', (await cancelOrder(id, 'admin', reason)).changed)
+  await done(id, 'cancel', (await cancelOrder(id, 'admin', reason)).changed, { reason })
 }
 
 /** Bank-transfer refunds happen in the bank; this records them (card refunds come from Stripe automatically). */
@@ -167,7 +175,7 @@ export async function refundAction(f: FormData) {
   const id = text(f, 'id')
   const lei = Number(text(f, 'amount', 20).replace(/\./g, '').replace(',', '.'))
   if (!confirmed(f) || !Number.isFinite(lei) || lei <= 0) return
-  await done(id, 'refund', (await recordRefund(id, 'admin', Math.round(lei * 100))).changed)
+  await done(id, 'refund', (await recordRefund(id, 'admin', Math.round(lei * 100))).changed, { refundedMinor: Math.round(lei * 100) })
 }
 
 export async function retryJobsAction(f: FormData) {
@@ -242,6 +250,8 @@ export async function createPromoAction(_: PromoFormState, f: FormData): Promise
   const maxRaw = text(f, 'max')
   const maxUses = maxRaw ? Math.round(Number(maxRaw)) : null
   if (maxUses !== null && (!Number.isFinite(maxUses) || maxUses < 1)) return { error: 'Numărul maxim de utilizări este cel puțin 1.' }
+  // The personal vouchers' and referral codes' shapes are reserved (server/codes.ts reads them first).
+  if (VOUCHER_CODE_RE.test(code) || REFERRAL_CODE_RE.test(code)) return { error: 'Codurile care încep cu BTV, BTG sau BTR sunt rezervate voucherelor personale și recomandărilor.' }
   const ok = await promoCodes.create(await getDb(), {
     code,
     kind,
@@ -256,6 +266,7 @@ export async function createPromoAction(_: PromoFormState, f: FormData): Promise
   })
   if (!ok) return { error: `Codul ${code} există deja.` }
   log.info('admin.promo_created', { code })
+  await audit(await getDb(), adminActor(), 'promo.create', { code, kind, value })
   revalidatePath('/admin/coduri')
   return { created: code }
 }
@@ -266,6 +277,7 @@ export async function togglePromoAction(f: FormData) {
   const active = text(f, 'active') === 'true'
   await promoCodes.setActive(await getDb(), code, active)
   log.info('admin.promo_toggled', { code, active })
+  await audit(await getDb(), adminActor(), 'promo.toggle', { code, active })
   revalidatePath('/admin/coduri')
 }
 
@@ -291,9 +303,12 @@ export async function issueVoucherAction(f: FormData) {
   }
 }
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
 export async function revokeVoucherAction(f: FormData) {
   await guard()
   const id = text(f, 'id', 64)
+  if (!UUID.test(id)) redirectWith('/admin/vouchere', 'Voucher necunoscut.')
   const reason = text(f, 'reason', 300)
   if (!confirmed(f) || reason.length < 3) redirectWith('/admin/vouchere', 'Bifează confirmarea și scrie motivul.')
   const db = await getDb()
@@ -306,6 +321,7 @@ export async function revokeVoucherAction(f: FormData) {
 export async function restoreVoucherAction(f: FormData) {
   await guard()
   const id = text(f, 'id', 64)
+  if (!UUID.test(id)) redirectWith('/admin/vouchere', 'Voucher necunoscut.')
   const days = Math.min(90, Math.max(1, Number(text(f, 'days', 3)) || 7))
   if (!confirmed(f)) redirectWith('/admin/vouchere', 'Bifează confirmarea.')
   const db = await getDb()
@@ -319,6 +335,7 @@ export async function restoreVoucherAction(f: FormData) {
 export async function reviewVideoAction(f: FormData) {
   await guard()
   const id = text(f, 'id', 64)
+  if (!UUID.test(id)) redirectWith('/admin/vouchere', 'Review necunoscut.')
   const to = text(f, 'to', 20)
   if (to !== 'approved' && to !== 'rejected' && to !== 'in_review') redirectWith('/admin/vouchere', 'Acțiune necunoscută.')
   const db = await getDb()

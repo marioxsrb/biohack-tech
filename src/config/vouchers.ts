@@ -23,8 +23,9 @@ export const isVoucherProduct = (id: string): id is VoucherProduct => id in VOUC
  * NEUROS Amber with the 2+1 offer (final rule, 21.10.2026): the third pair is free AND each paid pair gets 30 lei off,
  * so 3 pairs at 315 lei = 315 + 315 + 0 − 30 − 30 = 570 lei. The free pair never gets the 30 lei.
  *   perPairMinor  the reduction per paid pair (the Amber voucher's value);
- *   maxPairs      at most this many paid pairs get it in one order (2: "60 lei reducere la comandă", landing-amber-03);
- *                 null = every paid pair;
+ *   maxPairs      null: EVERY paid pair gets it (no global cap, decided 21.10.2026). The 2+1 groups: in every complete
+ *                 group of 3 pairs one is free (the cheapest units), so paid = units − floor(units / 3):
+ *                 1→1, 2→2, 3→2, 4→3, 5→4, 6→4, 7→5 paid pairs, each 30 lei off;
  *   audience      'voucher': only an order that uses the contact's Amber voucher (the offer the Amber landing emails
  *                 promise); 'all': every order with Amber, automatically (a live price change: needs approval).
  * In both cases the 30 lei are never given twice: with 'all', an Amber voucher adds nothing on top.
@@ -32,7 +33,7 @@ export const isVoucherProduct = (id: string): id is VoucherProduct => id in VOUC
 export const AMBER_PAIR_DISCOUNT: { productId: ProductId; perPairMinor: number; maxPairs: number | null; audience: 'voucher' | 'all' } = {
   productId: 'ochelari-biohack',
   perPairMinor: VOUCHER_VALUE['ochelari-biohack'],
-  maxPairs: 2,
+  maxPairs: null,
   audience: 'voucher',
 }
 

@@ -77,14 +77,15 @@ export async function funnelStats(q: Queryable, f: StatsFilter): Promise<FunnelS
     campaign: "coalesce(o.attribution->'utm'->>'utm_campaign', '')",
     product: 'exists (select 1 from order_items i where i.order_id = o.id and i.product_id = ?)',
   })
-  // Orders: placed checkouts (card orders count once paid; cash on delivery and transfer when placed).
+  // Orders: placed checkouts (card orders count once paid; cash on delivery and transfer when placed) that still stand:
+  // an expired transfer, a refused parcel, or money that arrived after a cancellation (to refund) are not sales.
   const orders = await q.query<{ orders: number; paid_orders: number; revenue: number; recovered: number }>(
     `select count(*) filter (where o.payment_method <> 'card' or o.payment_status in ${PAID} or o.payment_status = 'refunded')::int as orders,
             count(*) filter (where o.payment_status in ${PAID})::int as paid_orders,
             coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate) filter (where o.payment_status in ${PAID}), 0)::int as revenue,
             count(*) filter (where (o.payment_method <> 'card' or o.payment_status in ${PAID})
               and (o.attribution->>'entry' = 'recovery' or exists (select 1 from leads r where r.id = o.lead_id and r.recovery_sent > 0 and o.created_at > r.last_recovery_at)))::int as recovered
-     from orders o where o.kind = 'checkout' and ${o.sql}`,
+     from orders o where o.kind = 'checkout' and o.status not in ('cancelled', 'abandoned') and ${o.sql}`,
     o.params,
   )
   const vi = visits.rows[0]
@@ -114,7 +115,7 @@ export async function dailyTrend(q: Queryable, f: StatsFilter) {
           v as (select day, sum(sessions)::int as sessions from visit_stats where day >= ($1::timestamptz at time zone '${TZ}')::date and day < ($2::timestamptz at time zone '${TZ}')::date group by 1),
           l as (select (created_at at time zone 'Europe/Bucharest')::date as day, count(*)::int as leads from leads where created_at >= $1 and created_at < $2 group by 1),
           o as (select (created_at at time zone 'Europe/Bucharest')::date as day, count(*)::int as orders
-                from orders where kind = 'checkout' and created_at >= $1 and created_at < $2 and (payment_method <> 'card' or payment_status in ${PAID}) group by 1)
+                from orders where kind = 'checkout' and status not in ('cancelled', 'abandoned') and created_at >= $1 and created_at < $2 and (payment_method <> 'card' or payment_status in ${PAID}) group by 1)
      select to_char(d.day, 'YYYY-MM-DD') as day, coalesce(v.sessions,0) as sessions, coalesce(l.leads,0) as leads, coalesce(o.orders,0) as orders
      from days d left join v on v.day = d.day left join l on l.day = d.day left join o on o.day = d.day
      order by d.day`,

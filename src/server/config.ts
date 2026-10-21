@@ -389,9 +389,11 @@ function readApns(): Config['apns'] {
   return { keyId, teamId, bundleId, privateKey }
 }
 
-function readMetaCapi(): Config['metaCapi'] {
+function readMetaCapi(appEnv: AppEnv, issues: ConfigIssue[]): Config['metaCapi'] {
   const accessToken = str('META_CAPI_ACCESS_TOKEN')
   if (!accessToken) return null
+  // A test code left set in production sends every server Purchase as a test event (not counted by Meta).
+  if (appEnv === 'production' && str('META_CAPI_TEST_EVENT_CODE')) issues.push({ area: 'meta', level: 'warn', message: 'META_CAPI_TEST_EVENT_CODE este setat în producție: Purchase-urile de pe server ajung ca evenimente de test. Șterge-l după verificare.' })
   return { pixelId: activeMetaPixelId(), accessToken, testEventCode: str('META_CAPI_TEST_EVENT_CODE') ?? null }
 }
 
@@ -488,7 +490,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
       testRecipients: str('RECOVERY_TEST_RECIPIENTS')?.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean) || null,
     },
     ...readCalling(issues, isolated),
-    metaCapi: readMetaCapi(),
+    metaCapi: readMetaCapi(appEnv, issues),
     apns: isolated ? null : readApns(),
     digital: readDigital(appEnv, issues),
     bookSales: flag('BOOK_SALES_ENABLED'),

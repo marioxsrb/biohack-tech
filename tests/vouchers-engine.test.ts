@@ -37,15 +37,16 @@ function check(r: ReturnType<typeof priceLines>) {
 }
 
 describe('NEUROS Amber 2+1 with the Amber voucher: 30 lei per paid pair, never on the free pair', () => {
-  // quantity → [free pairs, paid pairs that get 30 lei (max 2), total]
+  // quantity → [free pairs (one per complete group of 3), paid pairs (each 30 lei off, no cap), total]
   it.each([
     [1, 0, 1, AMBER - 3000],
     [2, 0, 2, 2 * AMBER - 6000],
     [3, 1, 2, 57000],
-    [4, 1, 2, 4 * AMBER - AMBER - 6000],
-    [5, 1, 2, 5 * AMBER - AMBER - 6000],
-    [6, 2, 2, 6 * AMBER - 2 * AMBER - 6000],
-    [7, 2, 2, 7 * AMBER - 2 * AMBER - 6000],
+    [4, 1, 3, 3 * AMBER - 9000],
+    [5, 1, 4, 4 * AMBER - 12000],
+    [6, 2, 4, 4 * AMBER - 12000],
+    [7, 2, 5, 5 * AMBER - 15000],
+    [9, 3, 6, 6 * AMBER - 18000],
   ])('%i pairs', (q, free, pairs, total) => {
     const r = check(priceLines([amber(q)], undefined, voucher('ochelari-biohack')))
     expect(savedBy(r.promotions, 'amber-2-plus-1')).toBe(free * AMBER)

@@ -41,6 +41,18 @@ describe('proxy', () => {
     expect([admin.status, admin.headers.get('location')]).toEqual([303, 'https://biohack-tech.ro/admin/login?next=%2Fadmin'])
   })
 
+  it('guessing the admin password with Basic Auth: 10 failures from one address, then 429 for that address only', async () => {
+    const { proxy } = await import('@/proxy')
+    const basic = (pw: string, ip: string) =>
+      proxy(new NextRequest('https://biohack-tech.ro/admin', { headers: { host: 'biohack-tech.ro', authorization: `Basic ${btoa(`admin:${pw}`)}`, 'x-forwarded-for': ip } }))
+    for (let i = 0; i < 10; i++) expect((await basic(`wrong-${i}`, '10.1.1.1')).status).toBe(303)
+    expect((await basic('wrong-x', '10.1.1.1')).status).toBe(429)
+    expect((await basic('a-long-test-password', '10.1.1.1')).status).toBe(429)
+    expect((await basic('a-long-test-password', '10.2.2.2')).status).not.toBe(429)
+    const portal = await proxy(new NextRequest('https://biohack-tech.ro/fulfillment', { headers: { host: 'biohack-tech.ro', authorization: `Basic ${btoa('admin:x')}`, 'x-forwarded-for': '10.1.1.1' } }))
+    expect(portal.status).toBe(429)
+  })
+
   it('serves the presentation page at /prezentare on a landing hostname, outside the language tree, never indexed', async () => {
     const res = await run('https://calm.biohack-tech.ro/prezentare?utm_source=x', 'calm.biohack-tech.ro')
     expect(getRewrittenUrl(res)).toBe('https://calm.biohack-tech.ro/prezentare/calm?utm_source=x')

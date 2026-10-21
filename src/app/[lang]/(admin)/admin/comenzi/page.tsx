@@ -1,6 +1,5 @@
 import Link from 'next/link'
 import { connection } from 'next/server'
-import { formatLei } from '@/lib/money'
 import { formatMoney } from '@/lib/currency'
 import { loadConfig } from '@/server/config'
 import { getDb } from '@/server/db'
@@ -111,7 +110,7 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
               <li key={f.id} className="flex flex-wrap items-center justify-between gap-3 py-2">
                 <span>
                   <span className="font-medium">#{f.orderNumber}</span>
-                  {f.refund && <> · anulată, de rambursat {formatLei(f.outstandingMinor)}</>}
+                  {f.refund && <> · {f.returned ? 'produs returnat' : 'anulată'}, de rambursat {formatMoney(f.outstandingMinor, f.currency as Parameters<typeof formatMoney>[1])}</>}
                   {f.storno && <> · factură emisă, fără storno</>}
                 </span>
                 <Link href={`/admin/orders/${f.id}`} className="underline underline-offset-4">

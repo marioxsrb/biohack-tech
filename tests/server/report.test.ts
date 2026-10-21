@@ -53,6 +53,24 @@ describe('report', () => {
     expect(md).toMatch(/Comenzi valide: 1/)
   })
 
+  it('counts over the whole period (not the 100 listed), net of refunds and discounts, vouchers in the codes card', async () => {
+    const db = await freshDb({ ...TEST_ENV, EMAIL_TRANSPORT: 'none' })
+    const v = await import('@/server/vouchers')
+    for (let i = 0; i < 103; i++) await svc.placeOrder({ lines: lines([{ productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 1 }]), form: { ...person, email: `r${i}@exemplu.ro`, paymentMethod: 'cod' }, attemptId: `many-${i}` })
+    const issued = await v.issueVoucher(db, { email: 'vip@exemplu.ro', productId: 'balance-wave', source: 'admin' })
+    if (!issued.ok) throw new Error(issued.reason)
+    const { order: withVoucher } = await svc.placeOrder({ lines: lines([{ productId: 'balance-wave', quantity: 1 }]), form: { ...person, email: 'vip@exemplu.ro', paymentMethod: 'transfer' }, attemptId: 'voucher', promoCode: issued.voucher.code })
+    await svc.confirmPayment(withVoucher.id, 'admin')
+    await svc.recordRefund(withVoucher.id, 'admin', 10000)
+    const r = await buildReport(db, period('azi'))
+    expect(r.orders).toHaveLength(100)
+    expect(r.ordersPlacedAll).toBe(104)
+    expect(r.funnels[0].orders).toBe(104)
+    expect(r.payments.find((p) => p.method === 'bank_transfer')?.valueLei).toBe((638000 - 64000 - 10000) / 100)
+    expect(r.products.find((p) => p.product === 'NEUROS Calm')?.valueLei).toBe((638000 - 64000) / 100)
+    expect(r.codes).toEqual(expect.arrayContaining([expect.objectContaining({ code: 'vouchere personale', uses: 1, discountLei: 640 })]))
+  })
+
   it('the API: a bearer token or an admin session, nothing else; JSON or text', async () => {
     await freshDb({ ...TEST_ENV, EMAIL_TRANSPORT: 'none', ADMIN_API_TOKEN: TOKEN })
     const call = (headers: Record<string, string>, q = '') => GET(new NextRequest(`https://biohack-tech.ro/api/admin/report${q}`, { headers }))
