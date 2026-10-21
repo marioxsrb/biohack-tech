@@ -14,14 +14,14 @@ import { cookieFrom, VISITOR_COOKIE } from '@/lib/lead'
 import { getDb } from '@/server/db'
 import { linkOrder } from '@/server/leads'
 import { customerName } from '@/server/orders/model'
-import { attachPaymentIntent, placeOrder, PromoError, setStripeCustomer } from '@/server/orders/service'
+import { attachPaymentIntent, CardAttemptsError, placeOrder, PromoError, setStripeCustomer } from '@/server/orders/service'
 import { normalizeCode, promoMessage } from '@/server/promo'
 import { clientIp, rateLimit } from '@/server/rate-limit'
 import { ensureStoreSettings } from '@/server/store-settings'
 
 export const runtime = 'nodejs'
 
-type ErrorCode = 'BAD_REQUEST' | 'RATE_LIMIT' | 'EMPTY' | 'BAD_LINE' | 'INVALID' | 'UNAVAILABLE' | 'PAYMENT_PROVIDER' | 'SERVER' | 'PROMO'
+type ErrorCode = 'BAD_REQUEST' | 'RATE_LIMIT' | 'CARD_ATTEMPTS' | 'EMPTY' | 'BAD_LINE' | 'INVALID' | 'UNAVAILABLE' | 'PAYMENT_PROVIDER' | 'SERVER' | 'PROMO'
 type Locale = 'ro' | 'en'
 
 /** One error shape: a code for the client, a human sentence for the customer, in the customer's language. */
@@ -31,6 +31,7 @@ const fail = (status: number, error: ErrorCode, message: string, extra?: object)
 const MESSAGES = {
   ro: {
     RATE_LIMIT: 'Prea multe încercări într-un timp scurt. Încearcă din nou în câteva minute.',
+    CARD_ATTEMPTS: `Plata cu cardul nu a reușit de mai multe ori, așa că am oprit-o temporar pentru siguranța ta. Poți alege plata ramburs sau prin transfer, ori ne poți suna la ${site.phone} și te ajutăm.`,
     BAD_REQUEST: 'Cererea nu este validă. Reîncarcă pagina și încearcă din nou.',
     EMPTY: 'Coșul este gol.',
     BAD_LINE: 'Un produs din coș nu mai este disponibil sau s-a schimbat între timp. Reîncarcă pagina și verifică din nou coșul.',
@@ -42,6 +43,7 @@ const MESSAGES = {
   },
   en: {
     RATE_LIMIT: 'Too many attempts in a short time. Please try again in a few minutes.',
+    CARD_ATTEMPTS: `The card payment failed several times, so we paused it for your safety. Please try again later or write to us at ${site.email} and we will help.`,
     BAD_REQUEST: 'The request is not valid. Reload the page and try again.',
     EMPTY: 'Your cart is empty.',
     BAD_LINE: 'A product in your cart is no longer available or has changed. Reload the page and check your cart again.',
@@ -70,7 +72,11 @@ const localeFrom = (req: NextRequest, body?: Record<string, unknown>): Locale =>
 export async function POST(req: NextRequest) {
   // Prices and stock as the admin set them (server/store-settings.ts), before anything is priced.
   await ensureStoreSettings()
-  if (!rateLimit(`checkout:${clientIp(req.headers)}`, 12, 10 * 60_000)) {
+  const ip = clientIp(req.headers)
+  const visitorCookie = cookieFrom(req.headers.get('cookie'), VISITOR_COOKIE)
+  const visitor = visitorCookie && /^[0-9a-f-]{36}$/.test(visitorCookie) ? visitorCookie : null
+  // Per network and per browser session (the visitor cookie): a person retrying a form never gets near these.
+  if (!rateLimit(`checkout:${ip}`, 12, 10 * 60_000) || (visitor && !rateLimit(`checkout:v:${visitor}`, 8, 10 * 60_000))) {
     return fail(429, 'RATE_LIMIT', MESSAGES[localeFrom(req)].RATE_LIMIT)
   }
   let body: Record<string, unknown>
@@ -114,15 +120,18 @@ export async function POST(req: NextRequest) {
     const browser = metaBrowser(req.headers, { fbclid: sanitized?.fbclid, siteHost })
     const attribution = { ...(sanitized ?? {}), ...(browser && { meta: browser }) }
     let created: boolean
-    ;({ order, created } = await placeOrder({ lines: resolved.lines, form, attemptId, attribution, promoCode, currency, locale, site: siteForHost(req.headers.get('host')) }))
+    ;({ order, created } = await placeOrder({ lines: resolved.lines, form, attemptId, attribution, promoCode, currency, locale, site: siteForHost(req.headers.get('host')), source: { ip, visitor } }))
     // This browser's leads now point to the order.
-    const visitor = cookieFrom(req.headers.get('cookie'), VISITOR_COOKIE)
-    if (created && visitor && /^[0-9a-f-]{36}$/.test(visitor)) {
+    if (created && visitor) {
       const placed = order
       await (await getDb()).tx((t) => linkOrder(t, visitor, placed)).catch((e) => log.error('lead.link_failed', { orderId: placed.id, error: errText(e) }))
     }
   } catch (e) {
     // A promo code that cannot be used (expired, used up, not for these products...): said next to the code field.
+    if (e instanceof CardAttemptsError) {
+      log.warn('checkout.card_attempts', { site: siteForHost(req.headers.get('host')) })
+      return fail(429, 'CARD_ATTEMPTS', m.CARD_ATTEMPTS)
+    }
     if (e instanceof PromoError) {
       const message = promoMessage(e.problem, locale, e.rule)
       return fail(422, 'PROMO', message, { fields: { promoCode: message } })
@@ -156,7 +165,8 @@ export async function POST(req: NextRequest) {
     }
     const pi = order.stripePaymentIntentId
       ? await stripe.retrievePaymentIntent(c.stripe!, order.stripePaymentIntentId)
-      : await stripe.createPaymentIntent(c.stripe!, order, customerId ?? undefined)
+      : // An order the risk check flagged: the bank is asked for 3D Secure every time (the extra challenge).
+        await stripe.createPaymentIntent(c.stripe!, order, customerId ?? undefined, { threeDSecure: order.riskReview === 'pending' })
     if (!order.stripePaymentIntentId) await attachPaymentIntent(order.id, pi.id)
     // Never hand out a PaymentIntent that does not belong to this order exactly.
     if (pi.amount !== order.totalMinor || pi.currency !== order.currency.toLowerCase() || pi.metadata?.order_id !== order.id) throw new Error('payment intent does not match the order')

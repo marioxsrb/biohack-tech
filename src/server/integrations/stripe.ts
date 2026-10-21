@@ -100,7 +100,7 @@ export const stripe = {
    * card on that customer for on-session use only (the customer present on our page), which is what the
    * post-purchase offer needs; it is detached again when the offer ends.
    */
-  createPaymentIntent(c: StripeConfig, o: { id: string; orderNumber: string; totalMinor: number; currency?: string }, customerId?: string) {
+  createPaymentIntent(c: StripeConfig, o: { id: string; orderNumber: string; totalMinor: number; currency?: string }, customerId?: string, opts: { threeDSecure?: boolean } = {}) {
     return call<PaymentIntent>(c, '/payment_intents', {
       idempotencyKey: `pi-create-${o.id}`,
       body: {
@@ -112,6 +112,8 @@ export const stripe = {
         description: `Biohack Tech ${o.orderNumber}`,
         metadata: { order_id: o.id, order_number: o.orderNumber },
         ...(customerId && { customer: customerId, setup_future_usage: 'on_session' }),
+        // Risk-flagged orders (server/risk.ts): 3D Secure is requested whatever the bank's own exemptions.
+        ...(opts.threeDSecure && { payment_method_options: { card: { request_three_d_secure: 'any' } } }),
       },
     })
   },

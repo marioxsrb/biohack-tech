@@ -838,4 +838,31 @@ create table if not exists welcome_gifts (
 alter table welcome_gifts enable row level security;
 alter table welcome_signups add column if not exists gift text`,
   },
+  {
+    // Checkout risk review (21.10.2026): an order whose signals add up (server/risk.ts) waits for a person
+    // ('pending' → 'cleared') before preparation, like a business order waits for the team's call. Payment and
+    // order status are untouched. The signals are kept for correlation only: a keyed hash of the IP (never the IP)
+    // and the browser's visitor cookie; no card data. Only orders placed from now on are scored, with one
+    // exception: the four card attempts of 20–21.10.2026 from mailnow.io addresses (all failed at 3D Secure, all
+    // abandoned) are listed for review by number; nothing else is flagged after the fact.
+    id: '031_risk_review',
+    sql: `alter table orders add column if not exists risk_review text check (risk_review in ('pending', 'cleared'));
+alter table orders add column if not exists risk_score integer;
+alter table orders add column if not exists risk_reasons jsonb;
+alter table orders add column if not exists risk_ip text;
+alter table orders add column if not exists risk_visitor text;
+alter table orders add column if not exists risk_reviewed_at timestamptz;
+alter table orders add column if not exists risk_reviewed_by text;
+create index if not exists orders_risk_review_idx on orders (risk_review) where risk_review is not null;
+create index if not exists orders_risk_ip_idx on orders (risk_ip, created_at) where risk_ip is not null;
+create index if not exists orders_risk_visitor_idx on orders (risk_visitor, created_at) where risk_visitor is not null;
+update orders set risk_review = 'pending', risk_score = 60,
+  risk_reasons = '["Email temporar (mailnow.io)","Plată cu cardul eșuată la 3D Secure","Mai multe carduri și nume pe aceleași date de contact (20–21.10.2026)"]'::jsonb
+  where order_number in ('BHT-20261020-0002', 'BHT-20261021-0001', 'BHT-20261021-0002', 'BHT-20261021-0004')
+    and email like '%@mailnow.io' and payment_method = 'card' and payment_status = 'failed' and risk_review is null;
+insert into order_events (order_id, type, source, data)
+  select id, 'risk.flagged', 'system', jsonb_build_object('score', risk_score, 'reasons', risk_reasons, 'retroactive', true)
+  from orders where order_number in ('BHT-20261020-0002', 'BHT-20261021-0001', 'BHT-20261021-0002', 'BHT-20261021-0004')
+    and risk_review = 'pending' and not exists (select 1 from order_events e where e.order_id = orders.id and e.type = 'risk.flagged')`,
+  },
 ]

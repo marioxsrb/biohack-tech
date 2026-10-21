@@ -26,6 +26,8 @@ import {
   deliveredAction,
   markPaidAction,
   confirmTeamAction,
+  clearRiskAction,
+  holdRiskAction,
   processingAction,
   refundAction,
   resyncCrmAction,
@@ -278,6 +280,34 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
         <div className="min-w-0 space-y-5 lg:col-span-5">
           <Panel title="Acțiuni">
             <div className="space-y-4">
+              {o.riskReview === 'pending' && o.status !== 'cancelled' && (
+                <div className="rounded-[12px] bg-[#fff4d6] p-4">
+                  <p className="text-[14px] text-text">
+                    <strong>Necesită verificare</strong> (scor {o.riskScore ?? '–'}). Până la confirmare comanda nu se pregătește, iar clientul nu primește emailuri de recuperare sau
+                    apeluri AI. Plata nu se schimbă.
+                  </p>
+                  {o.riskReasons.length > 0 && (
+                    <ul className="mt-2 list-disc pl-5 text-[13.5px] text-text">
+                      {o.riskReasons.map((r) => (
+                        <li key={r}>{r}</li>
+                      ))}
+                    </ul>
+                  )}
+                  <form action={clearRiskAction} className="mt-3">
+                    <input type="hidden" name="id" value={o.id} />
+                    <Confirm text="Am verificat clientul (de exemplu la telefon): comanda este legitimă." />
+                    <input name="note" maxLength={300} placeholder="Notă (opțional)" className="mt-2 w-full rounded-[8px] border border-mist-2 bg-white px-2.5 py-1.5 text-[14px]" />
+                    <button className="cta sm mt-2">Confirmă comanda</button>
+                  </form>
+                  <form action={holdRiskAction} className="mt-3 border-t border-[#ecd9a6] pt-3">
+                    <input type="hidden" name="id" value={o.id} />
+                    <Confirm text="Rămâne în verificare (nu se pregătește)." />
+                    <input name="note" maxLength={300} placeholder="Ce ai aflat (de ex. nu răspunde)" className="mt-2 w-full rounded-[8px] border border-mist-2 bg-white px-2.5 py-1.5 text-[14px]" />
+                    <button className="mt-2 rounded-[10px] bg-white px-3 py-1.5 text-[14px] text-ink">Menține în verificare</button>
+                  </form>
+                </div>
+              )}
+              {o.riskReview === 'cleared' && <p className="text-[13.5px] text-muted">Verificată și confirmată legitimă{o.riskReviewedAt ? ` la ${dt(o.riskReviewedAt)}` : ''}.</p>}
               {o.teamConfirmation === 'awaiting' && o.status !== 'cancelled' && (
                 <form action={confirmTeamAction} className="rounded-[12px] bg-[#fff4d6] p-4">
                   <input type="hidden" name="id" value={o.id} />
@@ -471,7 +501,7 @@ function Confirm({ text }: { text: string }) {
 
 /** The useful part of an event's data, in one line (no personal data is stored in events). */
 function eventDetails(data: Record<string, unknown>) {
-  const LABEL: Record<string, string> = { courier: 'curier', trackingNumber: 'AWB', reason: 'motiv', amount: 'sumă', refundedMinor: 'rambursat', codAmount: 'ramburs', reference: 'referință', series: 'serie', number: 'număr', template: 'email', via: 'prin', eventId: 'eveniment Stripe' }
+  const LABEL: Record<string, string> = { courier: 'curier', trackingNumber: 'AWB', reason: 'motiv', amount: 'sumă', refundedMinor: 'rambursat', codAmount: 'ramburs', reference: 'referință', series: 'serie', number: 'număr', template: 'email', via: 'prin', eventId: 'eveniment Stripe', score: 'scor', note: 'notă' }
   const MONEY = new Set(['amount', 'refundedMinor', 'codAmount', 'amountMinor'])
   return Object.entries(data ?? {})
     .filter(([k, v]) => LABEL[k] && v !== null && v !== undefined && v !== '')

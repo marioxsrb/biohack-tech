@@ -9,6 +9,7 @@
  * unfinished checkout alone never allows one. A purchase, an unsubscribe or a stop ends it.
  */
 import 'server-only'
+import { HOLD_MAX_MS, HOLD_RECHECK_MS, riskHold } from '@/server/risk'
 import { randomBytes, randomUUID } from 'node:crypto'
 import { getProduct, resolveLine } from '@/content/catalog'
 import type { Attribution } from '@/lib/attribution'
@@ -363,6 +364,8 @@ export function recoveryDecision(
     canSend: boolean
     /** RECOVERY_TEST_RECIPIENTS is set and this address is not on it. */
     notTestRecipient?: boolean
+    /** One of this person's orders waits for a person's risk check (server/risk.ts): nothing goes out meanwhile. */
+    riskHold?: boolean
   },
 ): RecoveryCheck {
   if (!ctx.features.abandonedCheckout) return { send: false, reason: 'abandoned checkout off' }
@@ -379,6 +382,12 @@ export function recoveryDecision(
     if (o.status !== 'abandoned') return { send: false, reason: 'order awaiting payment', later: new Date(Math.max(ctx.now.getTime(), o.createdAt.getTime() + ((ctx.abandonAfterMinutes ?? 60) + 5) * 60_000)) }
   }
   if (ctx.superseded) return { send: false, reason: 'went on to the checkout' }
+  // A flagged order of this person: the email waits (no code, no link) and goes out once a person clears it; a review
+  // still open after a week ends the sequence.
+  if (ctx.riskHold) {
+    if (ctx.now.getTime() - lead.lastActivityAt.getTime() >= HOLD_MAX_MS) return { send: false, reason: 'risk review', status: 'stopped' }
+    return { send: false, reason: 'risk review', later: new Date(ctx.now.getTime() + HOLD_RECHECK_MS) }
+  }
   if (ctx.otherRecovery) return { send: false, reason: 'another recovery for this person', status: 'stopped' }
   // Activity since the step was planned (another visit, the checkout typed into): not abandoned yet.
   const quietFor = ctx.now.getTime() - lead.lastActivityAt.getTime()
@@ -432,7 +441,8 @@ export async function recoveryFacts(q: Queryable, lead: Lead) {
     ? await q.query<{ status: string; payment_method: string; payment_status: string; created_at: string }>('select status, payment_method, payment_status, created_at from orders where id = $1', [lead.orderId])
     : { rows: [] }
   const order = own[0] ? { status: own[0].status, paymentMethod: own[0].payment_method, paymentStatus: own[0].payment_status, createdAt: new Date(own[0].created_at) } : null
-  return { converted: conv.length > 0, superseded: sup.length > 0, otherRecovery: other.length > 0, consentGranted: consent ? consent.granted : null, order }
+  const held = await riskHold(q, { email: lead.email, phone: lead.phone, orderId: lead.orderId })
+  return { converted: conv.length > 0, superseded: sup.length > 0, otherRecovery: other.length > 0, consentGranted: consent ? consent.granted : null, order, riskHold: held }
 }
 
 /** What a lead recovery link puts back in the cart (only what is still sold), or null. */

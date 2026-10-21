@@ -25,7 +25,7 @@ import { getConfig } from '@/server/config'
 import { CODE_RE, normalizeCode, promoCodes } from '@/server/promo'
 import { products } from '@/content/catalog'
 import { adminCopyLink, adminSendDigital, adminSetAccess } from '@/server/digital/delivery'
-import { cancelOrder, confirmByTeam, confirmPayment, markDelivered, markProcessing, markReturnReceived, markReturnRequested, markShipped, recordRefund } from '@/server/orders/service'
+import { cancelOrder, clearRisk, holdRisk, confirmByTeam, confirmPayment, markDelivered, markProcessing, markReturnReceived, markReturnRequested, markShipped, recordRefund } from '@/server/orders/service'
 
 /**
  * Every action verifies the admin credentials itself. Server Actions are HTTP endpoints; the proxy's
@@ -87,6 +87,32 @@ export async function confirmTeamAction(f: FormData) {
   if (r.changed) await audit(await getDb(), 'admin', 'order.team_confirmed', { orderId: id, orderNumber: r.order?.orderNumber })
   await done(id, 'team_confirmed', r.changed)
   revalidatePath('/admin/companii')
+}
+
+/**
+ * An order flagged by the checkout's risk check: a person checked it (usually by phone) and confirms it is a real
+ * customer, so it may be prepared and its automations resume; or keeps it in review with a note. Both need the ticked
+ * box and are recorded in the order's history and the admin audit. Payment and order status never change here.
+ */
+export async function clearRiskAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id')
+  if (!confirmed(f)) return
+  const r = await clearRisk(id, 'admin', 'admin', text(f, 'note', 300))
+  if (r.changed) await audit(await getDb(), 'admin', 'order.risk_cleared', { orderId: id, orderNumber: r.order?.orderNumber })
+  await done(id, 'risk_cleared', r.changed)
+  revalidatePath('/admin/verificare')
+}
+
+export async function holdRiskAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id')
+  const note = text(f, 'note', 300)
+  if (!confirmed(f)) return
+  const r = await holdRisk(id, 'admin', 'admin', note)
+  if (r.changed) await audit(await getDb(), 'admin', 'order.risk_held', { orderId: id, orderNumber: r.order?.orderNumber })
+  await done(id, 'risk_held', r.changed)
+  revalidatePath('/admin/verificare')
 }
 
 export async function processingAction(f: FormData) {

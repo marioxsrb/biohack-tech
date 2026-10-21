@@ -177,8 +177,20 @@ export type Order = {
   preparedAt: Date | null
   fulfillmentIssue: string | null
   fulfillmentIssueAt: Date | null
+  /**
+   * Checkout risk (server/risk.ts): 'pending' while the order waits for a person's check ("Necesită verificare"),
+   * 'cleared' once a person confirmed it, null for an order that was never flagged. Preparation waits for it, like
+   * for the team's confirmation; payment and status are untouched. Admin only: never shown to the customer.
+   */
+  riskReview: RiskReview | null
+  riskScore: number | null
+  riskReasons: string[]
+  riskReviewedAt: Date | null
+  riskReviewedBy: string | null
   items: OrderItem[]
 }
+
+export type RiskReview = 'pending' | 'cleared'
 
 export type TeamConfirmation = 'awaiting' | 'confirmed'
 

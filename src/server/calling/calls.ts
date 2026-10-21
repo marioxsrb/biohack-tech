@@ -9,6 +9,7 @@
  * provider ids.
  */
 import 'server-only'
+import { HOLD_MAX_MS, HOLD_RECHECK_MS, riskHold } from '@/server/risk'
 import { isIntlHost } from '@/lib/sites'
 import { givenName } from './names'
 import { randomUUID } from 'node:crypto'
@@ -175,6 +176,8 @@ export type CallFacts = {
   blocked?: boolean
   /** Calls placed today (calling time zone), for the daily brake. */
   placedToday?: number
+  /** One of this person's orders waits for a person's risk check (server/risk.ts). */
+  riskHold?: boolean
 }
 
 export type CallCheck = { call: true; phone: string } | { call: false; reason: string; status?: 'stopped' | 'disabled'; later?: Date }
@@ -190,6 +193,11 @@ export function callDecision(lead: Lead, ctx: { attempt: number; now: Date; call
   if (lead.orderId) return { call: false, reason: 'order placed', status: 'stopped' }
   if (!ctx.phone) return { call: false, reason: 'no valid Romanian phone number', status: 'stopped' }
   if (ctx.blocked) return { call: false, reason: 'number on the do-not-call list', status: 'stopped' }
+  // A flagged order of this person: no call (and so no offer, no code) until a person clears it; a week at most.
+  if (ctx.riskHold) {
+    if (ctx.now.getTime() - lead.lastActivityAt.getTime() >= HOLD_MAX_MS) return { call: false, reason: 'risk review', status: 'stopped' }
+    return { call: false, reason: 'risk review', later: nextCallingWindow(new Date(ctx.now.getTime() + HOLD_RECHECK_MS), c) }
+  }
   if (ctx.consentGranted === null) return { call: false, reason: 'no call consent', status: 'stopped' }
   if (!ctx.consentGranted) return { call: false, reason: 'call consent withdrawn', status: 'stopped' }
   if (ctx.unsubscribed) return { call: false, reason: 'unsubscribed', status: 'stopped' }
@@ -215,7 +223,7 @@ export async function callFacts(q: Queryable, lead: Lead, calling?: Pick<Calling
   const phone = romanianE164(lead.phone)
   // Test mode, a listed number: one person per email (marioxsrb+a@…, +b@…), so several carts can be tested on one phone.
   const samePhone = phone && !(calling?.testMode && calling.testNumbers?.includes(phone)) ? phone : ''
-  const [consent, mkt, conv, sup, other, talked, blocked, today] = await Promise.all([
+  const [consent, mkt, conv, sup, other, talked, blocked, today, held] = await Promise.all([
     phone ? callConsent.state(q, phone) : null,
     marketing.state(q, lead.email),
     q.query(
@@ -240,6 +248,7 @@ export async function callFacts(q: Queryable, lead: Lead, calling?: Pick<Calling
     ),
     callBlocklist.has(q, phone),
     q.query<{ n: number }>(`select count(*)::int as n from calls where (created_at at time zone $1)::date = (now() at time zone $1)::date and status <> 'cancelled'`, [calling?.timezone ?? 'Europe/Bucharest']),
+    riskHold(q, { email: lead.email, phone: lead.phone, orderId: lead.orderId }),
   ])
   return {
     phone,
@@ -251,6 +260,7 @@ export async function callFacts(q: Queryable, lead: Lead, calling?: Pick<Calling
     talkedBefore: talked.rows.length > 0,
     blocked,
     placedToday: today.rows[0]?.n ?? 0,
+    riskHold: held,
   }
 }
 
