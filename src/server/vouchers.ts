@@ -19,7 +19,7 @@
  */
 import 'server-only'
 import { randomInt, randomUUID } from 'node:crypto'
-import { getProduct } from '@/content/catalog'
+import { catalogProduct as getProduct } from '@/content/catalog'
 import { AMBER_PAIR_DISCOUNT, VOUCHER_VALIDITY_DAYS, VOUCHER_VALUE, isGiftProduct, isVoucherProduct, type VoucherSource } from '@/config/vouchers'
 import type { PromoCodeRule } from '@/lib/promotions'
 import type { Queryable, Row } from '@/server/db'

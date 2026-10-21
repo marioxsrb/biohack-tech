@@ -5,6 +5,9 @@ import { getDb } from '@/server/db'
 import { runDueJobs } from '@/server/jobs/runner'
 import { purgeStaleLeads } from '@/server/leads'
 import { purgeRiskSignals } from '@/server/risk'
+import { expireVouchers } from '@/server/vouchers'
+import { settleRewards } from '@/server/rewards'
+import { workflowTick, workflowsMode } from '@/server/workflows/engine'
 import { errText, log } from '@/server/log'
 import { imapSource, syncInbox } from '@/server/inbox'
 
@@ -33,6 +36,21 @@ async function run(req: NextRequest) {
     if (cleared) log.info('risk.signals_purged', { count: cleared })
   } catch (e) {
     log.error('leads.purge_failed', { error: errText(e) })
+  }
+  // Vouchers past their expiry, referrals settled after the return window (both no-ops while none exist), and the
+  // workflows' dry run (nothing unless WORKFLOWS_MODE=dry_run; no mode sends anything).
+  try {
+    const db = await getDb()
+    const expired = await expireVouchers(db)
+    if (expired) log.info('vouchers.expired', { count: expired })
+    const settled = await db.tx((t) => settleRewards(t))
+    if (settled.qualified) log.info('rewards.settled', settled)
+    if (workflowsMode() !== 'off') {
+      const ticked = await db.tx((t) => workflowTick(t))
+      if (ticked.length) log.info('workflows.dry_run', { decisions: ticked.length })
+    }
+  } catch (e) {
+    log.error('workflows.run_failed', { error: errText(e) })
   }
   // Customers' email answers for the admin inbox (IMAP), after the queue: bounded in time, and a mailbox that does
   // not answer is recorded and retried next run, never an error for the rest.

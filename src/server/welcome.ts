@@ -12,6 +12,8 @@ import type { Queryable } from '@/server/db'
 import { emailShell, esc } from '@/server/integrations/email/shell'
 import { jobs } from '@/server/jobs/outbox'
 import { marketing } from '@/server/marketing/consent'
+import type { LandingSlug } from '@/lib/landing-hosts'
+import { popupProduct, popupVoucher, popupVouchersOn } from '@/server/popup-vouchers'
 
 export { WELCOME_CONSENT_TEXT }
 
@@ -37,7 +39,7 @@ async function claimGift(t: Queryable, id: string, email: string): Promise<Welco
  * Records the signup and queues the code email; a second signup of the same address sends nothing more. With an
  * opened box (`giftId`), the email carries that gift's code; without one, the 10% code.
  */
-export async function welcomeSignup(t: Queryable, email: string, page: string | null, locale: 'ro' | 'en' = 'ro', site: 'ro' | 'net' = 'ro', giftId?: string) {
+export async function welcomeSignup(t: Queryable, email: string, page: string | null, locale: 'ro' | 'en' = 'ro', site: 'ro' | 'net' = 'ro', giftId?: string, landing: LandingSlug | null = null) {
   const addr = email.trim().toLowerCase()
   const { rows } = await t.query('insert into welcome_signups (email, page) values ($1, $2) on conflict (email) do nothing returning email', [addr, page?.slice(0, 80) ?? null])
   if (!rows.length) return { created: false, already: true }
@@ -46,7 +48,11 @@ export async function welcomeSignup(t: Queryable, email: string, page: string | 
   const state = await marketing.state(t, addr)
   // An address that unsubscribed before chose so: signing up again here is a new, explicit consent.
   if (!state?.granted) await marketing.grant(t, { email: addr, source: 'popup', page: page ?? undefined, version: locale === 'en' ? 'welcome-en-2026-10-16' : giftId ? 'welcome-cadou-2026-10-20' : 'welcome-2026-10-15' })
-  await jobs.enqueue(t, { kind: 'email.welcome', dedupeKey: `email.welcome:${addr}`, payload: { email: addr, locale, site, gift } })
+  // Prepared, off (POPUP_VOUCHERS): a product popup gives that product's fixed voucher and its landing sequence
+  // instead of the 10% email (server/popup-vouchers.ts). Off, every popup sends what it sends today.
+  const product = popupVouchersOn() && site === 'ro' && locale === 'ro' && !giftId ? popupProduct(page, landing) : null
+  const voucher = product ? await popupVoucher(t, addr, product) : null
+  if (!voucher) await jobs.enqueue(t, { kind: 'email.welcome', dedupeKey: `email.welcome:${addr}`, payload: { email: addr, locale, site, gift } })
   // The address in the CRM (contact, lead tags, leads pipeline) for the team's follow-up and remarketing.
   await jobs.enqueue(t, { kind: 'ghl.welcome', dedupeKey: `ghl.welcome:${addr}`, payload: { email: addr, site } })
   return { created: true }

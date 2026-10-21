@@ -6,6 +6,7 @@ import { errText, log } from '@/server/log'
 import { clientIp, rateLimit } from '@/server/rate-limit'
 import { welcomeSignup } from '@/server/welcome'
 import { siteForHost } from '@/lib/sites'
+import { landingForHost } from '@/lib/landing-hosts'
 
 export const runtime = 'nodejs'
 
@@ -27,7 +28,7 @@ export async function POST(req: NextRequest) {
   try {
     const db = await getDb()
     const giftId = typeof body.gift === 'string' ? body.gift : undefined
-    const r = await db.tx((t) => welcomeSignup(t, email, typeof body.page === 'string' ? body.page : null, body.locale === 'en' ? 'en' : 'ro', siteForHost(req.headers.get('host')), giftId))
+    const r = await db.tx((t) => welcomeSignup(t, email, typeof body.page === 'string' ? body.page : null, body.locale === 'en' ? 'en' : 'ro', siteForHost(req.headers.get('host')), giftId, landingForHost(req.headers.get('host'))))
     kickJobs()
     log.info('welcome.signup', { created: r.created })
     // An address that already got the code: told so, nothing is sent again.

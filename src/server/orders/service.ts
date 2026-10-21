@@ -26,6 +26,7 @@ import { normalizeCode, promoCodes, type PromoProblem } from '@/server/promo'
 import { resolveCode, type ResolvedCode } from '@/server/codes'
 import { attributeReferral } from '@/server/referrals'
 import { reserveVoucher, syncVoucher } from '@/server/vouchers'
+import { onOrderEvent, workflowsMode } from '@/server/workflows/engine'
 import { upsellsFor } from '@/lib/upsell'
 import { UPSELL_WINDOW_MINUTES } from '@/config/upsell'
 import type { OrderLine } from '@/lib/orders/resolve'
@@ -282,6 +283,8 @@ async function transition(
     // A personal voucher follows its order: released when the order stops standing, taken back by a late payment.
     const voucher = await syncVoucher(t, (await orders.byId(t, orderId))!, r.event)
     if (voucher) await orders.event(t, orderId, `voucher.${voucher}`, source, { via: r.event })
+    // The email workflows (server/workflows: nothing at all unless WORKFLOWS_MODE=dry_run, and that mode sends nothing).
+    if (workflowsMode() !== 'off') await onOrderEvent(t, (await orders.byId(t, orderId))!, r.event)
     const digital = await syncEntitlement(t, (await orders.byId(t, orderId))!, r.event)
     if (digital.granted) await orders.event(t, orderId, 'digital.granted', source, { via: r.event })
     if (digital.revoked) await orders.event(t, orderId, 'digital.revoked', source, { via: r.event })

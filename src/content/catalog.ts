@@ -402,6 +402,9 @@ export const products: Product[] = allRo.filter(isListed)
 /** The same products with the English text a visitor reads on /en. Ids, prices and images are identical. */
 const productsEn: Product[] = allEn.filter(isListed)
 
+/** A product by id, released or not (names in emails and records about something already sold or promised). */
+export const catalogProduct = (id: string): Product | undefined => allRo.find((p) => p.id === id)
+
 /** Every product's URL segment, released or not (static generation; an unreleased page answers 404). */
 export const allSlugs = () => allRo.map((p) => p.slug)
 
