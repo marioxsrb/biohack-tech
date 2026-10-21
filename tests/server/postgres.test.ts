@@ -99,5 +99,30 @@ describe.skipIf(!url)('on real PostgreSQL', () => {
     ])
     expect((await db.query<{ n: number }>(`select count(*)::int as n from pg_policies where tablename in ('leads', 'funnel_visits')`)).rows[0].n).toBe(0)
   })
-})
 
+  it('risk check on the real server: typed queries, a flagged order waits, ten simultaneous confirmations clear it once', async () => {
+    const { riskSignals, riskHold } = await import('@/server/risk')
+    const { orders } = await import('@/server/orders/repository')
+    const who = { ...person, email: 'race.risk@mailnow.io', phone: '0733000999' }
+    const src = { ip: '203.0.113.200', visitor: '0b1c2d3e-0000-4000-8000-000000000001' }
+    const fail = async (i: number) => {
+      const { order } = await svc.placeOrder({ lines: lines([{ productId: 'balance-wave', quantity: 1 }]), form: { ...who, firstName: `Nume${i}`, paymentMethod: 'card' }, attemptId: `risk-pg-${i}`, source: src })
+      await svc.attachPaymentIntent(order.id, `pi_risk_pg_${i}`)
+      await svc.recordPaymentFailure(order.id, 'stripe.webhook', 'authentication failed', `pi_risk_pg_${i}`)
+      return order
+    }
+    await fail(1)
+    await fail(2)
+    const s = await riskSignals(db, { email: who.email, phone: who.phone, firstName: 'X', lastName: 'Y', ip: null, visitor: src.visitor })
+    expect(s).toMatchObject({ emailKind: 'disposable', failedCards: 2, known: false })
+    const { order } = await svc.placeOrder({ lines: lines([{ productId: 'ochelari-biohack', variantId: 'cat-eye-negru', quantity: 1 }]), form: { ...who, paymentMethod: 'cod' }, attemptId: 'risk-pg-cod', source: src })
+    expect(order.riskReview).toBe('pending')
+    expect(await riskHold(db, { email: who.email, phone: '+40733000999' })).toBe(true)
+    expect((await svc.markProcessing(order.id, 'admin')).changed).toBe(false)
+    const results = await Promise.all(Array.from({ length: 10 }, () => svc.clearRisk(order.id, 'admin', 'admin')))
+    expect(results.filter((r) => r.changed)).toHaveLength(1)
+    expect((await orders.events(db, order.id)).filter((e) => e.type === 'risk.cleared')).toHaveLength(1)
+    expect(await riskHold(db, { email: who.email })).toBe(false)
+    expect((await svc.markProcessing(order.id, 'admin')).changed).toBe(true)
+  })
+})

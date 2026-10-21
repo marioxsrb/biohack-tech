@@ -10,7 +10,7 @@ import { CONSENT_MAX_AGE_DAYS } from '@/lib/consent/cookies'
 import { configuredVendors } from '@/lib/consent/vendors'
 import type { LegalPage, LegalSection } from './legal'
 
-const UPDATED = '20 octombrie 2026'
+const UPDATED = '21 octombrie 2026'
 const processingDays = terms.processingDays.replace(' zile', ' days')
 const transitDays = terms.transitDays.replace(' zile', ' days')
 const contactLine = `Write to us at ${site.email} or call ${site.phone}. We reply within 24 hours.`
@@ -155,7 +155,7 @@ export const legalPagesEn: LegalPage[] = [
               rows: [
                 ['We process and deliver the order and write to you about it', 'Name, email, phone, delivery and billing address, the products ordered, notes', 'The contract (Art. 6(1)(b) GDPR)'],
                 ['We invoice and keep the accounting records', 'Billing details; for companies, the name, tax ID (CUI) and Trade Register number', 'Legal obligation (Art. 6(1)(c))'],
-                ['We collect payment and prevent fraud', 'The payment result from Stripe; for transfers, the details in the bank statement', 'The contract and the legitimate interest in preventing fraud (points b and f)'],
+                ['We collect payment and prevent fraud', 'The payment result from Stripe; for transfers, the details in the bank statement; for fraud prevention, the signals described below', 'The contract and the legitimate interest in preventing fraud (points b and f)'],
                 ['We keep what you wrote in the contact step of the order before you submit it, so we know how many orders remain unfinished and can restore your cart', 'Name, email, phone, the products in the cart', 'Our legitimate interest in understanding and improving the ordering process (point f)'],
                 ['We send you news, offers, recommendations and a reminder about an unfinished order or offer', 'Email, name, the products you were interested in', 'Your consent, given by ticking the box (point a)'],
                 ['Our AI assistant calls you about the chosen product, if you did not finish your order', 'Phone, first name, the chosen product, the outcome of the call', 'Your separate consent to calls, given by ticking the box (point a)'],
@@ -167,6 +167,18 @@ export const legalPagesEn: LegalPage[] = [
           },
           'Without the order data we cannot process and deliver the order. Marketing emails are optional: ordering works the same without them.',
           'We do not make automated decisions with legal effects on you.',
+        ],
+      },
+      {
+        heading: 'Payment fraud prevention',
+        id: 'frauda',
+        body: [
+          'To protect our customers and the shop from payments with stolen cards and fake orders, we check every order when it is placed. We look at a few signals: whether the email address is a temporary one, how many card payments recently failed for the same contact details, the same browser or the same network, whether the same contact details appear with different names, and how many orders come from the same source in a short time.',
+          'For this we keep, with the order, two pseudonymised identifiers: a cryptographic fingerprint of the IP address (not the IP address itself; the address cannot be rebuilt from the fingerprint) and the random identifier of the necessary cart cookie. We do not keep card details: they go directly to Stripe, which also runs its own fraud checks.',
+          'What happens: an order with several risk signals is put under review. A team member may call you to confirm it, and until then the order is not prepared and you receive no reminder emails or automated calls. The decision is always made by a person, never by the system alone; the order is not cancelled automatically. After several failed card payments in one day, card payment is paused for the same details, while cash on delivery, bank transfer and phone orders remain available. When paying by card, your bank may ask you to confirm with 3D Secure.',
+          'The legal basis is our legitimate interest, and that of our customers, in preventing fraud (Art. 6(1)(f) GDPR).',
+          'Retention and access: the pseudonymised identifiers are deleted automatically 90 days after the order. The outcome of the check (the score, the reasons and who confirmed the order) stays in the order history for as long as we keep the order. Only team members with administrator access can see this information; it never appears on the website, in emails or with marketing providers.',
+          'You can object to this processing, ask for access to it, or ask for a person to look again at an order put under review, by writing to us at the address in the Contact section.',
         ],
       },
       {
@@ -216,6 +228,7 @@ export const legalPagesEn: LegalPage[] = [
           {
             list: [
               'Orders and invoices: as long as accounting and tax laws require.',
+              'The pseudonymised identifiers used for fraud prevention (the IP address fingerprint and the cart cookie identifier): 90 days from the order, then deleted automatically.',
               'Marketing consent and unsubscription: as long as you receive emails and afterwards for as long as they may be requested from us as proof.',
               'Your messages and requests: for as long as the resolution takes and the period during which they may be requested from us as proof.',
               'The data in the contact step of an unsubmitted order (and in the price form on acces.biohack-tech.ro, used until 20 October 2026): at most 12 months from your last activity, after which we delete it automatically. If you place an order, it remains linked to the order.',

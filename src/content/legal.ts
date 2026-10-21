@@ -17,7 +17,7 @@ export type LegalBlock = string | { list: string[] } | { table: { head: string[]
 export type LegalSection = { heading: string; id?: string; body: LegalBlock[] }
 export type LegalPage = { slug: string; title: string; shortTitle: string; description: string; updated: string; sections: LegalSection[] }
 
-const UPDATED = '20 octombrie 2026'
+const UPDATED = '21 octombrie 2026'
 const contactLine = `Scrie-ne la ${site.email} sau sună la ${site.phone}. Răspundem ${terms.responseTime}.`
 
 const identity = (): LegalSection => ({
@@ -158,7 +158,7 @@ export const legalPages: LegalPage[] = [
               rows: [
                 ['Procesăm, livrăm și îți scriem despre comandă', 'Nume, email, telefon, adresă de livrare și facturare, produsele comandate, observații', 'Contractul (art. 6 alin. 1 lit. b GDPR)'],
                 ['Facturăm și ținem evidența contabilă', 'Datele de facturare; pentru firme, denumirea, CUI și nr. Reg. Com.', 'Obligație legală (art. 6 alin. 1 lit. c)'],
-                ['Încasăm plata și prevenim frauda', 'Rezultatul plății de la Stripe; la transfer, datele din extrasul de cont', 'Contractul și interesul legitim de a preveni frauda (lit. b și f)'],
+                ['Încasăm plata și prevenim frauda', 'Rezultatul plății de la Stripe; la transfer, datele din extrasul de cont; pentru prevenirea fraudei, semnalele descrise mai jos', 'Contractul și interesul legitim de a preveni frauda (lit. b și f)'],
                 ['Păstrăm ce ai scris în pasul de contact al comenzii înainte să o trimiți, ca să știm câte comenzi rămân neterminate și să îți putem reface coșul', 'Nume, email, telefon, produsele din coș', 'Interesul nostru legitim de a înțelege și îmbunătăți comanda (lit. f)'],
                 ['Îți trimitem noutăți, oferte, recomandări și un memento pentru o comandă sau o ofertă nefinalizată', 'Email, nume, produsele de care ai fost interesat', 'Consimțământul tău, dat prin bifă (lit. a)'],
                 ['Te sună asistentul nostru AI despre produsul ales, dacă nu ai finalizat comanda', 'Telefon, prenume, produsul ales, rezultatul apelului', 'Consimțământul tău separat pentru apeluri, dat prin bifă (lit. a)'],
@@ -170,6 +170,18 @@ export const legalPages: LegalPage[] = [
           },
           'Fără datele de comandă nu putem procesa și livra comanda. Emailurile de marketing sunt opționale: comanda funcționează la fel și fără ele.',
           'Nu luăm decizii automate cu efecte juridice asupra ta.',
+        ],
+      },
+      {
+        heading: 'Prevenirea fraudei la plată',
+        id: 'frauda',
+        body: [
+          'Ca să protejăm clienții și magazinul de plăți cu carduri furate și de comenzi false, verificăm fiecare comandă când este plasată. Ne uităm la câteva semnale: dacă adresa de email este una temporară, câte plăți cu cardul au eșuat recent pentru aceleași date de contact, același browser sau aceeași rețea, dacă aceleași date de contact apar cu nume diferite și câte comenzi vin într-un timp scurt de la aceeași sursă.',
+          'Pentru asta păstrăm, la comandă, două identificatoare pseudonimizate: o amprentă criptografică a adresei IP (nu adresa IP în sine; din amprentă nu se poate reface adresa) și identificatorul aleator al cookie-ului necesar al coșului. Nu păstrăm datele cardului: acestea merg direct la Stripe, care face și propria verificare antifraudă.',
+          'Ce se întâmplă: o comandă cu mai multe semnale de risc este pusă în verificare. Un membru al echipei te poate suna ca să o confirme, iar până atunci comanda nu este pregătită și nu primești emailuri de reamintire sau apeluri automate. Decizia o ia întotdeauna un om, niciodată sistemul singur; comanda nu este anulată automat. După mai multe plăți cu cardul eșuate într-o zi, plata cu cardul se oprește temporar pentru aceleași date, iar plata ramburs, transferul bancar și telefonul rămân disponibile. La plata cu cardul, banca îți poate cere confirmarea 3D Secure.',
+          'Temeiul este interesul nostru legitim, și al clienților noștri, de a preveni frauda (art. 6 alin. 1 lit. f GDPR).',
+          'Păstrare și acces: identificatorii pseudonimizați se șterg automat după 90 de zile de la comandă. Rezultatul verificării (scorul, motivele și cine a confirmat comanda) rămâne în istoricul comenzii, cât timp păstrăm comanda. Aceste informații le văd doar membrii echipei cu acces de administrator; nu apar pe site, în emailuri sau la furnizorii de marketing.',
+          'Te poți opune acestei prelucrări, poți cere acces la ea sau poți cere ca o persoană să reanalizeze o comandă pusă în verificare, scriindu-ne la adresa de la secțiunea Contact.',
         ],
       },
       {
@@ -218,6 +230,7 @@ export const legalPages: LegalPage[] = [
           {
             list: [
               'Comenzile și facturile: cât cer legile contabile și fiscale.',
+              'Identificatorii pseudonimizați folosiți pentru prevenirea fraudei (amprenta adresei IP și identificatorul cookie-ului coșului): 90 de zile de la comandă, apoi se șterg automat.',
               'Acordul pentru marketing și dezabonarea: cât timp primești emailuri și apoi cât ne pot fi cerute ca dovadă.',
               'Mesajele și cererile tale: cât durează rezolvarea și termenul în care ne pot fi cerute ca dovadă.',
               'Datele din pasul de contact al unei comenzi netrimise (și cele din formularul de preț de pe acces.biohack-tech.ro, folosit până la 20 octombrie 2026): cel mult 12 luni de la ultima ta activitate, apoi le ștergem automat. Dacă plasezi o comandă, rămân legate de comandă.',

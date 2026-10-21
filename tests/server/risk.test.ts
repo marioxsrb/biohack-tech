@@ -84,6 +84,27 @@ describe('placing orders', () => {
     expect((await svc.markProcessing(order.id, 'admin')).changed).toBe(true)
   })
 
+  it('a legitimate customer whose card failed can try a card again, and is not flagged for it', async () => {
+    await failedCard({ email: 'ioana@gmail.com', phone: '0745000111' })
+    const { order } = await place('card', { email: 'ioana@gmail.com', phone: '0745000111' })
+    expect(order).toMatchObject({ riskReview: null, status: 'pending', paymentStatus: 'pending' })
+    await failedCard({ email: 'ioana@gmail.com', phone: '0745000111' })
+    // A second failure still leaves the card open (the pause starts only after the third one).
+    const { order: third } = await place('card', { email: 'ioana@gmail.com', phone: '0745000111' })
+    expect(third.riskReview).toBeNull()
+  })
+
+  it('the network fingerprint and browser id are cleared after 90 days; the score and reasons stay', async () => {
+    await failedCard(temp(20), { ip: '203.0.113.77', visitor: crypto.randomUUID() })
+    const { order } = await place('cod', temp(20), { ip: '203.0.113.77' }, AMBER)
+    await db.query(`update orders set created_at = now() - interval '91 days'`)
+    expect(await risk.purgeRiskSignals(db)).toBe(2)
+    const { rows } = await db.query<{ risk_ip: string | null; risk_visitor: string | null; risk_score: number }>('select risk_ip, risk_visitor, risk_score from orders where id = $1', [order.id])
+    expect(rows[0]).toMatchObject({ risk_ip: null, risk_visitor: null })
+    expect(rows[0].risk_score).toBeGreaterThan(0)
+    expect(await risk.purgeRiskSignals(db)).toBe(0)
+  })
+
   it('a temporary email alone: not flagged, not blocked', async () => {
     const { order } = await place('card', temp(1))
     expect(order.riskReview).toBeNull()

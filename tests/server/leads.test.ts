@@ -245,6 +245,29 @@ describe('unpaid card orders (application-owned recovery)', () => {
     expect(await recoveryCart(l.recoveryToken!)).toEqual([{ productId: 'balance-wave', quantity: 1 }])
   })
 
+  it('an order in risk review: no recovery email (no code) while it waits; once cleared, the sequence resumes with one email, never twice', async () => {
+    await marketing.grant(db, { email: 'ana@exemplu.ro', source: 'checkout' })
+    const step = await (await lead(post('/api/lead', MAIN, { action: 'checkout', ...ana, cart: [{ productId: 'balance-wave', quantity: 1 }] }))).json()
+    const vid = (await leads.byId(db, step.leadId))!.visitorId
+    const o = (await orders.byToken(db, (await (await card({ bt_vid: vid }, 'card-risk-1')).json()).token))!
+    // Flagged for review (server/risk.ts), as the checkout does when the signals add up.
+    await db.query(`update orders set risk_review = 'pending', risk_score = 45 where id = $1`, [o.id])
+    await abandonedOrder(o.id)
+    await later()
+    await later()
+    expect(recoveries()).toEqual([])
+    expect((await leads.byId(db, step.leadId))!.recoverySent).toBe(0)
+    // The consent is untouched.
+    expect((await marketing.state(db, 'ana@exemplu.ro'))?.granted).toBe(true)
+    expect((await svc.clearRisk(o.id, 'admin', 'admin')).changed).toBe(true)
+    await later()
+    expect(recoveries().map((m) => m.subject)).toEqual(['Produsele tale te așteaptă în coș'])
+    await later()
+    await later()
+    expect(recoveries()).toHaveLength(1)
+    expect((await leads.byId(db, step.leadId))!.recoverySent).toBe(1)
+  })
+
   it('an order without any lead (no captured contact step) gets one when abandoned, and the same sequence', async () => {
     await marketing.grant(db, { email: 'ana@exemplu.ro', source: 'checkout' })
     const o = (await orders.byToken(db, (await (await card({}, 'card-nolead-1', MAIN)).json()).token))!

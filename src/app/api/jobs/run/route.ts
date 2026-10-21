@@ -4,6 +4,7 @@ import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { runDueJobs } from '@/server/jobs/runner'
 import { purgeStaleLeads } from '@/server/leads'
+import { purgeRiskSignals } from '@/server/risk'
 import { errText, log } from '@/server/log'
 import { imapSource, syncInbox } from '@/server/inbox'
 
@@ -27,6 +28,9 @@ async function run(req: NextRequest) {
   try {
     purged = await purgeStaleLeads(await getDb())
     if (purged) log.info('leads.purged', { count: purged })
+    // The fraud check's pseudonymised identifiers, likewise (server/risk.ts, 90 days).
+    const cleared = await purgeRiskSignals(await getDb())
+    if (cleared) log.info('risk.signals_purged', { count: cleared })
   } catch (e) {
     log.error('leads.purge_failed', { error: errText(e) })
   }

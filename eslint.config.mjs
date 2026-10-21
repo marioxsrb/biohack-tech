@@ -5,5 +5,14 @@ import nextTypescript from 'eslint-config-next/typescript'
 export default defineConfig([
   ...nextVitals,
   ...nextTypescript,
-  globalIgnores(['.next/**', '.next-*/**', '.data/**', 'out/**', 'build/**', 'next-env.d.ts']),
+  globalIgnores([
+    '.next/**',
+    '.next-*/**',
+    '.data/**',
+    'out/**',
+    'build/**',
+    'next-env.d.ts',
+    // MediaPipe's runtime, copied unchanged from @mediapipe/tasks-vision (generated code, not ours).
+    'public/mediapipe/**',
+  ]),
 ])

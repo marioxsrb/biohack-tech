@@ -96,7 +96,8 @@ const contactSql = (a: string, email: string, phone: string) =>
   `(lower(${a}email) = ${email}::text or (${phone}::text <> '' and right(regexp_replace(coalesce(${a}phone, ''), '\\D', '', 'g'), 9) = ${phone}::text))`
 const sourceSql = (a: string, ip: string, visitor: string) => `((${ip}::text <> '' and ${a}risk_ip = ${ip}::text) or (${visitor}::text <> '' and ${a}risk_visitor = ${visitor}::text))`
 
-const STANDING_PAID = `payment_status in ('paid', 'partially_refunded') or risk_review = 'cleared'`
+/** A paid order, or one a person cleared (alias o). */
+const STANDING_PAID = `o.payment_status in ('paid', 'partially_refunded') or o.risk_review = 'cleared'`
 const NO_ORDER = '00000000-0000-0000-0000-000000000000'
 
 /** Reads the signals for an order about to be placed (or just placed: pass its id to leave it out). */
@@ -106,50 +107,61 @@ export async function riskSignals(q: Queryable, i: RiskInput): Promise<RiskSigna
   const ip = i.ip ?? ''
   const visitor = i.visitor ?? ''
   const not = i.excludeOrderId ?? NO_ORDER
-  const [failed, names, emails, burst, known] = await Promise.all([
-    q.query<{ n: number }>(
-      `select count(*)::int as n from order_events e join orders o on o.id = e.order_id
-        where e.type = 'payment.failed' and e.created_at >= now() - interval '24 hours' and o.id <> $5::uuid
-          and (${contactSql('o.', '$1', '$2')} or ${sourceSql('o.', '$3', '$4')})`,
-      [email, phone, ip, visitor, not],
-    ),
-    q.query<{ name: string }>(
-      `select distinct lower(trim(coalesce(customer->>'firstName', '') || ' ' || coalesce(customer->>'lastName', ''))) as name from orders
-        where created_at >= now() - interval '7 days' and id <> $3::uuid and ${contactSql('', '$1', '$2')}`,
-      [email, phone, not],
-    ),
-    q.query<{ email: string }>(
-      `select distinct lower(email) as email from orders where created_at >= now() - interval '24 hours' and id <> $3::uuid and ${sourceSql('', '$1', '$2')}
-       union select distinct lower(l.email) from leads l where $2::text <> '' and l.visitor_id = $2::text and l.created_at >= now() - interval '24 hours'`,
-      [ip, visitor, not],
-    ),
-    q.query<{ n: number }>(`select count(*)::int as n from orders where created_at >= now() - interval '1 hour' and id <> $3::uuid and ${sourceSql('', '$1', '$2')}`, [ip, visitor, not]),
-    q.query(`select 1 from orders where lower(email) = $1::text and id <> $2::uuid and (${STANDING_PAID}) limit 1`, [email, not]),
-  ])
+  // One round trip: every signal is a subquery of the same statement.
+  const { rows } = await q.query<{ failed: number; names: string[] | null; emails: string[] | null; burst: number; known: boolean }>(
+    `select
+       (select count(*)::int from order_events e join orders o on o.id = e.order_id
+         where e.type = 'payment.failed' and e.created_at >= now() - interval '24 hours' and o.id <> $5::uuid
+           and (${contactSql('o.', '$1', '$2')} or ${sourceSql('o.', '$3', '$4')})) as failed,
+       (select array_agg(distinct lower(trim(coalesce(o.customer->>'firstName', '') || ' ' || coalesce(o.customer->>'lastName', '')))) from orders o
+         where o.created_at >= now() - interval '7 days' and o.id <> $5::uuid and ${contactSql('o.', '$1', '$2')}) as names,
+       (select array_agg(distinct x.email) from (
+          select lower(o.email) as email from orders o where o.created_at >= now() - interval '24 hours' and o.id <> $5::uuid and ${sourceSql('o.', '$3', '$4')}
+          union select lower(l.email) from leads l where $4::text <> '' and l.visitor_id = $4::text and l.created_at >= now() - interval '24 hours') x) as emails,
+       (select count(*)::int from orders o where o.created_at >= now() - interval '1 hour' and o.id <> $5::uuid and ${sourceSql('o.', '$3', '$4')}) as burst,
+       exists (select 1 from orders o where lower(o.email) = $1::text and o.id <> $5::uuid and (${STANDING_PAID})) as known`,
+    [email, phone, ip, visitor, not],
+  )
+  const r = rows[0]
   const name = `${i.firstName} ${i.lastName}`.trim().toLowerCase().replace(/\s+/g, ' ')
-  const allNames = new Set([...names.rows.map((r) => r.name.replace(/\s+/g, ' ')).filter(Boolean), name])
-  const allEmails = new Set([...emails.rows.map((r) => r.email).filter(Boolean), email])
+  const allNames = new Set([...(r?.names ?? []).map((n) => n.replace(/\s+/g, ' ')).filter(Boolean), name])
+  const allEmails = new Set([...(r?.emails ?? []).filter(Boolean), email])
   return {
     emailKind: emailKind(email),
-    failedCards: failed.rows[0]?.n ?? 0,
+    failedCards: Number(r?.failed ?? 0),
     names: allNames.size,
     emails: allEmails.size,
-    burst: burst.rows[0]?.n ?? 0,
-    known: known.rows.length > 0,
+    burst: Number(r?.burst ?? 0),
+    known: !!r?.known,
   }
 }
 
 /**
  * Whether automations (recovery emails, AI calls) must wait for this person: one of their orders, by email or by
- * phone, is waiting for a person's check. They resume by themselves once it is cleared.
+ * phone, is waiting for a person's check, and no later check cleared them. They resume by themselves once cleared.
  */
 export async function riskHold(q: Queryable, who: { email: string; phone?: string | null; orderId?: string | null }): Promise<boolean> {
   const phone = phoneKey(who.phone) ?? ''
   const { rows } = await q.query(
-    `select 1 from orders where risk_review = 'pending' and status <> 'cancelled' and (id::text = $3::text or ${contactSql('', '$1', '$2')}) limit 1`,
+    // A person clearing one of this person's orders vouches for them: earlier flagged attempts no longer hold anything.
+    `select 1 from orders p where p.risk_review = 'pending' and p.status <> 'cancelled' and (p.id::text = $3::text or ${contactSql('p.', '$1', '$2')})
+       and not exists (select 1 from orders c where c.risk_review = 'cleared' and c.risk_reviewed_at >= p.created_at and ${contactSql('c.', '$1', '$2')})
+     limit 1`,
     [who.email.trim().toLowerCase(), phone, who.orderId ?? ''],
   )
   return rows.length > 0
+}
+
+/** The pseudonymised identifiers are kept this long after the order (privacy policy, „Prevenirea fraudei”). */
+export const RISK_SIGNAL_RETENTION_DAYS = 90
+
+/** Clears the network fingerprint and the browser id of older orders; the score and reasons stay in the history. */
+export async function purgeRiskSignals(q: Queryable, now = new Date()) {
+  const { rows } = await q.query(
+    `update orders set risk_ip = null, risk_visitor = null where created_at < $1 and (risk_ip is not null or risk_visitor is not null) returning id`,
+    [new Date(now.getTime() - RISK_SIGNAL_RETENTION_DAYS * 86_400_000)],
+  )
+  return rows.length
 }
 
 /** How long automations wait between checks while a review is open, and for how long at most. */
