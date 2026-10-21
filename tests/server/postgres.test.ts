@@ -65,6 +65,19 @@ describe.skipIf(!url)('on real PostgreSQL', () => {
     expect((await promoCodes.uses(db, 'BIOHACK10', 'oferta@exemplu.ro')).byEmail).toBe(1)
   })
 
+  it('a personal voucher: ten simultaneous orders, one gets it; ten simultaneous issues, one active voucher', async () => {
+    const v = await import('@/server/vouchers')
+    const issued = await Promise.all(Array.from({ length: 10 }, () => db.tx((t) => v.issueVoucher(t, { email: 'voucher@exemplu.ro', productId: 'balance-wave', source: 'landing-calm' }))))
+    expect(new Set(issued.map((r) => (r.ok ? r.voucher.id : r.reason))).size).toBe(1)
+    const code = issued[0].ok ? issued[0].voucher.code : ''
+    const cart = lines([{ productId: 'balance-wave', quantity: 1 }])
+    const res = await Promise.allSettled(Array.from({ length: 10 }, (_, i) => svc.placeOrder({ lines: cart, form: { ...person, email: 'voucher@exemplu.ro' }, attemptId: `voucher-race-${i}`, promoCode: code })))
+    expect(res.filter((r) => r.status === 'fulfilled')).toHaveLength(1)
+    expect(res.filter((r) => r.status === 'rejected' && r.reason instanceof svc.PromoError && r.reason.problem === 'already_used')).toHaveLength(9)
+    const used = await v.voucherByCode(db, code)
+    expect(used?.status).toBe('used')
+  })
+
   it('two workers never claim the same job', async () => {
     const [a, b] = await Promise.all([jobs.claim(db, 50), jobs.claim(db, 50)])
     const ids = [...a, ...b].map((j) => j.id)

@@ -23,6 +23,9 @@ import { isChatSound, type ChatSound } from '@/lib/chat-sounds'
 import { cancelScheduledCalls, disableCalling, retryCall } from '@/server/calling/admin'
 import { getConfig } from '@/server/config'
 import { CODE_RE, normalizeCode, promoCodes } from '@/server/promo'
+import { issueVoucher, restoreVoucher, revokeVoucher } from '@/server/vouchers'
+import { reviewVideo } from '@/server/rewards'
+import { isVoucherProduct } from '@/config/vouchers'
 import { products } from '@/content/catalog'
 import { adminCopyLink, adminSendDigital, adminSetAccess } from '@/server/digital/delivery'
 import { cancelOrder, clearRisk, holdRisk, confirmByTeam, confirmPayment, markDelivered, markProcessing, markReturnReceived, markReturnRequested, markShipped, recordRefund } from '@/server/orders/service'
@@ -266,6 +269,64 @@ export async function togglePromoAction(f: FormData) {
   revalidatePath('/admin/coduri')
 }
 
+
+// ─── personal vouchers and rewards (/admin/vouchere) ─────────────────────────
+
+/**
+ * A person issues a voucher by hand (an exception, a goodwill gesture): the same rules as the workflows (an active one
+ * for the same contact and product is reused, never two), source "admin", in the admin log. Needs the ticked box.
+ */
+export async function issueVoucherAction(f: FormData) {
+  await guard()
+  const email = text(f, 'email', 200).toLowerCase()
+  const productId = text(f, 'product', 40)
+  if (!confirmed(f) || !isVoucherProduct(productId)) redirectWith('/admin/vouchere', 'Bifează confirmarea și alege produsul.')
+  const db = await getDb()
+  const r = await db.tx((t) => issueVoucher(t, { email, productId, source: 'admin', actor: adminActor() }))
+  if (!r.ok) redirectWith('/admin/vouchere', `Nu s-a emis: ${r.reason}`)
+  else {
+    await audit(db, adminActor(), 'voucher.issue', { id: r.voucher.id, email, productId, reused: r.reused })
+    revalidatePath('/admin/vouchere')
+    redirectWith('/admin/vouchere', r.reused ? `Clientul avea deja voucherul activ ${r.voucher.code}.` : `Voucher emis: ${r.voucher.code}.`)
+  }
+}
+
+export async function revokeVoucherAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id', 64)
+  const reason = text(f, 'reason', 300)
+  if (!confirmed(f) || reason.length < 3) redirectWith('/admin/vouchere', 'Bifează confirmarea și scrie motivul.')
+  const db = await getDb()
+  const ok = await db.tx((t) => revokeVoucher(t, id, adminActor(), reason))
+  if (ok) await audit(db, adminActor(), 'voucher.revoke', { id, reason })
+  revalidatePath('/admin/vouchere')
+  redirectWith('/admin/vouchere', ok ? 'Voucher revocat.' : 'Voucherul nu mai poate fi revocat (folosit sau deja revocat).')
+}
+
+export async function restoreVoucherAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id', 64)
+  const days = Math.min(90, Math.max(1, Number(text(f, 'days', 3)) || 7))
+  if (!confirmed(f)) redirectWith('/admin/vouchere', 'Bifează confirmarea.')
+  const db = await getDb()
+  const ok = await db.tx((t) => restoreVoucher(t, id, adminActor(), new Date(Date.now() + days * 86_400_000)))
+  if (ok) await audit(db, adminActor(), 'voucher.restore', { id, days })
+  revalidatePath('/admin/vouchere')
+  redirectWith('/admin/vouchere', ok ? `Voucher reactivat pentru ${days} zile.` : 'Nu se poate reactiva (clientul are alt voucher activ pentru produs, sau voucherul e folosit).')
+}
+
+/** A person approves or rejects a review video (approval: one reward for the order, whatever the rating). */
+export async function reviewVideoAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id', 64)
+  const to = text(f, 'to', 20)
+  if (to !== 'approved' && to !== 'rejected' && to !== 'in_review') redirectWith('/admin/vouchere', 'Acțiune necunoscută.')
+  const db = await getDb()
+  const r = await db.tx((t) => reviewVideo(t, id, to as 'approved' | 'rejected' | 'in_review', adminActor(), text(f, 'reason', 300)))
+  if (r.changed) await audit(db, adminActor(), 'video_review.' + to, { id, reward: r.reward?.id ?? null })
+  revalidatePath('/admin/vouchere')
+  redirectWith('/admin/vouchere', r.changed ? 'Review actualizat.' : 'Nimic de schimbat.')
+}
 
 // ─── store settings and API keys (/admin/setari) ─────────────────────────────
 

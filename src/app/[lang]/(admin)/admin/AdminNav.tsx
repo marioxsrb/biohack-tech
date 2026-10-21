@@ -24,6 +24,7 @@ const GROUPS: { title: string; items: { href: string; label: string }[] }[] = [
     items: [
       { href: '/admin/stats', label: 'Funnel A/B și vânzări' },
       { href: '/admin/coduri', label: 'Coduri promoționale' },
+      { href: '/admin/vouchere', label: 'Vouchere și recompense' },
     ],
   },
   {

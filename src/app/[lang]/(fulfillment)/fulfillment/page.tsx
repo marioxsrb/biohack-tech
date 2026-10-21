@@ -1,3 +1,4 @@
+import { isGiftLine } from '@/lib/orders/gifts'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { connection } from 'next/server'
@@ -36,6 +37,7 @@ function OrderCard({ o }: { o: Order }) {
             <li key={i.position}>
               <b className="tabular-nums">{i.quantity} ×</b> {i.productName}
               {i.variantName ? <span className="text-muted"> · {i.variantName}</span> : null}
+              {isGiftLine(o, i) ? <span className="text-muted"> · cadou (recompensă)</span> : null}
             </li>
           ))}
         </ul>

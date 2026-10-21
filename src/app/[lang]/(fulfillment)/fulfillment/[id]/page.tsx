@@ -1,3 +1,4 @@
+import { isGiftLine } from '@/lib/orders/gifts'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
@@ -72,6 +73,7 @@ export default async function FulfillmentOrder({ params }: PageProps<'/[lang]/fu
                   <span className="block text-[16px] font-semibold text-ink">{i.productName}</span>
                   <span className="text-[14px] text-muted">
                     {i.variantName ?? 'Fără variantă'} · {i.sku}
+                    {isGiftLine(o, i) ? ' · cadou (recompensă)' : ''}
                   </span>
                 </span>
                 <span className="text-[22px] font-semibold text-ink tabular-nums">×{i.quantity}</span>

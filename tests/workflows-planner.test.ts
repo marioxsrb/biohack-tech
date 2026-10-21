@@ -131,3 +131,26 @@ describe('variables', () => {
     expect(postPurchaseFacts(['carte-diana'], ['balance-wave', 'brainlink-pro', 'ochelari-biohack']).ownsAll).toBe(true)
   })
 })
+
+describe('the GHL sub-account update (built, never sent here)', async () => {
+  const { contactUpdate, missingValues, sendTag, ghlWorkflowsConfig } = await import('@/server/workflows/ghl-map')
+  it('one tag per email to send, the interest segments, the variables as fields', () => {
+    const u = contactUpdate({ workflow: 'abandoned-cart', template: 'abandoned-cart-04', email: ' Ana@Exemplu.ro ', interests: ['balance-wave', 'balance-wave'], values: { voucherAmount: '640', checkoutUrl: 'https://biohack-tech.ro/reluare/x' } })
+    expect(u).toEqual({
+      email: 'ana@exemplu.ro',
+      tags: ['bt-wf-abandoned-cart-04', 'bt-interes-calm'],
+      customFields: [
+        { key: 'contact.bt_voucher_amount', field_value: '640' },
+        { key: 'contact.bt_checkout_url', field_value: 'https://biohack-tech.ro/reluare/x' },
+      ],
+    })
+    expect(sendTag('welcome-01')).toBe('bt-wf-welcome-01')
+  })
+  it('an email whose variables have no value is never sendable', () => {
+    expect(missingValues(['product_name', 'voucher_amount', 'voucher_expiry'], { productName: 'NEUROS Calm', voucherAmount: '640' })).toEqual(['voucher_expiry'])
+    expect(missingValues(['bf_discount_calm'])).toEqual(['bf_discount_calm'])
+  })
+  it('no sub-account credentials: no configuration', () => {
+    expect(ghlWorkflowsConfig({})).toBeNull()
+  })
+})
