@@ -865,4 +865,148 @@ insert into order_events (order_id, type, source, data)
   from orders where order_number in ('BHT-20261020-0002', 'BHT-20261021-0001', 'BHT-20261021-0002', 'BHT-20261021-0004')
     and risk_review = 'pending' and not exists (select 1 from order_events e where e.order_id = orders.id and e.type = 'risk.flagged')`,
   },
+  {
+    // Infrastructure for the 14 email workflows (21.10.2026), additive only, nothing issued or sent by itself:
+    //   vouchers          personal fixed-value vouchers and gifts, one contact, one product, one use (server/vouchers.ts);
+    //                     at most one ACTIVE marketing voucher per contact, product and kind (a reward is its own,
+    //                     earned: never merged with a marketing one); (source, source_ref) issues once;
+    //   voucher_events    their history (issued, reused, used, released, expired, revoked, conflict);
+    //   rewards           Review Video, Referral and VIP rewards: once per source reference, chosen as voucher or gift;
+    //   video_reviews     one per order, status, separate consent for advertising use (server/rewards.ts);
+    //   referral_codes / referral_attributions   one link per customer, one attribution per order;
+    //   vip_members       reached once, by email;
+    //   workflow_enrollments / email_sends       one enrollment per workflow and reference, and every planned send
+    //                     (the frequency cap reads it) (server/workflows/*).
+    id: '032_vouchers_rewards_workflows',
+    sql: `create table if not exists vouchers (
+  id uuid primary key,
+  code text not null unique,
+  email text not null,
+  kind text not null check (kind in ('value', 'gift')),
+  product_id text not null,
+  amount_minor integer check (amount_minor is null or amount_minor >= 0),
+  per_paid_unit boolean not null default false,
+  max_units integer,
+  source text not null,
+  source_ref text,
+  status text not null default 'active' check (status in ('active', 'used', 'expired', 'revoked')),
+  issued_at timestamptz not null default now(),
+  expires_at timestamptz not null,
+  order_id uuid references orders(id),
+  used_at timestamptz,
+  revoked_at timestamptz,
+  revoke_reason text,
+  issued_by text not null default 'system'
+);
+create unique index if not exists vouchers_one_active_idx on vouchers (email, product_id, kind) where status = 'active' and source not in ('review', 'referral', 'vip');
+create unique index if not exists vouchers_source_ref_idx on vouchers (source, source_ref) where source_ref is not null;
+create index if not exists vouchers_email_idx on vouchers (email);
+create index if not exists vouchers_order_idx on vouchers (order_id) where order_id is not null;
+create index if not exists vouchers_expiry_idx on vouchers (expires_at) where status = 'active';
+alter table vouchers enable row level security;
+create table if not exists voucher_events (
+  id bigserial primary key,
+  voucher_id uuid not null references vouchers(id),
+  type text not null,
+  order_id uuid,
+  actor text not null default 'system',
+  data jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists voucher_events_voucher_idx on voucher_events (voucher_id, id);
+alter table voucher_events enable row level security;
+alter table orders add column if not exists voucher_id uuid;
+create table if not exists rewards (
+  id uuid primary key,
+  email text not null,
+  source text not null check (source in ('review', 'referral', 'vip')),
+  source_ref text not null,
+  status text not null default 'pending' check (status in ('pending', 'available', 'claimed', 'revoked')),
+  choice text check (choice in ('voucher', 'gift')),
+  product_id text,
+  voucher_id uuid references vouchers(id),
+  available_at timestamptz,
+  note text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (source, source_ref)
+);
+create index if not exists rewards_email_idx on rewards (email);
+alter table rewards enable row level security;
+create table if not exists video_reviews (
+  id uuid primary key,
+  order_id uuid not null unique references orders(id),
+  email text not null,
+  status text not null default 'received' check (status in ('received', 'in_review', 'approved', 'rejected')),
+  storage_key text,
+  content_type text,
+  size_bytes bigint,
+  rating smallint check (rating is null or rating between 1 and 5),
+  ad_consent boolean not null default false,
+  ad_consent_at timestamptz,
+  ad_consent_version text,
+  submitted_at timestamptz not null default now(),
+  reviewed_at timestamptz,
+  reviewed_by text,
+  reject_reason text
+);
+alter table video_reviews enable row level security;
+create table if not exists referral_codes (
+  code text primary key,
+  email text not null unique,
+  created_at timestamptz not null default now()
+);
+alter table referral_codes enable row level security;
+create table if not exists referral_attributions (
+  id uuid primary key,
+  code text not null references referral_codes(code),
+  referrer_email text not null,
+  friend_email text not null,
+  order_id uuid not null unique references orders(id),
+  status text not null default 'pending' check (status in ('pending', 'qualified', 'rejected', 'rewarded')),
+  reason text,
+  qualifies_at timestamptz,
+  created_at timestamptz not null default now()
+);
+create index if not exists referral_attributions_referrer_idx on referral_attributions (referrer_email);
+alter table referral_attributions enable row level security;
+create table if not exists vip_members (
+  email text primary key,
+  reached_at timestamptz not null default now(),
+  total_minor bigint not null,
+  reward_id uuid references rewards(id)
+);
+alter table vip_members enable row level security;
+create table if not exists workflow_enrollments (
+  id uuid primary key,
+  email text not null,
+  workflow text not null,
+  ref text not null,
+  status text not null default 'active' check (status in ('active', 'paused', 'stopped', 'completed')),
+  step integer not null default 0,
+  next_at timestamptz,
+  started_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  stop_reason text,
+  data jsonb not null default '{}'::jsonb,
+  unique (workflow, ref)
+);
+create index if not exists workflow_enrollments_due_idx on workflow_enrollments (next_at) where status = 'active';
+create index if not exists workflow_enrollments_email_idx on workflow_enrollments (email, status);
+alter table workflow_enrollments enable row level security;
+create table if not exists email_sends (
+  id bigserial primary key,
+  email text not null,
+  workflow text not null,
+  template text not null,
+  enrollment_id uuid,
+  promotional boolean not null default true,
+  status text not null check (status in ('dry_run', 'queued', 'sent', 'skipped')),
+  reason text,
+  created_at timestamptz not null default now(),
+  unique (enrollment_id, template)
+);
+create index if not exists email_sends_email_idx on email_sends (email, created_at);
+alter table email_sends enable row level security`,
+  },
 ]

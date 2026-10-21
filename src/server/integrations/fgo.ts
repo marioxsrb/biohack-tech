@@ -36,8 +36,13 @@ function lineName(i: Order['items'][number], o: Order) {
     const promo = label.endsWith(` ${i.productName}`) ? label.slice(0, -i.productName.length - 1) : label
     parts.push(`${promo}: -${(auto / 100).toFixed(2)} ${unitOf(o)}`)
   }
-  // A promo code applies after the automatic promotion: its share is named on its own ("cod VARA10").
-  if (i.codeDiscountMinor) parts.push(`cod ${o.promoCode ?? ''}: -${(i.codeDiscountMinor / 100).toFixed(2)} ${unitOf(o)}`.replace('cod :', 'cod:'))
+  // A promo code applies after the automatic promotion: its share is named on its own ("cod VARA10"); a personal
+  // voucher or a gift by what it is ("Voucher NEUROS Calm BTVC…", "Cadou NEUROS Amber BTGA…").
+  if (i.codeDiscountMinor) {
+    const label = o.promotions.find((p) => p.id === `cod:${o.promoCode}`)?.label
+    const named = label && !label.startsWith('Cod ') ? `${label} ${o.promoCode}` : `cod ${o.promoCode ?? ''}`.trim()
+    parts.push(`${named}: -${(i.codeDiscountMinor / 100).toFixed(2)} ${unitOf(o)}`)
+  }
   return `${base}, ${parts.join(', ')}`
 }
 

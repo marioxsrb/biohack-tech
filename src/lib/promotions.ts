@@ -10,7 +10,8 @@
  * applied under its own id (`trei-produse-20:balance-wave`), so 3 Calm + 2 Focus is 20% on the Calm
  * lines and 10% on the Focus lines, and an invoice line names the discount that lowered it.
  */
-import { BULK_OFFER, PROMOTIONS, type BulkOffer, type BundlePercent, type BundleTier, type Promotion } from '@/config/promotions'
+import { BULK_OFFER, PROMOTIONS, type BulkOffer, type BundlePercent, type BundleTier, type BuyXGetY, type Promotion } from '@/config/promotions'
+import { AMBER_PAIR_DISCOUNT } from '@/config/vouchers'
 import { getProduct } from '@/content/catalog'
 
 /** `variantId`: needed only by promotions limited to some variants; lines without it count as the base variant. */
@@ -36,6 +37,15 @@ export type PromoCodeRule = {
    * promotions or the code on the full price, whichever saves more; a code that saves no more is refused.
    */
   exclusive?: boolean
+  /**
+   * A fixed value per PAID unit of the eligible products, for at most `maxUnits` units (null: all): the NEUROS Amber
+   * voucher, 30 lei for each paid pair, never for the pair the 2+1 offer makes free (config/vouchers.ts).
+   */
+  perPaidUnit?: { maxUnits: number | null }
+  /** A gift: `freeUnits` units of the eligible product cost nothing (the most expensive ones the cart has). `value` is ignored. */
+  freeUnits?: number
+  /** A personal voucher or reward (server/vouchers.ts), not a shared code: named so on the order and the invoice. */
+  label?: string
 }
 
 /** The applied id of a promo code (`cod:VARA10`), and whether an applied id is one. */
@@ -139,6 +149,46 @@ function applyOne(p: Promotion, lines: PricedLine[]): Applied[] {
   return [{ id: p.id, amount, own, perLine: allocate(amount, own.map((l) => l.unitAmount * l.quantity)), label: p.label }]
 }
 
+/** Free units a buy X get Y promotion gives on these lines (3 Amber → 1, 6 → 2, 7 → 2). */
+const freeOf = (p: BuyXGetY, lines: PricedLine[]) => Math.floor(lines.filter((l) => eligibleLine(p, l)).reduce((n, l) => n + l.quantity, 0) / p.group) * (p.group - p.pay)
+
+/** Units of `own` the customer pays for: the units a buy X get Y promotion makes free are left out. */
+function paidUnits(lines: PricedLine[], promotions: Promotion[], own: PricedLine[]) {
+  let units = own.reduce((n, l) => n + l.quantity, 0)
+  for (const p of promotions) {
+    if (p.kind !== 'buy_x_get_y') continue
+    const mine = own.filter((l) => eligibleLine(p, l)).reduce((n, l) => n + l.quantity, 0)
+    units -= Math.min(mine, freeOf(p, lines))
+  }
+  return Math.max(0, units)
+}
+
+const capUnits = (units: number, max: number | null) => (max == null ? units : Math.min(units, Math.max(0, max)))
+
+/** What `count` free units are worth: the most expensive eligible units (a gift is the frame the customer chose). */
+function giftValue(own: PricedLine[], count: number) {
+  const units = own.flatMap((l) => Array.from({ length: l.quantity }, () => l.unitAmount)).sort((a, b) => b - a)
+  return units.slice(0, Math.max(0, count)).reduce((s, x) => s + x, 0)
+}
+
+/**
+ * NEUROS Amber's 30 lei per paid pair for every order (AMBER_PAIR_DISCOUNT.audience 'all'). With 'voucher' (the
+ * default) it is the Amber voucher that gives it, through the code; this returns nothing.
+ */
+function pairDiscount(lines: PricedLine[], promotions: Promotion[], rule: PairRule | null): Applied | null {
+  if (!rule || rule.audience !== 'all') return null
+  // Only where the 2+1 offer itself is priced (never in the "code alone on the full price" comparison).
+  if (!promotions.some((p) => p.kind === 'buy_x_get_y' && (p.products as string[]).includes(rule.productId))) return null
+  const own = lines.filter((l) => l.productId === rule.productId)
+  const amount = rule.perPairMinor * capUnits(paidUnits(lines, promotions, own), rule.maxPairs)
+  if (!amount) return null
+  return { id: PAIR_ID, amount, own, perLine: allocate(amount, own.map((l) => l.unitAmount * l.quantity)), label: `${rule.perPairMinor / 100} lei reducere la fiecare pereche plătită` }
+}
+
+export type PairRule = typeof AMBER_PAIR_DISCOUNT
+/** The applied id of the automatic per-pair discount. */
+export const PAIR_ID = 'amber-pereche-30'
+
 /** Calm and Focus units in the cart: what counts towards the business offer (Amber and the book never do). */
 export const bulkUnits = (lines: Pick<PricedLine, 'productId' | 'quantity'>[], bulk: BulkOffer = BULK_OFFER) =>
   lines.filter((l) => (bulk.products as string[]).includes(l.productId)).reduce((n, l) => n + l.quantity, 0)
@@ -147,13 +197,13 @@ export const bulkUnits = (lines: Pick<PricedLine, 'productId' | 'quantity'>[], b
  * The cart with the business offer: 40% off every eligible line (instead of their quantity discount), the other
  * products priced as usual (Amber keeps its 2+1). No promo code: the caller compares with the code alone.
  */
-function withBulk(lines: PricedLine[], promotions: Promotion[], bulk: BulkOffer): Pricing {
+function withBulk(lines: PricedLine[], promotions: Promotion[], bulk: BulkOffer, pairRule: PairRule | null): Pricing {
   const eligible = (id: string) => (bulk.products as string[]).includes(id)
   // The quantity discount no longer sees Calm and Focus; promotions on other products are untouched.
   const rest = promotions
     .map((p) => (p.kind === 'bundle_percent' ? { ...p, products: p.products.filter((id) => !eligible(id)) } : p))
     .filter((p) => p.products.length > 0)
-  const base = priceLines(lines, rest, null, null)
+  const base = priceLines(lines, rest, null, null, pairRule)
   const own = lines.filter((l) => eligible(l.productId))
   const full = own.map((l) => l.unitAmount * l.quantity)
   const amount = percentOf(full.reduce((s, x) => s + x, 0), bulk.percent)
@@ -170,20 +220,26 @@ function withBulk(lines: PricedLine[], promotions: Promotion[], bulk: BulkOffer)
   return { ...base, discountMinor, totalMinor: base.subtotalMinor - discountMinor, promotions: promotionsApplied, lineDiscounts, linePromotion }
 }
 
-export function priceLines(lines: PricedLine[], promotions: Promotion[] = PROMOTIONS, promo?: PromoCodeRule | null, bulk: BulkOffer | null = BULK_OFFER): Pricing {
+export function priceLines(
+  lines: PricedLine[],
+  promotions: Promotion[] = PROMOTIONS,
+  promo?: PromoCodeRule | null,
+  bulk: BulkOffer | null = BULK_OFFER,
+  pairRule: PairRule | null = AMBER_PAIR_DISCOUNT,
+): Pricing {
   if (bulk && bulkUnits(lines, bulk) >= bulk.minUnits) {
     // The business offer never adds up with a code or the quantity discount: the better of the business offer and
     // the code alone on the full price applies (a code that saves no more is refused, as for the AI call codes).
-    const b = withBulk(lines, promotions, bulk)
+    const b = withBulk(lines, promotions, bulk, pairRule)
     if (!promo) return b
-    const alone = priceLines(lines, [], { ...promo, exclusive: false }, null)
+    const alone = priceLines(lines, [], { ...promo, exclusive: false }, null, pairRule)
     if (alone.code?.problem) return { ...b, code: alone.code }
     return alone.discountMinor > b.discountMinor ? alone : { ...b, code: { code: promo.code, amountMinor: 0, problem: 'not_better' } }
   }
   if (promo?.exclusive) {
     // The better of the two, never both: the promotions alone, or the code alone on the full price.
-    const auto = priceLines(lines, promotions, null, bulk)
-    const alone = priceLines(lines, [], { ...promo, exclusive: false }, null)
+    const auto = priceLines(lines, promotions, null, bulk, pairRule)
+    const alone = priceLines(lines, [], { ...promo, exclusive: false }, null, pairRule)
     if (alone.code?.problem) return { ...auto, code: alone.code }
     return alone.discountMinor > auto.discountMinor ? alone : { ...auto, code: { code: promo.code, amountMinor: 0, problem: 'not_better' } }
   }
@@ -202,6 +258,16 @@ export function priceLines(lines: PricedLine[], promotions: Promotion[] = PROMOT
       })
     }
   }
+  const pair = pairDiscount(lines, promotions, pairRule)
+  if (pair) {
+    applied.push({ id: pair.id, label: pair.label, amountMinor: pair.amount })
+    // Its own share on each Amber line; the line keeps naming the 2+1 offer it belongs to.
+    pair.own.forEach((l, i) => {
+      if (!pair.perLine[i]) return
+      lineDiscounts[l.key] = (lineDiscounts[l.key] ?? 0) + pair.perLine[i]
+      linePromotion[l.key] ??= pair.id
+    })
+  }
   const lineCodeDiscounts: Record<string, number> = {}
   let code: Pricing['code']
   if (promo) {
@@ -217,10 +283,19 @@ export function priceLines(lines: PricedLine[], promotions: Promotion[] = PROMOT
       // Percent: of the full price (the discounts add up); split by full price, each line capped at what is left.
       const full = own.map((l) => l.unitAmount * l.quantity)
       const fullSum = full.reduce((s, b) => s + b, 0)
-      const amount = Math.min(eligible, promo.kind === 'percent' ? percentOf(fullSum, Math.min(90, Math.max(0, promo.value))) : Math.max(0, promo.value))
-      code = { code: promo.code, amountMinor: amount }
+      const wanted =
+        promo.freeUnits != null
+          ? giftValue(own, promo.freeUnits)
+          : promo.perPaidUnit
+            ? // Never twice: what the automatic per-pair discount already gave these products is taken off.
+              Math.max(0, Math.max(0, promo.value) * capUnits(paidUnits(lines, promotions, own), promo.perPaidUnit.maxUnits) - (pair && own.some((l) => l.productId === pairRule?.productId) ? pair.amount : 0))
+            : promo.kind === 'percent'
+              ? percentOf(fullSum, Math.min(90, Math.max(0, promo.value)))
+              : Math.max(0, promo.value)
+      const amount = Math.min(eligible, wanted)
+      code = amount || !promo.perPaidUnit ? { code: promo.code, amountMinor: amount } : { code: promo.code, amountMinor: 0, problem: 'not_better' }
       if (amount) {
-        applied.push({ id: codeId(promo.code), label: `Cod ${promo.code}`, amountMinor: amount })
+        applied.push({ id: codeId(promo.code), label: promo.label ?? `Cod ${promo.code}`, amountMinor: amount })
         const parts = allocate(amount, promo.kind === 'percent' ? full : base)
         // Safeguard: a line never goes below zero; any excess moves to lines that still have room.
         let excess = 0

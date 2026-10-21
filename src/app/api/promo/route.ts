@@ -3,7 +3,8 @@ import { resolveOrderLines } from '@/lib/orders/resolve'
 import { priceLines } from '@/lib/promotions'
 import { getDb } from '@/server/db'
 import { errText, log } from '@/server/log'
-import { promoCodes, promoMessage, ruleOf } from '@/server/promo'
+import { resolveCode } from '@/server/codes'
+import { promoMessage } from '@/server/promo'
 import { clientIp, rateLimit } from '@/server/rate-limit'
 import { ensureStoreSettings } from '@/server/store-settings'
 
@@ -34,9 +35,12 @@ export async function POST(req: NextRequest) {
   if (!resolved.ok) return NextResponse.json({ ok: false, message: promoMessage('no_products', locale) }, { status: 422 })
   try {
     const email = typeof body.email === 'string' && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email.trim()) ? body.email.trim().toLowerCase() : undefined
-    const checked = await promoCodes.check(await getDb(), body.code, { email })
+    // A promo code, a personal voucher or gift, or a referral code (server/codes.ts); the order checks it again.
+    // Vouchers are in lei: the international checkout (euro, dollar) is refused like the order would.
+    const phone = typeof body.phone === 'string' ? body.phone : undefined
+    const checked = await resolveCode(await getDb(), body.code, { email, phone, ...(locale === 'en' && { currency: body.currency === 'USD' ? 'USD' : 'EUR' }) })
     if (!checked.ok) return NextResponse.json({ ok: false, message: promoMessage(checked.problem, locale) }, { status: 422 })
-    const rule = ruleOf(checked.code)
+    const rule = checked.rule
     const pricing = priceLines(resolved.lines, undefined, rule)
     if (pricing.code?.problem) return NextResponse.json({ ok: false, message: promoMessage(pricing.code.problem, locale, rule) }, { status: 422 })
     return NextResponse.json({ ok: true, rule, discountMinor: pricing.code?.amountMinor ?? 0 })

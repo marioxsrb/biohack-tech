@@ -348,7 +348,9 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
   // A cart change can make an applied code stop fitting (minimum, products): the totals fall back, and the order says why.
   const pricing = withCode && !withCode.code?.problem ? withCode : cartPricing
   // Free, or the book's flat fee once per order (lib/shipping.ts): never discounted, added after the promotions.
-  const shipping = useMemo(() => shippingFor(priced, currency), [priced, currency])
+  // A gift code (a reward: the product is free) pays its delivery, as the server charges it.
+  const gift = !!(withCode && !withCode.code?.problem && promo.rule?.freeUnits && withCode.code?.amountMinor)
+  const shipping = useMemo(() => shippingFor(priced, currency, undefined, { gift }), [priced, currency, gift])
   const total = pricing.totalMinor + shipping
   // The summary stays in view only when it fits the window; a taller one scrolls with the page, so its lower part
   // (consents, the pay button) is never out of reach.

@@ -187,6 +187,8 @@ export type Order = {
   riskReasons: string[]
   riskReviewedAt: Date | null
   riskReviewedBy: string | null
+  /** The personal voucher or reward this order used (server/vouchers.ts), null without one. */
+  voucherId: string | null
   items: OrderItem[]
 }
 

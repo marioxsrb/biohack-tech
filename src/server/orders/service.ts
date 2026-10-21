@@ -5,7 +5,7 @@
  * the order already moved and does nothing.
  */
 import 'server-only'
-import { convertUnit, rateFor, rates, ruleIn, type Currency } from '@/lib/currency'
+import { convertUnit, rateFor, rates, type Currency } from '@/lib/currency'
 import { consentVersionFor } from '@/lib/consent/marketing'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { getConfig } from '@/server/config'
@@ -22,7 +22,10 @@ import type { OrderForm } from '@/lib/checkout'
 import { priceLines, type PromoCodeRule } from '@/lib/promotions'
 import { isBulk } from '@/config/promotions'
 import { shippingFor } from '@/lib/shipping'
-import { normalizeCode, promoCodes, ruleOf, type PromoProblem } from '@/server/promo'
+import { normalizeCode, promoCodes, type PromoProblem } from '@/server/promo'
+import { resolveCode, type ResolvedCode } from '@/server/codes'
+import { attributeReferral } from '@/server/referrals'
+import { reserveVoucher, syncVoucher } from '@/server/vouchers'
 import { upsellsFor } from '@/lib/upsell'
 import { UPSELL_WINDOW_MINUTES } from '@/config/upsell'
 import type { OrderLine } from '@/lib/orders/resolve'
@@ -80,6 +83,9 @@ const addressOf = (f: OrderForm, ship: boolean): Address =>
  * A card payment refused before any order is written: this contact, browser or network already had
  * FAILED_CARD_LIMIT failed card payments in the last 24 hours. The other methods stay open.
  */
+/** Stripe's smallest card charge in lei (2 lei); euro and dollar orders are far above it. */
+const MIN_CARD_MINOR = 200
+
 export class CardAttemptsError extends Error {
   constructor() {
     super('too many failed card payments')
@@ -100,20 +106,27 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
   const method: PaymentMethod = f.paymentMethod === 'transfer' ? 'bank_transfer' : f.paymentMethod === 'cod' ? 'cash_on_delivery' : 'card'
   const cod = method === 'cash_on_delivery'
   // Free, or the book's flat fee once per order (lib/shipping.ts), in the order's currency. Never discounted.
-  const shipping = shippingFor(lines, currency)
+  // A gift order pays its delivery (set once its code is known, below).
+  let shipping = shippingFor(lines, currency)
 
   try {
     const order = await db.tx(async (t) => {
       // Promotions are recomputed here from the catalog-priced lines, whatever the caller passed; a promo code
       // is checked with its row locked, so a limited code's last use goes to one order only.
+      // The one code field takes a promo code, a personal voucher or gift, or a referral code (server/codes.ts).
       let rule: PromoCodeRule | undefined
+      let code: ResolvedCode | undefined
       if (input.promoCode) {
-        const checked = await promoCodes.check(t, input.promoCode, { email: f.email, lock: true })
-        if (!checked.ok) throw new PromoError(checked.problem)
-        rule = ruleIn(ruleOf(checked.code), currency)
+        code = await resolveCode(t, input.promoCode, { email: f.email, phone: f.phone, currency, convert: true, lock: true })
+        if (!code.ok) throw new PromoError(code.problem)
+        rule = code.rule
       }
       const pricing = priceLines(lines, undefined, rule)
       if (pricing.code?.problem) throw new PromoError(pricing.code.problem, rule)
+      shipping = shippingFor(lines, currency, undefined, { gift: !!rule?.freeUnits && !!pricing.code?.amountMinor })
+      // Never an order with nothing (or less than a card can be charged) to pay: a code cannot bring it there.
+      const payable = pricing.subtotalMinor - pricing.discountMinor + shipping
+      if (rule && (payable <= 0 || (method === 'card' && payable < MIN_CARD_MINOR))) throw new PromoError('not_better', rule)
       // The risk check (server/risk.ts) reads what happened before this order; it never blocks on one signal.
       const riskInput = { email: f.email, phone: f.phone, firstName: f.firstName, lastName: f.lastName, ip: ipKey(input.source?.ip), visitor: input.source?.visitor ?? null }
       const signals = await riskSignals(t, riskInput)
@@ -197,7 +210,12 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
         marketingConsent: f.marketingConsent,
         ...(input.attribution && { attribution: input.attribution }),
       })
-      if (rule && pricing.code?.amountMinor) await promoCodes.redeem(t, { orderId: id, code: rule.code, email: f.email, discountMinor: pricing.code.amountMinor })
+      if (code?.ok && pricing.code?.amountMinor) {
+        // The voucher is this order's from now on (released again if the order does not stand: server/vouchers.ts).
+        if (code.type === 'voucher') await reserveVoucher(t, code.voucher, id, pricing.code.amountMinor)
+        else if (code.type === 'referral') await attributeReferral(t, { code: code.rule.code, referrer: code.referrer, orderId: id, friendEmail: f.email, shippingAddress: addressOf(f, true) })
+        else await promoCodes.redeem(t, { orderId: id, code: code.rule.code, email: f.email, discountMinor: pricing.code.amountMinor })
+      }
       // Proof of the ticked box: exact wording, version, time, order. An unticked box records nothing.
       if (f.marketingConsent) await marketing.grant(t, { email: f.email, source: 'checkout', orderId: id, page: '/checkout', version: consentVersionFor(input.site ?? 'ro', input.locale ?? 'ro') })
       // The same box names the AI calls: their consent is recorded separately, by phone number (no call follows
@@ -261,6 +279,9 @@ async function transition(
     if (r.event === 'order.abandoned') await ensureOrderLead(t, (await orders.byId(t, orderId))!)
     // The book's PDF follows the order in the same transaction: granted when it is earned (card or transfer paid,
     // cash on delivery delivered), revoked by a cancellation or a full refund (server/digital/rules.ts).
+    // A personal voucher follows its order: released when the order stops standing, taken back by a late payment.
+    const voucher = await syncVoucher(t, (await orders.byId(t, orderId))!, r.event)
+    if (voucher) await orders.event(t, orderId, `voucher.${voucher}`, source, { via: r.event })
     const digital = await syncEntitlement(t, (await orders.byId(t, orderId))!, r.event)
     if (digital.granted) await orders.event(t, orderId, 'digital.granted', source, { via: r.event })
     if (digital.revoked) await orders.event(t, orderId, 'digital.revoked', source, { via: r.event })
