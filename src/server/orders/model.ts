@@ -6,6 +6,7 @@
  *   OrderStatus   where the order is in its life (to prepare, shipped...)
  *   PaymentStatus what we know about the money
  */
+import type { SellerIdentity } from '@/config/company'
 import type { Attribution } from '@/lib/attribution'
 import type { Currency } from '@/lib/currency'
 import { countryName } from '@/lib/countries'
@@ -189,6 +190,8 @@ export type Order = {
   riskReviewedBy: string | null
   /** The personal voucher or reward this order used (server/vouchers.ts), null without one. */
   voucherId: string | null
+  /** The seller's identity when the order was placed (null for orders placed before it was stored: config/company.ts). */
+  seller: SellerIdentity | null
   items: OrderItem[]
 }
 

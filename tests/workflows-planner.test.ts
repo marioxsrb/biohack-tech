@@ -160,3 +160,16 @@ describe('the GHL sub-account update (built, never sent here)', async () => {
     expect(ghlWorkflowsConfig({})).toBeNull()
   })
 })
+
+describe('the GHL sub-account setup list', async () => {
+  const { ghlWorkflowSpec } = await import('@/server/workflows/ghl-setup')
+  const { readFileSync, writeFileSync, existsSync } = await import('node:fs')
+  it('scripts/ghl-wf-spec.json is the same list (59 email tags, interests, events, the fields)', () => {
+    const spec = ghlWorkflowSpec()
+    const file = 'scripts/ghl-wf-spec.json'
+    if (!existsSync(file) || process.env.WRITE_GHL_SPEC) writeFileSync(file, JSON.stringify(spec, null, 2) + '\n')
+    expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual(spec)
+    expect(spec.tags.filter((t) => t.startsWith('bt-wf-') && /-\d\d$/.test(t))).toHaveLength(59)
+    expect(new Set(spec.tags).size).toBe(spec.tags.length)
+  })
+})

@@ -2,6 +2,8 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { checkFulfilCredentials, createFulfilSession, FULFIL_COOKIE, FULFIL_SESSION_HOURS } from '@/lib/fulfillment-auth'
 import { log } from '@/server/log'
 import { clientIp, rateLimit } from '@/server/rate-limit'
+import { getDb } from '@/server/db'
+import { loginBlocked, loginFailed, loginSucceeded } from '@/server/auth-attempts'
 
 export const runtime = 'nodejs'
 
@@ -12,12 +14,18 @@ export async function POST(req: NextRequest) {
   const next = /^\/fulfillment(\/[\w/-]*)?$/.test(raw) && !raw.startsWith('/fulfillment/login') ? raw : '/fulfillment'
   const back = (e: string) => NextResponse.redirect(new URL(`/fulfillment/login?e=${e}&next=${encodeURIComponent(next)}`, req.url), 303)
   if (!rateLimit(`fulfil-login:${clientIp(req.headers)}`, 10, 15 * 60_000)) return back('limit')
+  // The same limit across every instance, shared by both logins that accept the admin password (server/auth-attempts.ts).
+  const ip = clientIp(req.headers)
+  const db = await getDb().catch(() => null)
+  if (db && (await loginBlocked(db, ip).catch(() => false))) return back('limit')
   const user = String(form?.get('user') ?? '').trim().slice(0, 100)
   const role = checkFulfilCredentials(user, String(form?.get('password') ?? '').slice(0, 200))
   if (!role) {
+    if (db) await loginFailed(db, ip).catch(() => {})
     log.warn('fulfillment.login_failed', { ip: clientIp(req.headers) })
     return back('invalid')
   }
+  if (db) await loginSucceeded(db, ip).catch(() => {})
   const res = NextResponse.redirect(new URL(next, req.url), 303)
   res.cookies.set(FULFIL_COOKIE, await createFulfilSession(role, user), {
     httpOnly: true,

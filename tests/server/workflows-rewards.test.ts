@@ -126,6 +126,23 @@ describe('Post-Purchase', () => {
   })
 })
 
+describe('Post-Purchase and the post-purchase offer (upsell)', () => {
+  it('a paid upsell is part of its parent order: its products join the parent’s sequence, no sequence of its own', async () => {
+    const parent = await place([CALM], 'card')
+    await svc.attachPaymentIntent(parent.id, 'pi_parent')
+    await svc.confirmPayment(parent.id, 'stripe.webhook', { amountMinor: parent.totalMinor, currency: 'RON', paymentIntentId: 'pi_parent' })
+    await db.query("update orders set upsell_status = 'offered' where id = $1", [parent.id])
+    const { order: child } = await svc.placeUpsellOrder((await orders.byId(db, parent.id))!, lines([AMBER])[0])
+    await svc.confirmPayment(child.id, 'stripe.webhook', { amountMinor: child.totalMinor, currency: 'ron' })
+    await svc.markShipped(parent.id, 'admin', { courier: 'Sameday', trackingNumber: 'AWBP' })
+    await svc.markDelivered(parent.id, 'admin')
+    const e = await enrollments()
+    expect(e).toHaveLength(1)
+    expect(e[0]).toMatchObject({ workflow: 'post-purchase', ref: parent.id })
+    expect(e[0].data.products).toEqual(['balance-wave', 'ochelari-biohack'])
+  })
+})
+
 describe('the weekly limit across workflows (Welcome and Educație in parallel)', () => {
   it('at most 3 promotional emails in 7 days per contact; the rest wait', async () => {
     await marketing.grant(db, { email: person.email, source: 'popup' })

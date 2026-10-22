@@ -144,3 +144,13 @@ describe('gifts: the product at 0 lei, a real line', () => {
     expect(priceLines([calm(1)], undefined, gift('carte-diana')).code?.problem).toBe('no_products')
   })
 })
+
+describe('delivery of gift orders: 25 lei once per order', async () => {
+  const { shippingFor } = await import('@/lib/shipping')
+  it('devices ship free; the book alone 12,10 lei; a gift order 25 lei; gift + book: 25 lei once (never both)', () => {
+    expect(shippingFor([{ productId: 'balance-wave', quantity: 2 }])).toBe(0)
+    expect(shippingFor([{ productId: 'carte-diana', quantity: 3 }])).toBe(1210)
+    expect(shippingFor([{ productId: 'ochelari-biohack', quantity: 1 }], 'RON', undefined, { gift: true })).toBe(2500)
+    expect(shippingFor([{ productId: 'carte-diana', quantity: 1 }, { productId: 'balance-wave', quantity: 1 }], 'RON', undefined, { gift: true })).toBe(2500)
+  })
+})

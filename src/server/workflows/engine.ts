@@ -191,7 +191,14 @@ export async function onOrderEvent(q: Queryable, o: Order, event: string, mode =
   }
   if (event === 'order.delivered' && o.kind === 'checkout') {
     const email = normalizeEmail(o.email)
-    const products = [...new Set(o.items.map((i) => i.productId))]
+    // A paid post-purchase offer (upsell) is part of its parent order: its products join this sequence, never one of
+    // its own (an upsell order is never enrolled: kind 'upsell').
+    const upsold = await q.query(
+      `select distinct i.product_id from orders u join order_items i on i.order_id = u.id
+       where u.parent_order_id = $1 and u.kind = 'upsell' and u.status <> 'cancelled' and u.payment_status in ('paid','partially_refunded')`,
+      [o.id],
+    )
+    const products = [...new Set([...o.items.map((i) => i.productId), ...upsold.rows.map((r) => r.product_id as string)])]
     const active = await q.query(`select * from workflow_enrollments where workflow = 'post-purchase' and email = $1 and status = 'active' for update`, [email])
     if (active.rows[0]) {
       const e = toEnrollment(active.rows[0])

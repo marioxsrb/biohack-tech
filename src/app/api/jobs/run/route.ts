@@ -6,6 +6,7 @@ import { runDueJobs } from '@/server/jobs/runner'
 import { purgeStaleLeads } from '@/server/leads'
 import { purgeRiskSignals } from '@/server/risk'
 import { expireVouchers } from '@/server/vouchers'
+import { purgeAuthAttempts } from '@/server/auth-attempts'
 import { settleRewards } from '@/server/rewards'
 import { workflowTick, workflowsMode } from '@/server/workflows/engine'
 import { errText, log } from '@/server/log'
@@ -41,6 +42,7 @@ async function run(req: NextRequest) {
   // workflows' dry run (nothing unless WORKFLOWS_MODE=dry_run; no mode sends anything).
   try {
     const db = await getDb()
+    await purgeAuthAttempts(db)
     const expired = await expireVouchers(db)
     if (expired) log.info('vouchers.expired', { count: expired })
     const settled = await db.tx((t) => settleRewards(t))

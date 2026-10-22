@@ -7,7 +7,7 @@
  * Shipping is never part of a promotion or a promo code: it is added after them (total = subtotal − discount +
  * shipping). In euro or dollars it is converted like a price (lib/currency: BNR rate, whole units). Pure, shared.
  *   - an order that uses a gift (a Review Video, Referral or VIP reward: the product is free) pays its delivery,
- *     GIFT_SHIPPING_RON, once, or the book's fee if that is higher.
+ *     GIFT_SHIPPING_RON (25 lei), once per order; with the book too, the higher fee once (never both).
  */
 import { BOOK_SHIPPING_RON } from '@/config/prices'
 import { GIFT_SHIPPING_RON } from '@/config/vouchers'

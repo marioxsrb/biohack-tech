@@ -9,6 +9,7 @@ import { convertUnit, rateFor, rates, type Currency } from '@/lib/currency'
 import { consentVersionFor } from '@/lib/consent/marketing'
 import { createHash, randomBytes, randomUUID } from 'node:crypto'
 import { getConfig } from '@/server/config'
+import { sellerAt } from '@/config/company'
 import { getDb, type Queryable } from '@/server/db'
 import { jobs, type NewJob } from '@/server/jobs/outbox'
 import { log } from '@/server/log'
@@ -190,6 +191,8 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
         key,
         now,
       )
+      // Who sells: kept on the order, so a later change of operator never rewrites it (config/company.ts).
+      await orders.update(t, id, { seller: JSON.stringify(sellerAt(now)) })
       // What the courier has to collect, kept on the order for the parcel (fulfillment/courier.ts).
       if (cod) await orders.update(t, id, { cod_amount_minor: subtotal - discount + shipping })
       // A business order paid at the door or by transfer is called and confirmed by a person before preparation.
@@ -607,6 +610,23 @@ export function noteAwb(orderId: string, source: Source, by: string, s: { courie
     if (o.status !== 'processing' || !canFulfil(o)) return { skip: `status_${o.status}` }
     if (o.courier === s.courier && o.trackingNumber === s.trackingNumber && (o.trackingUrl ?? '') === (s.trackingUrl ?? '')) return { skip: 'unchanged' }
     return { patch: { courier: s.courier, tracking_number: s.trackingNumber, tracking_url: s.trackingUrl || null }, event: 'fulfillment.awb_noted', data: { by, courier: s.courier, trackingNumber: s.trackingNumber } }
+  })
+}
+
+/**
+ * A person corrects the AWB of a parcel already shipped (a mistyped number, a new label from the courier), with the
+ * reason. Old and new are kept in the order's history; the status and the customer's emails do not change.
+ */
+export function correctAwb(orderId: string, source: Source, by: string, s: { courier: string; trackingNumber: string; trackingUrl?: string; reason: string }) {
+  return transition(orderId, source, async (o) => {
+    if (o.status !== 'shipped' && o.status !== 'delivered') return { skip: `status_${o.status}` }
+    if (!s.courier.trim() || !s.trackingNumber.trim() || s.reason.trim().length < 3) return { skip: 'invalid' }
+    if (o.courier === s.courier && o.trackingNumber === s.trackingNumber && (o.trackingUrl ?? '') === (s.trackingUrl ?? '')) return { skip: 'unchanged' }
+    return {
+      patch: { courier: s.courier, tracking_number: s.trackingNumber, tracking_url: s.trackingUrl || null },
+      event: 'fulfillment.awb_corrected',
+      data: { by, reason: s.reason.trim().slice(0, 300), from: { courier: o.courier, trackingNumber: o.trackingNumber }, to: { courier: s.courier, trackingNumber: s.trackingNumber } },
+    }
   })
 }
 

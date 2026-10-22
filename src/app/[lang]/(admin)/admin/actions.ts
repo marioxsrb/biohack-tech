@@ -29,7 +29,7 @@ import { reviewVideo } from '@/server/rewards'
 import { isVoucherProduct } from '@/config/vouchers'
 import { products } from '@/content/catalog'
 import { adminCopyLink, adminSendDigital, adminSetAccess } from '@/server/digital/delivery'
-import { cancelOrder, clearRisk, holdRisk, confirmByTeam, confirmPayment, markDelivered, markProcessing, markReturnReceived, markReturnRequested, markShipped, recordRefund } from '@/server/orders/service'
+import { cancelOrder, correctAwb, clearRisk, holdRisk, confirmByTeam, confirmPayment, markDelivered, markProcessing, markReturnReceived, markReturnRequested, markShipped, recordRefund } from '@/server/orders/service'
 
 /**
  * Every action verifies the admin credentials itself. Server Actions are HTTP endpoints; the proxy's
@@ -139,6 +139,19 @@ export async function shipAction(f: FormData) {
   if (!courierName || !trackingNumber) return
   const trackingUrl = /^https:\/\//.test(url) ? url : courier().trackingUrl(courierName, trackingNumber)
   await done(id, 'shipped', (await markShipped(id, 'admin', { courier: courierName, trackingNumber, trackingUrl })).changed, { courier: courierName, trackingNumber })
+}
+
+/** The AWB of a shipped parcel, corrected with its reason (history + admin audit); the customer is not emailed again. */
+export async function correctAwbAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id')
+  const courierName = text(f, 'courier', 60)
+  const trackingNumber = text(f, 'tracking', 80)
+  const url = text(f, 'trackingUrl', 400)
+  const reason = text(f, 'reason', 300)
+  if (!confirmed(f) || !courierName || !trackingNumber || reason.length < 3) return
+  const trackingUrl = /^https:\/\//.test(url) ? url : courier().trackingUrl(courierName, trackingNumber)
+  await done(id, 'awb_corrected', (await correctAwb(id, 'admin', 'admin', { courier: courierName, trackingNumber, trackingUrl, reason })).changed, { courier: courierName, trackingNumber, reason })
 }
 
 export async function returnRequestedAction(f: FormData) {

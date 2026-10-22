@@ -34,6 +34,12 @@ export type FgoConfig = {
    * parcel), when the courier's settlement is recorded, or never automatically. Never marked as collected.
    */
   codInvoice: 'on_shipment' | 'on_collection' | 'manual'
+  /**
+   * How a reward's free product is invoiced: 'zero' (default) the gift line at 0 lei; 'discount' the product at its
+   * full price plus its own negative line "Cadou (recompensă)", if FGO / e-Factura refuse zero-value lines. Either way
+   * the invoice total is exactly what was paid.
+   */
+  giftLines?: 'zero' | 'discount'
   autoStorno: boolean
 }
 export type GhlConfig = { token: string; locationId: string; pipelineId: string; apiBase: string; emailFrom?: string }
@@ -263,6 +269,7 @@ function readFgo(appEnv: AppEnv, issues: ConfigIssue[], siteUrl: string): FgoCon
     transferInvoice: str('FGO_TRANSFER_INVOICE') === 'manual' ? 'manual' : 'on_payment',
     codInvoice: str('FGO_COD_INVOICE') === 'manual' ? 'manual' : str('FGO_COD_INVOICE') === 'on_collection' ? 'on_collection' : 'on_shipment',
     autoStorno: str('FGO_AUTO_STORNO') === 'true',
+    giftLines: str('FGO_GIFT_LINES') === 'discount' ? 'discount' : 'zero',
   }
 }
 

@@ -1,7 +1,7 @@
 import { countryName } from '@/lib/countries'
 import Link from 'next/link'
 import { connection } from 'next/server'
-import { companyLine } from '@/config/company'
+import { sellerLine, sellerOf } from '@/config/company'
 import { site } from '@/config/site'
 import { formatLei } from '@/lib/money'
 import { formatMoney } from '@/lib/currency'
@@ -85,7 +85,7 @@ export async function OrderDocuments({
                   <span>{o.courier && o.trackingNumber ? `${o.courier} · AWB ${o.trackingNumber}` : 'AWB: de la curier'}</span>
                 </div>
                 {s.cashOnDeliveryMinor > 0 && <p className="mt-[2mm] text-[13pt] font-bold">RAMBURS: {formatLei(s.cashOnDeliveryMinor)}</p>}
-                <p className="mt-[2mm] text-[8pt]">Expeditor: {companyLine() || site.name} · {site.phone}</p>
+                <p className="mt-[2mm] text-[8pt]">Expeditor: {sellerLine(sellerOf(o)) || site.name} · {site.phone}</p>
               </section>
             )
           })}
@@ -105,7 +105,7 @@ export async function OrderDocuments({
                     {dt(o.createdAt)} · {PAYMENT_METHOD_LABEL[o.paymentMethod]}{restricted ? '' : ` · ${PAYMENT_LABEL[o.paymentStatus]}`} · {ORDER_LABEL[o.status]}
                   </p>
                 </div>
-                <p className="text-right text-[9pt]">{companyLine() || site.name}</p>
+                <p className="text-right text-[9pt]">{sellerLine(sellerOf(o)) || site.name}</p>
               </header>
 
               {(parent || child) && (

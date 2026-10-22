@@ -1,0 +1,156 @@
+{
+  "fields": [
+    {
+      "key": "contact.bt_voucher_code",
+      "name": "bt_voucher_code",
+      "dataType": "TEXT"
+    },
+    {
+      "key": "contact.bt_voucher_amount",
+      "name": "bt_voucher_amount",
+      "dataType": "TEXT"
+    },
+    {
+      "key": "contact.bt_voucher_expiry",
+      "name": "bt_voucher_expiry",
+      "dataType": "TEXT"
+    },
+    {
+      "key": "contact.bt_voucher_url",
+      "name": "bt_voucher_url",
+      "dataType": "TEXT"
+    },
+    {
+      "key": "contact.bt_product_name",
+      "name": "bt_product_name",
+      "dataType": "TEXT"
+    },
+    {
+      "key": "contact.bt_cart_items",
+      "name": "bt_cart_items",
+      "dataType": "TEXT"
+    },
+    {
+      "key": "contact.bt_cart_product_benefits",
+      "name": "bt_cart_product_benefits",
+      "dataType": "TEXT"
+    },
+    {
+      "key": "contact.bt_cart_eligible_vouchers",
+      "name": "bt_cart_eligible_vouchers",
+      "dataType": "TEXT"
+    },
+    {
+      "key": "contact.bt_checkout_url",
+      "name": "bt_checkout_url",
+      "dataType": "TEXT"
+    },
+    {
+      "key": "contact.bt_product_first_steps",
+      "name": "bt_product_first_steps",
+      "dataType": "TEXT"
+    },
+    {
+      "key": "contact.bt_product_usage_tips",
+      "name": "bt_product_usage_tips",
+      "dataType": "TEXT"
+    },
+    {
+      "key": "contact.bt_complementary_product_recommendation",
+      "name": "bt_complementary_product_recommendation",
+      "dataType": "TEXT"
+    },
+    {
+      "key": "contact.bt_referral_url",
+      "name": "bt_referral_url",
+      "dataType": "TEXT"
+    },
+    {
+      "key": "contact.bt_review_url",
+      "name": "bt_review_url",
+      "dataType": "TEXT"
+    },
+    {
+      "key": "contact.bt_reward_url",
+      "name": "bt_reward_url",
+      "dataType": "TEXT"
+    },
+    {
+      "key": "contact.bt_unsubscribe_url",
+      "name": "bt_unsubscribe_url",
+      "dataType": "TEXT"
+    }
+  ],
+  "tags": [
+    "bt-wf-abandoned-cart-01",
+    "bt-wf-abandoned-cart-02",
+    "bt-wf-abandoned-cart-03",
+    "bt-wf-abandoned-cart-04",
+    "bt-wf-post-purchase-01",
+    "bt-wf-post-purchase-02",
+    "bt-wf-post-purchase-03",
+    "bt-wf-post-purchase-04",
+    "bt-wf-landing-calm-01",
+    "bt-wf-landing-calm-02",
+    "bt-wf-landing-calm-03",
+    "bt-wf-landing-calm-04",
+    "bt-wf-landing-calm-05",
+    "bt-wf-landing-focus-01",
+    "bt-wf-landing-focus-02",
+    "bt-wf-landing-focus-03",
+    "bt-wf-landing-focus-04",
+    "bt-wf-landing-focus-05",
+    "bt-wf-landing-amber-01",
+    "bt-wf-landing-amber-02",
+    "bt-wf-landing-amber-03",
+    "bt-wf-referral-01",
+    "bt-wf-vip-01",
+    "bt-wf-welcome-01",
+    "bt-wf-welcome-02",
+    "bt-wf-welcome-03",
+    "bt-wf-welcome-04",
+    "bt-wf-welcome-05",
+    "bt-wf-welcome-06",
+    "bt-wf-welcome-07",
+    "bt-wf-welcome-08",
+    "bt-wf-welcome-09",
+    "bt-wf-educatie-01",
+    "bt-wf-educatie-02",
+    "bt-wf-educatie-03",
+    "bt-wf-educatie-04",
+    "bt-wf-educatie-05",
+    "bt-wf-educatie-06",
+    "bt-wf-educatie-07",
+    "bt-wf-educatie-08",
+    "bt-wf-win-back-01",
+    "bt-wf-win-back-02",
+    "bt-wf-nudge-01",
+    "bt-wf-nudge-02",
+    "bt-wf-black-friday-01",
+    "bt-wf-black-friday-02",
+    "bt-wf-black-friday-03",
+    "bt-wf-black-friday-04",
+    "bt-wf-black-friday-05",
+    "bt-wf-craciun-01",
+    "bt-wf-craciun-02",
+    "bt-wf-craciun-03",
+    "bt-wf-craciun-04",
+    "bt-wf-anul-nou-01",
+    "bt-wf-anul-nou-02",
+    "bt-wf-anul-nou-03",
+    "bt-wf-anul-nou-04",
+    "bt-wf-anul-nou-05",
+    "bt-wf-anul-nou-06",
+    "bt-interes-calm",
+    "bt-interes-focus",
+    "bt-interes-amber",
+    "bt-interes-carte",
+    "bt-wf-cumparat",
+    "bt-wf-abandon",
+    "bt-wf-plata-esuata",
+    "bt-wf-recompensa",
+    "bt-wf-recomandare",
+    "bt-wf-vip",
+    "bt-wf-dezabonat"
+  ]
+}

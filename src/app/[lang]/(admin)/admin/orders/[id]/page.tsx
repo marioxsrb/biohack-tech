@@ -35,6 +35,7 @@ import {
   returnReceivedAction,
   returnRequestedAction,
   shipAction,
+  correctAwbAction,
 } from '../../actions'
 import { INVOICE_LABEL, JOB_STATUS, ORDER_LABEL, PAYMENT_LABEL, tone } from '../../labels'
 
@@ -365,6 +366,20 @@ export default async function AdminOrderPage({ params }: PageProps<'/[lang]/admi
                   <input name="trackingUrl" type="url" placeholder="Link urmărire (https://...)" className="field !min-h-11 !py-2" aria-label="Link urmărire" />
                   <button className="cta sm w-full">Marchează expediată și anunță clientul</button>
                 </form>
+              )}
+              {(o.status === 'shipped' || o.status === 'delivered') && (
+                <details className="rounded-[12px] bg-mist p-4 text-[14px]">
+                  <summary className="cursor-pointer text-text">Corectează AWB-ul</summary>
+                  <form action={correctAwbAction} className="mt-2 space-y-2">
+                    <input type="hidden" name="id" value={o.id} />
+                    <input name="courier" required defaultValue={o.courier ?? ''} placeholder="Curier" className="field !min-h-11 !py-2" aria-label="Curier" />
+                    <input name="tracking" required defaultValue={o.trackingNumber ?? ''} placeholder="Număr AWB" className="field !min-h-11 !py-2" aria-label="Număr AWB" />
+                    <input name="trackingUrl" type="url" placeholder="Link urmărire (https://...)" className="field !min-h-11 !py-2" aria-label="Link urmărire" />
+                    <input name="reason" required minLength={3} placeholder="Motivul corecturii" className="field !min-h-11 !py-2" aria-label="Motivul corecturii" />
+                    <Confirm text="Corectez AWB-ul. Clientul nu primește alt email." />
+                    <button className="btn-secondary sm w-full">Salvează AWB-ul corectat</button>
+                  </form>
+                </details>
               )}
               {canMoveOrder(o.status, 'delivered') && (
                 <form action={deliveredAction} className="space-y-2">

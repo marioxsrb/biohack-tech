@@ -3,6 +3,7 @@
  * One invoice per order: IdExtern = order number with VerificareDuplicat, and the invoice
  * number stored on the order before we ever call again. FGO allows 1 request per second.
  */
+import { isGiftLine } from '@/lib/orders/gifts'
 import 'server-only'
 import { createHash } from 'node:crypto'
 import type { FgoConfig } from '@/server/config'
@@ -77,15 +78,27 @@ export function invoicePayload(c: FgoConfig, o: Order) {
     // Prices are VAT-inclusive, so each line sends its total and FGO derives the unit price. A promotion
     // is already split across its lines (whole bani), so line totals add up to exactly what was paid;
     // the line name says which promotion lowered it.
-    Continut: o.items.map((i) => ({
-      Denumire: lineName(i, o),
-      CodArticol: i.sku,
-      UM: c.unit,
-      NrProduse: i.quantity,
-      CotaTVA: c.vatRate,
-      PretTotal: lei(i.lineTotalMinor - i.discountMinor),
-    })).concat(
-      // Delivery (only orders with the book pay it, once): its own line, never discounted, so the lines still add up.
+    Continut: o.items.flatMap((i) => {
+      // A reward's gift with FGO_GIFT_LINES=discount: the product at its price (less any other discount), then the
+      // gift's own negative line, so the lines still add up to what was paid.
+      if (c.giftLines === 'discount' && isGiftLine(o, i)) {
+        return [
+          { Denumire: i.variantName ? `${i.productName} (${i.variantName})` : i.productName, CodArticol: i.sku, UM: c.unit, NrProduse: i.quantity, CotaTVA: c.vatRate, PretTotal: lei(i.lineTotalMinor - i.discountMinor + i.codeDiscountMinor) },
+          { Denumire: `Cadou (recompensă) ${o.promoCode}`, CodArticol: 'cadou', UM: c.unit, NrProduse: 1, CotaTVA: c.vatRate, PretTotal: -lei(i.codeDiscountMinor) },
+        ]
+      }
+      return [
+        {
+          Denumire: lineName(i, o),
+          CodArticol: i.sku,
+          UM: c.unit,
+          NrProduse: i.quantity,
+          CotaTVA: c.vatRate,
+          PretTotal: lei(i.lineTotalMinor - i.discountMinor),
+        },
+      ]
+    }).concat(
+      // Delivery (orders with the book, or with a reward's gift: once): its own line, never discounted, so the lines still add up.
       o.shippingMinor > 0 ? [{ Denumire: 'Transport (livrare prin curier)', CodArticol: 'transport', UM: c.unit, NrProduse: 1, CotaTVA: c.vatRate, PretTotal: lei(o.shippingMinor) }] : [],
     ),
     PlatformaUrl: c.platformUrl,

@@ -38,19 +38,20 @@ export const AMBER_PAIR_DISCOUNT: { productId: ProductId; perPairMinor: number; 
 }
 
 /**
- * How long a voucher stays valid, per issuing workflow (days from issue, not from opening the email). The landing
- * values come from the approved emails ("în următoarele 7 zile"); the others are not stated in the copy (the copy
- * prints {{voucher_expiry}}) and are proposals to confirm before any workflow is switched on.
+ * How long a voucher stays valid (approved 22.10.2026): 30 days from issue, for every source (days from issue, not
+ * from opening the email). Kept per source so one can change without touching the others.
+ * Note for the copy (not changed here): the landing emails say "în următoarele 7 zile"; with 30 days they understate
+ * the validity, never overstate it. The other emails print the real {{voucher_expiry}}.
  */
 export const VOUCHER_VALIDITY_DAYS = {
-  'landing-calm': 7,
-  'landing-focus': 7,
-  'landing-amber': 7,
-  'abandoned-cart': 7,
-  'win-back': 14,
-  nudge: 14,
-  craciun: 10,
-  'anul-nou': 14,
+  'landing-calm': 30,
+  'landing-focus': 30,
+  'landing-amber': 30,
+  'abandoned-cart': 30,
+  'win-back': 30,
+  nudge: 30,
+  craciun: 30,
+  'anul-nou': 30,
   review: 30,
   referral: 30,
   vip: 30,
@@ -67,10 +68,11 @@ export type GiftProduct = (typeof GIFT_PRODUCTS)[number]
 export const isGiftProduct = (id: string): id is GiftProduct => (GIFT_PRODUCTS as readonly string[]).includes(id)
 
 /**
- * Delivery of a gift order, in bani with VAT: an order without the book ships free, so a gift would otherwise cost the
- * customer nothing. Proposal: the book's flat delivery (10 lei + VAT). To confirm before the rewards go live.
+ * Delivery of an order with gift products (approved 22.10.2026): 25 lei (VAT included), ONCE per order, whatever the
+ * number of gifts. Devices ship free; the book alone pays BOOK_SHIPPING_RON. An order with a gift and the book pays the
+ * higher of the two fees, once (25 lei), never both: see lib/shipping.ts (to confirm before the rewards go live).
  */
-export const GIFT_SHIPPING_RON = 1210
+export const GIFT_SHIPPING_RON = 2500
 
 /** The friend's discount on a first order through a referral link (referral-01: "Prietenul tău primește 10% reducere"). */
 export const REFERRAL_FRIEND_PERCENT = 10

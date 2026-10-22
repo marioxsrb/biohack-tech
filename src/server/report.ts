@@ -25,8 +25,14 @@ export const SITES = [
 const LEAD_SITE = `case when coalesce(landing_host,'') like '%biohack-tech.net' or coalesce(landing_host,'') like 'net.localhost%' then 'net' when split_part(coalesce(landing_host,''), '.', 1) in ('calm','focus','amber') then split_part(landing_host, '.', 1) else 'main' end`
 /** An order's site: the landing it came through, the international store, or the main store. */
 const ORDER_SITE = `case when o.site = 'net' then 'net' when o.attribution->>'landing' in ('calm','focus','amber') then o.attribution->>'landing' else 'main' end`
-/** An order that stands (counted in sales). */
-const STANDS = `o.kind = 'checkout' and o.status not in ('cancelled', 'abandoned') and (o.payment_method <> 'card' or o.payment_status in ('paid', 'partially_refunded', 'refunded'))`
+/**
+ * A sale that stands: not cancelled or abandoned, card money in (or a transfer / cash-on-delivery order), not fully
+ * refunded. A paid post-purchase offer (upsell) is part of its parent's sale: its money counts, never as an order of
+ * its own (counts use ORDER below).
+ */
+const STANDS = `o.kind in ('checkout', 'upsell') and o.status not in ('cancelled', 'abandoned') and o.payment_status <> 'refunded' and (o.payment_method <> 'card' or o.payment_status in ('paid', 'partially_refunded'))`
+/** Counted as an order (the upsell is not a second order). */
+const ORDER = `o.kind = 'checkout'`
 
 // ─── periods ─────────────────────────────────────────────────────────────────
 
@@ -102,12 +108,12 @@ async function totals(q: Queryable, p: Pick<Period, 'from' | 'to'>) {
       [p.from, p.to],
     ),
     q.query(`select count(*)::int as leads, count(distinct email)::int as people from leads where created_at >= $1 and created_at < $2`, [p.from, p.to]),
-    q.query(`select count(*)::int as orders, coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate),0)::bigint as revenue from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2`, [p.from, p.to]),
+    q.query(`select count(*) filter (where ${ORDER})::int as orders, coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate),0)::bigint as revenue from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2`, [p.from, p.to]),
     // Of those, the money actually in (paid) and what is still to collect (transfer awaited, cash on delivery).
     q.query(
-      `select count(*) filter (where o.payment_status in ('paid', 'partially_refunded'))::int as paid_orders,
+      `select count(*) filter (where ${ORDER} and o.payment_status in ('paid', 'partially_refunded'))::int as paid_orders,
               coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate) filter (where o.payment_status in ('paid', 'partially_refunded')),0)::bigint as collected,
-              count(*) filter (where o.payment_status in ('awaiting_transfer', 'awaiting_collection'))::int as pending_orders,
+              count(*) filter (where ${ORDER} and o.payment_status in ('awaiting_transfer', 'awaiting_collection'))::int as pending_orders,
               coalesce(sum(o.total_minor * o.fx_rate) filter (where o.payment_status in ('awaiting_transfer', 'awaiting_collection')),0)::bigint as pending
        from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2`,
       [p.from, p.to],
@@ -135,7 +141,7 @@ async function totals(q: Queryable, p: Pick<Period, 'from' | 'to'>) {
 /** Since the store opened: orders that stand, money in, and what is still to collect (the iOS app's "total"). */
 export async function lifetimeTotals(q: Queryable) {
   const { rows } = await q.query(
-    `select count(*)::int as orders,
+    `select count(*) filter (where ${ORDER})::int as orders,
             coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate) filter (where o.payment_status in ('paid', 'partially_refunded')),0)::bigint as collected,
             coalesce(sum(o.total_minor * o.fx_rate) filter (where o.payment_status in ('awaiting_transfer', 'awaiting_collection')),0)::bigint as pending
      from orders o where ${STANDS}`,
@@ -180,7 +186,7 @@ export async function buildReport(q: Queryable, p: Period) {
       range,
     ),
     // Net of refunds, like the KPIs and the sites table.
-    q.query(`select o.payment_method as method, count(*)::int as orders, coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate),0)::bigint as value from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1`, range),
+    q.query(`select o.payment_method as method, count(*) filter (where ${ORDER})::int as orders, coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate),0)::bigint as value from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1`, range),
     q.query(
       // What each product brought after its discounts (promotions, codes, vouchers; a gift counts at 0).
       `select i.product_name as product, sum(i.quantity)::int as units, coalesce(sum((i.line_total_minor - i.discount_minor) * o.fx_rate),0)::bigint as value
@@ -213,7 +219,7 @@ export async function buildReport(q: Queryable, p: Period) {
        select to_char(d.day,'YYYY-MM-DD') as day,
               coalesce((select sum(sessions) from visit_stats v where v.day = d.day),0)::int as sessions,
               (select count(*) from leads l where (l.created_at at time zone '${TZ}')::date = d.day)::int as leads,
-              (select count(*) from orders o where ${STANDS} and (o.created_at at time zone '${TZ}')::date = d.day)::int as orders,
+              (select count(*) from orders o where ${STANDS} and ${ORDER} and (o.created_at at time zone '${TZ}')::date = d.day)::int as orders,
               coalesce((select sum((o.total_minor - o.refunded_minor) * o.fx_rate) from orders o where ${STANDS} and (o.created_at at time zone '${TZ}')::date = d.day),0)::bigint as revenue
        from d order by d.day`,
       [p.days > 1 ? p.from : new Date(p.to.getTime() - 14 * 86_400_000), p.to],
@@ -224,14 +230,14 @@ export async function buildReport(q: Queryable, p: Period) {
       range,
     ),
     q.query(`select ${LEAD_SITE} as site, count(*)::int as leads from leads where created_at >= $1 and created_at < $2 group by 1`, range),
-    q.query(`select ${ORDER_SITE} as site, count(*)::int as orders, coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate),0)::bigint as revenue from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1`, range),
+    q.query(`select ${ORDER_SITE} as site, count(*) filter (where ${ORDER})::int as orders, coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate),0)::bigint as revenue from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2 group by 1`, range),
     // The funnel's and the list's counts over the whole period (the list itself shows the latest 100 only).
     q.query(
-      `select count(*)::int as placed, count(*) filter (where ${STANDS})::int as standing,
+      `select count(*) filter (where ${ORDER})::int as placed, count(*) filter (where ${STANDS} and ${ORDER})::int as standing,
               coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate) filter (where ${STANDS}),0)::bigint as revenue,
-              count(*) filter (where o.status = 'cancelled')::int as cancelled,
-              count(*) filter (where o.payment_method = 'card' and o.payment_status not in ('paid','partially_refunded','refunded'))::int as unpaid_card
-       from orders o where o.kind = 'checkout' and o.created_at >= $1 and o.created_at < $2`,
+              count(*) filter (where ${ORDER} and o.status = 'cancelled')::int as cancelled,
+              count(*) filter (where ${ORDER} and o.payment_method = 'card' and o.payment_status not in ('paid','partially_refunded','refunded'))::int as unpaid_card
+       from orders o where o.kind in ('checkout', 'upsell') and o.created_at >= $1 and o.created_at < $2`,
       range,
     ),
   ])

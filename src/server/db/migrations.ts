@@ -1009,4 +1009,17 @@ create table if not exists email_sends (
 create index if not exists email_sends_email_idx on email_sends (email, created_at);
 alter table email_sends enable row level security`,
   },
+  {
+    // The seller's identity on each order from now on (config/company.ts SELLER_HISTORY): a later change of operator
+    // never rewrites an order or its documents. Existing orders are not touched: their seller is the one in force on
+    // their date. Login attempts in the database, so the admin and warehouse login limits hold across instances.
+    id: '033_seller_snapshot_auth_attempts',
+    sql: `alter table orders add column if not exists seller jsonb;
+create table if not exists auth_attempts (
+  key text primary key,
+  failures integer not null default 0,
+  window_start timestamptz not null default now()
+);
+alter table auth_attempts enable row level security`,
+  },
 ]

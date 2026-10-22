@@ -81,7 +81,7 @@ describe('issuing', () => {
     const amber = await issue('ochelari-biohack', { source: 'landing-amber', now })
     expect([calm.amountMinor, focus.amountMinor, amber.amountMinor]).toEqual([64000, 32500, 3000])
     expect([amber.perPaidUnit, amber.maxUnits]).toEqual([true, null])
-    expect(calm.expiresAt.getTime() - now.getTime()).toBe(7 * 86_400_000)
+    expect(calm.expiresAt.getTime() - now.getTime()).toBe(30 * 86_400_000)
     for (const x of [calm, focus, amber]) expect(x.code).toMatch(/^BTV[CFA][A-Z0-9]{8}$/)
     expect(await history(calm.id)).toEqual(['issued'])
   })
@@ -194,7 +194,7 @@ describe('using a voucher in the checkout', () => {
   })
 
   it('an expired voucher is refused (the expiry job marks it)', async () => {
-    const calm = await issue('balance-wave', { now: new Date(Date.now() - 8 * 86_400_000) })
+    const calm = await issue('balance-wave', { now: new Date(Date.now() - 31 * 86_400_000) })
     expect((await buy([CALM(1)], calm.code)).data.fields.promoCode).toMatch(/a expirat/)
     expect(await v.expireVouchers(db)).toBe(1)
     expect((await v.voucherById(db, calm.id))!.status).toBe('expired')
@@ -259,7 +259,7 @@ describe('the voucher follows its order', () => {
 
 describe('expiry, revocation, restore', () => {
   it('the expiry job, a revoked voucher refused, a person can restore it', async () => {
-    const a = await issue('balance-wave', { now: new Date(Date.now() - 10 * 86_400_000) })
+    const a = await issue('balance-wave', { now: new Date(Date.now() - 31 * 86_400_000) })
     const b = await issue('brainlink-pro', { source: 'landing-focus' })
     expect(await v.expireVouchers(db)).toBe(1)
     expect((await v.voucherById(db, a.id))!.status).toBe('expired')
@@ -281,11 +281,15 @@ describe('gifts (rewards): the product at 0 lei, the delivery paid', () => {
     expect(status, JSON.stringify(data)).toBe(200)
     const o = await order(data.orderNumber)
     expect(o.items[0].lineTotalMinor - o.items[0].discountMinor).toBe(0)
-    expect([o.shippingMinor, o.totalMinor]).toEqual([1210, 1210])
-    expect(piAmounts.at(-1)).toBe(1210)
+    expect([o.shippingMinor, o.totalMinor]).toEqual([2500, 2500])
+    expect(piAmounts.at(-1)).toBe(2500)
     const lines = invoicePayload(getConfig().fgo!, o).Continut
-    expect(Math.round(lines.reduce((s, l) => s + l.PretTotal * 100, 0))).toBe(1210)
+    expect(Math.round(lines.reduce((s, l) => s + l.PretTotal * 100, 0))).toBe(2500)
     expect(lines[0].Denumire).toMatch(/Cadou NEUROS Amber/)
+    // If FGO / e-Factura refuse zero-value lines (FGO_GIFT_LINES=discount): full price + its own negative gift line.
+    const alt = invoicePayload({ ...getConfig().fgo!, giftLines: 'discount' }, o).Continut
+    expect(alt.map((l) => [l.CodArticol, l.PretTotal])).toEqual([[o.items[0].sku, 315], ['cadou', -315], ['transport', 25]])
+    expect(Math.round(alt.reduce((s, l) => s + l.PretTotal * 100, 0))).toBe(o.totalMinor)
     expect((await buy([AMBER(1)], g.voucher.code)).data.fields.promoCode).toMatch(/Ai folosit deja/)
   })
 
@@ -293,8 +297,8 @@ describe('gifts (rewards): the product at 0 lei, the delivery paid', () => {
     const g = await v.issueVoucher(db, { email: person.email, productId: 'ochelari-biohack', kind: 'gift', source: 'vip', sourceRef: person.email })
     if (!g.ok) throw new Error(g.reason)
     const o = await order((await buy([AMBER(1)], g.voucher.code)).data.orderNumber)
-    expect([o.subtotalMinor - o.discountMinor, o.shippingMinor, o.totalMinor]).toEqual([0, 1210, 1210])
-    expect(o.codAmountMinor).toBe(1210)
+    expect([o.subtotalMinor - o.discountMinor, o.shippingMinor, o.totalMinor]).toEqual([0, 2500, 2500])
+    expect(o.codAmountMinor).toBe(2500)
   })
 
   it('a reward voucher is its own: it never replaces the marketing voucher the contact already holds', async () => {
