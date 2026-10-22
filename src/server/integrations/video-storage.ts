@@ -18,6 +18,8 @@ export type VideoStorage = {
   downloadUrl(path: string, seconds?: number): Promise<string | null>
   /** Deletes a file (a replaced or withdrawn video). True when the storage confirmed it. */
   remove(path: string): Promise<boolean>
+  /** Whether the file really arrived (the upload is confirmed only then), and its size. */
+  stat(path: string): Promise<{ size: number; contentType: string } | null>
 }
 
 export const MAX_VIDEO_BYTES = 300 * 1024 * 1024
@@ -28,7 +30,7 @@ export function videoStorage(env: Record<string, string | undefined> = process.e
   const base = env.VIDEO_STORAGE_URL?.replace(/\/+$/, '')
   const key = env.VIDEO_STORAGE_KEY
   const bucket = env.VIDEO_STORAGE_BUCKET
-  if (!base || !key || !bucket || !/^https:\/\//.test(base)) return { kind: 'none', uploadUrl: async () => null, downloadUrl: async () => null, remove: async () => false }
+  if (!base || !key || !bucket || !/^https:\/\//.test(base)) return { kind: 'none', uploadUrl: async () => null, downloadUrl: async () => null, remove: async () => false, stat: async () => null }
   const call = async (path: string, body: unknown) => {
     const res = await fetch(`${base}/storage/v1${path}`, { method: 'POST', headers: { authorization: `Bearer ${key}`, apikey: key, 'content-type': 'application/json' }, body: JSON.stringify(body) })
     if (!res.ok) throw new Error(`video storage ${res.status}`)
@@ -40,6 +42,11 @@ export function videoStorage(env: Record<string, string | undefined> = process.e
     async uploadUrl(path) {
       const r = await call(`/object/upload/sign/${bucket}/${safe(path)}`, {})
       return r.url ? { url: `${base}/storage/v1${r.url}` } : null
+    },
+    async stat(path) {
+      const res = await fetch(`${base}/storage/v1/object/${bucket}/${safe(path)}`, { method: 'HEAD', headers: { authorization: `Bearer ${key}`, apikey: key } })
+      if (!res.ok) return null
+      return { size: Number(res.headers.get('content-length') ?? 0), contentType: res.headers.get('content-type') ?? '' }
     },
     async remove(path) {
       const res = await fetch(`${base}/storage/v1/object/${bucket}`, { method: 'DELETE', headers: { authorization: `Bearer ${key}`, apikey: key, 'content-type': 'application/json' }, body: JSON.stringify({ prefixes: [path] }) })

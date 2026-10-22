@@ -38,3 +38,20 @@ it('without it, the same environment keeps its integrations; in production the f
   expect(config.databaseUrl).toBe('postgres://real@db.example/biohack_ecom')
   expect(issues.some((i) => i.message.includes('ISOLATED_TEST'))).toBe(true)
 })
+
+it('Preview / staging never connect to the production database (refused and reported); production does', () => {
+  const prod = 'postgresql://postgres.whboehkartnchujhewhg:x@aws-1-eu-central-1.pooler.supabase.com:6543/postgres'
+  vi.stubEnv('DATABASE_URL', prod)
+  vi.stubEnv('APP_ENV', 'staging')
+  resetConfig()
+  const staging = loadConfig()
+  expect(staging.config.databaseUrl).toBeUndefined()
+  expect(staging.issues.some((i) => i.area === 'database' && /producție/.test(i.message))).toBe(true)
+  vi.stubEnv('APP_ENV', 'production')
+  resetConfig()
+  expect(loadConfig().config.databaseUrl).toBe(prod)
+  vi.stubEnv('APP_ENV', 'staging')
+  vi.stubEnv('DATABASE_URL', 'postgresql://postgres.stagingref:x@aws-1-eu-central-1.pooler.supabase.com:6543/postgres')
+  resetConfig()
+  expect(loadConfig().config.databaseUrl).toContain('stagingref')
+})

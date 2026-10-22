@@ -416,6 +416,9 @@ const positiveInt = (v: string | undefined) => {
   return v !== undefined && Number.isInteger(n) && n > 0 ? n : null
 }
 
+/** The production Supabase project (orders, customers): only APP_ENV=production may connect to it. */
+export const PRODUCTION_DB_REF = 'whboehkartnchujhewhg'
+
 let cached: { config: Config; issues: ConfigIssue[] } | null = null
 
 export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
@@ -430,7 +433,12 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
   const isolated = str('ISOLATED_TEST') === '1' && appEnv !== 'production'
   if (str('ISOLATED_TEST') === '1' && appEnv === 'production') issues.push({ area: 'app', level: 'error', message: 'ISOLATED_TEST nu se folosește în producție; este ignorat.' })
 
-  const databaseUrl = isolated ? undefined : str('DATABASE_URL')
+  const rawDatabaseUrl = isolated ? undefined : str('DATABASE_URL')
+  // Staging and Preview never touch the production database (its project ref, PRODUCTION_DB_REF): a misconfigured
+  // Preview would otherwise write test orders among real ones. Refused: no database at all instead.
+  const productionDb = !!rawDatabaseUrl && rawDatabaseUrl.includes(PRODUCTION_DB_REF)
+  if (productionDb && appEnv !== 'production') issues.push({ area: 'database', level: 'error', message: `DATABASE_URL arată spre baza de producție, dar APP_ENV=${appEnv}. Refuzat: Preview și staging folosesc doar o bază separată.` })
+  const databaseUrl = productionDb && appEnv !== 'production' ? undefined : rawDatabaseUrl
   // Production never falls back to the embedded database: orders must survive a redeploy.
   const localDb = !databaseUrl && appEnv !== 'production'
   if (!databaseUrl && !localDb) issues.push({ area: 'database', level: 'error', message: 'DATABASE_URL lipsește. Fără bază de date nu se pot înregistra comenzi.' })

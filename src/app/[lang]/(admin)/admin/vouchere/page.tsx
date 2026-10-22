@@ -163,6 +163,11 @@ export default async function VouchersPage({ searchParams }: { searchParams: Pro
         {videos.map((r) => (
           <li key={r.id as string} className="rounded-[16px] bg-paper p-4 text-[14px]">
             <span className="font-semibold text-ink">{r.order_number as string}</span> · {r.email as string} · {r.status as string} · rating {(r.rating as number | null) ?? '–'} · folosire în reclame: {r.ad_consent ? 'acord dat' : 'fără acord'}
+            {' · '}
+            <a href={`/api/admin/review-video/${r.id as string}`} target="_blank" rel="noreferrer" className="underline underline-offset-4">
+              Vezi video-ul (link 10 min)
+            </a>
+            {r.reviewed_at ? <span className="text-muted"> · verificat {new Date(r.reviewed_at as string).toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest' })} de {r.reviewed_by as string}</span> : null}
             {r.status !== 'approved' && (
               <form action={reviewVideoAction} className="mt-2 flex flex-wrap items-center gap-2 text-[13.5px]">
                 <input type="hidden" name="id" value={r.id as string} />

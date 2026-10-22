@@ -21,9 +21,15 @@ const { POST: review } = await import('@/app/api/cont/review/route')
 const { chooseRewardAction } = await import('@/app/[lang]/(site)/cont/[token]/actions')
 
 let db: Awaited<ReturnType<typeof freshDb>>
+let uploaded = true
 beforeEach(async () => {
   db = await freshDb({ ...TEST_ENV, ADMIN_SESSION_SECRET: 'x'.repeat(40), VIDEO_STORAGE_URL: 'https://proj.supabase.co', VIDEO_STORAGE_KEY: 'k', VIDEO_STORAGE_BUCKET: 'rv' })
-  vi.stubGlobal('fetch', async (url: string) => new Response(JSON.stringify(String(url).includes('/upload/sign/') ? { url: '/object/upload/sign/rv/x?token=t' } : {}), { status: 200 }))
+  uploaded = true
+  vi.stubGlobal('fetch', async (url: string, init: RequestInit = {}) => {
+    // The storage: a HEAD says whether the file arrived (and its size and type).
+    if (init.method === 'HEAD') return uploaded ? new Response(null, { status: 200, headers: { 'content-length': '1000', 'content-type': 'video/mp4' } }) : new Response(null, { status: 404 })
+    return new Response(JSON.stringify(String(url).includes('/upload/sign/') ? { url: '/object/upload/sign/rv/x?token=t' } : {}), { status: 200 })
+  })
 })
 afterEach(() => vi.unstubAllGlobals())
 
@@ -73,6 +79,10 @@ describe('the review upload', () => {
     const start = await (await call({ step: 'start', t, orderId: o.id, contentType: 'video/mp4', sizeBytes: 1000 })).json()
     expect(start.uploadUrl).toMatch(/^https:\/\/proj\.supabase\.co\/storage\/v1\/object\/upload\/sign\//)
     expect((await call({ step: 'done', t, orderId: o.id, key: 'altceva/x.mp4', contentType: 'video/mp4', sizeBytes: 1000, adConsent: true })).status).toBe(422)
+    // An upload that never arrived is never recorded (and so never rewarded).
+    uploaded = false
+    expect((await (await call({ step: 'done', t, orderId: o.id, key: start.key, contentType: 'video/mp4', sizeBytes: 1000, adConsent: true })).json()).error).toBe('NOT_UPLOADED')
+    uploaded = true
     expect((await call({ step: 'done', t, orderId: o.id, key: start.key, contentType: 'video/mp4', sizeBytes: 1000, rating: 3, adConsent: true })).status).toBe(200)
     expect((await db.query('select status, rating, ad_consent, ad_consent_version from video_reviews')).rows[0]).toEqual({ status: 'received', rating: 3, ad_consent: true, ad_consent_version: account.AD_CONSENT_VERSION })
     expect((await (await call({ step: 'start', t, orderId: o.id, contentType: 'video/mp4', sizeBytes: 1000 })).json()).error).toBe('already_sent')

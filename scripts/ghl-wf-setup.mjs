@@ -1,23 +1,25 @@
-// The Biohack Tech GHL sub-account for the email workflows: contact fields and tags (scripts/ghl-wf-spec.json, the same
-// list as src/server/workflows/ghl-setup.ts). Dry run by default: lists what exists and what is missing, writes nothing.
+// The GHL contact fields and tags of the Biohack Tech email workflows (scripts/ghl-wf-spec.json, the same list as
+// src/server/workflows/ghl-setup.ts), in the EXISTING location the store already uses (decided 22.10.2026: no
+// sub-account). Every name is prefixed bt_ / bt-wf-, so nothing of NEUROS or Brain Event is touched or renamed.
+// Dry run by default: lists what exists and what is missing, writes nothing.
 //
-//   node scripts/ghl-wf-setup.mjs            dry run (GHL_WF_TOKEN, GHL_WF_LOCATION_ID from .env.local)
-//   node scripts/ghl-wf-setup.mjs --apply    creates only what is missing (fields, tags); never contacts or workflows
+//   node scripts/ghl-wf-setup.mjs            dry run (GHL_WF_TOKEN / GHL_WF_LOCATION_ID, else GHL_PRIVATE_TOKEN / GHL_LOCATION_ID)
+//   node scripts/ghl-wf-setup.mjs --apply    creates only what is missing (fields, tags); never contacts, never workflows
 //
-// Refuses the shared NEUROS locations (GHL_LOCATION_ID, GHL_BRAINEVENT_LOCATION_ID). Never prints the token.
+// Refuses the Brain Event mirror location. Never prints the token.
 import { existsSync, readFileSync } from 'node:fs'
 
 if (existsSync('.env.local')) process.loadEnvFile('.env.local')
-const TOKEN = process.env.GHL_WF_TOKEN?.trim()
-const LOCATION = process.env.GHL_WF_LOCATION_ID?.trim()
+const TOKEN = (process.env.GHL_WF_TOKEN || process.env.GHL_PRIVATE_TOKEN)?.trim()
+const LOCATION = (process.env.GHL_WF_LOCATION_ID || process.env.GHL_LOCATION_ID)?.trim()
 const BASE = process.env.GHL_API_BASE?.trim() || 'https://services.leadconnectorhq.com'
 const apply = process.argv.includes('--apply')
 if (!TOKEN || !LOCATION) {
-  console.error('GHL_WF_TOKEN și GHL_WF_LOCATION_ID lipsesc: subcontul Biohack Tech nu este configurat. Nimic de făcut.')
+  console.error('Lipsește tokenul sau locația GHL (GHL_WF_* sau GHL_PRIVATE_TOKEN / GHL_LOCATION_ID). Nimic de făcut.')
   process.exit(1)
 }
-if ([process.env.GHL_LOCATION_ID, process.env.GHL_BRAINEVENT_LOCATION_ID].map((x) => x?.trim()).includes(LOCATION)) {
-  console.error('GHL_WF_LOCATION_ID este locația comună NEUROS. Oprit: workflow-urile Biohack Tech merg doar în subcontul lor.')
+if (process.env.GHL_BRAINEVENT_LOCATION_ID?.trim() === LOCATION) {
+  console.error('Aceasta este locația Brain Event (oglinda de taguri). Oprit.')
   process.exit(1)
 }
 const spec = JSON.parse(readFileSync(new URL('./ghl-wf-spec.json', import.meta.url), 'utf8'))
@@ -31,6 +33,13 @@ if (fields.status !== 200 || tags.status !== 200) {
   console.error(`Nu pot citi subcontul (câmpuri ${fields.status}, taguri ${tags.status}). Verifică scopurile tokenului: locations/customFields, locations/tags.`)
   process.exit(1)
 }
+const wf = await call('GET', `/workflows/?locationId=${LOCATION}`)
+if (wf.status === 200) {
+  const list = wf.body.workflows ?? []
+  const bt = list.filter((w) => /biohack|^bt[\s_-]/i.test(w.name ?? ''))
+  console.log(`Workflow-uri în locație: ${list.length} · Biohack Tech: ${bt.length}`)
+  for (const w of bt) console.log(`  ${w.status ?? '?'}  ${w.name}`)
+} else console.log(`Workflow-urile nu pot fi citite cu acest token (${wf.status}); se organizează din interfața GHL.`)
 const haveFields = new Set((fields.body.customFields ?? []).map((f) => f.fieldKey))
 const haveTags = new Set((tags.body.tags ?? []).map((t) => t.name))
 const missingFields = spec.fields.filter((f) => !haveFields.has(f.key))

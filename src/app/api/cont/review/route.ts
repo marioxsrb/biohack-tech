@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { AD_CONSENT_VERSION, accountEmail, ownsOrder } from '@/server/account'
 import { getDb } from '@/server/db'
-import { videoStorage } from '@/server/integrations/video-storage'
+import { isVideoType, MAX_VIDEO_BYTES, videoStorage } from '@/server/integrations/video-storage'
 import { errText, log } from '@/server/log'
 import { clientIp, rateLimit } from '@/server/rate-limit'
 import { recordVideoReview, startVideoUpload } from '@/server/rewards'
@@ -35,9 +35,13 @@ export async function POST(req: NextRequest) {
       return r.ok ? NextResponse.json({ ok: true, uploadUrl: r.uploadUrl, key: r.key }) : NextResponse.json({ ok: false, error: r.problem }, { status: 422 })
     }
     if (body.step === 'done') {
+      // Only a file that really arrived, of a video type and within the size limit, is recorded (never a reward for
+      // an upload that did not happen).
+      const file = await storage.stat(String(body.key ?? ''))
+      if (!file || file.size <= 0 || file.size > MAX_VIDEO_BYTES || !isVideoType(file.contentType.split(';')[0])) return NextResponse.json({ ok: false, error: 'NOT_UPLOADED' }, { status: 422 })
       const rating = body.rating == null ? null : Number(body.rating)
       const r = await db.tx((t) =>
-        recordVideoReview(t, { orderId, key: String(body.key ?? ''), contentType: String(body.contentType ?? ''), sizeBytes: Number(body.sizeBytes), rating, adConsent: body.adConsent === true, adConsentVersion: AD_CONSENT_VERSION }, storage),
+        recordVideoReview(t, { orderId, key: String(body.key ?? ''), contentType: String(body.contentType ?? ''), sizeBytes: file.size, rating, adConsent: body.adConsent === true, adConsentVersion: AD_CONSENT_VERSION }, storage),
       )
       return r.ok ? NextResponse.json({ ok: true }) : NextResponse.json({ ok: false, error: 'NOT_ACCEPTED' }, { status: 422 })
     }
