@@ -26,6 +26,7 @@ import { CODE_RE, normalizeCode, promoCodes } from '@/server/promo'
 import { issueVoucher, restoreVoucher, revokeVoucher, VOUCHER_CODE_RE } from '@/server/vouchers'
 import { REFERRAL_CODE_RE } from '@/server/referrals'
 import { reviewVideo } from '@/server/rewards'
+import { accountToken } from '@/server/account'
 import { isVoucherProduct } from '@/config/vouchers'
 import { products } from '@/content/catalog'
 import { adminCopyLink, adminSendDigital, adminSetAccess } from '@/server/digital/delivery'
@@ -45,7 +46,7 @@ async function guard() {
 
 const text = (f: FormData, k: string, max = 200) => String(f.get(k) ?? '').trim().slice(0, max)
 /** Back to a page with a short message (?mesaj=…) the page shows once. */
-const redirectWith = (path: string, message: string): never => redirect(`${path}?mesaj=${encodeURIComponent(message.slice(0, 200))}`)
+const redirectWith = (path: string, message: string): never => redirect(`${path}?mesaj=${encodeURIComponent(message.slice(0, 400))}`)
 /** Money and cancellations need the ticked confirmation box; without it nothing changes. */
 const confirmed = (f: FormData) => f.get('confirm') === 'da'
 
@@ -317,6 +318,17 @@ export async function issueVoucherAction(f: FormData) {
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+
+/** The customer's account link (vouchers, rewards, review video) for support: shown once on the page, audited. */
+export async function accountLinkAction(f: FormData) {
+  await guard()
+  const email = text(f, 'email', 200).toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) redirectWith('/admin/vouchere', 'Adresa de email nu este validă.')
+  const token = accountToken(email)
+  if (!token) redirectWith('/admin/vouchere', 'Linkurile de cont sunt oprite: lipsește ACCOUNT_LINK_SECRET / ADMIN_SESSION_SECRET.')
+  await audit(await getDb(), adminActor(), 'account.link', { email })
+  redirectWith('/admin/vouchere', `${getConfig().siteUrl}/cont/${token}`)
+}
 
 export async function revokeVoucherAction(f: FormData) {
   await guard()

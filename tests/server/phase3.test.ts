@@ -96,7 +96,9 @@ describe('landing attribution: checkout request → order → CRM', () => {
     const { token } = await res.json()
     const order = (await orders.byToken(db, token))!
     expect(order.totalMinor).toBe(638000)
+    // The cookie banner's marketing choice is kept too (none sent here: no Meta signal kept, no Purchase to Meta).
     expect(order.attribution).toEqual({
+      cookieMarketing: false,
       landing: 'calm',
       landingHost: 'calm.biohack-tech.ro',
       landingPath: '/',
@@ -110,7 +112,7 @@ describe('landing attribution: checkout request → order → CRM', () => {
     const res = await checkout(req({ lines: [{ productId: 'ochelari-biohack', variantId: 'patrat-maro', quantity: 1 }], order: { ...person, paymentMethod: 'transfer' }, acceptedTerms: true, attemptId: 'site-1', attribution: { lp: '../admin', lp_host: 'evil' } }))
     const order = (await orders.byToken(db, (await res.json()).token))!
     // Nothing remains: the landing fields were invalid.
-    expect(order.attribution ?? {}).toEqual({})
+    expect(order.attribution ?? {}).toEqual({ cookieMarketing: false })
     await runDueJobs()
     expect(field('bt_last_order_source')).toBe('site')
   })

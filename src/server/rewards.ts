@@ -118,10 +118,14 @@ export async function startVideoUpload(q: Queryable, storage: VideoStorage, i: {
   return { ok: true, uploadUrl: signed.url, key }
 }
 
-/** The upload finished: the review is received (status 'received'), with the consents the customer gave. */
-export async function recordVideoReview(q: Queryable, i: { orderId: string; key: string; contentType: string; sizeBytes: number; rating?: number | null; adConsent: boolean; adConsentVersion?: string }) {
+/**
+ * The upload finished: the review is received (status 'received'), with the consents the customer gave. A rejected
+ * video that is replaced is deleted from the storage (never two files for one order).
+ */
+export async function recordVideoReview(q: Queryable, i: { orderId: string; key: string; contentType: string; sizeBytes: number; rating?: number | null; adConsent: boolean; adConsentVersion?: string }, storage?: VideoStorage) {
   const o = await reviewableOrder(q, i.orderId)
-  if (!o || o.status !== 'delivered' || !i.key.startsWith(`${i.orderId}/`)) return { ok: false as const }
+  if (!o || o.status !== 'delivered' || !/^[0-9a-f-]{36}\/[0-9a-f-]{36}\.(mp4|mov|webm)$/i.test(i.key) || !i.key.startsWith(`${i.orderId}/`)) return { ok: false as const }
+  const prior = await q.query<{ storage_key: string | null; status: string }>('select storage_key, status from video_reviews where order_id = $1', [i.orderId])
   const rating = i.rating != null && Number.isInteger(i.rating) && i.rating >= 1 && i.rating <= 5 ? i.rating : null
   const { rows } = await q.query(
     `insert into video_reviews (id, order_id, email, status, storage_key, content_type, size_bytes, rating, ad_consent, ad_consent_at, ad_consent_version)
@@ -133,6 +137,7 @@ export async function recordVideoReview(q: Queryable, i: { orderId: string; key:
      returning id`,
     [randomUUID(), i.orderId, normalizeEmail(o.email as string), i.key, i.contentType, i.sizeBytes, rating, i.adConsent, i.adConsent ? (i.adConsentVersion ?? 'v1') : null],
   )
+  if (rows[0] && storage && prior.rows[0]?.storage_key && prior.rows[0].storage_key !== i.key) await storage.remove(prior.rows[0].storage_key).catch(() => false)
   return rows[0] ? { ok: true as const, id: rows[0].id as string } : { ok: false as const }
 }
 

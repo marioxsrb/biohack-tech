@@ -118,7 +118,9 @@ export async function POST(req: NextRequest) {
     const sanitized = sanitizeAttribution(body.attribution, siteHost)
     // Cookies and the request, never the body's copy: this is what the Conversions API matches to the pixel.
     const browser = metaBrowser(req.headers, { fbclid: sanitized?.fbclid, siteHost })
-    const attribution = { ...(sanitized ?? {}), ...(browser && { meta: browser }) }
+    // Without the visitor's marketing-cookie consent, no browser signal is kept for Meta (and no Purchase goes to it).
+    const cookieMarketing = body.cookieMarketing === true
+    const attribution = { ...(sanitized ?? {}), ...(browser && cookieMarketing && { meta: browser }), cookieMarketing }
     let created: boolean
     ;({ order, created } = await placeOrder({ lines: resolved.lines, form, attemptId, attribution, promoCode, currency, locale, site: siteForHost(req.headers.get('host')), source: { ip, visitor } }))
     // This browser's leads now point to the order.

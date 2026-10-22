@@ -28,6 +28,32 @@ describe('Conversions API', () => {
     expect(await kinds(db, order.id)).not.toContain('meta.purchase')
   })
 
+  it('without the marketing-cookie consent: no browser signal kept, and the Purchase is never sent to Meta', async () => {
+    const db = await freshDb({ ...TEST_ENV, META_CAPI_ACCESS_TOKEN: 'EAAB-test-token' })
+    const calls: string[] = []
+    vi.stubGlobal('fetch', async (u: string) => {
+      calls.push(String(u))
+      return new Response('{}', { status: 200 })
+    })
+    const res = await checkout(
+      new Request('https://biohack-tech.ro/api/checkout', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'user-agent': 'Mozilla/5.0 NoConsent', 'x-forwarded-for': '203.0.113.10', cookie: '_fbp=fb.1.1700000000000.1234567890' },
+        body: JSON.stringify({ lines: [{ productId: 'balance-wave', quantity: 1 }], order: { ...person, paymentMethod: 'transfer' }, acceptedTerms: true, attemptId: 'meta-off', cookieMarketing: false }),
+      }) as never,
+    )
+    const order = (await orders.byToken(db, (await res.json()).token))!
+    expect(order.attribution?.meta).toBeUndefined()
+    expect(order.attribution?.cookieMarketing).toBe(false)
+    await svc.confirmPayment(order.id, 'admin')
+    const { runDueJobs } = await import('@/server/jobs/runner')
+    await runDueJobs(50)
+    expect(calls.some((u) => u.includes('graph.facebook.com'))).toBe(false)
+    const job = (await db.query(`select status, last_error from jobs where kind = 'meta.purchase' and order_id = $1`, [order.id])).rows[0]
+    expect(job.status).toBe('skipped')
+    vi.unstubAllGlobals()
+  })
+
   it('stores the browser signals, then sends one Purchase in lei with the order number as event id', async () => {
     const db = await freshDb({ ...TEST_ENV, META_CAPI_ACCESS_TOKEN: 'EAAB-test-token', META_CAPI_TEST_EVENT_CODE: 'TEST12345' })
     const res = await checkout(
@@ -45,6 +71,7 @@ describe('Conversions API', () => {
           order: { ...person, paymentMethod: 'transfer' },
           acceptedTerms: true,
           attemptId: 'meta-on',
+          cookieMarketing: true,
           attribution: { lp: 'calm', lp_host: 'calm.biohack-tech.ro', utm_source: 'facebook', fbclid: 'IwAR0abcdefghij', meta: { ip: '198.51.100.1', ua: 'spoofed' } },
         }),
       }) as never,

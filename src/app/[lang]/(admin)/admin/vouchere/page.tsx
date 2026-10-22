@@ -8,7 +8,7 @@ import { getDb } from '@/server/db'
 import { listRewards, listVideoReviews } from '@/server/rewards'
 import { listVouchers, voucherHistory, type VoucherStatus } from '@/server/vouchers'
 import { workflowsMode } from '@/server/workflows/engine'
-import { issueVoucherAction, restoreVoucherAction, revokeVoucherAction, reviewVideoAction } from '../actions'
+import { accountLinkAction, issueVoucherAction, restoreVoucherAction, revokeVoucherAction, reviewVideoAction } from '../actions'
 
 export const metadata: Metadata = { title: 'Vouchere și recompense' }
 
@@ -35,7 +35,7 @@ const TABS = ['active', 'used', 'expired', 'revoked'] as const
 export default async function VouchersPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   await connection()
   const sp = await searchParams
-  const message = String(sp.mesaj ?? '').slice(0, 200)
+  const message = String(sp.mesaj ?? '').slice(0, 400)
   const status = (TABS as readonly string[]).includes(String(sp.status)) ? (String(sp.status) as VoucherStatus) : undefined
   const db = await getDb()
   const [list, rewards, videos] = await Promise.all([listVouchers(db, { status }), listRewards(db), listVideoReviews(db)])
@@ -72,6 +72,14 @@ export default async function VouchersPage({ searchParams }: { searchParams: Pro
           <input type="checkbox" name="confirm" value="da" required className="h-4 w-4" /> Confirm emiterea
         </label>
         <button className="btn-secondary sm">Emite voucherul</button>
+      </form>
+
+      <form action={accountLinkAction} className="mt-3 flex flex-wrap items-end gap-3 rounded-[16px] bg-paper p-5 text-[14px]">
+        <label className="grid gap-1">
+          <span className="text-muted">Linkul de cont al unui client (vouchere, recompense, review video)</span>
+          <input name="email" type="email" required className="field" />
+        </label>
+        <button className="btn-secondary sm">Generează linkul</button>
       </form>
 
       <nav aria-label="Filtre" className="mt-8 flex flex-wrap gap-2">

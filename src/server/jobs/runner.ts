@@ -554,6 +554,9 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const o = await orders.byId(await getDb(), j.orderId!)
     if (!o) throw new Skip('order gone')
     if (!isPaid(o.paymentStatus)) throw new Skip('not paid')
+    // GDPR: hashed email and phone are still personal data. Only an order whose visitor accepted marketing cookies is
+    // sent (orders placed before this was recorded have no choice stored: not sent either).
+    if (c.metaCapi.requireConsent && o.attribution?.cookieMarketing !== true) throw new Skip('no marketing cookie consent')
     return sendMetaPurchase(c.metaCapi, o, c.siteUrl)
   },
   // The book's PDF link by email (automatic after a grant, or asked for in /admin); checked again before sending.

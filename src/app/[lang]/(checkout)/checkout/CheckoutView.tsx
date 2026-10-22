@@ -19,6 +19,7 @@ import { useLocale } from '@/i18n/LocaleProvider'
 import { ui } from '@/i18n/ui'
 import type { Locale } from '@/i18n/locales'
 import { attributionParams } from '@/lib/attribution'
+import { consentStore } from '@/lib/consent/store'
 import { cookieFrom, normalizeContact, PROMO_COOKIE, validateContact } from '@/lib/lead'
 import { cashOnDelivery } from '@/config/payments'
 import { site, terms } from '@/config/site'
@@ -474,6 +475,8 @@ function CheckoutForm({ lines, methods: offered, stripeKey, preferred }: { lines
           // Landing and UTM parameters from the URL, if any, and where the first product was added.
           // The server validates them.
           attribution: { ...Object.fromEntries(attributionParams(window.location.search)), ...(lines[0]?.source && { entry: lines[0].source }) },
+          // The cookie banner's marketing choice: the server sends Meta this order's Purchase only with it.
+          cookieMarketing: consentStore.allows('marketing'),
         }),
       })
       const data = await res.json().catch(() => ({}))

@@ -107,7 +107,11 @@ export type Config = {
    * Meta Conversions API. Null when META_CAPI_ACCESS_TOKEN is absent: Purchase is then not queued.
    * The pixel id is the live dataset (a leftover override of the retired pixel is ignored).
    */
-  metaCapi: { pixelId: string; accessToken: string; testEventCode: string | null } | null
+  /**
+   * requireConsent (META_CAPI_CONSENT, default on): the Purchase of an order is sent only when the visitor had accepted
+   * marketing cookies at checkout. "off" sends every paid order as before (only after a legal decision that allows it).
+   */
+  metaCapi: { pixelId: string; accessToken: string; testEventCode: string | null; requireConsent: boolean } | null
   /**
    * Apple Push Notification service for the private iOS app (token auth, .p8 key): APNS_KEY_ID, APNS_TEAM_ID,
    * APNS_BUNDLE_ID and APNS_PRIVATE_KEY (the key's PEM text; "\n" escapes allowed). Null until all four are set.
@@ -401,7 +405,7 @@ function readMetaCapi(appEnv: AppEnv, issues: ConfigIssue[]): Config['metaCapi']
   if (!accessToken) return null
   // A test code left set in production sends every server Purchase as a test event (not counted by Meta).
   if (appEnv === 'production' && str('META_CAPI_TEST_EVENT_CODE')) issues.push({ area: 'meta', level: 'warn', message: 'META_CAPI_TEST_EVENT_CODE este setat în producție: Purchase-urile de pe server ajung ca evenimente de test. Șterge-l după verificare.' })
-  return { pixelId: activeMetaPixelId(), accessToken, testEventCode: str('META_CAPI_TEST_EVENT_CODE') ?? null }
+  return { pixelId: activeMetaPixelId(), accessToken, testEventCode: str('META_CAPI_TEST_EVENT_CODE') ?? null, requireConsent: str('META_CAPI_CONSENT') !== 'off' }
 }
 
 /** A feature switch: on only when set to "true". */

@@ -27,6 +27,12 @@ export type Attribution = {
    * Never taken from the body (sanitizeAttribution does not copy this).
    */
   meta?: MetaBrowser
+  /**
+   * The visitor's marketing-cookie choice at checkout (the banner's, from the browser): the Conversions API sends
+   * this order's Purchase only when it was true (META_CAPI_CONSENT). Set by the server from the request body's
+   * `cookieMarketing`, never copied by sanitizeAttribution.
+   */
+  cookieMarketing?: boolean
 }
 
 const clean = (v: unknown) =>
