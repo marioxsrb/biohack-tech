@@ -29,6 +29,7 @@ export const WORKFLOW_FIELDS = {
   referralUrl: 'contact.bt_referral_url',
   reviewUrl: 'contact.bt_review_url',
   rewardUrl: 'contact.bt_reward_url',
+  recommendationUrl: 'contact.bt_recommendation_url',
   unsubscribeUrl: 'contact.bt_unsubscribe_url',
 } as const
 
@@ -44,6 +45,13 @@ export const VARIABLE_FIELD: Record<string, keyof typeof WORKFLOW_FIELDS> = {
   product_first_steps: 'firstSteps',
   product_usage_tips: 'usageTips',
   complementary_product_recommendation: 'recommendation',
+  // The CTA links (server/workflows/links.ts).
+  voucher_url: 'voucherUrl',
+  review_url: 'reviewUrl',
+  reward_url: 'rewardUrl',
+  referral_url: 'referralUrl',
+  recommendation_url: 'recommendationUrl',
+  unsubscribe_url: 'unsubscribeUrl',
 }
 
 export const INTEREST_SEGMENT: Record<string, string> = {

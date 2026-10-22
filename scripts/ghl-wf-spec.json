@@ -76,6 +76,11 @@
       "dataType": "TEXT"
     },
     {
+      "key": "contact.bt_recommendation_url",
+      "name": "bt_recommendation_url",
+      "dataType": "TEXT"
+    },
+    {
       "key": "contact.bt_unsubscribe_url",
       "name": "bt_unsubscribe_url",
       "dataType": "TEXT"

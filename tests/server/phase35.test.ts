@@ -17,7 +17,7 @@ const { orders } = await import('@/server/orders/repository')
 const { jobs } = await import('@/server/jobs/outbox')
 const { runDueJobs } = await import('@/server/jobs/runner')
 const { getConfig } = await import('@/server/config')
-const { invoicePayload } = await import('@/server/integrations/fgo')
+const { invoicePayload, fgoLineTotal } = await import('@/server/integrations/fgo')
 const { contactPayload, STAGES } = await import('@/server/integrations/ghl')
 const { renderEmail } = await import('@/server/integrations/email/templates')
 const { offersFor } = await import('@/server/orders/upsell')
@@ -137,7 +137,7 @@ describe('discounted orders agree everywhere', () => {
 
     const c = getConfig()
     const lines = invoicePayload(c.fgo!, o).Continut
-    expect(Math.round(lines.reduce((s, l) => s + l.PretTotal * 100, 0))).toBe(expected)
+    expect(Math.round(lines.reduce((s, l) => s + fgoLineTotal(l) * 100, 0))).toBe(expected)
     expect(lines.map((l) => l.Denumire)).toEqual(['NEUROS Calm, 20% la 3 bucăți: -3828.00 lei', 'NEUROS Amber (Unisex pătrat · Negru), NEUROS Amber 2+1 gratis: -315.00 lei'])
     const f = contactPayload(c.ghl!, o, { orders: 1, valueMinor: o.totalMinor }, { consent: false, recoveryUrl: '', unsubscribeUrl: '' }, c.siteUrl).customFields
     expect(f.find((x) => x.key === 'bt_last_order_value')!.field_value).toBe((expected / 100).toFixed(2))

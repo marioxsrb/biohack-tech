@@ -12,7 +12,7 @@ vi.mock('next/server', async (orig) => ({ ...(await orig<typeof import('next/ser
 const { freshDb, person, company, TEST_ENV } = await import('./helpers')
 const { orders } = await import('@/server/orders/repository')
 const { getConfig } = await import('@/server/config')
-const { invoicePayload } = await import('@/server/integrations/fgo')
+const { invoicePayload, fgoLineTotal } = await import('@/server/integrations/fgo')
 const { PRICES_RON } = await import('@/config/prices')
 const { POST: checkout } = await import('@/app/api/checkout/route')
 
@@ -54,7 +54,7 @@ async function buy(lines: L[], method: 'card' | 'transfer' | 'cod' = 'card', for
 /** Server total, Stripe amount, FGO line sum and GHL value must all be the same number of bani. */
 function agreeEverywhere(o: Awaited<ReturnType<typeof buy>>, method: 'card' | 'transfer' | 'cod') {
   const c = getConfig()
-  const fgoSum = Math.round(invoicePayload(c.fgo!, o).Continut.reduce((s, l) => s + l.PretTotal * 100, 0))
+  const fgoSum = Math.round(invoicePayload(c.fgo!, o).Continut.reduce((s, l) => s + fgoLineTotal(l) * 100, 0))
   expect(fgoSum).toBe(o.totalMinor)
   expect(o.items.reduce((s, i) => s + i.lineTotalMinor - i.discountMinor, 0)).toBe(o.totalMinor)
   if (method === 'card') expect([piAmounts.at(-1), currencies.at(-1)]).toEqual([o.totalMinor, 'ron'])

@@ -14,7 +14,7 @@ vi.mock('@/server/rate-limit', async (orig) => ({ ...(await orig<typeof import('
 const { freshDb, person, TEST_ENV } = await import('./helpers')
 const { orders } = await import('@/server/orders/repository')
 const { getConfig } = await import('@/server/config')
-const { invoicePayload } = await import('@/server/integrations/fgo')
+const { invoicePayload, fgoLineTotal } = await import('@/server/integrations/fgo')
 const { priceLines } = await import('@/lib/promotions')
 const { promoCodes } = await import('@/server/promo')
 const svc = await import('@/server/orders/service')
@@ -110,7 +110,7 @@ describe('orders with a code', () => {
     expect(o.promotions.find((p) => p.id === 'cod:VARA10')).toBeTruthy()
     expect(o.items.reduce((s, i) => s + i.lineTotalMinor - i.discountMinor, 0)).toBe(o.totalMinor)
     const lines = invoicePayload(getConfig().fgo!, o).Continut
-    expect(Math.round(lines.reduce((s, l) => s + l.PretTotal * 100, 0))).toBe(o.totalMinor)
+    expect(Math.round(lines.reduce((s, l) => s + fgoLineTotal(l) * 100, 0))).toBe(o.totalMinor)
     expect(lines[0].Denumire).toMatch(/20% la 3 bucăți: -\d+\.\d{2} lei, cod VARA10: -\d+\.\d{2} lei/)
     expect(piAmounts.at(-1)).toBe(o.totalMinor)
   })

@@ -15,7 +15,7 @@ vi.mock('@/server/rate-limit', async (orig) => ({ ...(await orig<typeof import('
 const { freshDb, person, TEST_ENV } = await import('./helpers')
 const { orders } = await import('@/server/orders/repository')
 const { getConfig } = await import('@/server/config')
-const { invoicePayload } = await import('@/server/integrations/fgo')
+const { invoicePayload, fgoLineTotal } = await import('@/server/integrations/fgo')
 const v = await import('@/server/vouchers')
 const svc = await import('@/server/orders/service')
 const { POST: checkout } = await import('@/app/api/checkout/route')
@@ -122,7 +122,7 @@ describe('using a voucher in the checkout', () => {
     expect(o.promoCode).toBe(calm.code)
     expect(o.items.reduce((s, i) => s + i.lineTotalMinor - i.discountMinor, 0)).toBe(o.totalMinor)
     const lines = invoicePayload(getConfig().fgo!, o).Continut
-    expect(Math.round(lines.reduce((s, l) => s + l.PretTotal * 100, 0))).toBe(o.totalMinor)
+    expect(Math.round(lines.reduce((s, l) => s + fgoLineTotal(l) * 100, 0))).toBe(o.totalMinor)
     expect(piAmounts.at(-1)).toBe(o.totalMinor)
     const used = (await v.voucherById(db, calm.id))!
     expect([used.status, used.orderId]).toEqual(['used', o.id])
@@ -140,7 +140,7 @@ describe('using a voucher in the checkout', () => {
     ])
     expect(piAmounts.at(-1)).toBe(57000)
     const lines = invoicePayload(getConfig().fgo!, o).Continut
-    expect(Math.round(lines.reduce((s, l) => s + l.PretTotal * 100, 0))).toBe(57000)
+    expect(Math.round(lines.reduce((s, l) => s + fgoLineTotal(l) * 100, 0))).toBe(57000)
   })
 
   it.each([
@@ -153,7 +153,7 @@ describe('using a voucher in the checkout', () => {
     const o = await order(data.orderNumber)
     expect(o.totalMinor).toBe(total)
     expect(piAmounts.at(-1)).toBe(total)
-    expect(Math.round(invoicePayload(getConfig().fgo!, o).Continut.reduce((s, l) => s + l.PretTotal * 100, 0))).toBe(total)
+    expect(Math.round(invoicePayload(getConfig().fgo!, o).Continut.reduce((s, l) => s + fgoLineTotal(l) * 100, 0))).toBe(total)
   })
 
   it('personal: another address cannot use it, in the order nor in the preview', async () => {
@@ -284,13 +284,36 @@ describe('gifts (rewards): the product at 0 lei, the delivery paid', () => {
     expect([o.shippingMinor, o.totalMinor]).toEqual([2500, 2500])
     expect(piAmounts.at(-1)).toBe(2500)
     const lines = invoicePayload(getConfig().fgo!, o).Continut
-    expect(Math.round(lines.reduce((s, l) => s + l.PretTotal * 100, 0))).toBe(2500)
+    expect(Math.round(lines.reduce((s, l) => s + fgoLineTotal(l) * 100, 0))).toBe(2500)
     expect(lines[0].Denumire).toMatch(/Cadou NEUROS Amber/)
     // If FGO / e-Factura refuse zero-value lines (FGO_GIFT_LINES=discount): full price + its own negative gift line.
     const alt = invoicePayload({ ...getConfig().fgo!, giftLines: 'discount' }, o).Continut
-    expect(alt.map((l) => [l.CodArticol, l.PretTotal])).toEqual([[o.items[0].sku, 315], ['cadou', -315], ['transport', 25]])
-    expect(Math.round(alt.reduce((s, l) => s + l.PretTotal * 100, 0))).toBe(o.totalMinor)
+    expect(alt.map((l) => [l.CodArticol, fgoLineTotal(l)])).toEqual([[o.items[0].sku, 315], ['cadou', -315], ['transport', 25]])
+    // FGO API v7.1: a negative article = positive unit price, negative quantity, classic direction (no PretTotal).
+    expect(alt[1]).toMatchObject({ NrProduse: -1, PretUnitar: 315 })
+    expect(alt[1]).not.toHaveProperty('PretTotal')
+    expect(Math.round(alt.reduce((s, l) => s + fgoLineTotal(l) * 100, 0))).toBe(o.totalMinor)
     expect((await buy([AMBER(1)], g.voucher.code)).data.fields.promoCode).toMatch(/Ai folosit deja/)
+  })
+
+  it.each([
+    ['gift + NEUROS Calm', [AMBER(1), CALM(1)], 638000 + 2500],
+    ['gift + another Amber pair (paid at full price)', [AMBER(2)], 31500 + 2500],
+    ['gift + a PJ buyer', [AMBER(1)], 2500],
+  ] as const)('the invoice of a mixed gift order adds up, VAT per line, delivery once (%s)', async (label, cart, total) => {
+    const g = await v.issueVoucher(db, { email: person.email, productId: 'ochelari-biohack', kind: 'gift', source: 'review', sourceRef: `mix-${label}` })
+    if (!g.ok) throw new Error(g.reason)
+    const pj = label.includes('PJ')
+    const res = await checkout(req('https://biohack-tech.ro/api/checkout', { lines: cart, order: { ...person, ...(pj && { buyerType: 'pj', company: 'Exemplu SRL', cui: 'RO14399840', regCom: 'J12/345/2020' }), paymentMethod: 'transfer' }, acceptedTerms: true, attemptId: `mix-${Math.random()}`, promoCode: g.voucher.code }))
+    const o = await order((await res.json()).orderNumber)
+    expect(o.totalMinor).toBe(total)
+    for (const giftLines of ['zero', 'discount'] as const) {
+      const inv = invoicePayload({ ...getConfig().fgo!, giftLines }, o)
+      expect(Math.round(inv.Continut.reduce((s, l) => s + fgoLineTotal(l) * 100, 0))).toBe(total)
+      expect(inv.Continut.filter((l) => l.CodArticol === 'transport')).toEqual([expect.objectContaining({ PretTotal: 25, NrProduse: 1 })])
+      expect(inv.Continut.every((l) => l.CotaTVA === getConfig().fgo!.vatRate)).toBe(true)
+      if (pj) expect(inv.Client).toMatchObject({ Tip: 'PJ', CodUnic: 'RO14399840' })
+    }
   })
 
   it('a gift Amber pair: free, and an Amber order (normally delivered free) pays the gift delivery', async () => {

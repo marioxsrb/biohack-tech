@@ -21,7 +21,7 @@ const { orders } = await import('@/server/orders/repository')
 const { jobs } = await import('@/server/jobs/outbox')
 const { runDueJobs } = await import('@/server/jobs/runner')
 const { signPayload } = await import('@/server/integrations/stripe')
-const { invoicePayload } = await import('@/server/integrations/fgo')
+const { invoicePayload, fgoLineTotal } = await import('@/server/integrations/fgo')
 const { getConfig } = await import('@/server/config')
 const { ensureStoreSettings } = await import('@/server/store-settings')
 const catalog = await import('@/content/catalog')
@@ -219,7 +219,7 @@ describe('orders with the book: one canonical total for Stripe, transfer, COD, F
     const inv = invoicePayload(getConfig().fgo!, o)
     const transport = inv.Continut.find((l) => l.CodArticol === 'transport')
     expect(transport).toMatchObject({ NrProduse: 1, PretTotal: 12.1 })
-    expect(Math.round(inv.Continut.reduce((s, l) => s + l.PretTotal, 0) * 100)).toBe(o.totalMinor)
+    expect(Math.round(inv.Continut.reduce((s, l) => s + fgoLineTotal(l), 0) * 100)).toBe(o.totalMinor)
   })
 
   it('an order without the book stays exactly as before: free delivery, no transport line', async () => {

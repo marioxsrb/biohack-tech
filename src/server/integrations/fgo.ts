@@ -47,6 +47,9 @@ function lineName(i: Order['items'][number], o: Order) {
   return `${base}, ${parts.join(', ')}`
 }
 
+/** What one invoice line amounts to (reverse direction: PretTotal; classic: PretUnitar × NrProduse), in lei. */
+export const fgoLineTotal = (l: { PretTotal?: number; PretUnitar?: number; NrProduse: number }) => l.PretTotal ?? (l.PretUnitar ?? 0) * l.NrProduse
+
 /** The invoice request, built from the canonical order only. */
 export function invoicePayload(c: FgoConfig, o: Order) {
   const client = billingName(o.customer)
@@ -84,7 +87,9 @@ export function invoicePayload(c: FgoConfig, o: Order) {
       if (c.giftLines === 'discount' && isGiftLine(o, i)) {
         return [
           { Denumire: i.variantName ? `${i.productName} (${i.variantName})` : i.productName, CodArticol: i.sku, UM: c.unit, NrProduse: i.quantity, CotaTVA: c.vatRate, PretTotal: lei(i.lineTotalMinor - i.discountMinor + i.codeDiscountMinor) },
-          { Denumire: `Cadou (recompensă) ${o.promoCode}`, CodArticol: 'cadou', UM: c.unit, NrProduse: 1, CotaTVA: c.vatRate, PretTotal: -lei(i.codeDiscountMinor) },
+          // FGO API v7.1 (Continut[i][PretUnitar], [NrProduse]): a negative article is a POSITIVE unit price with a
+          // NEGATIVE quantity, in the classic direction (no PretTotal).
+          { Denumire: `Cadou (recompensă) ${o.promoCode}`, CodArticol: 'cadou', UM: c.unit, NrProduse: -1, CotaTVA: c.vatRate, PretUnitar: lei(i.codeDiscountMinor) },
         ]
       }
       return [

@@ -96,3 +96,22 @@ describe('choosing a reward', () => {
     expect((await db.query("select product_id from vouchers where kind = 'gift'")).rows).toEqual([{ product_id: 'carte-diana' }])
   })
 })
+
+describe('the CTA links of the approved emails (server/workflows/links.ts)', () => {
+  it('{{voucher_url}} opens the voucher’s product page with the code; {{referral_url}} brings the friend with the code', async () => {
+    const links = await import('@/server/workflows/links')
+    const issued = await v.issueVoucher(db, { email: 'ana@exemplu.ro', productId: 'ochelari-biohack', source: 'landing-amber' })
+    if (!issued.ok) throw new Error('issue')
+    const url = links.voucherUrl('https://biohack-tech.ro', 'ana@exemplu.ro', issued.voucher.code)!
+    const res = await use(new NextRequest(url))
+    expect(res.headers.get('location')).toBe('https://biohack-tech.ro/products/amber')
+    const { referralCodeFor } = await import('@/server/referrals')
+    const code = await referralCodeFor(db, 'ana@exemplu.ro')
+    const { GET: referral } = await import('@/app/api/recomandare/route')
+    const r = await referral(new NextRequest(links.referralUrl('https://biohack-tech.ro', code)))
+    expect(r.headers.get('set-cookie')).toContain(`bt_promo=${code}`)
+    expect((await referral(new NextRequest('https://biohack-tech.ro/api/recomandare?cod=BTRZZZZZZZ'))).headers.get('set-cookie')).toBeNull()
+    expect(links.recommendationUrl('https://biohack-tech.ro', 'brainlink-pro')).toBe('https://biohack-tech.ro/products/focus')
+    expect(links.rewardUrl('https://biohack-tech.ro', 'ana@exemplu.ro')).toMatch(/\/cont\/.+#recompense$/)
+  })
+})
