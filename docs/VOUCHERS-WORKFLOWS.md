@@ -342,3 +342,35 @@ The infrastructure (items 1–4) is GO for a deploy with everything off. Activat
   - 842 tests, 13 on a real Postgres;
   - build, tsc and lint pass;
   - Stripe TEST e2e: 19/19 and 16/16.
+
+## 16. Approved 22.10.2026: gift + book delivery, upsell reporting, staging
+
+- **Gift + book delivery: 25 lei in total per order** (never 25 lei plus the book's 12,10 lei). `lib/shipping.ts` charges the higher fee once. A test places an order with a gift and the book and checks the same 25 lei in:
+  - the order total;
+  - the Stripe amount;
+  - the FGO lines (one transport line, in both gift modes);
+  - the confirmation email ("Livrare: 25 lei").
+- **Upsell reported separately.** The upsell stays linked to its parent order and is never counted as an order. Admin Stats now shows:
+  - "Venit din comenzile inițiale";
+  - "Venit din upsell";
+  - "Venit total net" (each counted once, refunds deducted).
+
+  The dashboard's "Valoare comenzi" card shows the same split.
+- **Review video.** Tested end to end on the real staging storage and on the staging Preview, with synthetic files and orders:
+  - a valid upload;
+  - a wrong type (refused by the app and by the bucket);
+  - over 300 MB (refused by the app, and the bucket limit is enforced);
+  - another address;
+  - no public access;
+  - an expired link;
+  - the admin preview (401 without login, a 10-minute link, audited);
+  - replacement after rejection (the old file deleted);
+  - one video per order.
+
+  The key must be the legacy `service_role` JWT: Storage refuses the new `sb_secret_` keys ("Invalid Compact JWS").
+- **Staging** (see `docs/STAGING.md`): a separate Supabase project, Stripe TEST webhook, its own secrets. On the staging URL:
+  - card e2e 19/19;
+  - vouchers, Amber 2+1, gift and refunds e2e 16/16;
+  - review video 19/19;
+  - upsell 6/6;
+  - admin and fulfillment checked.
