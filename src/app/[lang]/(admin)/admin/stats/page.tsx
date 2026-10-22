@@ -43,8 +43,10 @@ export default async function StatsPage({ searchParams }: PageProps<'/[lang]/adm
     { label: 'Conversie (comenzi / sesiuni)', value: (s) => pct(s.orders, s.sessions) },
     { label: 'Conversie plătită (plătite / sesiuni)', value: (s) => pct(s.paidOrders, s.sessions) },
     { label: 'Lead → comandă', value: (s) => pct(s.orders, s.leads) },
-    { label: 'Venit confirmat', value: (s) => formatLei(s.revenueMinor), note: 'încasat, minus rambursări' },
-    { label: 'Valoare medie comandă', value: (s) => (s.paidOrders ? formatLei(Math.round(s.revenueMinor / s.paidOrders)) : '–') },
+    { label: 'Venit din comenzile inițiale', value: (s) => formatLei(s.initialRevenueMinor), note: 'încasat, minus rambursări' },
+    { label: 'Venit din upsell', value: (s) => formatLei(s.upsellRevenueMinor), note: 'oferta de după plată, legată de comanda inițială (nu e o comandă separată)' },
+    { label: 'Venit total net', value: (s) => formatLei(s.revenueMinor), note: 'inițiale + upsell, fiecare o singură dată, minus rambursări' },
+    { label: 'Valoare medie comandă', value: (s) => (s.paidOrders ? formatLei(Math.round(s.revenueMinor / s.paidOrders)) : '–'), note: 'venit total net / comenzi plătite (upsell inclus)' },
     { label: 'Checkout abandonat', value: (s) => String(s.abandoned) },
     { label: 'Emailuri de recuperare trimise', value: (s) => String(s.recoveryEmails) },
     { label: 'Comenzi recuperate', value: (s) => String(s.recoveredOrders), note: 'comandă după un email de recuperare' },
@@ -149,8 +151,11 @@ export default async function StatsPage({ searchParams }: PageProps<'/[lang]/adm
           ))}
         </ul>
         <p className="mt-3 flex justify-between text-[13px] text-ink">
-          <span>Venit confirmat</span>
+          <span>Venit total net</span>
           <span className="font-medium tabular-nums">{formatLei(s.revenueMinor)}</span>
+        </p>
+        <p className="mt-1 flex justify-between text-[12px] text-muted">
+          <span>inițiale {formatLei(s.initialRevenueMinor)} · upsell {formatLei(s.upsellRevenueMinor)}</span>
         </p>
       </section>
 

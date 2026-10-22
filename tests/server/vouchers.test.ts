@@ -316,6 +316,30 @@ describe('gifts (rewards): the product at 0 lei, the delivery paid', () => {
     }
   })
 
+  it('gift + the book in one order: 25 lei delivery in total (never 25 plus the book fee), the same in Stripe, FGO, the email and the order', async () => {
+    // The book is on sale only with its digital delivery set up (test values).
+    db = await freshDb({ ...BASE, EMAIL_TRANSPORT: 'smtp', BOOK_SALES_ENABLED: 'true', NEUROS_BOOK_PDF_URL: 'https://neuros.ro/api/carte/partener/pdf', NEUROS_BOOK_PDF_SECRET: 'test-book-secret-0123456789abcdef', DIGITAL_LINK_SECRET: 'test-link-secret-0123456789abcdef' })
+    await (await import('@/server/store-settings')).ensureStoreSettings(0)
+    const g = await v.issueVoucher(db, { email: person.email, productId: 'ochelari-biohack', kind: 'gift', source: 'review', sourceRef: 'gift-book' })
+    if (!g.ok) throw new Error(g.reason)
+    const { status, data } = await buy([AMBER(1), { productId: 'carte-diana', quantity: 1 }], g.voucher.code, { method: 'card' })
+    expect(status, JSON.stringify(data)).toBe(200)
+    const o = await order(data.orderNumber)
+    const book = o.items.find((i) => i.productId === 'carte-diana')!
+    expect(o.shippingMinor).toBe(2500)
+    expect(o.totalMinor).toBe(book.lineTotalMinor - book.discountMinor + 2500)
+    expect(piAmounts.at(-1)).toBe(o.totalMinor)
+    for (const giftLines of ['zero', 'discount'] as const) {
+      const inv = invoicePayload({ ...getConfig().fgo!, giftLines }, o).Continut
+      expect(inv.filter((l) => l.CodArticol === 'transport')).toEqual([expect.objectContaining({ PretTotal: 25, NrProduse: 1 })])
+      expect(Math.round(inv.reduce((s, l) => s + fgoLineTotal(l) * 100, 0))).toBe(o.totalMinor)
+    }
+    const { renderEmail } = await import('@/server/integrations/email/templates')
+    const mail = renderEmail('order_confirmed', { ...o, paymentStatus: 'paid' }, { siteUrl: 'https://biohack-tech.ro', bank: null })
+    expect(mail.text).toMatch(/^Livrare: 25 lei$/m)
+    expect(mail.text).not.toMatch(/12,10/)
+  })
+
   it('a gift Amber pair: free, and an Amber order (normally delivered free) pays the gift delivery', async () => {
     const g = await v.issueVoucher(db, { email: person.email, productId: 'ochelari-biohack', kind: 'gift', source: 'vip', sourceRef: person.email })
     if (!g.ok) throw new Error(g.reason)

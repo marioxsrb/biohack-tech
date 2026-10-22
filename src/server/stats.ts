@@ -24,7 +24,12 @@ export type FunnelStats = {
   recoveryLeads: number
   orders: number
   paidOrders: number
+  /** Net confirmed revenue: the initial orders plus their paid upsells, each counted once. */
   revenueMinor: number
+  /** Of it: the initial orders (checkout). */
+  initialRevenueMinor: number
+  /** Of it: the post-purchase upsells (kept with their parent order, never counted as orders). */
+  upsellRevenueMinor: number
   recoveredOrders: number
 }
 
@@ -79,13 +84,15 @@ export async function funnelStats(q: Queryable, f: StatsFilter): Promise<FunnelS
   })
   // Orders: placed checkouts (card orders count once paid; cash on delivery and transfer when placed) that still stand:
   // an expired transfer, a refused parcel, or money that arrived after a cancellation (to refund) are not sales.
-  const orders = await q.query<{ orders: number; paid_orders: number; revenue: number; recovered: number }>(
-    `select count(*) filter (where o.payment_method <> 'card' or o.payment_status in ${PAID} or o.payment_status = 'refunded')::int as orders,
-            count(*) filter (where o.payment_status in ${PAID})::int as paid_orders,
-            coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate) filter (where o.payment_status in ${PAID}), 0)::int as revenue,
-            count(*) filter (where (o.payment_method <> 'card' or o.payment_status in ${PAID})
+  // A paid upsell (it copies its parent's attribution) adds revenue, reported apart, and is never an order of its own.
+  const orders = await q.query<{ orders: number; paid_orders: number; initial: string; upsell: string; recovered: number }>(
+    `select count(*) filter (where o.kind = 'checkout' and (o.payment_method <> 'card' or o.payment_status in ${PAID} or o.payment_status = 'refunded'))::int as orders,
+            count(*) filter (where o.kind = 'checkout' and o.payment_status in ${PAID})::int as paid_orders,
+            coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate) filter (where o.kind = 'checkout' and o.payment_status in ${PAID}), 0)::bigint as initial,
+            coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate) filter (where o.kind = 'upsell' and o.payment_status in ${PAID}), 0)::bigint as upsell,
+            count(*) filter (where o.kind = 'checkout' and (o.payment_method <> 'card' or o.payment_status in ${PAID})
               and (o.attribution->>'entry' = 'recovery' or exists (select 1 from leads r where r.id = o.lead_id and r.recovery_sent > 0 and o.created_at > r.last_recovery_at)))::int as recovered
-     from orders o where o.kind = 'checkout' and o.status not in ('cancelled', 'abandoned') and ${o.sql}`,
+     from orders o where o.kind in ('checkout', 'upsell') and o.status not in ('cancelled', 'abandoned') and ${o.sql}`,
     o.params,
   )
   const vi = visits.rows[0]
@@ -103,7 +110,9 @@ export async function funnelStats(q: Queryable, f: StatsFilter): Promise<FunnelS
     recoveryLeads: le?.recovery_leads ?? 0,
     orders: or?.orders ?? 0,
     paidOrders: or?.paid_orders ?? 0,
-    revenueMinor: or?.revenue ?? 0,
+    revenueMinor: Number(or?.initial ?? 0) + Number(or?.upsell ?? 0),
+    initialRevenueMinor: Number(or?.initial ?? 0),
+    upsellRevenueMinor: Number(or?.upsell ?? 0),
     recoveredOrders: or?.recovered ?? 0,
   }
 }

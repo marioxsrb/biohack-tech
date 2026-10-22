@@ -3,7 +3,8 @@
  * (4,5 MB on Vercel), so the browser uploads it straight to the storage, with a signed upload URL made here for one
  * path only. Supabase Storage (the project's database host), private bucket:
  *   VIDEO_STORAGE_URL     https://<project>.supabase.co
- *   VIDEO_STORAGE_KEY     a service key (server only, never sent to the browser)
+ *   VIDEO_STORAGE_KEY     the project's legacy service_role key (a JWT; server only, never sent to the browser). The
+ *                         newer sb_secret_ keys are refused by Storage here ("Invalid Compact JWS", checked 22.10.2026)
  *   VIDEO_STORAGE_BUCKET  e.g. review-videos (private)
  * Without them uploads are off ('none'); nothing else changes. Videos are never public: the team watches them through
  * a short signed download link, and a video is used in advertising only with its own consent (server/rewards.ts).

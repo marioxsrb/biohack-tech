@@ -108,7 +108,7 @@ async function totals(q: Queryable, p: Pick<Period, 'from' | 'to'>) {
       [p.from, p.to],
     ),
     q.query(`select count(*)::int as leads, count(distinct email)::int as people from leads where created_at >= $1 and created_at < $2`, [p.from, p.to]),
-    q.query(`select count(*) filter (where ${ORDER})::int as orders, coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate),0)::bigint as revenue from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2`, [p.from, p.to]),
+    q.query(`select count(*) filter (where ${ORDER})::int as orders, coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate),0)::bigint as revenue, coalesce(sum((o.total_minor - o.refunded_minor) * o.fx_rate) filter (where o.kind = 'upsell'),0)::bigint as upsell from orders o where ${STANDS} and o.created_at >= $1 and o.created_at < $2`, [p.from, p.to]),
     // Of those, the money actually in (paid) and what is still to collect (transfer awaited, cash on delivery).
     q.query(
       `select count(*) filter (where ${ORDER} and o.payment_status in ('paid', 'partially_refunded'))::int as paid_orders,
@@ -128,6 +128,9 @@ async function totals(q: Queryable, p: Pick<Period, 'from' | 'to'>) {
     people: n(leads.rows[0]?.people),
     orders: orderCount,
     revenueLei: lei(orders.rows[0]?.revenue),
+    /** Of the revenue: the initial orders, and the post-purchase upsells (kept with their parent, counted once). */
+    initialRevenueLei: lei(n(orders.rows[0]?.revenue) - n(orders.rows[0]?.upsell)),
+    upsellRevenueLei: lei(orders.rows[0]?.upsell),
     averageOrderLei: orderCount ? Math.round(lei(orders.rows[0]?.revenue) / orderCount) : 0,
     conversionPct: pct(orderCount, sessions),
     /** Money in (paid orders) vs. still to collect: an unpaid order is never collected revenue. */

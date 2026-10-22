@@ -49,3 +49,21 @@ it('visits are counted on Bucharest days: a range ending tonight (Bucharest) inc
   expect((await dailyTrend(db, { from, to })).find((t) => t.day === today)).toMatchObject({ sessions: 1 })
   expect(await campaignOptions(db, from, to)).toEqual({ sources: ['facebook'], campaigns: ['toamna'] })
 })
+
+it('a paid upsell is revenue reported apart (initial, upsell, net total once), never an order', async () => {
+  const parent = await place('par', 'transfer', [{ productId: 'balance-wave', quantity: 1 }], { utm_source: 'facebook', utm_campaign: 'toamna' })
+  await svc.confirmPayment(parent.id, 'admin')
+  // The child the post-purchase offer creates: card, paid, its parent's attribution.
+  await db.query(
+    `insert into orders select (jsonb_populate_record(null::orders, to_jsonb(o) || jsonb_build_object('id', gen_random_uuid(), 'order_number', o.order_number || '-U', 'attempt_id', 'upsell-par', 'public_token', md5(random()::text), 'idempotency_key', md5(random()::text),
+       'kind', 'upsell', 'parent_order_id', o.id, 'total_minor', 31500, 'refunded_minor', 1500, 'payment_method', 'card', 'payment_status', 'partially_refunded'))).* from orders o where o.id = $1`,
+    [parent.id],
+  )
+  const s = await funnelStats(db, range())
+  expect(s).toMatchObject({ orders: 1, paidOrders: 1, initialRevenueMinor: parent.totalMinor, upsellRevenueMinor: 30000, revenueMinor: parent.totalMinor + 30000 })
+  expect(await funnelStats(db, { ...range(), campaign: 'toamna' })).toMatchObject({ upsellRevenueMinor: 30000 })
+  expect(await funnelStats(db, { ...range(), campaign: 'alta' })).toMatchObject({ upsellRevenueMinor: 0, revenueMinor: 0 })
+  const { buildReport, period } = await import('@/server/report')
+  const t = (await buildReport(db, period('azi'))).totals
+  expect([t.orders, t.initialRevenueLei, t.upsellRevenueLei, t.revenueLei]).toEqual([1, parent.totalMinor / 100, 300, parent.totalMinor / 100 + 300])
+})

@@ -137,7 +137,7 @@ export default async function Dashboard({ searchParams }: PageProps<'/[lang]/adm
       )}
 
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Kpi label="Valoare comenzi" value={L(t.revenueLei)} delta={r.changePct.revenue} hint={`coș mediu ${L(t.averageOrderLei)}`} />
+        <Kpi label="Valoare comenzi" value={L(t.revenueLei)} delta={r.changePct.revenue} hint={`inițiale ${L(t.initialRevenueLei)} · upsell ${L(t.upsellRevenueLei)} · coș mediu ${L(t.averageOrderLei)}`} />
         <Kpi label="Comenzi valide" value={String(t.orders)} delta={r.changePct.orders} hint={`${r.cancelled} anulate · ${r.unpaidCard} card neplătit`} />
         <Kpi label="Vizite (sesiuni)" value={String(t.sessions)} delta={r.changePct.sessions} hint={`${t.views} afișări · conversie ${t.conversionPct ?? 0}%`} />
         <Kpi label="Leaduri" value={String(t.leads)} delta={r.changePct.leads} hint={`${t.people} persoane · ${r.emails.welcomeSignups} din popup`} />
