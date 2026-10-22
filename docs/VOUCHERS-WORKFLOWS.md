@@ -83,8 +83,8 @@ Note for the copy (not changed): landing-amber-03 says "Și mai primești 60 lei
 
 | Decision | Built default | Where |
 |---|---|---|
-| Validity outside the landings (abandoned 7, win-back 14, nudge 14, Crăciun 10, Anul Nou 14, rewards 30 days) | as listed | `VOUCHER_VALIDITY_DAYS` |
-| Delivery fee of a gift order (free delivery otherwise) | 12,10 lei (the book's fee) | `GIFT_SHIPPING_RON` |
+| Validity | **30 days from issue, every source (approved 22.10.2026)**. Note: landing-*-01 says "în următoarele 7 zile" (copy not changed: decision) | `VOUCHER_VALIDITY_DAYS` |
+| Delivery fee of a gift order | **25 lei once per order (approved 22.10.2026)**; gift + book: 25 lei once (not 25 + 12,10: to confirm) | `GIFT_SHIPPING_RON` |
 | A voucher on top of the quantity discount (2 Calm: 10% + 640 lei) | stacks, like today's 10% codes | engine |
 | Referral friend discount: all products, stacking like the 10% codes | 10%, all products | `referralRule` |
 | Same shipping address as the referrer | friend keeps 10%, no reward | `attributeReferral` |
@@ -273,3 +273,42 @@ Results on 21.10.2026 (second pass):
 | 12 | Legal: CAPI without cookie consent; review video advertising consent text | NO-GO until reviewed |
 
 The infrastructure (items 1–4) is GO for a deploy with everything off. Activating vouchers and workflows for customers is NO-GO until items 5–12 are settled.
+
+
+## 14. Finalization 22.10.2026 (branch `release/finalization`)
+
+- **Legal identity.** NEUROS EUROPE S.R.L. is already the operator everywhere it is shown or used:
+  - footer, legal pages, emails, print and checkout read `src/config/company.ts`; production has no override;
+  - Stripe account acct_1PmfBwBd7uu5v7wn is NEUROS EUROPE SRL (live and test);
+  - the FGO issuer is CUI 50323873;
+  - the transfer beneficiary is NEUROS EUROPE S.R.L. at Banca Transilvania.
+
+  No "BIONEUROS" exists in the code, the docs or the 59 emails. New: each order stores the seller's identity when placed (`orders.seller`, migration 033), and `SELLER_HISTORY` dates identities. A future change of operator gets an effective date and never rewrites old orders or their documents. Old orders are not touched.
+- **Vouchers 30 days, gift delivery 25 lei:** see §4.
+- **FGO.** Gift lines are 0 lei by default. `FGO_GIFT_LINES=discount` invoices the product at full price plus its own negative "Cadou (recompensă)" line, in case FGO / e-Factura refuse zero-value lines. Both modes are tested and the total equals what was paid. **Not verified against FGO:** it needs a free test account on testuat.fgo.ro.
+- **GHL sub-account.** `scripts/ghl-wf-setup.mjs` runs as a dry run by default; `--apply` creates only the missing fields and tags. It refuses the shared NEUROS locations. The list is `scripts/ghl-wf-spec.json`, kept equal to the code by a test. Credentials `GHL_WF_TOKEN` and `GHL_WF_LOCATION_ID` don't exist yet: the sub-account was not found or created.
+- **Upsell.** Part of the parent order:
+  - its products join the parent's Post-Purchase sequence;
+  - it never starts a sequence of its own;
+  - its money counts in the dashboard, but not as a second order.
+- **Dashboard.** Fully refunded orders are no longer "comenzi valide".
+- **Admin.**
+  - The AWB can be corrected after shipping, with a reason, a ticked box, history (old and new) and the admin audit.
+  - The login limit is kept in the database (`auth_attempts`), shared across instances and by both logins that accept the admin password.
+  - "Linkul de cont" for a customer can be generated in `/admin/vouchere` (audited).
+- **Meta CAPI and consent.**
+  - The checkout sends the cookie banner's marketing choice, and the order keeps it (`attribution.cookieMarketing`).
+  - Without it, no browser signal is stored for Meta and the Purchase is never sent (job skipped).
+  - Orders placed before this have no stored choice and are not sent either.
+  - `META_CAPI_CONSENT=off` restores the previous behaviour, only after a legal decision.
+  - **Effect after deploy:** fewer server Purchases for visitors who refused or ignored the banner.
+- **Customer pages** (`/cont/<link>`, a signed link per email, 30 days, `ACCOUNT_LINK_SECRET` or `ADMIN_SESSION_SECRET`):
+  - available vouchers, with "Folosește voucherul" (code into the checkout, product page);
+  - voucher history;
+  - choosing a reward, once;
+  - the review video upload (direct to the private storage, one per delivered order, the advertising consent separate and versioned).
+
+  Every item is checked against the address in the signature. **Texts on these pages are new: to approve.** There is no "send me my link" form yet: the link comes in the customer's emails, or from `/admin/vouchere`.
+- **Video storage.** A replaced rejected video is deleted. **Still needed:** the private bucket and `VIDEO_STORAGE_*`.
+- **Contradiction found (copy not changed):** landing-calm-01, landing-focus-01 and landing-amber-01 (body and preheader) say "în următoarele 7 zile", while vouchers now last 30 days. Choose: 7 days for the landing vouchers, or new copy.
+- **Not integrated.** 8 remote branches `cursor/*` (15–20.10.2026: copy rewrites, Calm landing story, cookie banner, Clarity, mobile speed, Meta tracking, Focus price 1.800) are not in main and not merged here (design and copy freeze).
