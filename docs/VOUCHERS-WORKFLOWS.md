@@ -312,3 +312,33 @@ The infrastructure (items 1–4) is GO for a deploy with everything off. Activat
 - **Video storage.** A replaced rejected video is deleted. **Still needed:** the private bucket and `VIDEO_STORAGE_*`.
 - **Contradiction found (copy not changed):** landing-calm-01, landing-focus-01 and landing-amber-01 (body and preheader) say "în următoarele 7 zile", while vouchers now last 30 days. Choose: 7 days for the landing vouchers, or new copy.
 - **Not integrated.** 8 remote branches `cursor/*` (15–20.10.2026: copy rewrites, Calm landing story, cookie banner, Clarity, mobile speed, Meta tracking, Focus price 1.800) are not in main and not merged here (design and copy freeze).
+
+## 15. The five integrations, 22.10.2026 (second half)
+
+- **Email Studio content** (26 emails changed, 33 untouched; backup in `~/biohack-email-studio-backups/<ts>-cta/`):
+  - CTA links now point to `{{voucher_url}}`, the product pages, `/contact-us`, or the personal links `{{review_url}}`, `{{recommendation_url}}`, `{{referral_url}}` and `{{reward_url}}`.
+  - landing-*-01 now says "30 de zile".
+  - The 13 approved landing emails went back to "De aprobat" (re-approval needed).
+  - Still open:
+    - the Black Friday 03–05 CTA goes to `/products` (destination to confirm);
+    - post-purchase-01/02 have no guide link (the guides don't exist);
+    - the post-purchase-01 subject has the plural/book issue.
+- **Links in the store:** `src/server/workflows/links.ts` builds all five personal links. `/api/recomandare` sets the promo cookie for a valid BTR code. ghl-map maps each variable to a `contact.bt_*` field.
+- **FGO.** `FGO_GIFT_LINES=discount` follows spec v7.1: the gift is a negative article with a positive PretUnitar, NrProduse −1 and no PretTotal. The spec requires PretUnitar to be positive, so a 0-lei line is doubtful. The default is still `zero`. Mixed invoices are tested in both modes: gift with Calm, gift with Amber, and PJ. Still not tried against FGO itself.
+- **Video storage.**
+  - Private bucket `biohacktech-reviews` exists in the production Supabase project: 300 MB limit, mp4/mov/webm, no public access.
+  - Vercel has `VIDEO_STORAGE_URL` and `VIDEO_STORAGE_BUCKET`. **Missing: `VIDEO_STORAGE_KEY`** (the service role key, set by a person).
+  - "Trimis" now requires the file to exist in storage, to be a video and to be within the size limit.
+  - Admin watches a review through a 10-minute signed link (`/api/admin/review-video/<id>`, audited).
+- **GHL (existing location `xnf2JtFk46U23NG0lzwC`, no new sub-account).**
+  - Folder "Biohack Tech": BT · W1–W7 moved here.
+  - New subfolder "BT · Email 2026 · 14 workflow-uri (Draft)": E01–E14 as empty drafts (no trigger, no action, nobody enrolled).
+  - 16 contact fields `bt_*` were created, in field folder "BiohackTech Ecommerce".
+  - Tags are created on first use.
+  - The current token can't read or write workflows, fields or tags (401). The script falls back to `GHL_PRIVATE_TOKEN` / `GHL_LOCATION_ID` and refuses the Brain Event location.
+  - **Not built:** the 59 email actions and the triggers (they wait for the approved copy).
+- **Staging.** A `DATABASE_URL` pointing to the production database is refused unless `APP_ENV=production`. The steps for a separate staging database and Stripe TEST keys are in `docs/STAGING.md` (credentials, done by a person).
+- **Checks:**
+  - 842 tests, 13 on a real Postgres;
+  - build, tsc and lint pass;
+  - Stripe TEST e2e: 19/19 and 16/16.
