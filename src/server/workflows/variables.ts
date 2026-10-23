@@ -4,6 +4,7 @@
  * new wording (the guides, the support text for the whole range), it is left to the approved content and flagged.
  */
 import { catalogProduct as getProduct, variantLabel } from '@/content/catalog'
+import { PRODUCT_GUIDES } from '@/config/product-guides'
 import { VOUCHER_VALUE, isVoucherProduct } from '@/config/vouchers'
 
 export type CartLine = { productId: string; variantId?: string | null; quantity: number }
@@ -87,4 +88,18 @@ export function postPurchaseFacts(bought: string[], owned: string[]) {
      */
     subjectNeedsRule: types.some((id) => id === 'carte-diana') || types.length > 1,
   }
+}
+
+/**
+ * {{product_first_steps}} and {{product_usage_tips}}: the guide of each product bought (config/product-guides.ts), in
+ * one text, each product under its name when there are several. Products without a guide are left out.
+ */
+export function productGuides(productIds: string[]) {
+  const ids = [...new Set(productIds)].filter((id) => PRODUCT_GUIDES[id as keyof typeof PRODUCT_GUIDES])
+  const block = (pick: 'firstSteps' | 'usageTips') =>
+    ids.map((id) => {
+      const lines = PRODUCT_GUIDES[id as keyof typeof PRODUCT_GUIDES]![pick].map((l) => `- ${l}`).join('\n')
+      return ids.length > 1 ? `${nameOf(id)}\n${lines}` : lines
+    }).join('\n\n')
+  return { firstSteps: block('firstSteps'), usageTips: block('usageTips') }
 }

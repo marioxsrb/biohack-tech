@@ -4,6 +4,8 @@ import { COMMUNICATIONS_CONSENT_TEXT, COMMUNICATIONS_CONSENT_TEXT_EN, EMAIL_ONLY
 export const WELCOME_CONSENT_TEXT = 'Primești pe email codul de 10% și, ocazional, oferte și noutăți Biohack Tech. Te poți dezabona oricând, din orice email.'
 /** The same consent under the gift boxes (20.10.2026): the code is the gift's, not always 10%. */
 export const WELCOME_GIFT_CONSENT_TEXT = 'Primești pe email codul cadoului tău și, ocazional, oferte și noutăți Biohack Tech. Te poți dezabona oricând, din orice email.'
+/** Under the product popups when they give the product's voucher (POPUP_VOUCHERS, prepared 23.10.2026, off). */
+export const WELCOME_VOUCHER_CONSENT_TEXT = 'Primești pe email voucherul tău și, din când în când, oferte și noutăți Biohack Tech. Te dezabonezi oricând, din orice email.'
 export const WELCOME_CONSENT_TEXT_EN = 'You get the 10% code by email and, now and then, Biohack Tech offers and news. You can unsubscribe at any time, from any email.'
 
 /**
@@ -20,6 +22,7 @@ export const MARKETING_CONSENT_TEXTS = {
   // Since 15.10.2026: the website's 10% popup (email only; AI calls are never implied by it).
   'welcome-2026-10-15': WELCOME_CONSENT_TEXT,
   'welcome-cadou-2026-10-20': WELCOME_GIFT_CONSENT_TEXT,
+  'welcome-voucher-2026-10-23': WELCOME_VOUCHER_CONSENT_TEXT,
   // Since 16.10.2026: the international site's box (email only, no AI calls), in the language the visitor read.
   'email-2026-10-16': EMAIL_ONLY_CONSENT_TEXT,
   'email-en-2026-10-16': EMAIL_ONLY_CONSENT_TEXT_EN,

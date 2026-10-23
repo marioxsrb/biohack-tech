@@ -13,8 +13,7 @@ import { normalizeEmail } from '@/server/vouchers'
 
 export const ACCOUNT_LINK_DAYS = 30
 
-/** The version of the advertising-use consent text on the review upload page (its exact text is in that page). */
-export const AD_CONSENT_VERSION = 'review-video-reclame-2026-10-22'
+export { AD_CONSENT_TEXT, AD_CONSENT_VERSION } from '@/config/review'
 
 const secret = () => process.env.ACCOUNT_LINK_SECRET?.trim() || process.env.ADMIN_SESSION_SECRET?.trim() || ''
 const sign = (payload: string, key: string) => createHmac('sha256', `account:${key}`).update(payload).digest('base64url')
@@ -48,7 +47,7 @@ export function accountEmail(token: string | null | undefined, now = new Date())
 /** The address's delivered orders that can still get a review video (one per order), newest first. */
 export async function reviewableOrders(q: Queryable, email: string) {
   const { rows } = await q.query(
-    `select o.id, o.order_number, o.delivered_at, r.status as review_status,
+    `select o.id, o.order_number, o.delivered_at, r.status as review_status, r.ad_consent, r.ad_consent_withdrawn_at, r.file_deleted_at,
             (select string_agg(i.product_name, ', ' order by i.position) from order_items i where i.order_id = o.id) as products
      from orders o left join video_reviews r on r.order_id = o.id
      where lower(o.email) = $1 and o.kind = 'checkout' and o.status = 'delivered' and o.payment_status in ('paid','partially_refunded') and o.return_status is null
@@ -61,6 +60,9 @@ export async function reviewableOrders(q: Queryable, email: string) {
     deliveredAt: r.delivered_at ? new Date(r.delivered_at as string) : null,
     products: (r.products as string) ?? '',
     reviewStatus: (r.review_status as string | null) ?? null,
+    adConsent: r.ad_consent === true,
+    consentWithdrawn: !!r.ad_consent_withdrawn_at,
+    fileDeleted: !!r.file_deleted_at,
   }))
 }
 

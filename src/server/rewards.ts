@@ -131,7 +131,7 @@ export async function recordVideoReview(q: Queryable, i: { orderId: string; key:
     `insert into video_reviews (id, order_id, email, status, storage_key, content_type, size_bytes, rating, ad_consent, ad_consent_at, ad_consent_version)
      values ($1, $2, $3, 'received', $4, $5, $6, $7, $8, case when $8 then now() else null end, $9)
      on conflict (order_id) do update set status = 'received', storage_key = excluded.storage_key, content_type = excluded.content_type, size_bytes = excluded.size_bytes,
-       rating = excluded.rating, ad_consent = excluded.ad_consent, ad_consent_at = excluded.ad_consent_at, ad_consent_version = excluded.ad_consent_version,
+       rating = excluded.rating, ad_consent = excluded.ad_consent, ad_consent_at = excluded.ad_consent_at, ad_consent_version = excluded.ad_consent_version, ad_consent_withdrawn_at = null,
        submitted_at = now(), reviewed_at = null, reviewed_by = null, reject_reason = null
      where video_reviews.status = 'rejected'
      returning id`,
@@ -142,8 +142,9 @@ export async function recordVideoReview(q: Queryable, i: { orderId: string; key:
 }
 
 /**
- * A person moves a review: in_review, approved (the reward becomes available: once per order, whatever the rating),
- * or rejected (with a reason; the customer may send another). An approved review is final.
+ * A person moves a review: in_review, approved, or rejected (with a reason; the customer may send another). An
+ * approved review is final. The reward comes with the approval only when the customer's advertising licence stands
+ * at that moment (the condition stated before the upload); it never depends on the rating or on what the video says.
  */
 export async function reviewVideo(q: Queryable, id: string, to: 'in_review' | 'approved' | 'rejected', actor: string, reason?: string) {
   const { rows } = await q.query('select * from video_reviews where id = $1 for update', [id])
@@ -155,13 +156,44 @@ export async function reviewVideo(q: Queryable, id: string, to: 'in_review' | 'a
     if (!o.rows.length) return { changed: false, reward: null, reason: 'order_not_standing' as const }
   }
   await q.query('update video_reviews set status = $2, reviewed_at = now(), reviewed_by = $3, reject_reason = $4 where id = $1', [id, to, actor, to === 'rejected' ? (reason ?? '').slice(0, 300) : null])
-  const reward = to === 'approved' ? (await grantReward(q, { email: r.email as string, source: 'review', sourceRef: r.order_id as string })).reward : null
-  return { changed: true, reward }
+  const eligible = to === 'approved' && r.ad_consent === true
+  const reward = eligible ? (await grantReward(q, { email: r.email as string, source: 'review', sourceRef: r.order_id as string })).reward : null
+  return { changed: true, reward, ...(to === 'approved' && !eligible ? { reason: 'no_consent' as const } : {}) }
 }
 
-/** The customer withdraws (or gives) the consent for advertising use, at any time; the review itself stays. */
-export async function setAdConsent(q: Queryable, orderId: string, consent: boolean, version = 'v1') {
-  await q.query('update video_reviews set ad_consent = $2, ad_consent_at = now(), ad_consent_version = $3 where order_id = $1', [orderId, consent, consent ? version : null])
+/**
+ * The customer gives or withdraws the advertising licence. Giving it is possible until the review is decided (so a
+ * forgotten tick can still make it eligible) and records the text version and the moment; withdrawing is possible at
+ * any time, is recorded, and takes the video out of every ad and the site. A reward already given stays.
+ */
+export async function setAdConsent(q: Queryable, orderId: string, consent: boolean, version: string) {
+  const { rows } = consent
+    ? await q.query(
+        `update video_reviews set ad_consent = true, ad_consent_at = now(), ad_consent_version = $2, ad_consent_withdrawn_at = null
+         where order_id = $1 and ad_consent = false and status in ('received', 'in_review') and file_deleted_at is null returning id`,
+        [orderId, version],
+      )
+    : await q.query('update video_reviews set ad_consent = false, ad_consent_withdrawn_at = now() where order_id = $1 and ad_consent = true returning id', [orderId])
+  return rows.length > 0
+}
+
+/** Whether the team may use this video in ads, on the site or on social media right now. */
+export const usableInAds = (r: { ad_consent?: unknown; file_deleted_at?: unknown; status?: unknown }) => r.ad_consent === true && !r.file_deleted_at && r.status === 'approved'
+
+/**
+ * Deletes the file from the storage at the customer's request (or after a withdrawal); the record stays, without the
+ * licence, so the order shows what happened.
+ */
+export async function deleteVideoFile(q: Queryable, storage: VideoStorage, id: string) {
+  const { rows } = await q.query<{ storage_key: string | null }>('select storage_key from video_reviews where id = $1 and file_deleted_at is null for update', [id])
+  if (!rows[0]) return false
+  if (rows[0].storage_key && !(await storage.remove(rows[0].storage_key))) return false
+  await q.query(
+    `update video_reviews set file_deleted_at = now(), storage_key = null,
+       ad_consent_withdrawn_at = case when ad_consent then now() else ad_consent_withdrawn_at end, ad_consent = false where id = $1`,
+    [id],
+  )
+  return true
 }
 
 export async function listVideoReviews(q: Queryable, limit = 200) {

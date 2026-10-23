@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import { Close } from '@/components/ui/icons'
 import { useLocale } from '@/i18n/LocaleProvider'
-import { WELCOME_CONSENT_TEXT, WELCOME_CONSENT_TEXT_EN, WELCOME_GIFT_CONSENT_TEXT } from '@/lib/consent/marketing'
+import { WELCOME_CONSENT_TEXT, WELCOME_CONSENT_TEXT_EN, WELCOME_GIFT_CONSENT_TEXT, WELCOME_VOUCHER_CONSENT_TEXT } from '@/lib/consent/marketing'
 import { getProduct } from '@/content/catalog'
 import { AmberGate } from './AmberGate'
 import { FocusGate } from './FocusGate'
@@ -61,6 +61,33 @@ const COPY = {
   },
 }
 
+/**
+ * The product popups when they give the product's voucher (POPUP_VOUCHERS, prepared 23.10.2026, off until approved):
+ * Romanian site only, on the NEUROS Calm, Focus and Amber pages. The amounts are those of config/vouchers.ts.
+ */
+const VOUCHER_COPY: Record<'balance-wave' | 'brainlink-pro' | 'ochelari-biohack', { badge: string; title: string; lead: string; done: string }> = {
+  'balance-wave': {
+    badge: '640 lei',
+    title: 'Voucher de 640 lei pentru NEUROS Calm',
+    lead: 'Lasă-ne adresa de email. Îți trimitem voucherul imediat. Îl folosești la NEUROS Calm în următoarele 30 de zile.',
+    done: 'Gata! Voucherul de 640 lei e pe email. Îl folosești la NEUROS Calm în următoarele 30 de zile.',
+  },
+  'brainlink-pro': {
+    badge: '325 lei',
+    title: 'Voucher de 325 lei pentru NEUROS Focus',
+    lead: 'Lasă-ne adresa de email. Îți trimitem voucherul imediat. Îl folosești la NEUROS Focus în următoarele 30 de zile.',
+    done: 'Gata! Voucherul de 325 lei e pe email. Îl folosești la NEUROS Focus în următoarele 30 de zile.',
+  },
+  'ochelari-biohack': {
+    badge: '30 lei',
+    title: '30 lei reducere la fiecare pereche Amber',
+    lead: 'Lasă-ne adresa de email. Îți trimitem voucherul imediat. Primești 30 lei la fiecare pereche plătită, peste oferta 2+1, în următoarele 30 de zile.',
+    done: 'Gata! Voucherul Amber e pe email. Primești 30 lei la fiecare pereche plătită, în următoarele 30 de zile.',
+  },
+}
+const VOUCHER_ALREADY = 'Voucherul e deja trimis pe această adresă. Caută emailul de la Biohack Tech, și în Promoții sau Spam.'
+const VOUCHER_FALLBACK = 'Gata! Ți-am trimis pe email codul de 10%. Voucherul e pentru prima comandă a produsului, iar codul merge la orice produs.'
+
 const read = (k: string) => {
   try {
     return localStorage.getItem(k)
@@ -87,6 +114,8 @@ export function WelcomePopup() {
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [state, setState] = useState<'idle' | 'busy' | 'done' | 'already' | 'error'>('idle')
+  // The server's answer: the voucher was given, or (already bought the product) the 10% code instead.
+  const [gotVoucher, setGotVoucher] = useState(true)
   const [error, setError] = useState('')
   const hiddenHere = HIDDEN.test(pathname)
   // NEUROS Amber's pages (also amber.<domain>, whose "/" is the product page): the drag-the-bar scene comes first.
@@ -105,6 +134,7 @@ export function WelcomePopup() {
   const context = amber ? 'ochelari-biohack' : calm ? 'balance-wave' : focus ? 'brainlink-pro' : null
   const contextProduct = context ? getProduct(context, locale) : null
   const photo = getProduct(context ?? 'brainlink-pro', locale)!.lifestyle
+  const voucher = context && locale === 'ro' && !gift && window.__BT_STORE__?.popupVouchers === true ? VOUCHER_COPY[context] : null
 
   useEffect(() => {
     if (hiddenHere || window.__BT_STORE__?.welcomePopup === false) return
@@ -170,6 +200,7 @@ export function WelcomePopup() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.message ?? t.failed)
+      setGotVoucher(data.voucher === true)
       setState(data.already ? 'already' : 'done')
       write(STATE_KEY, 'sent')
     } catch (err) {
@@ -214,7 +245,7 @@ export function WelcomePopup() {
           <Image src={photo.src} alt="" fill sizes="(max-width: 640px) 100vw, 360px" className="object-cover" />
           <div className="absolute inset-0 bg-gradient-to-t from-[rgb(8_17_19/0.75)] via-transparent to-transparent sm:bg-gradient-to-r sm:from-transparent sm:to-[rgb(8_17_19/0.15)]" />
           <span className="absolute bottom-4 left-4 rounded-full bg-red-dark px-4 py-2 text-[18px] font-extrabold tracking-[0.04em] text-white uppercase sm:top-4 sm:bottom-auto">
-            {gift ? gift.badge : t.badge}
+            {gift ? gift.badge : voucher ? voucher.badge : t.badge}
           </span>
         </div>
         <div className="flex flex-col justify-center p-9 max-sm:p-5">
@@ -223,18 +254,18 @@ export function WelcomePopup() {
           </button>
           <p className="text-[13px] font-semibold tracking-[0.12em] text-cyan-700 uppercase">{t.kicker}</p>
           <p id="welcome-title" className="mt-2 text-[42px] leading-[1.02] font-semibold tracking-[-0.035em] text-ink max-sm:text-[30px]">
-            {gift ? `${gift.title} la prima comandă` : contextProduct && locale === 'ro' ? `10% reducere la ${contextProduct.name}` : t.title}
+            {gift ? `${gift.title} la prima comandă` : voucher ? voucher.title : contextProduct && locale === 'ro' ? `10% reducere la ${contextProduct.name}` : t.title}
           </p>
           {state === 'done' || state === 'already' ? (
             <div role="status" className="mt-4">
-              <p className="text-[16px] leading-snug text-text">{state === 'already' ? (gift ? 'Pe această adresă am trimis deja un cod de reducere. Caută emailul de la Biohack Tech (și în Promoții sau Spam).' : t.already) : gift ? `Gata! Ți-am trimis codul pentru ${gift.title} pe email. Dacă nu îl vezi în câteva minute, uită-te și în Spam sau Promoții.` : t.done}</p>
+              <p className="text-[16px] leading-snug text-text">{voucher ? (state === 'already' ? VOUCHER_ALREADY : gotVoucher ? voucher.done : VOUCHER_FALLBACK) : state === 'already' ? (gift ? 'Pe această adresă am trimis deja un cod de reducere. Caută emailul de la Biohack Tech (și în Promoții sau Spam).' : t.already) : gift ? `Gata! Ți-am trimis codul pentru ${gift.title} pe email. Dacă nu îl vezi în câteva minute, uită-te și în Spam sau Promoții.` : t.done}</p>
               <button type="button" onClick={close} className="cta mt-5 w-full">
                 {t.continue}
               </button>
             </div>
           ) : (
             <form onSubmit={submit} noValidate className="mt-3">
-              <p className="text-[16px] leading-snug text-text">{gift ? `Lasă-ne adresa de email și îți trimitem codul imediat: ${gift.detail}. Se adaugă peste ofertele din coș.` : contextProduct && locale === 'ro' ? `Lasă-ne adresa de email și îți trimitem codul imediat. Îl folosești la ${contextProduct.name} (și la orice alt produs), peste ofertele din coș.` : t.lead}</p>
+              <p className="text-[16px] leading-snug text-text">{voucher ? voucher.lead : gift ? `Lasă-ne adresa de email și îți trimitem codul imediat: ${gift.detail}. Se adaugă peste ofertele din coș.` : contextProduct && locale === 'ro' ? `Lasă-ne adresa de email și îți trimitem codul imediat. Îl folosești la ${contextProduct.name} (și la orice alt produs), peste ofertele din coș.` : t.lead}</p>
               <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden className="hidden" />
               <label className="sr-only" htmlFor="welcome-email">
                 {t.placeholder}
@@ -257,14 +288,14 @@ export function WelcomePopup() {
                 </p>
               )}
               <button type="submit" disabled={state === 'busy'} className="cta mt-3 w-full">
-                {state === 'busy' ? t.sending : t.send}
+                {state === 'busy' ? t.sending : voucher ? 'Trimite-mi voucherul' : t.send}
               </button>
               <p className="mt-2 text-center text-[12.5px] text-muted">{t.spamHint}</p>
               <button type="button" onClick={close} className="mt-2 w-full py-2 text-[14px] text-muted underline underline-offset-4 hover:text-ink">
                 {t.noThanks}
               </button>
               <p className="mt-2 text-[11.5px] leading-snug text-faint">
-                {locale === 'en' ? WELCOME_CONSENT_TEXT_EN : gift ? WELCOME_GIFT_CONSENT_TEXT : WELCOME_CONSENT_TEXT}{' '}
+                {locale === 'en' ? WELCOME_CONSENT_TEXT_EN : gift ? WELCOME_GIFT_CONSENT_TEXT : voucher ? WELCOME_VOUCHER_CONSENT_TEXT : WELCOME_CONSENT_TEXT}{' '}
                 <Link href="/privacy-policy" target="_blank" className="underline underline-offset-2 hover:text-ink">
                   {t.privacy}
                 </Link>

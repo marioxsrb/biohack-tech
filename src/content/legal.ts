@@ -7,7 +7,10 @@
  * Text blocks: a paragraph (links as [text](/path)), a list, or a table.
  */
 import { company, companyLine } from '@/config/company'
+import { AD_CONSENT_TEXT } from '@/config/review'
 import { site, terms } from '@/config/site'
+import { GIFT_SHIPPING_RON, VOUCHER_VALIDITY_DAYS, VOUCHER_VALUE } from '@/config/vouchers'
+import { formatLei } from '@/lib/money'
 import { COMMUNICATIONS_CONSENT_TEXT } from '@/lib/consent/communications'
 import { CONSENT_MAX_AGE_DAYS } from '@/lib/consent/cookies'
 import { configuredVendors } from '@/lib/consent/vendors'
@@ -17,7 +20,7 @@ export type LegalBlock = string | { list: string[] } | { table: { head: string[]
 export type LegalSection = { heading: string; id?: string; body: LegalBlock[] }
 export type LegalPage = { slug: string; title: string; shortTitle: string; description: string; updated: string; sections: LegalSection[] }
 
-const UPDATED = '21 octombrie 2026'
+const UPDATED = '23 octombrie 2026'
 const contactLine = `Scrie-ne la ${site.email} sau sună la ${site.phone}. Răspundem ${terms.responseTime}.`
 
 const identity = (): LegalSection => ({
@@ -122,6 +125,23 @@ export const legalPages: LegalPage[] = [
         ],
       },
       {
+        heading: 'Vouchere, cadouri și recompense',
+        id: 'vouchere',
+        body: [
+          {
+            list: [
+              `Voucherele personale: ${formatLei(VOUCHER_VALUE['balance-wave'])} pentru NEUROS Calm, ${formatLei(VOUCHER_VALUE['brainlink-pro'])} pentru NEUROS Focus și ${formatLei(VOUCHER_VALUE['ochelari-biohack'])} pentru fiecare pereche plătită de ochelari Amber.`,
+              `Un voucher este valabil ${VOUCHER_VALIDITY_DAYS.admin} de zile de la emitere. Îl folosești o singură dată, la produsul pentru care a fost emis, cu adresa de email căreia i-a fost trimis.`,
+              'Voucherul se introduce în câmpul pentru cod, la finalizarea comenzii. Valoarea lui se scade din prețul produsului. Restul nefolosit nu se transformă în bani.',
+              'Dacă o comandă plătită cu voucher este anulată sau rambursată integral, voucherul redevine disponibil până la data lui de expirare.',
+              `Un cadou înseamnă produsul ales, gratuit. Plătești doar transportul, ${formatLei(GIFT_SHIPPING_RON)} pe comandă, oricâte cadouri și produse ar fi în ea.`,
+              'Recompensele pentru review video, recomandări și statutul de client VIP se aleg din contul tău, din linkul primit pe email.',
+            ],
+          },
+          'Condițiile pentru review-ul video sunt în pagina [Condițiile review-ului video](/conditii-review-video).',
+        ],
+      },
+      {
         heading: 'Date personale',
         body: ['Folosim datele tale ca să procesăm, să facturăm și să livrăm comanda. Detaliile sunt în [Politica de confidențialitate](/privacy-policy) și în [Politica de cookies](/politica-cookies).'],
       },
@@ -164,7 +184,10 @@ export const legalPages: LegalPage[] = [
                 ['Te sună asistentul nostru AI despre produsul ales, dacă nu ai finalizat comanda', 'Telefon, prenume, produsul ales, rezultatul apelului', 'Consimțământul tău separat pentru apeluri, dat prin bifă (lit. a)'],
                 ['Înregistrăm audio și analizăm apelurile asistentului AI, ca să verificăm calitatea serviciilor și să putem dovedi ce s-a convenit (de exemplu refuzul de a mai fi contactat)', 'Vocea ta, transcriptul conversației, numărul de telefon, data și durata apelului', 'Interesul nostru legitim de a verifica și îmbunătăți calitatea apelurilor și de a dovedi ce s-a convenit (lit. f); te anunțăm la începutul apelului și te poți opune oricând'],
                 ['Răspundem la întrebări, reclamații și cereri de retragere', 'Ce ne scrii și datele comenzii', 'Contractul și obligația legală'],
-                ['Statistici și reclame, doar dacă accepți', 'Date despre folosirea site-ului, fără date de contact', 'Consimțământul tău (lit. a)'],
+                ['Statistici și reclame, doar dacă accepți cookie-urile de analiză sau de marketing', 'Date despre folosirea site-ului. Detalii la secțiunea Reclame Meta', 'Consimțământul tău (lit. a)'],
+                ['Măsurăm comenzile venite din reclamele Meta, doar dacă ai acceptat cookie-urile de marketing', 'Emailul și telefonul în formă criptată (hash), adresa IP, browserul, identificatorii _fbp și _fbc, numărul comenzii, produsele și valoarea ei', 'Consimțământul tău (lit. a)'],
+                ['Emitem și verificăm voucherele, cadourile și recompensele', 'Email, codul voucherului, produsul, valoarea, data emiterii, a folosirii și a expirării, comanda în care l-ai folosit', 'Contractul (lit. b) și interesul legitim de a preveni folosirea dublă (lit. f)'],
+                ['Primim review-ul video și îl folosim în materialele Biohack Tech, doar cu acordul tău', 'Video-ul, imaginea și vocea ta, nota opțională, comanda, momentul și versiunea acordului', 'Acordul tău de utilizare, dat prin bifă separată (lit. a și b); îl poți retrage oricând'],
               ],
             },
           },
@@ -207,6 +230,25 @@ export const legalPages: LegalPage[] = [
         ],
       },
       {
+        heading: 'Reclame Meta',
+        id: 'meta',
+        body: [
+          'Folosim Meta Pixel și Conversions API ca să știm ce reclame Biohack Tech aduc comenzi. Le pornim doar dacă accepți cookie-urile de marketing. Fără acest acord, Meta primește zero date de la noi.',
+          'Cu acordul tău, Meta primește paginile vizitate, produsele văzute, adăugările în coș, începerea comenzii și comanda plătită. La comanda plătită trimitem și emailul și telefonul, criptate ireversibil (hash SHA-256), adresa IP, browserul și identificatorii _fbp și _fbc. Așa Meta leagă comanda de reclamă și o numără o singură dată.',
+          'Meta Platforms Ireland Ltd. primește aceste date ca operator asociat pentru măsurarea reclamelor. Îți poți retrage acordul oricând din setările de cookie-uri, din subsolul site-ului.',
+        ],
+      },
+      {
+        heading: 'Review video',
+        id: 'review-video',
+        body: [
+          'Când trimiți un review video, îl păstrăm într-un spațiu de stocare privat. Îl vede doar echipa Biohack Tech, prin linkuri temporare.',
+          'Folosim video-ul pe site, pe rețelele sociale și în reclame doar dacă ai bifat acordul separat. Păstrăm textul acordului, versiunea lui și momentul în care l-ai dat.',
+          'Îți poți retrage acordul oricând, din contul tău sau scriindu-ne. Scoatem video-ul din materialele noastre în cel mult 7 zile lucrătoare. Dacă ne ceri, ștergem și fișierul.',
+          'Toate condițiile sunt în pagina [Condițiile review-ului video](/conditii-review-video).',
+        ],
+      },
+      {
         heading: 'Cine mai primește datele',
         body: [
           'Fiecare furnizor primește doar datele necesare pentru rolul lui:',
@@ -217,11 +259,12 @@ export const legalPages: LegalPage[] = [
               'GoHighLevel (platforma LeadConnector): evidența clienților și trimiterea emailurilor.',
               'ElevenLabs (vocea, conversația, înregistrarea și transcriptul apelurilor asistentului AI) și Twilio (rețeaua telefonică), doar dacă ai acceptat apelurile. Înregistrarea, transcriptul și analiza apelului sunt păstrate de ElevenLabs 30 de zile, apoi șterse automat.',
               'Firma de curierat: livrarea coletului.',
-              'Furnizorul de găzduire al site-ului și al bazei de date.',
+              'Meta (Meta Platforms Ireland Ltd.): măsurarea reclamelor, doar cu acordul pentru cookie-urile de marketing. Primește și review-urile video folosite în reclame, doar cu acordul tău de utilizare.',
+              'Furnizorul de găzduire al site-ului, al bazei de date și al spațiului de stocare pentru review-urile video (Vercel, Supabase).',
               'Autorități, doar când legea ne obligă.',
             ],
           },
-          'Stripe, GoHighLevel, ElevenLabs și Twilio pot prelucra date și în afara Spațiului Economic European. În acest caz, transferul se face doar cu garanțiile cerute de GDPR (art. 44-46).',
+          'Stripe, GoHighLevel, ElevenLabs, Twilio și Meta pot prelucra date și în afara Spațiului Economic European. În acest caz, transferul se face doar cu garanțiile cerute de GDPR (art. 44-46).',
         ],
       },
       {
@@ -232,6 +275,8 @@ export const legalPages: LegalPage[] = [
               'Comenzile și facturile: cât cer legile contabile și fiscale.',
               'Identificatorii pseudonimizați folosiți pentru prevenirea fraudei (amprenta adresei IP și identificatorul cookie-ului coșului): 90 de zile de la comandă, apoi se șterg automat.',
               'Acordul pentru marketing și dezabonarea: cât timp primești emailuri și apoi cât ne pot fi cerute ca dovadă.',
+              'Voucherele și recompensele: cât timp păstrăm comanda de care țin. Un voucher nefolosit rămâne în evidență după expirare, ca dovadă.',
+              'Review-ul video: cât timp îl folosim cu acordul tău. Dovada acordului și a retragerii: cât ne poate fi cerută. Fișierul îl ștergem la cerere, în cel mult 30 de zile.',
               'Mesajele și cererile tale: cât durează rezolvarea și termenul în care ne pot fi cerute ca dovadă.',
               'Datele din pasul de contact al unei comenzi netrimise (și cele din formularul de preț de pe acces.biohack-tech.ro, folosit până la 20 octombrie 2026): cel mult 12 luni de la ultima ta activitate, apoi le ștergem automat. Dacă plasezi o comandă, rămân legate de comandă.',
               'Acordul pentru apeluri și refuzul lui: cât timp ne pot fi cerute ca dovadă. Rezultatele apelurilor: împreună cu solicitarea de care țin. Înregistrarea audio, transcriptul și analiza unui apel: 30 de zile, la ElevenLabs, apoi se șterg automat.',
@@ -495,6 +540,101 @@ export const legalPages: LegalPage[] = [
       {
         heading: 'Rambursări',
         body: ['Returnăm banii pe aceeași cale prin care ai plătit: pe card sau în contul din care ai făcut transferul. Pentru o comandă plătită ramburs, prin transfer bancar, în contul pe care ni-l indici.'],
+      },
+      contact,
+    ],
+  },
+  {
+    slug: 'conditii-review-video',
+    title: 'Condițiile review-ului video',
+    shortTitle: 'Review video',
+    description: 'Cum trimiți un review video Biohack Tech, cum primești recompensa și cum folosim video-ul, cu acordul tău.',
+    updated: UPDATED,
+    sections: [
+      {
+        heading: 'Pe scurt',
+        body: [
+          {
+            list: [
+              'Trimiți un video scurt despre produsul primit, din contul tău.',
+              'Bifezi acordul de utilizare. Așa putem folosi video-ul pe site, pe rețelele sociale și în reclame.',
+              'Verificăm video-ul și primești recompensa în contul tău.',
+              'Recompensa este aceeași, oricare ar fi părerea ta.',
+              'Acordul îl poți retrage oricând.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Cine folosește video-ul',
+        body: [`Video-ul îl folosește ${company.legalName ?? 'operatorul magazinului'}, pentru magazinul Biohack Tech. Datele firmei sunt în [Termeni și condiții](/terms-of-service).`],
+      },
+      {
+        heading: 'Recompensa',
+        id: 'recompensa',
+        body: [
+          {
+            list: [
+              'Primești o recompensă pentru fiecare comandă livrată și plătită, pentru un singur video.',
+              'Recompensa vine împreună cu acordul de utilizare. Un video trimis fără acord rămâne privat, doar pentru echipa noastră, și este fără recompensă.',
+              'Poți da acordul și după trimitere, din contul tău, până când verificăm video-ul.',
+              'Recompensa este aceeași pentru orice notă și orice părere, pozitivă sau critică. Ne interesează experiența ta reală.',
+              'Verificăm doar că video-ul este al tău, arată produsul primit și respectă regulile de mai jos. Dacă îl respingem, îți spunem motivul și poți trimite altul.',
+              'Recompensa o alegi din contul tău: un cadou, la care plătești doar transportul.',
+              'Dacă retragi acordul după ce ai primit recompensa, recompensa rămâne a ta.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Acordul de utilizare',
+        id: 'acord',
+        body: [
+          `Bifa de pe pagina de încărcare spune: „${AD_CONSENT_TEXT}” Bifa este separată și nebifată dinainte.`,
+          'Prin acord ne permiți, gratuit și neexclusiv, să folosim video-ul, imaginea și vocea ta din el:',
+          {
+            list: [
+              'pe site-urile Biohack Tech (biohack-tech.ro și biohack-tech.net);',
+              'pe paginile Biohack Tech din rețelele sociale (de exemplu Facebook, Instagram, TikTok, YouTube);',
+              'în reclame plătite pentru produsele Biohack Tech, pe aceste rețele și pe Google.',
+            ],
+          },
+          'Putem scurta video-ul, îl putem încadra în alt format și îi putem adăuga subtitrări, logo sau textul reclamei. Păstrăm sensul a ce ai spus.',
+          'Folosim cel mult prenumele tău, dacă îl spui în video. Restul datelor tale rămân private.',
+          'Acordul este valabil până îl retragi. Păstrăm textul acordului, versiunea lui și momentul în care l-ai dat.',
+          'În reclame menționăm că ai primit o recompensă pentru review, acolo unde legea o cere.',
+        ],
+      },
+      {
+        heading: 'Ce poate conține video-ul',
+        body: [
+          {
+            list: [
+              'Experiența ta reală cu produsul cumpărat.',
+              'Doar persoane care au fost de acord să apară. Fără copii.',
+              'Fără date personale ale altora, fără muzică protejată și fără promisiuni medicale.',
+              'Format MP4, MOV sau WebM, cel mult 300 MB.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Retragerea acordului',
+        id: 'retragere',
+        body: [
+          'Îți poți retrage acordul oricând, gratuit: din contul tău, cu butonul „Retrag acordul”, sau scriindu-ne la ' + site.email + '.',
+          'După retragere folosim video-ul în zero materiale noi. Îl scoatem de pe site, de pe paginile noastre și din reclamele active în cel mult 7 zile lucrătoare.',
+          'Distribuirile făcute de alte persoane și copiile salvate de ele sunt în afara controlului nostru. Le putem cere platformei eliminarea, dacă ne ceri.',
+          'Retragerea privește folosirile viitoare. Ce s-a publicat înainte a fost legal, cu acordul tău.',
+        ],
+      },
+      {
+        heading: 'Păstrarea și ștergerea video-ului',
+        body: [
+          'Video-ul stă într-un spațiu de stocare privat. Îl vede doar echipa Biohack Tech, prin linkuri temporare. Fiecare vizualizare din administrare este înregistrată.',
+          'Dacă ne ceri ștergerea, ștergem fișierul în cel mult 30 de zile și îți confirmăm pe email. Păstrăm doar dovada acordului și a retragerii.',
+          'Detalii despre date în [Politica de confidențialitate, Review video](/privacy-policy#review-video).',
+        ],
       },
       contact,
     ],

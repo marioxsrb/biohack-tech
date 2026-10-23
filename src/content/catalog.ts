@@ -423,6 +423,8 @@ export type CatalogOverrides = {
   /** Products waiting for release that the server released (the book, once its PDF can be delivered). */
   released?: string[]
   welcomePopup?: boolean
+  /** The product popups give the product's voucher (POPUP_VOUCHERS on and the GHL sub-account configured). */
+  popupVouchers?: boolean
   assistant?: boolean
   chatSound?: string
   fx?: Partial<Rates> | null

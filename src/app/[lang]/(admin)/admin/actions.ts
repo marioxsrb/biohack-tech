@@ -25,7 +25,8 @@ import { getConfig } from '@/server/config'
 import { CODE_RE, normalizeCode, promoCodes } from '@/server/promo'
 import { issueVoucher, restoreVoucher, revokeVoucher, VOUCHER_CODE_RE } from '@/server/vouchers'
 import { REFERRAL_CODE_RE } from '@/server/referrals'
-import { reviewVideo } from '@/server/rewards'
+import { deleteVideoFile, reviewVideo } from '@/server/rewards'
+import { videoStorage } from '@/server/integrations/video-storage'
 import { accountToken } from '@/server/account'
 import { isVoucherProduct } from '@/config/vouchers'
 import { products } from '@/content/catalog'
@@ -367,7 +368,19 @@ export async function reviewVideoAction(f: FormData) {
   const r = await db.tx((t) => reviewVideo(t, id, to as 'approved' | 'rejected' | 'in_review', adminActor(), text(f, 'reason', 300)))
   if (r.changed) await audit(db, adminActor(), 'video_review.' + to, { id, reward: r.reward?.id ?? null })
   revalidatePath('/admin/vouchere')
-  redirectWith('/admin/vouchere', r.changed ? 'Review actualizat.' : 'Nimic de schimbat.')
+  redirectWith('/admin/vouchere', !r.changed ? 'Nimic de schimbat.' : r.reason === 'no_consent' ? 'Review aprobat fără recompensă: clientul nu a dat acordul pentru reclame.' : 'Review actualizat.')
+}
+
+/** Deletes a review video's file from the storage (a customer's request, or after a withdrawn licence). Audited. */
+export async function deleteReviewVideoAction(f: FormData) {
+  await guard()
+  const id = text(f, 'id', 64)
+  if (!UUID.test(id)) redirectWith('/admin/vouchere', 'Review necunoscut.')
+  const db = await getDb()
+  const ok = await db.tx((t) => deleteVideoFile(t, videoStorage(), id))
+  if (ok) await audit(db, adminActor(), 'video_review.file_deleted', { id })
+  revalidatePath('/admin/vouchere')
+  redirectWith('/admin/vouchere', ok ? 'Fișierul video a fost șters din storage.' : 'Fișierul nu a putut fi șters (deja șters sau storage indisponibil).')
 }
 
 // ─── store settings and API keys (/admin/setari) ─────────────────────────────

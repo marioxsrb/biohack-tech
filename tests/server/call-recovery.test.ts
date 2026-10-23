@@ -344,7 +344,7 @@ describe('the website popup: 10% by email (LONGEVITY10)', () => {
     expect(await marketing.state(db, 'nou@exemplu.ro')).toMatchObject({ granted: true, source: 'popup', version: 'welcome-2026-10-15' })
     expect(await db.query('select count(*)::int as n from call_consent_events')).toMatchObject({ rows: [{ n: 0 }] })
     const again = await join('nou@exemplu.ro')
-    expect(await again.json()).toEqual({ ok: true, already: true })
+    expect(await again.json()).toEqual({ ok: true, already: true, voucher: false })
     await later()
     expect(sent).toHaveLength(1)
   })

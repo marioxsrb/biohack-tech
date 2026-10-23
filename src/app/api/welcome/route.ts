@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     kickJobs()
     log.info('welcome.signup', { created: r.created })
     // An address that already got the code: told so, nothing is sent again.
-    return NextResponse.json({ ok: true, already: !r.created })
+    return NextResponse.json({ ok: true, already: !r.created, voucher: 'voucher' in r && r.voucher === true })
   } catch (e) {
     log.error('welcome.failed', { error: errText(e) })
     return NextResponse.json({ error: 'SERVER', message: 'Nu am putut trimite codul. Încearcă din nou.' }, { status: 500 })

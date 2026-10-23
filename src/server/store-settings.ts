@@ -8,6 +8,7 @@
  * terms and the AI agent, so they change together with that text, in code.
  */
 import 'server-only'
+import { ghlWorkflowsConfig } from '@/server/workflows/ghl-map'
 import { createHash } from 'node:crypto'
 import { cache } from 'react'
 import { applyCatalogOverrides, BOOK_ID, getProduct, products, type CatalogOverrides } from '@/content/catalog'
@@ -111,7 +112,7 @@ export async function ensureStoreSettings(maxAgeMs = 15_000): Promise<StoreSetti
 
 /** What the page tells the browser (the script runs before the app, so the first render already uses it). */
 export function storeScript(s: StoreSettings = current) {
-  return `window.__BT_STORE__=${JSON.stringify({ ...toOverrides(s), welcomePopup: s.welcomePopup, chatSound: s.chatSound, assistant: s.assistant && process.env.ASSISTANT_ENABLED !== 'false' && (!!process.env.ANTHROPIC_API_KEY || process.env.ASSISTANT_MODEL === 'mock') }).replace(/</g, '\\u003c')};`
+  return `window.__BT_STORE__=${JSON.stringify({ ...toOverrides(s), welcomePopup: s.welcomePopup, popupVouchers: process.env.POPUP_VOUCHERS === 'on' && !!ghlWorkflowsConfig(), chatSound: s.chatSound, assistant: s.assistant && process.env.ASSISTANT_ENABLED !== 'false' && (!!process.env.ANTHROPIC_API_KEY || process.env.ASSISTANT_MODEL === 'mock') }).replace(/</g, '\\u003c')};`
 }
 
 export type SettingsProblem = { field: string; message: string }

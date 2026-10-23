@@ -5,11 +5,11 @@ import { catalogProduct } from '@/content/catalog'
 import { GIFT_PRODUCTS, VOUCHER_VALUE } from '@/config/vouchers'
 import { site } from '@/config/site'
 import { formatLei } from '@/lib/money'
-import { accountEmail, reviewableOrders } from '@/server/account'
+import { AD_CONSENT_TEXT, accountEmail, reviewableOrders } from '@/server/account'
 import { getDb } from '@/server/db'
 import { rewardsFor } from '@/server/rewards'
 import { vouchersFor, type Voucher } from '@/server/vouchers'
-import { chooseRewardAction } from './actions'
+import { adConsentAction, chooseRewardAction } from './actions'
 
 export const metadata: Metadata = { title: 'Contul tău Biohack Tech', robots: { index: false, follow: false } }
 
@@ -34,7 +34,7 @@ export default async function AccountPage({ params, searchParams }: { params: Pr
     return (
       <section className="pt-[calc(var(--nav-h)+56px)] pb-[var(--sec)] max-sm:pt-[calc(var(--nav-h)+28px)]">
         <div className="wrap max-w-[640px]">
-          <h1 className="text-[clamp(28px,3.4vw,38px)] leading-tight tracking-[-0.035em]">Linkul nu mai este valid.</h1>
+          <h1 className="text-[clamp(28px,3.4vw,38px)] leading-tight tracking-[-0.035em]">Linkul a expirat.</h1>
           <p className="sub mt-4">
             Folosește linkul din cel mai recent email de la noi sau scrie-ne la{' '}
             <a href={`mailto:${site.email}`} className="font-medium text-ink underline underline-offset-4">
@@ -60,11 +60,13 @@ export default async function AccountPage({ params, searchParams }: { params: Pr
         <h1 className="mt-2 text-[clamp(30px,3.6vw,42px)] leading-tight tracking-[-0.035em]">Voucherele și recompensele tale</h1>
         <p className="sub mt-3">Pentru {mask(email)}. Fiecare voucher se folosește o singură dată, la produsul lui, cu această adresă de email.</p>
         {result === 'ales' && <p className="mt-6 rounded-[14px] bg-cyan-50 px-4 py-3 text-[15px] text-cyan-700">Alegerea ta a fost salvată. Codul apare mai jos.</p>}
-        {result === 'eroare' && <p className="mt-6 rounded-[14px] bg-paper px-4 py-3 text-[15px] text-ink">Nu am putut salva alegerea. Încearcă din nou sau scrie-ne.</p>}
+        {result === 'acord' && <p className="mt-6 rounded-[14px] bg-cyan-50 px-4 py-3 text-[15px] text-cyan-700">Am salvat acordul. Video-ul este eligibil pentru recompensă.</p>}
+        {result === 'retras' && <p className="mt-6 rounded-[14px] bg-cyan-50 px-4 py-3 text-[15px] text-cyan-700">Am înregistrat retragerea acordului. Scoatem video-ul din materialele noastre în cel mult 7 zile lucrătoare.</p>}
+        {result === 'eroare' && <p className="mt-6 rounded-[14px] bg-paper px-4 py-3 text-[15px] text-ink">Modificarea a rămas nesalvată. Încearcă din nou sau scrie-ne.</p>}
 
         <h2 className="mt-12 text-[24px] tracking-[-0.02em]">Vouchere disponibile</h2>
         {available.length === 0 ? (
-          <p className="mt-3 text-[15.5px] text-text">Nu ai niciun voucher disponibil acum.</p>
+          <p className="mt-3 text-[15.5px] text-text">Voucherele noi apar aici imediat ce le primești.</p>
         ) : (
           <ul className="mt-5 grid gap-4 sm:grid-cols-2">
             {available.map((v) => (
@@ -72,7 +74,7 @@ export default async function AccountPage({ params, searchParams }: { params: Pr
                 <p className="text-[13px] font-medium tracking-[0.08em] text-muted uppercase">{v.kind === 'gift' ? 'Cadou' : 'Voucher'}</p>
                 <p className="mt-2 text-[32px] leading-none font-semibold tracking-[-0.03em] text-ink">{v.kind === 'gift' ? name(v.productId) : formatLei(v.amountMinor ?? 0)}</p>
                 <p className="mt-2 text-[15px] text-text">
-                  {v.kind === 'gift' ? 'Gratuit, plătești doar transportul.' : v.perPaidUnit ? `Pentru ${name(v.productId)}: la fiecare pereche plătită.` : `Pentru ${name(v.productId)}.`}
+                  {v.kind === 'gift' ? 'Produsul e gratuit. Plătești doar transportul.' : v.perPaidUnit ? `Pentru ${name(v.productId)}: la fiecare pereche plătită.` : `Pentru ${name(v.productId)}.`}
                 </p>
                 <p className="mt-4 font-mono text-[15px] tracking-[0.08em] text-ink">{v.code}</p>
                 <p className="mt-1 text-[14px] text-muted">Valabil până la {day(v.expiresAt)}</p>
@@ -86,7 +88,7 @@ export default async function AccountPage({ params, searchParams }: { params: Pr
 
         <h2 id="recompense" className="mt-14 text-[24px] tracking-[-0.02em]">Recompense</h2>
         {rewards.length === 0 ? (
-          <p className="mt-3 text-[15.5px] text-text">Nu ai recompense deocamdată.</p>
+          <p className="mt-3 text-[15.5px] text-text">Recompensele apar aici după un review video aprobat, o recomandare sau statutul de client VIP.</p>
         ) : (
           <ul className="mt-5 grid gap-4">
             {rewards.map((r) => (
@@ -116,7 +118,7 @@ export default async function AccountPage({ params, searchParams }: { params: Pr
                   </form>
                 ) : (
                   <p className="mt-2 text-[15.5px] text-text">
-                    {r.status === 'claimed' ? `Ai ales: ${r.choice === 'gift' ? `cadou ${name(r.productId)}` : `voucher pentru ${name(r.productId)}`}. Codul este la vouchere.` : r.status === 'pending' ? 'În așteptare.' : 'Nu mai este disponibilă.'}
+                    {r.status === 'claimed' ? `Ai ales: ${r.choice === 'gift' ? `cadou ${name(r.productId)}` : `voucher pentru ${name(r.productId)}`}. Codul este la vouchere.` : r.status === 'pending' ? 'În așteptare.' : 'Expirată.'}
                   </p>
                 )}
               </li>
@@ -126,20 +128,52 @@ export default async function AccountPage({ params, searchParams }: { params: Pr
 
         {orders.length > 0 && (
           <>
-            <h2 className="mt-14 text-[24px] tracking-[-0.02em]">Review video</h2>
+            <h2 id="review" className="mt-14 text-[24px] tracking-[-0.02em]">Review video</h2>
             <ul className="mt-5 grid gap-3">
               {orders.map((o) => (
-                <li key={o.id} className="flex flex-wrap items-center justify-between gap-3 rounded-[20px] bg-paper p-5">
-                  <div>
-                    <p className="text-[16px] font-semibold text-ink">Comanda {o.orderNumber}</p>
-                    <p className="text-[14px] text-muted">{o.products}</p>
+                <li key={o.id} className="rounded-[20px] bg-paper p-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[16px] font-semibold text-ink">Comanda {o.orderNumber}</p>
+                      <p className="text-[14px] text-muted">{o.products}</p>
+                    </div>
+                    {o.reviewStatus && o.reviewStatus !== 'rejected' ? (
+                      <span className="text-[14.5px] text-text">{REVIEW[o.reviewStatus] ?? o.reviewStatus}</span>
+                    ) : (
+                      <Link href={`/cont/${t}/review/${o.id}`} className="btn-secondary sm">
+                        {o.reviewStatus === 'rejected' ? 'Trimite alt video' : 'Trimite review-ul video'}
+                      </Link>
+                    )}
                   </div>
-                  {o.reviewStatus && o.reviewStatus !== 'rejected' ? (
-                    <span className="text-[14.5px] text-text">{REVIEW[o.reviewStatus] ?? o.reviewStatus}</span>
-                  ) : (
-                    <Link href={`/cont/${t}/review/${o.id}`} className="btn-secondary sm">
-                      {o.reviewStatus === 'rejected' ? 'Trimite alt video' : 'Trimite review-ul video'}
-                    </Link>
+                  {o.reviewStatus && o.reviewStatus !== 'rejected' && !o.fileDeleted && (
+                    <form action={adConsentAction} className="mt-4 border-t border-mist-2 pt-4 text-[14.5px] text-text">
+                      <input type="hidden" name="t" value={decodeURIComponent(token)} />
+                      <input type="hidden" name="order" value={o.id} />
+                      {o.adConsent ? (
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <span>Acord pentru site, rețele sociale și reclame: dat.</span>
+                          <button name="consent" value="nu" className="btn-secondary sm">
+                            Retrag acordul
+                          </button>
+                        </div>
+                      ) : o.consentWithdrawn ? (
+                        <span>Acord retras. Video-ul iese din materialele noastre în cel mult 7 zile lucrătoare.</span>
+                      ) : o.reviewStatus !== 'approved' ? (
+                        <div className="grid gap-3">
+                          <span>
+                            Video-ul este privat. Pentru recompensă, dă acordul: {AD_CONSENT_TEXT}{' '}
+                            <Link href="/conditii-review-video" className="font-medium text-ink underline underline-offset-4">
+                              Condițiile review-ului video
+                            </Link>
+                          </span>
+                          <button name="consent" value="da" className="btn-secondary sm justify-self-start">
+                            Dau acordul
+                          </button>
+                        </div>
+                      ) : (
+                        <span>Video-ul este privat, doar pentru echipa noastră.</span>
+                      )}
+                    </form>
                   )}
                 </li>
               ))}

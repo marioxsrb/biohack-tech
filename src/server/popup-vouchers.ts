@@ -1,6 +1,6 @@
 /**
  * The landing popups' switch from the 10% code to the product's fixed voucher (prepared 21.10.2026, OFF):
- * Calm 640 lei, Focus 325 lei, Amber 30 lei per paid pair (config/vouchers.ts), personal, 7 days.
+ * Calm 640 lei, Focus 325 lei, Amber 30 lei per paid pair (config/vouchers.ts), personal, 30 days.
  *
  * POPUP_VOUCHERS=on (only after the popup's and the welcome email's new texts are approved): a signup on the Calm, Focus
  * or Amber popup (its landing, or its product page) gets that product's voucher instead of LONGEVITY10, and enters

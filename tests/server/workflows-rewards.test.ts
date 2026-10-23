@@ -165,7 +165,7 @@ describe('Review Video', () => {
     vi.stubGlobal('fetch', async (url: string) => new Response(JSON.stringify(String(url).includes('/upload/sign/') ? { url: '/object/upload/sign/rv/x?token=t' } : { signedURL: '/object/sign/rv/x?token=d' }), { status: 200 }))
     return videoStorage({ VIDEO_STORAGE_URL: 'https://proj.supabase.co', VIDEO_STORAGE_KEY: 'k', VIDEO_STORAGE_BUCKET: 'rv' })
   }
-  it('off without storage; only after delivery; one per order; approval → one reward whatever the rating; gift claimed once', async () => {
+  it('off without storage; only after delivery; one per order; approval with the licence → one reward whatever the rating; gift claimed once', async () => {
     expect(videoStorage({}).kind).toBe('none')
     const pending = await place([CALM], 'transfer')
     expect(await rewards.startVideoUpload(db, storage(), { orderId: pending.id, contentType: 'video/mp4', sizeBytes: 1000 })).toEqual({ ok: false, problem: 'not_delivered' })
@@ -174,7 +174,7 @@ describe('Review Video', () => {
     const up = await rewards.startVideoUpload(db, storage(), { orderId: o.id, contentType: 'video/mp4', sizeBytes: 5_000_000 })
     if (!up.ok) throw new Error(up.problem)
     expect(up.uploadUrl).toMatch(/^https:\/\/proj\.supabase\.co\/storage\/v1\/object\/upload\/sign\//)
-    const rec = await rewards.recordVideoReview(db, { orderId: o.id, key: up.key, contentType: 'video/mp4', sizeBytes: 5_000_000, rating: 2, adConsent: false })
+    const rec = await rewards.recordVideoReview(db, { orderId: o.id, key: up.key, contentType: 'video/mp4', sizeBytes: 5_000_000, rating: 2, adConsent: true, adConsentVersion: 'v-test' })
     if (!rec.ok) throw new Error('not recorded')
     expect((await rewards.startVideoUpload(db, storage(), { orderId: o.id, contentType: 'video/mp4', sizeBytes: 10 })).ok).toBe(false)
     const approved = await rewards.reviewVideo(db, rec.id, 'approved', 'admin')
@@ -186,9 +186,39 @@ describe('Review Video', () => {
     const again = await rewards.claimReward(db, approved.reward!.id, { kind: 'gift', productId: 'ochelari-biohack' })
     expect(claimed.ok && again.ok && claimed.voucher.id === again.voucher.id).toBe(true)
     expect((await db.query("select count(*)::int n from vouchers where kind = 'gift'")).rows[0].n).toBe(1)
-    // The advertising consent is separate and can change; the review stays approved.
-    await rewards.setAdConsent(db, o.id, true)
-    expect((await db.query('select ad_consent, status from video_reviews')).rows[0]).toEqual({ ad_consent: true, status: 'approved' })
+    expect(rewards.usableInAds((await db.query('select * from video_reviews')).rows[0])).toBe(true)
+    // Withdrawn after the reward: recorded, out of the ads, the reward stays; giving it again after approval is refused.
+    expect(await rewards.setAdConsent(db, o.id, false, 'v-test')).toBe(true)
+    const row = (await db.query('select * from video_reviews')).rows[0]
+    expect(row).toMatchObject({ ad_consent: false, status: 'approved' })
+    expect(row.ad_consent_withdrawn_at).toBeTruthy()
+    expect(rewards.usableInAds(row)).toBe(false)
+    expect(await rewards.setAdConsent(db, o.id, true, 'v-test')).toBe(false)
+    expect((await db.query("select status from rewards where id = $1", [approved.reward!.id])).rows[0].status).not.toBe('revoked')
+  })
+
+  it('without the licence: received and kept private, approved without a reward; the licence given before the decision makes it eligible; file deletion', async () => {
+    const o = await delivered([CALM])
+    const up = await rewards.startVideoUpload(db, storage(), { orderId: o.id, contentType: 'video/mp4', sizeBytes: 1000 })
+    if (!up.ok) throw new Error(up.problem)
+    const rec = await rewards.recordVideoReview(db, { orderId: o.id, key: up.key, contentType: 'video/mp4', sizeBytes: 1000, rating: 5, adConsent: false })
+    if (!rec.ok) throw new Error('not recorded')
+    expect((await db.query('select ad_consent, ad_consent_at, ad_consent_version from video_reviews where id = $1', [rec.id])).rows[0]).toEqual({ ad_consent: false, ad_consent_at: null, ad_consent_version: null })
+    // Given afterwards from the account page, before the decision: recorded with the version and the moment.
+    expect(await rewards.setAdConsent(db, o.id, true, 'v-later')).toBe(true)
+    expect((await db.query('select ad_consent, ad_consent_version from video_reviews where id = $1', [rec.id])).rows[0]).toEqual({ ad_consent: true, ad_consent_version: 'v-later' })
+    // Withdrawn again before the decision: the approval gives no reward.
+    await rewards.setAdConsent(db, o.id, false, 'v-later')
+    const approved = await rewards.reviewVideo(db, rec.id, 'approved', 'admin')
+    expect(approved).toMatchObject({ changed: true, reward: null, reason: 'no_consent' })
+    expect((await db.query("select count(*)::int n from rewards where source = 'review' and source_ref = $1", [o.id])).rows[0].n).toBe(0)
+    // Deleting the file: removed from the storage, the record stays without the licence.
+    const removed: string[] = []
+    const fake = { ...storage(), remove: async (k: string) => (removed.push(k), true) }
+    expect(await rewards.deleteVideoFile(db, fake, rec.id)).toBe(true)
+    expect(removed).toEqual([up.key])
+    expect((await db.query('select storage_key, file_deleted_at, ad_consent from video_reviews where id = $1', [rec.id])).rows[0]).toMatchObject({ storage_key: null, ad_consent: false })
+    expect(await rewards.deleteVideoFile(db, fake, rec.id)).toBe(false)
   })
 })
 

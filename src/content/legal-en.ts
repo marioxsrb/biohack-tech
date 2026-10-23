@@ -4,13 +4,16 @@
  * legal.ts must be mirrored here.
  */
 import { company, companyLine } from '@/config/company'
+import { AD_CONSENT_TEXT } from '@/config/review'
 import { site, terms } from '@/config/site'
+import { GIFT_SHIPPING_RON, VOUCHER_VALIDITY_DAYS, VOUCHER_VALUE } from '@/config/vouchers'
+import { formatLei } from '@/lib/money'
 import { COMMUNICATIONS_CONSENT_TEXT_EN, EMAIL_ONLY_CONSENT_TEXT_EN } from '@/lib/consent/communications'
 import { CONSENT_MAX_AGE_DAYS } from '@/lib/consent/cookies'
 import { configuredVendors } from '@/lib/consent/vendors'
 import type { LegalPage, LegalSection } from './legal'
 
-const UPDATED = '21 octombrie 2026'
+const UPDATED = '23 octombrie 2026'
 const processingDays = terms.processingDays.replace(' zile', ' days')
 const transitDays = terms.transitDays.replace(' zile', ' days')
 const contactLine = `Write to us at ${site.email} or call ${site.phone}. We reply within 24 hours.`
@@ -119,6 +122,23 @@ export const legalPagesEn: LegalPage[] = [
         ],
       },
       {
+        heading: 'Vouchers, gifts and rewards',
+        id: 'vouchere',
+        body: [
+          {
+            list: [
+              `Personal vouchers: ${formatLei(VOUCHER_VALUE['balance-wave'])} for NEUROS Calm, ${formatLei(VOUCHER_VALUE['brainlink-pro'])} for NEUROS Focus and ${formatLei(VOUCHER_VALUE['ochelari-biohack'])} for each paid pair of Amber glasses.`,
+              `A voucher is valid for ${VOUCHER_VALIDITY_DAYS.admin} days from issue. You use it once, on the product it was issued for, with the email address it was sent to.`,
+              'Enter the voucher in the code field at checkout. Its value is deducted from the product price. Any unused remainder is not paid out in cash.',
+              'If an order paid with a voucher is cancelled or fully refunded, the voucher becomes available again until its expiry date.',
+              `A gift is the chosen product, free of charge. You pay only the delivery, ${formatLei(GIFT_SHIPPING_RON)} per order, however many gifts and products it contains.`,
+              'Rewards for a video review, for referrals and for VIP status are chosen from your account, through the link you receive by email.',
+            ],
+          },
+          'The conditions for the video review are on the [Video review conditions](/conditii-review-video) page.',
+        ],
+      },
+      {
         heading: 'Personal data',
         body: ['We use your data to process, invoice and deliver the order. The details are in the [Privacy Policy](/privacy-policy) and the [Cookie Policy](/politica-cookies).'],
       },
@@ -161,7 +181,10 @@ export const legalPagesEn: LegalPage[] = [
                 ['Our AI assistant calls you about the chosen product, if you did not finish your order', 'Phone, first name, the chosen product, the outcome of the call', 'Your separate consent to calls, given by ticking the box (point a)'],
                 ['We record and analyse the AI assistant calls, to check the quality of our service and to be able to prove what was agreed (for example that you asked not to be contacted again)', 'Your voice, the transcript of the conversation, the phone number, the date and duration of the call', 'Our legitimate interest in checking and improving call quality and in proving what was agreed (point f); we tell you at the start of the call and you can object at any time'],
                 ['We answer questions, complaints and withdrawal requests', 'What you write to us and the order details', 'The contract and legal obligation'],
-                ['Statistics and ads, only if you accept', 'Data about how the site is used, without contact details', 'Your consent (point a)'],
+                ['Statistics and ads, only if you accept analytics or marketing cookies', 'Data about how the site is used. Details in the Meta ads section', 'Your consent (point a)'],
+                ['We measure the orders that come from Meta ads, only if you accepted marketing cookies', 'Your email and phone in encrypted form (hash), the IP address, the browser, the _fbp and _fbc identifiers, the order number, its products and its value', 'Your consent (point a)'],
+                ['We issue and check vouchers, gifts and rewards', 'Email, the voucher code, the product, the value, the dates of issue, use and expiry, the order in which you used it', 'The contract (point b) and the legitimate interest in preventing double use (point f)'],
+                ['We receive your video review and use it in Biohack Tech materials, only with your agreement', 'The video, your image and voice, the optional rating, the order, the time and version of the agreement', 'Your licence agreement, given with a separate tick box (points a and b); you can withdraw it at any time'],
               ],
             },
           },
@@ -205,6 +228,25 @@ export const legalPagesEn: LegalPage[] = [
         ],
       },
       {
+        heading: 'Meta ads',
+        id: 'meta',
+        body: [
+          'We use the Meta Pixel and the Conversions API to know which Biohack Tech ads bring orders. We turn them on only if you accept marketing cookies. Without that consent, Meta receives no data from us.',
+          'With your consent, Meta receives the pages you visit, the products you view, additions to the cart, the start of checkout and the paid order. For the paid order we also send your email and phone, irreversibly encrypted (SHA-256 hash), the IP address, the browser and the _fbp and _fbc identifiers. This lets Meta link the order to the ad and count it only once.',
+          'Meta Platforms Ireland Ltd. receives this data as a joint controller for ad measurement. You can withdraw your consent at any time from the cookie settings in the footer of the site.',
+        ],
+      },
+      {
+        heading: 'Video review',
+        id: 'review-video',
+        body: [
+          'When you send a video review, we keep it in private storage. Only the Biohack Tech team can see it, through temporary links.',
+          'We use the video on the site, on social networks and in ads only if you ticked the separate agreement box. We keep the text of the agreement, its version and the time you gave it.',
+          'You can withdraw your agreement at any time, from your account or by writing to us. We remove the video from our materials within 7 working days. If you ask, we also delete the file.',
+          'All the conditions are on the [Video review conditions](/conditii-review-video) page.',
+        ],
+      },
+      {
         heading: 'Who else receives the data',
         body: [
           'Each provider receives only the data necessary for its role:',
@@ -215,11 +257,12 @@ export const legalPagesEn: LegalPage[] = [
               'GoHighLevel (the LeadConnector platform): customer records and sending emails.',
               'ElevenLabs (the voice, the conversation, the recording and the transcript of the AI assistant calls) and Twilio (the telephone network), only if you accepted calls. The recording, transcript and analysis of a call are kept by ElevenLabs for 30 days, then deleted automatically.',
               'The courier company: delivering the parcel.',
-              'The hosting provider of the website and the database.',
+              'Meta (Meta Platforms Ireland Ltd.): ad measurement, only with consent to marketing cookies. It also receives the video reviews used in ads, only with your licence agreement.',
+              'The hosting provider of the website, the database and the storage for video reviews (Vercel, Supabase).',
               'Authorities, only when the law requires us to.',
             ],
           },
-          'Stripe, GoHighLevel, ElevenLabs and Twilio may also process data outside the European Economic Area. In that case, the transfer takes place only with the safeguards required by the GDPR (Art. 44-46).',
+          'Stripe, GoHighLevel, ElevenLabs, Twilio and Meta may also process data outside the European Economic Area. In that case, the transfer takes place only with the safeguards required by the GDPR (Art. 44-46).',
         ],
       },
       {
@@ -230,6 +273,8 @@ export const legalPagesEn: LegalPage[] = [
               'Orders and invoices: as long as accounting and tax laws require.',
               'The pseudonymised identifiers used for fraud prevention (the IP address fingerprint and the cart cookie identifier): 90 days from the order, then deleted automatically.',
               'Marketing consent and unsubscription: as long as you receive emails and afterwards for as long as they may be requested from us as proof.',
+              'Vouchers and rewards: for as long as we keep the order they relate to. An unused voucher stays on record after expiry, as proof.',
+              'The video review: for as long as we use it with your agreement. Proof of the agreement and of its withdrawal: for as long as it may be requested from us. We delete the file on request, within 30 days.',
               'Your messages and requests: for as long as the resolution takes and the period during which they may be requested from us as proof.',
               'The data in the contact step of an unsubmitted order (and in the price form on acces.biohack-tech.ro, used until 20 October 2026): at most 12 months from your last activity, after which we delete it automatically. If you place an order, it remains linked to the order.',
               'Consent to calls and its refusal: for as long as they may be requested from us as proof. Call outcomes: together with the request they relate to. The audio recording, transcript and analysis of a call: 30 days, at ElevenLabs, then deleted automatically.',
@@ -493,6 +538,101 @@ export const legalPagesEn: LegalPage[] = [
       {
         heading: 'Refunds',
         body: ['We refund the money by the same means you used to pay: to the card or to the account from which you made the transfer. For an order paid cash on delivery, by bank transfer, to the account you indicate to us.'],
+      },
+      contact,
+    ],
+  },
+  {
+    slug: 'conditii-review-video',
+    title: 'Video review conditions',
+    shortTitle: 'Video review',
+    description: 'How you send a Biohack Tech video review, how you receive the reward and how we use the video, with your agreement.',
+    updated: UPDATED,
+    sections: [
+      {
+        heading: 'In short',
+        body: [
+          {
+            list: [
+              'You send a short video about the product you received, from your account.',
+              'You tick the licence agreement. This lets us use the video on the site, on social networks and in ads.',
+              'We check the video and you receive the reward in your account.',
+              'The reward is the same, whatever your opinion.',
+              'You can withdraw the agreement at any time.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Who uses the video',
+        body: [`The video is used by ${company.legalName ?? 'the operator of the shop'}, for the Biohack Tech shop. The company details are in the [Terms and Conditions](/terms-of-service).`],
+      },
+      {
+        heading: 'The reward',
+        id: 'recompensa',
+        body: [
+          {
+            list: [
+              'You receive one reward for each delivered and paid order, for one video.',
+              'The reward comes together with the licence agreement. A video sent without the agreement stays private, for our team only, and carries no reward.',
+              'You can also give the agreement after sending, from your account, until we check the video.',
+              'The reward is the same for any rating and any opinion, positive or critical. We care about your real experience.',
+              'We only check that the video is yours, shows the product you received and follows the rules below. If we reject it, we tell you why and you can send another one.',
+              'You choose the reward from your account: a gift, for which you pay only the delivery.',
+              'If you withdraw the agreement after receiving the reward, the reward stays yours.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'The licence agreement',
+        id: 'acord',
+        body: [
+          `The tick box on the upload page reads (in Romanian): “${AD_CONSENT_TEXT}” In English: “I agree that ${company.legalName ?? 'the operator of the shop'} may use my video, with my image and voice, in Biohack Tech materials: on the website, on social networks and in paid ads. I have read the conditions.” The box is separate and not pre-ticked.`,
+          'With the agreement you allow us, free of charge and non-exclusively, to use the video and your image and voice in it:',
+          {
+            list: [
+              'on the Biohack Tech websites (biohack-tech.ro and biohack-tech.net);',
+              'on the Biohack Tech pages on social networks (for example Facebook, Instagram, TikTok, YouTube);',
+              'in paid ads for Biohack Tech products, on these networks and on Google.',
+            ],
+          },
+          'We may shorten the video, fit it to another format and add subtitles, a logo or the ad text. We keep the meaning of what you said.',
+          'We use at most your first name, if you say it in the video. The rest of your data stays private.',
+          'The agreement is valid until you withdraw it. We keep the text of the agreement, its version and the time you gave it.',
+          'In ads we mention that you received a reward for the review, where the law requires it.',
+        ],
+      },
+      {
+        heading: 'What the video may contain',
+        body: [
+          {
+            list: [
+              'Your real experience with the product you bought.',
+              'Only people who agreed to appear. No children.',
+              'No personal data of others, no protected music and no medical promises.',
+              'MP4, MOV or WebM format, up to 300 MB.',
+            ],
+          },
+        ],
+      },
+      {
+        heading: 'Withdrawing the agreement',
+        id: 'retragere',
+        body: [
+          'You can withdraw the agreement at any time, free of charge: from your account, with the “Withdraw agreement” button, or by writing to us at ' + site.email + '.',
+          'After withdrawal we use the video in no new materials. We remove it from the site, from our pages and from active ads within 7 working days.',
+          'Shares made by other people and copies they saved are outside our control. We can ask the platform to remove them, if you ask us to.',
+          'Withdrawal concerns future uses. What was published before was lawful, with your agreement.',
+        ],
+      },
+      {
+        heading: 'Keeping and deleting the video',
+        body: [
+          'The video sits in private storage. Only the Biohack Tech team can see it, through temporary links. Every view from the administration area is logged.',
+          'If you ask us to delete it, we delete the file within 30 days and confirm by email. We keep only the proof of the agreement and of its withdrawal.',
+          'Details about the data in the [Privacy Policy, Video review](/privacy-policy#review-video).',
+        ],
       },
       contact,
     ],

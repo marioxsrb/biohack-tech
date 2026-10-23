@@ -47,15 +47,16 @@ export async function welcomeSignup(t: Queryable, email: string, page: string | 
   if (gift !== 'p10') await t.query('update welcome_signups set gift = $2 where email = $1', [addr, gift])
   const state = await marketing.state(t, addr)
   // An address that unsubscribed before chose so: signing up again here is a new, explicit consent.
-  if (!state?.granted) await marketing.grant(t, { email: addr, source: 'popup', page: page ?? undefined, version: locale === 'en' ? 'welcome-en-2026-10-16' : giftId ? 'welcome-cadou-2026-10-20' : 'welcome-2026-10-15' })
   // Prepared, off (POPUP_VOUCHERS): a product popup gives that product's fixed voucher and its landing sequence
   // instead of the 10% email (server/popup-vouchers.ts). Off, every popup sends what it sends today.
   const product = popupVouchersOn() && site === 'ro' && locale === 'ro' && !giftId ? popupProduct(page, landing) : null
+  const version = locale === 'en' ? 'welcome-en-2026-10-16' : giftId ? 'welcome-cadou-2026-10-20' : product ? 'welcome-voucher-2026-10-23' : 'welcome-2026-10-15'
+  if (!state?.granted) await marketing.grant(t, { email: addr, source: 'popup', page: page ?? undefined, version })
   const voucher = product ? await popupVoucher(t, addr, product) : null
   if (!voucher) await jobs.enqueue(t, { kind: 'email.welcome', dedupeKey: `email.welcome:${addr}`, payload: { email: addr, locale, site, gift } })
   // The address in the CRM (contact, lead tags, leads pipeline) for the team's follow-up and remarketing.
   await jobs.enqueue(t, { kind: 'ghl.welcome', dedupeKey: `ghl.welcome:${addr}`, payload: { email: addr, site } })
-  return { created: true }
+  return { created: true, voucher: !!voucher }
 }
 
 export function renderWelcome(x: { siteUrl: string; unsubscribeUrl: string; code?: string; locale?: 'ro' | 'en'; gift?: WelcomeGift }) {

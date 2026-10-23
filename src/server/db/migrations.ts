@@ -1022,4 +1022,11 @@ create table if not exists auth_attempts (
 );
 alter table auth_attempts enable row level security`,
   },
+  {
+    // The review video's advertising licence: when it was withdrawn (the video then leaves every ad and the site) and
+    // when the file was deleted from the storage at the customer's request. Existing rows are not touched.
+    id: '034_video_consent_withdrawal',
+    sql: `alter table video_reviews add column if not exists ad_consent_withdrawn_at timestamptz;
+alter table video_reviews add column if not exists file_deleted_at timestamptz`,
+  },
 ]

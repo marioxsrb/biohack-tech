@@ -5,10 +5,10 @@ import { catalogProduct } from '@/content/catalog'
 import { VOUCHER_VALUE } from '@/config/vouchers'
 import { formatLei } from '@/lib/money'
 import { getDb } from '@/server/db'
-import { listRewards, listVideoReviews } from '@/server/rewards'
+import { listRewards, listVideoReviews, usableInAds } from '@/server/rewards'
 import { listVouchers, voucherHistory, type VoucherStatus } from '@/server/vouchers'
 import { workflowsMode } from '@/server/workflows/engine'
-import { accountLinkAction, issueVoucherAction, restoreVoucherAction, revokeVoucherAction, reviewVideoAction } from '../actions'
+import { accountLinkAction, deleteReviewVideoAction, issueVoucherAction, restoreVoucherAction, revokeVoucherAction, reviewVideoAction } from '../actions'
 
 export const metadata: Metadata = { title: 'Vouchere și recompense' }
 
@@ -162,18 +162,37 @@ export default async function VouchersPage({ searchParams }: { searchParams: Pro
       <ul className="mt-4 space-y-2">
         {videos.map((r) => (
           <li key={r.id as string} className="rounded-[16px] bg-paper p-4 text-[14px]">
-            <span className="font-semibold text-ink">{r.order_number as string}</span> · {r.email as string} · {r.status as string} · rating {(r.rating as number | null) ?? '–'} · folosire în reclame: {r.ad_consent ? 'acord dat' : 'fără acord'}
-            {' · '}
-            <a href={`/api/admin/review-video/${r.id as string}`} target="_blank" rel="noreferrer" className="underline underline-offset-4">
-              Vezi video-ul (link 10 min)
-            </a>
+            <span className="font-semibold text-ink">{r.order_number as string}</span> · {r.email as string} · {r.status as string} · rating {(r.rating as number | null) ?? '–'} ·{' '}
+            {usableInAds(r) ? (
+              <span className="font-semibold text-cyan-700">poate fi folosit în reclame (acord {r.ad_consent_version as string}, {dt(new Date(r.ad_consent_at as string))})</span>
+            ) : (
+              <span className="font-semibold text-ink">
+                NU se folosește în reclame
+                {r.ad_consent_withdrawn_at ? ` (acord retras ${dt(new Date(r.ad_consent_withdrawn_at as string))})` : r.ad_consent ? ' până la aprobare' : ' (fără acord: fără recompensă)'}
+              </span>
+            )}
+            {r.file_deleted_at ? (
+              <span className="text-muted"> · fișier șters {dt(new Date(r.file_deleted_at as string))}</span>
+            ) : (
+              <>
+                {' · '}
+                <a href={`/api/admin/review-video/${r.id as string}`} target="_blank" rel="noreferrer" className="underline underline-offset-4">
+                  Vezi video-ul (link 10 min)
+                </a>
+                <form action={deleteReviewVideoAction} className="inline">
+                  <input type="hidden" name="id" value={r.id as string} />
+                  {' · '}
+                  <button className="underline underline-offset-4">Șterge fișierul (la cererea clientului)</button>
+                </form>
+              </>
+            )}
             {r.reviewed_at ? <span className="text-muted"> · verificat {new Date(r.reviewed_at as string).toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest' })} de {r.reviewed_by as string}</span> : null}
             {r.status !== 'approved' && (
               <form action={reviewVideoAction} className="mt-2 flex flex-wrap items-center gap-2 text-[13.5px]">
                 <input type="hidden" name="id" value={r.id as string} />
                 <input name="reason" placeholder="Motiv (la respingere)" maxLength={300} className="field max-w-[22em]" />
                 <button name="to" value="approved" className="btn-secondary sm">
-                  Aprobă (recompensa devine disponibilă)
+                  {r.ad_consent ? 'Aprobă (recompensa devine disponibilă)' : 'Aprobă (fără recompensă: lipsește acordul)'}
                 </button>
                 <button name="to" value="rejected" className="btn-secondary sm">
                   Respinge
