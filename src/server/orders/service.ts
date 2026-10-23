@@ -77,8 +77,8 @@ const addressOf = (f: OrderForm, ship: boolean): Address =>
     : { address: f.address, city: f.city, county: f.county, postalCode: f.postalCode, country: f.country || 'RO' }
 
 /**
- * A card payment refused before any order is written: this contact, browser or network already had
- * FAILED_CARD_LIMIT failed card payments in the last 24 hours. The other methods stay open.
+ * An order refused before it is written: this contact, browser or network already had FAILED_CARD_LIMIT failed
+ * card payments in the last FAILED_WINDOW_DAYS days. Every payment method is closed to them; they call us.
  */
 export class CardAttemptsError extends Error {
   constructor() {
@@ -127,7 +127,8 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
       const ship = addressOf(f, true)
       const listed = { email: f.email, phone: f.phone, ip: riskInput.ip, city: f.city, address: f.address }
       if (blocked(listed)) throw new BlockedError()
-      if (method === 'card' && signals.failedCards >= FAILED_CARD_LIMIT && !signals.known) throw new CardAttemptsError()
+      // Three failed payments from this network, browser, email or phone (30 days): no more orders, on any method; they call us.
+      if (signals.failedRecent >= FAILED_CARD_LIMIT && !signals.known) throw new CardAttemptsError()
       const scored = scoreRisk(signals)
       // Linked to the card testing attack (same phone, address or email domain): a person checks it, even when paid.
       const risk = held(listed) || held({ ...listed, city: ship.city, address: ship.address }) ? { ...scored, review: true, reasons: [...scored.reasons, 'Legat de atacul de card testing (telefon, adresă sau domeniu)'] } : scored

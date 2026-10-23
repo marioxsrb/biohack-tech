@@ -6,6 +6,7 @@ import { DISCONTINUED_PATH, isLandingSlug, landingForHost, presentationPath, ret
 import { defaultLocale, splitLocale } from '@/i18n/locales'
 import { isIntlHost } from '@/lib/sites'
 import { PRIVATE_PAGES, privateLink, tokenFreeUrl } from '@/lib/private-links'
+import { isBlockedNetwork, OPEN_TO_BLOCKED } from '@/lib/blocked-network'
 
 /**
  * Two jobs, before anything renders:
@@ -63,6 +64,11 @@ export async function proxy(req: NextRequest) {
   if (retired) return NextResponse.redirect(retired, 308)
   const acces = retiredAccesRedirect(req.headers.get('host'), site.url, pathname, search)
   if (acces) return NextResponse.redirect(acces, 308)
+  // 0a. A network blocked after the card testing attack (config/risk-blocklist.ts): no form, order, chat or API
+  // answers it, in any browser or private window.
+  if (pathname.startsWith('/api/') && !OPEN_TO_BLOCKED.test(pathname) && (await isBlockedNetwork(req.headers.get('x-forwarded-for')?.split(',')[0] || req.headers.get('x-real-ip')))) {
+    return NextResponse.json({ error: 'BLOCKED', message: `Pentru comenzi te rugăm să ne suni la ${site.phone}.` }, { status: 403 })
+  }
   if (NOT_A_PAGE.test(pathname)) return NextResponse.next()
   // 0b. A private link (order, cart recovery, unsubscribe): the token goes into an HttpOnly cookie and the page
   // opens at an address without it, so no analytics or ad tool, and no Referer, ever carries it (lib/private-links).

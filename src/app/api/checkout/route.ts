@@ -31,7 +31,7 @@ const fail = (status: number, error: ErrorCode, message: string, extra?: object)
 const MESSAGES = {
   ro: {
     RATE_LIMIT: 'Prea multe încercări într-un timp scurt. Încearcă din nou în câteva minute.',
-    CARD_ATTEMPTS: `Plata cu cardul nu a reușit de mai multe ori, așa că am oprit-o temporar pentru siguranța ta. Poți alege plata ramburs sau prin transfer, ori ne poți suna la ${site.phone} și te ajutăm.`,
+    CARD_ATTEMPTS: `Plata nu a reușit de 3 ori. Pentru siguranța ta, comanda se poate face acum doar la telefon: sună-ne la ${site.phone} și te ajutăm imediat.`,
     BLOCKED: `Pentru această comandă te rugăm să ne suni la ${site.phone}. Te ajutăm imediat.`,
     BAD_REQUEST: 'Cererea nu este validă. Reîncarcă pagina și încearcă din nou.',
     EMPTY: 'Coșul este gol.',
@@ -44,7 +44,7 @@ const MESSAGES = {
   },
   en: {
     RATE_LIMIT: 'Too many attempts in a short time. Please try again in a few minutes.',
-    CARD_ATTEMPTS: `The card payment failed several times, so we paused it for your safety. Please try again later or write to us at ${site.email} and we will help.`,
+    CARD_ATTEMPTS: `The payment failed 3 times. For your safety, please write to us at ${site.email} to place the order. We will help you right away.`,
     BLOCKED: `For this order, please write to us at ${site.email}. We will help you right away.`,
     BAD_REQUEST: 'The request is not valid. Reload the page and try again.',
     EMPTY: 'Your cart is empty.',

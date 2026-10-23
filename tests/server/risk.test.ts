@@ -19,7 +19,6 @@ const { signPayload } = await import('@/server/integrations/stripe')
 const { recoveryDecision, recoveryFacts, captureLead, leads } = await import('@/server/leads')
 const { callDecision, callFacts } = await import('@/server/calling/calls')
 const { getConfig } = await import('@/server/config')
-const { renderNotification } = await import('@/server/notifications')
 const { POST: webhook } = await import('@/app/api/webhooks/stripe/route')
 const { POST: checkout } = await import('@/app/api/checkout/route')
 
@@ -42,12 +41,12 @@ const failedCard = async (who: Who = {}, src: { ip?: string; visitor?: string } 
   expect((await svc.recordPaymentFailure(order.id, 'stripe.webhook', 'authentication failed', `pi_${order.id}`)).changed).toBe(true)
   return (await orders.byId(db, order.id))!
 }
-const temp = (n: number): Who => ({ email: `client${n}@yopmail.com` })
+const temp = (n: number): Who => ({ email: `client${n}@example.org` })
 const fresh = async (id: string) => (await orders.byId(db, id))!
 
 describe('the score', () => {
   it('one signal alone never reaches the review line', () => {
-    const none = { emailKind: null, failedCards: 0, names: 1, emails: 1, burst: 0, known: false } as const
+    const none = { emailKind: null, failedCards: 0, failedRecent: 0, names: 1, emails: 1, burst: 0, known: false } as const
     expect(risk.scoreRisk(none)).toEqual({ score: 0, reasons: [], review: false })
     expect(risk.scoreRisk({ ...none, emailKind: 'disposable' }).review).toBe(false)
     expect(risk.scoreRisk({ ...none, failedCards: 1 }).review).toBe(false)
@@ -105,44 +104,45 @@ describe('placing orders', () => {
     expect(await risk.purgeRiskSignals(db)).toBe(0)
   })
 
-  it('a temporary email alone: not flagged, not blocked', async () => {
-    const { order } = await place('card', temp(1))
-    expect(order.riskReview).toBeNull()
-    expect(order.riskReasons).toEqual(['Email temporar'])
+  it('a temporary inbox (mailnow, yopmail, a subdomain of one): refused, in the form and on the server', async () => {
+    await expect(place('card', { email: 'cineva@yopmail.com' })).rejects.toBeInstanceOf(svc.BlockedError)
+    await expect(place('cod', { email: 'cineva@x.mailinator.com' })).rejects.toBeInstanceOf(svc.BlockedError)
+    const { validateOrder } = await import('@/lib/checkout')
+    const { validateContact } = await import('@/lib/lead')
+    expect(validateOrder({ ...person, email: 'cineva@mailnow.io', paymentMethod: 'cod' } as never, true).email).toContain('adresa ta de email obișnuită')
+    expect(validateContact({ name: 'Ana', email: 'cineva@mailnow.io', phone: '' }, ['email']).email).toContain('obișnuită')
+    expect(validateContact({ name: 'Ana', email: 'ana@gmail.com', phone: '' }, ['email']).email).toBeUndefined()
   })
 
-  it('several cards tried quickly (the 20–21.10 pattern): flagged, then the card is paused, cash on delivery waits for a person', async () => {
+  it('three failed payments from one network (any browser, private window included): no more orders on any method, they call us', async () => {
     const src = { ip: '203.0.113.9' }
     await failedCard({ ...temp(2), firstName: 'Ingrid' }, src)
     const second = await failedCard({ ...temp(2), firstName: 'Izabela' }, src)
     expect(second.riskReview).toBe('pending')
     expect(second.riskScore).toBeGreaterThanOrEqual(risk.REVIEW_AT)
     expect(second.paymentStatus).toBe('failed')
-    await failedCard({ ...temp(3), phone: second.phone }, src)
-    // Three failed cards on the same contact/network in 24 h: a fourth card attempt is refused before any order.
-    await expect(place('card', temp(2), src)).rejects.toBeInstanceOf(svc.CardAttemptsError)
-    // Cash on delivery is still possible, but waits for a person and cannot be prepared or shipped.
-    const { order: cod } = await place('cod', temp(2), src, AMBER)
-    expect(cod).toMatchObject({ riskReview: 'pending', status: 'confirmed', paymentStatus: 'awaiting_collection' })
-    expect(cod.riskReasons.join(' ')).toContain('plăți cu cardul eșuate')
-    expect((await svc.markProcessing(cod.id, 'admin')).changed).toBe(false)
-    expect((await svc.markShipped(cod.id, 'admin', { courier: 'FAN', trackingNumber: 'X1' })).changed).toBe(false)
-    expect((await svc.markPrepared(cod.id, 'fulfillment', 'depozit')).changed).toBe(false)
-    expect((await orders.list(db, { queue: 'ramburs' })).map((o) => o.id)).not.toContain(cod.id)
-    expect((await orders.list(db, { queue: 'verificare' })).map((o) => o.id)).toContain(cod.id)
-    // Never cancelled automatically.
-    expect((await fresh(cod.id)).status).toBe('confirmed')
-    // The team's note asks for the check, without the signals.
-    const note = renderNotification('new_cod', cod, { siteUrl: 'https://biohack-tech.ro' })
-    expect(note.text).toContain('NECESITĂ VERIFICARE')
-    expect(note.text).not.toContain('Email temporar')
+    // A new browser (no cookie, other email and phone): the network is the same.
+    await failedCard({ email: 'altul@gmail.com', phone: '0711222333' }, { ...src, visitor: crypto.randomUUID() })
+    for (const method of ['card', 'cod', 'transfer'] as const)
+      await expect(place(method, { email: 'incognito@gmail.com', phone: '0711222444' }, { ...src, visitor: crypto.randomUUID() })).rejects.toBeInstanceOf(svc.CardAttemptsError)
+    // Someone else, elsewhere: unaffected.
+    const { order } = await place('cod', { email: 'altcineva@gmail.com', phone: '0733000111' }, { ip: '198.51.100.8' })
+    expect(order.riskReview).toBeNull()
   })
 
-  it('the same browser behind different addresses (johndoe@example.com, then a temporary address)', async () => {
+  it('two failures still leave the other methods open; a paid customer is never stopped', async () => {
+    const src = { ip: '203.0.113.20' }
+    await failedCard({ email: 'doi@gmail.com', phone: '0722000222' }, src)
+    await failedCard({ email: 'doi@gmail.com', phone: '0722000222' }, src)
+    const { order: cod } = await place('cod', { email: 'doi@gmail.com', phone: '0722000222' }, src, AMBER)
+    expect(cod.status).toBe('confirmed')
+  })
+
+  it('the same browser behind different addresses (johndoe@example.com, then another made-up address)', async () => {
     const visitor = crypto.randomUUID()
     await place('card', { email: 'johndoe@example.com' }, { visitor })
     const { order } = await place('card', temp(4), { visitor })
-    expect(order.riskReasons).toEqual(expect.arrayContaining(['Email temporar', '2 adrese de email din același browser sau rețea (24 h)']))
+    expect(order.riskReasons).toEqual(expect.arrayContaining(['Email fictiv (exemplu/test)', '2 adrese de email din același browser sau rețea (24 h)']))
     expect(order.riskReview).toBe('pending')
   })
 
@@ -182,13 +182,15 @@ describe('the card testing attack of 20–23.10 (config/risk-blocklist.ts)', () 
   it('its domain, phone or network: no order is written, on any payment method', async () => {
     await expect(place('cod', { email: 'altcineva@mailnow.io' })).rejects.toBeInstanceOf(svc.BlockedError)
     await expect(place('transfer', { email: 'nou@gmail.com', phone: '+40 724 541 662' })).rejects.toBeInstanceOf(svc.BlockedError)
+    for (const phone of ['0373809013', '0373808442', '+40373803641']) await expect(place('cod', { email: 'nou@gmail.com', phone })).rejects.toBeInstanceOf(svc.BlockedError)
+    await expect(place('cod', { email: 'APopescu66@mailnow.io' })).rejects.toBeInstanceOf(svc.BlockedError)
     expect(risk.blocked({ email: 'nou@gmail.com', phone: '0700000000', ip: '04c7541c20fc55cea8fa775a67b61a51' })).toBe(true)
     expect(risk.blocked({ email: 'nou@gmail.com', phone: '0700000000', ip: risk.ipKey('203.0.113.50') })).toBe(false)
     expect((await db.query('select count(*)::int as n from orders')).rows[0].n).toBe(0)
   })
 
-  it('another phone or address of the attack: written, waits for a person even once paid', async () => {
-    const { order: byPhone } = await place('card', { email: 'a@gmail.com', phone: '0373 809 013' })
+  it('an address of the attack: written, waits for a person even once paid', async () => {
+    const { order: byPhone } = await place('card', { email: 'a@gmail.com', phone: '0711111110', city: 'București', address: 'Str. Răsăritului nr. 27, Bl. D12' })
     expect(byPhone.riskReview).toBe('pending')
     expect(byPhone.riskReasons.join(' ')).toContain('card testing')
     const { order: byAddress } = await place('cod', { email: 'b@gmail.com', phone: '0711111111', city: 'Cluj Napoca', address: 'Str. Piata Unirii nr. 2' })
@@ -278,20 +280,36 @@ describe('the checkout route', () => {
     expect(bodies.at(-1)!.get('payment_method_options[card][request_three_d_secure]')).toBe('any')
   })
 
-  it('a paused card says why and offers the other methods; the session limit stops a burst', async () => {
+  it('after three failures the customer is asked to call; the session limit stops a burst', async () => {
     stripeStub()
     for (let i = 0; i < 3; i++) await failedCard(temp(9))
     const res = await post({ paymentMethod: 'card', email: temp(9).email }, '192.0.2.12')
     expect(res.status).toBe(429)
     const body = (await res.json()) as { error: string; message: string }
     expect(body.error).toBe('CARD_ATTEMPTS')
-    expect(body.message).toContain('ramburs')
+    expect(body.message).toContain('sună-ne')
+    expect((await post({ paymentMethod: 'cod', email: temp(9).email }, '192.0.2.13')).status).toBe(429)
+    // A temporary inbox is turned back at the form, before any order.
+    const disposable = await post({ paymentMethod: 'cod', email: 'nou@mailnow.io' }, '192.0.2.14')
+    expect(disposable.status).toBe(422)
     // The same browser (visitor cookie) placing order after order: stopped at 8 within 10 minutes.
     const cookie = `bt_vid=${crypto.randomUUID()}`
     const statuses: number[] = []
-    for (let i = 0; i < 9; i++) statuses.push((await post({ paymentMethod: 'transfer', email: `burst${i}@gmail.com` }, `192.0.2.${100 + i}`, cookie)).status)
+    for (let i = 0; i < 9; i++) statuses.push((await post({ paymentMethod: 'transfer', email: `burst${i}@gmail.com`, phone: `07330000${10 + i}` }, `192.0.2.${100 + i}`, cookie)).status)
     expect(statuses.slice(0, 8).every((s) => s === 200)).toBe(true)
     expect(statuses[8]).toBe(429)
+  })
+})
+
+describe('a blocked network (proxy.ts)', () => {
+  it('the proxy and the checkout hash the address the same way; a blocked network gets no API answer, the webhooks still pass', async () => {
+    const { networkKey, isBlockedNetwork, OPEN_TO_BLOCKED } = await import('@/lib/blocked-network')
+    for (const ip of ['203.0.113.77', '2001:db8::1']) expect(await networkKey(ip)).toBe(risk.ipKey(ip))
+    expect(await networkKey('unknown')).toBeNull()
+    expect(await isBlockedNetwork('203.0.113.77')).toBe(false)
+    expect(OPEN_TO_BLOCKED.test('/api/webhooks/stripe')).toBe(true)
+    expect(OPEN_TO_BLOCKED.test('/api/checkout')).toBe(false)
+    expect(OPEN_TO_BLOCKED.test('/api/lead')).toBe(false)
   })
 })
 
@@ -301,7 +319,7 @@ describe('migration 031', () => {
     const mk = async (number: string, method: 'card' | 'cod', who: Who) => {
       const w = { phone: `07${String(++seq).padStart(8, '0')}`, ...who }
       const o = method === 'card' ? await failedCard(w) : (await place('cod', w, {}, AMBER)).order
-      const email = who.email?.endsWith('@yopmail.com') ? who.email.replace('@yopmail.com', '@mailnow.io') : who.email
+      const email = who.email?.endsWith('@example.org') ? who.email.replace('@example.org', '@mailnow.io') : who.email
       await db.query('update orders set order_number = $2, email = $3, risk_review = null, risk_score = null, risk_reasons = null where id = $1', [o.id, number, email])
       return o.id
     }
