@@ -374,3 +374,24 @@ The infrastructure (items 1–4) is GO for a deploy with everything off. Activat
   - review video 19/19;
   - upsell 6/6;
   - admin and fulfillment checked.
+
+## 17. Finalization 23.10.2026
+
+- **GHL: the 14 workflows are built, all still Draft** (nobody enrolled, nothing published). In the location `xnf2JtFk46U23NG0lzwC`, folder "BT · Email 2026 · 14 workflow-uri (Draft)". Each workflow:
+  1. one trigger per email: "Contact tag added = `bt-wf-<template>`" (for example `bt-wf-welcome-03`), named with its day or date;
+  2. an If/else "Ce email trimit" with one branch per tag;
+  3. in each branch, "Send email" from the existing template "BT · <template> · rev N · …", sender Biohack Tech <contact@biohack-tech.ro>, with "Sync Edits to Template" on;
+  4. then "Remove contact tag" for the same tag.
+
+  The store still decides timing, stops, the weekly limit and priorities: it adds the tag at the right moment, GHL only sends.
+- **Templates:** all 59 in the folder "BT · Email 2026 · 59 emailuri (Draft)". The 9 Welcome templates were already approved in Email Studio ("APROBAT"); the other 50 are "DE APROBAT". Nothing was approved in this pass.
+- **Before turning any workflow on (YOU):** approve the copy in Email Studio, verify the GHL sending domain for biohack-tech.ro, set the Black Friday variables, then publish one workflow at a time and test it with internal addresses.
+- **Legal (RO and EN):**
+  - Terms and Conditions: section "Vouchere, cadouri și recompense" (`#vouchere`);
+  - Privacy Policy: the processing table rows for Meta, vouchers and the video review; new sections "Reclame Meta" (`#meta`) and "Review video" (`#review-video`); Meta in the recipients; retention for vouchers and videos;
+  - new page `/conditii-review-video` (reward, licence agreement `AD_CONSENT_TEXT`, version `AD_CONSENT_VERSION`, withdrawal, deletion).
+
+  These texts need a lawyer's review before launch.
+- **Review video licence:** the reward comes only with the separate ad-use agreement; the customer can withdraw it from the account (migration `034_video_consent_withdrawal`); the admin "vouchere" page shows consent, withdrawal and file deletion; a video is usable in ads only when approved, with consent and with the file present (`usableInAds`).
+- **Prepared, off:** the voucher popup copy (`POPUP_VOUCHERS`), the two failed-payment emails (`config/payment-failed-emails.ts`, status draft: the engine pauses them with `copy_pending`).
+- **Merged from `main`:** the card-testing block (commits 5016fca, 12720ed: blocklist, disposable emails refused, blocked network on `/api/*`, 3 failed payments then phone only).

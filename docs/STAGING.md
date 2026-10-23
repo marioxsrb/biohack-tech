@@ -60,3 +60,11 @@ These variables are scoped to Production only, so on Preview the integration is 
   ```
 - **Admin:** open `/admin` with the staging password. Admin Stats shows initial, upsell and net revenue separately.
 - **Fulfillment:** open `/fulfillment` as user `depozit` with the staging warehouse password.
+
+## Since 23 October 2026
+- **Migrations** run by themselves on the first database connection. Deploying `release/finalization` applies `034_video_consent_withdrawal` on staging; production gets it only after the merge into `main`.
+- **Anti-fraud from `main`** also applies on staging:
+  - test emails must use a normal domain (for example `@biohack-e2e.ro`). Disposable domains such as mailnow.io are refused;
+  - after 3 failed card payments from the same network, browser, email or phone in 30 days, every payment method is refused. Every test computer shares one IP behind Vercel, so clear the `payment.failed` events of the test orders between card-failure runs;
+  - the attacker's network hash (`src/config/risk-blocklist.ts`) gets 403 on `/api/*`, on staging too.
+- **Review video licence:** check on staging that the reward appears only with the ad-use agreement and that "Retrag acordul" in the account marks the withdrawal (admin, "Vouchere").
