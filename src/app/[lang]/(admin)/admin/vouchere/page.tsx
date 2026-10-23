@@ -8,12 +8,21 @@ import { getDb } from '@/server/db'
 import { listRewards, listVideoReviews, usableInAds } from '@/server/rewards'
 import { listVouchers, voucherHistory, type VoucherStatus } from '@/server/vouchers'
 import { workflowsMode } from '@/server/workflows/engine'
+import { liveWorkflows, testRecipients } from '@/server/workflows/live'
 import { accountLinkAction, deleteReviewVideoAction, issueVoucherAction, restoreVoucherAction, revokeVoucherAction, reviewVideoAction } from '../actions'
 
 export const metadata: Metadata = { title: 'Vouchere și recompense' }
 
 const dt = (d: Date) => d.toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 const name = (id: string | null) => (id ? (catalogProduct(id)?.name ?? id) : '–')
+
+function emailWorkflows() {
+  const mode = workflowsMode()
+  if (mode === 'off') return 'oprite'
+  if (mode === 'dry_run') return 'simulare (nu se trimite nimic)'
+  const only = testRecipients()
+  return `trimise prin GoHighLevel pentru ${liveWorkflows().join(', ') || 'niciun workflow'}${only.length ? ` doar către ${only.join(', ')} (test intern)` : ''}; celelalte în simulare`
+}
 
 const STATUS: Record<VoucherStatus, string> = { active: 'activ', used: 'folosit', expired: 'expirat', revoked: 'revocat' }
 const EVENT: Record<string, string> = {
@@ -47,7 +56,7 @@ export default async function VouchersPage({ searchParams }: { searchParams: Pro
       <p className="mt-2 max-w-[60em] text-[14.5px] text-muted">
         Voucherul este personal: îl poate folosi doar adresa căreia i-a fost emis, o singură dată, doar la produsul lui, prin câmpul de cod din checkout. Valori: NEUROS Calm {formatLei(VOUCHER_VALUE['balance-wave'])}, NEUROS Focus{' '}
         {formatLei(VOUCHER_VALUE['brainlink-pro'])}, NEUROS Amber {formatLei(VOUCHER_VALUE['ochelari-biohack'])} pe fiecare pereche plătită (la 2+1: 60 lei). O comandă anulată, o plată cu cardul nefinalizată sau o rambursare integrală îl
-        eliberează. Workflow-urile de email: {workflowsMode() === 'off' ? 'oprite' : 'simulare (nu se trimite nimic)'}.
+        eliberează. Workflow-urile de email: {emailWorkflows()}.
       </p>
 
       {message && <p className="mt-4 rounded-[12px] bg-cyan-50 px-4 py-3 text-[14.5px] text-cyan-700">{message}</p>}
