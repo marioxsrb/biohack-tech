@@ -147,6 +147,7 @@ const JOB_LABEL: Record<string, string> = {
   'order.transfer_expiry': 'Anularea transferului expirat',
   'order.abandon_check': 'Verificarea plății nefinalizate',
   'meta.purchase': 'Purchase către Meta (Conversions API)',
+  'ghl.workflow_send': 'Emailul din workflow (GoHighLevel)',
 }
 export const jobLabel = (kind: string, template?: string) => `${JOB_LABEL[kind] ?? kind}${template ? ` (${template})` : ''}`
 

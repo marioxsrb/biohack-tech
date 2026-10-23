@@ -34,6 +34,7 @@ export type JobKind =
   | 'fx.refresh'
   | 'meta.purchase'
   | 'digital.email'
+  | 'ghl.workflow_send'
 export type JobStatus = 'pending' | 'running' | 'retry' | 'done' | 'failed' | 'skipped'
 
 export type Job = {

@@ -516,6 +516,11 @@ export const ghl = {
     return r.opportunity.id
   },
 
+  /** Custom fields of a known contact only (the workflow email's values); its tags and identity are left as they are. */
+  async updateFields(c: GhlConfig, contactId: string, customFields: { key: string; field_value: string }[]) {
+    if (customFields.length) await call(c, 'PUT', `/contacts/${encodeURIComponent(contactId)}`, { customFields })
+  },
+
   async addTags(c: GhlConfig, contactId: string, tags: string[]) {
     if (tags.length) await call(c, 'POST', `/contacts/${contactId}/tags`, { tags })
   },

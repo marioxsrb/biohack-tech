@@ -28,6 +28,7 @@ import { resolveCode, type ResolvedCode } from '@/server/codes'
 import { attributeReferral } from '@/server/referrals'
 import { reserveVoucher, syncVoucher } from '@/server/vouchers'
 import { onOrderEvent, workflowsMode } from '@/server/workflows/engine'
+import { sendsLive } from '@/server/workflows/live'
 import { upsellsFor } from '@/lib/upsell'
 import { UPSELL_WINDOW_MINUTES } from '@/config/upsell'
 import type { OrderLine } from '@/lib/orders/resolve'
@@ -819,7 +820,8 @@ export function jobsFor(event: string, o: Order, data: Record<string, unknown> =
       // The service email the day after delivery (W6 P1), once per purchase: an added product shares its parent's parcel.
       return [
         ...crm(),
-        ...(c.email.deliveryFollowup && o.kind === 'checkout' ? later('delivery_followup', inDays(1)) : []),
+        // The Post-Purchase workflow's first email replaces this one where it sends live.
+        ...(c.email.deliveryFollowup && o.kind === 'checkout' && !sendsLive('post-purchase', o.email) ? later('delivery_followup', inDays(1)) : []),
         // Cash on delivery: a note if the courier's settlement is still not recorded 10 days later. Nothing automatic.
         ...(o.paymentMethod === 'cash_on_delivery' ? notify('cod_uncollected', inDays(10)) : []),
       ]

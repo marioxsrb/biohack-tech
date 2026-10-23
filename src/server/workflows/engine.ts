@@ -6,7 +6,9 @@
  *   off      (default) nothing is enrolled and nothing runs: the store behaves exactly as before;
  *   dry_run  enrollments are recorded and each tick records in email_sends what WOULD be sent, when and why not.
  *            No email, no CRM call, no voucher issued (the tick only checks whether one could be).
- * Sending through GoHighLevel is not part of this stage: no mode sends.
+ *   live     as dry_run, except that a workflow listed in WORKFLOWS_LIVE really sends, through GoHighLevel, to the
+ *            addresses allowed (WORKFLOWS_TEST_RECIPIENTS while set): the voucher is issued, the send is queued
+ *            (job ghl.workflow_send) and recorded as 'queued', then 'sent' (server/workflows/live.ts).
  */
 import 'server-only'
 import { randomUUID } from 'node:crypto'
@@ -16,12 +18,14 @@ import type { Queryable, Row } from '@/server/db'
 import { marketing } from '@/server/marketing/consent'
 import type { Order } from '@/server/orders/model'
 import { normalizeEmail, voucherEligibility } from '@/server/vouchers'
+import { jobs } from '@/server/jobs/outbox'
 import { decide, dueAt, type Decision, type Enrollment as Planned } from './planner'
+import { liveBlocker, prepareVoucher, sendsLive } from './live'
 
-export type WorkflowsMode = 'off' | 'dry_run'
+export type WorkflowsMode = 'off' | 'dry_run' | 'live'
 
 export function workflowsMode(env: Record<string, string | undefined> = process.env): WorkflowsMode {
-  return env.WORKFLOWS_MODE === 'dry_run' ? 'dry_run' : 'off'
+  return env.WORKFLOWS_MODE === 'dry_run' ? 'dry_run' : env.WORKFLOWS_MODE === 'live' ? 'live' : 'off'
 }
 
 export function weeklyLimit(env: Record<string, string | undefined> = process.env) {
@@ -114,9 +118,9 @@ export async function factsFor(q: Queryable, e: Enrollment, now: Date, campaign?
 }
 
 /** Applies one decision: the step's record in email_sends and the enrollment's next state. */
-async function apply(q: Queryable, e: Enrollment, d: Decision, now: Date) {
+async function apply(q: Queryable, e: Enrollment, d: Decision, now: Date, mode: WorkflowsMode) {
   const wf = WORKFLOWS[e.workflow]
-  const advance = async (status: 'dry_run' | 'skipped', template: string, promotional: boolean, reason: string | null) => {
+  const advance = async (status: 'dry_run' | 'skipped' | 'queued', template: string, promotional: boolean, reason: string | null) => {
     await q.query(
       `insert into email_sends (email, workflow, template, enrollment_id, promotional, status, reason, created_at) values ($1,$2,$3,$4,$5,$6,$7,$8)
        on conflict (enrollment_id, template) do nothing`,
@@ -127,8 +131,16 @@ async function apply(q: Queryable, e: Enrollment, d: Decision, now: Date) {
     await q.query(`update workflow_enrollments set step = $2, status = $3, next_at = $4, updated_at = now() where id = $1`, [e.id, next, done ? 'completed' : 'active', done ? null : dueAt(e, next)])
   }
   switch (d.action) {
-    case 'send':
-      return advance('dry_run', d.template, d.promotional, null)
+    case 'send': {
+      if (mode !== 'live' || !sendsLive(e.workflow, e.email)) return advance('dry_run', d.template, d.promotional, null)
+      const blocked = liveBlocker(d.template)
+      if (blocked) return advance('skipped', d.template, d.promotional, blocked)
+      const voucher = await prepareVoucher(q, e, d.template)
+      if ('skip' in voucher) return advance('skipped', d.template, d.promotional, voucher.skip)
+      await advance('queued', d.template, d.promotional, null)
+      await jobs.enqueue(q, { kind: 'ghl.workflow_send', dedupeKey: `ghl.workflow_send:${e.id}:${d.template}`, payload: { enrollmentId: e.id, template: d.template, voucherId: voucher.voucherId } })
+      return
+    }
     case 'skip':
       return advance('skipped', d.template, wf.steps[d.step].promotional, d.reason)
     case 'wait':
@@ -153,7 +165,7 @@ export async function workflowTick(q: Queryable, opts: { now?: Date; limit?: num
   const out: { id: string; email: string; workflow: WorkflowId; decision: Decision }[] = []
   for (const e of due) {
     const d = decide(e, await factsFor(q, e, now, opts.campaign))
-    await apply(q, e, d, now)
+    await apply(q, e, d, now, mode)
     out.push({ id: e.id, email: e.email, workflow: e.workflow, decision: d })
   }
   return out

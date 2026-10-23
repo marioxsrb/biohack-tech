@@ -79,6 +79,9 @@ export const marketing = {
     return rows[0]?.unsubscribe_token ?? null
   },
 
+  /** The address's unsubscribe token, created when missing (a service email carries the link too); records no consent. */
+  ensureUnsubscribeToken: (q: Queryable, email: string) => ensureSubject(q, email),
+
   async history(q: Queryable, email: string) {
     return (
       await q.query<{ granted: boolean; source: string; text_version: string; order_id: string | null; page: string | null; created_at: string }>(

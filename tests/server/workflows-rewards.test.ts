@@ -59,7 +59,8 @@ describe('mode', () => {
     await delivered([AMBER])
     expect(await enrollments()).toEqual([])
     expect(await wf.workflowTick(db)).toEqual([])
-    expect(wf.workflowsMode({ WORKFLOWS_MODE: 'live' })).toBe('off')
+    expect(wf.workflowsMode({ WORKFLOWS_MODE: 'other' })).toBe('off')
+    expect(wf.workflowsMode({ WORKFLOWS_MODE: 'live' })).toBe('live')
   })
 })
 

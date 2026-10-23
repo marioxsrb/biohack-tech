@@ -52,6 +52,9 @@ import { expireUnpaidTransfer, markAbandonedIfUnpaid } from '@/server/orders/ser
 import { withdrawals } from '@/server/orders/withdrawal'
 import { renderSupportNotice, supportRequests } from '@/server/assistant/support'
 import { DigitalPermanent, DigitalSkip, runDigitalEmail } from '@/server/digital/delivery'
+import { WORKFLOWS, type WorkflowId } from '@/config/workflows'
+import { sendTag } from '@/server/workflows/ghl-map'
+import { ghlFields, sendsLive, workflowValues, workflowsGhl } from '@/server/workflows/live'
 import { jobs, type Job } from './outbox'
 
 class Skip extends Error {}
@@ -269,6 +272,9 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const lead = await leads.byId(db, String(j.payload.leadId ?? ''))
     if (!lead) throw new Skip('lead gone')
     const step = Number(j.payload.step) === 3 ? 3 : Number(j.payload.step) === 2 ? 2 : 1
+    // An unpaid card order whose Abandoned Cart workflow sends live for this address: its four approved emails replace
+    // these, so the customer never gets both.
+    if (lead.orderId && sendsLive('abandoned-cart', lead.email)) throw new Skip('handled by the abandoned-cart workflow')
     // An AI call for this lead is about to happen: its email (with the personal code) is the first recovery
     // email, so the regular first email waits until after it (and is skipped when the call's email went out).
     if (step === 1) {
@@ -568,6 +574,45 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
       if (e instanceof DigitalPermanent) throw new Permanent(e.message)
       throw e
     }
+  },
+  // One live workflow email: checked again now (still active, still allowed, consent for a promotional one), its values
+  // written on the contact, then the tag that starts the approved GHL workflow. Never sent with a value missing.
+  'ghl.workflow_send': async (j) => {
+    const c = getConfig()
+    const db = await getDb()
+    const template = String(j.payload.template ?? '')
+    const { rows } = await db.query('select * from workflow_enrollments where id = $1', [String(j.payload.enrollmentId ?? '')])
+    const r = rows[0]
+    if (!r) throw new Permanent('enrollment gone')
+    const workflow = r.workflow as WorkflowId
+    const email = String(r.email)
+    const mark = (status: 'sent' | 'skipped', reason: string | null) =>
+      db.query('update email_sends set status = $3, reason = $4 where enrollment_id = $1 and template = $2', [r.id, template, status, reason])
+    if (r.status === 'stopped') {
+      await mark('skipped', `stopped_${r.stop_reason ?? ''}`)
+      throw new Skip('enrollment stopped')
+    }
+    if (!sendsLive(workflow, email)) {
+      await mark('skipped', 'not_live')
+      throw new Skip('not live for this address')
+    }
+    const step = WORKFLOWS[workflow].steps.find((s) => s.template === template)
+    if (step?.promotional && !(await marketing.state(db, email))?.granted) {
+      await mark('skipped', 'no_consent')
+      throw new Skip('no marketing consent')
+    }
+    const { values, missing } = await workflowValues(db, { id: String(r.id), email, workflow, ref: String(r.ref), step: Number(r.step), data: (r.data ?? {}) as Record<string, unknown> }, template, c.siteUrl, (j.payload.voucherId as string | null) ?? null)
+    if (missing.length) {
+      await mark('skipped', `missing_${missing.join('+')}`)
+      throw new Permanent(`missing values: ${missing.join(', ')}`)
+    }
+    const g = workflowsGhl()
+    if (!g) throw new Skip('ghl workflows location not configured')
+    const contactId = await ghl.upsertLeadContact(g, { name: null, email, phone: null }, await knownContactId(db, email))
+    await ghl.updateFields(g, contactId, ghlFields(values))
+    await ghl.addTags(g, contactId, [sendTag(template)])
+    await mark('sent', null)
+    return contactId
   },
   'stripe.reconcile': async (j) => reconcileCardPayment(j.orderId!),
   'upsell.release': async (j) => releaseUpsellCard(j.orderId!),

@@ -395,3 +395,31 @@ The infrastructure (items 1–4) is GO for a deploy with everything off. Activat
 - **Review video licence:** the reward comes only with the separate ad-use agreement; the customer can withdraw it from the account (migration `034_video_consent_withdrawal`); the admin "vouchere" page shows consent, withdrawal and file deletion; a video is usable in ads only when approved, with consent and with the file present (`usableInAds`).
 - **Prepared, off:** the voucher popup copy (`POPUP_VOUCHERS`), the two failed-payment emails (`config/payment-failed-emails.ts`, status draft: the engine pauses them with `copy_pending`).
 - **Merged from `main`:** the card-testing block (commits 5016fca, 12720ed: blocklist, disposable emails refused, blocked network on `/api/*`, 3 failed payments then phone only).
+
+## 18. Live sending through GoHighLevel, 23.10.2026
+
+All 59 emails are approved in Email Studio (hash check: Studio exports = HTML in GHL, 0 differences). GHL location: **Neuros** (`xnf2JtFk46U23NG0lzwC`, the same one the store syncs to; not Brain Event). Sending domain: `lc.biohack-tech.ro` (contact@biohack-tech.ro), already active.
+
+**How it works.** The store decides; GHL only sends. For a "send" the engine (mode `live`) issues the voucher if the step has one, records `email_sends` as `queued` and enqueues `ghl.workflow_send`. The job checks everything again (enrollment stopped, switches, consent for promotional steps, all values filled), writes the values on the contact (`contact.bt_*`), then adds the tag `bt-wf-<template>`. The GHL workflow (E01–E14) sends the approved email on that tag and removes it. An email with a missing value is skipped (`missing_<names>`); a raw `{{variable}}` never goes out.
+
+**Switches (all needed):**
+
+| Variable | Value |
+|---|---|
+| `WORKFLOWS_MODE` | `live` |
+| `WORKFLOWS_LIVE` | the workflows that send, e.g. `abandoned-cart,post-purchase`; the others are only recorded (dry run) |
+| `WORKFLOWS_TEST_RECIPIENTS` | while set, only these addresses receive anything (internal tests); empty = everyone with the right consent |
+| `GHL_WF_LOCATION_ID` | `xnf2JtFk46U23NG0lzwC`; equal to `GHL_LOCATION_ID`, so it reuses `GHL_PRIVATE_TOKEN` (otherwise `GHL_WF_TOKEN`) |
+
+**Legacy emails step aside** for a live address: the `lead.recovery` email for an unpaid card order (Abandoned Cart sends instead) and the `delivery_followup` email (Post-Purchase sends instead).
+
+**Every email carries the unsubscribe link,** also the service emails to customers without marketing consent (the token is created without recording any consent).
+
+**Blocked, stays off:**
+- `post-purchase-03` (review video): skipped with `review_upload_off` until `VIDEO_STORAGE_KEY` is set.
+- `abandoned-cart-04` with two or more product types: skipped (`voucher_variant_not_approved`); only the one-product email is approved.
+- Welcome, Educație, Referral, VIP, Win-back, Nudge, Black Friday, Crăciun, Anul Nou: no enrollment from the store yet; Black Friday also needs `bf_*` values that are not contact fields.
+- Landing (popup): needs `POPUP_VOUCHERS=on`, whose copy is not approved.
+- Referral and VIP rewards: the gift invoice line (`FGO_GIFT_LINES=discount`) is untested on FGO.
+
+**Activation order:** publish E01 and E02 in GHL, test with `WORKFLOWS_TEST_RECIPIENTS=contact@biohack-tech.ro`, check delivery in GHL, then empty the test list. Existing contacts are never enrolled retroactively.
