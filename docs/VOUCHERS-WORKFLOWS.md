@@ -423,3 +423,10 @@ All 59 emails are approved in Email Studio (hash check: Studio exports = HTML in
 - Referral and VIP rewards: the gift invoice line (`FGO_GIFT_LINES=discount`) is untested on FGO.
 
 **Activation order:** publish E01 and E02 in GHL, test with `WORKFLOWS_TEST_RECIPIENTS=contact@biohack-tech.ro`, check delivery in GHL, then empty the test list. Existing contacts are never enrolled retroactively.
+
+**Production state, 23.10.2026 evening:**
+- `release/finalization` merged into `main` (fast-forward, commit 0a1f493), Production READY; migrations 032–034 applied; no order changed.
+- Env (Production): `WORKFLOWS_MODE=live`, `WORKFLOWS_LIVE=abandoned-cart,post-purchase`, `WORKFLOWS_TEST_RECIPIENTS=contact@biohack-tech.ro`, `GHL_WF_LOCATION_ID=xnf2JtFk46U23NG0lzwC`. Everyone else stays a dry run and keeps the legacy emails.
+- GHL: E01 and E02 published; E03–E14 Draft. Internal test on the contact "Test Intern BiohackTech" (contact@biohack-tech.ro): tag added → email sent from "Biohack Tech <contact@biohack-tech.ro>" through lc.biohack-tech.ro, values filled, tag removed by the workflow; re-entry works.
+- Dark mode fix (Email Studio a9484f8): bold text was #0b1316 on the dark boxes (invisible in Apple Mail / iOS dark mode) in 49 of 59 emails; one CSS rule `.bt-ink strong,.bt-text strong{color:#ffffff!important}` in the dark-mode block. Text unchanged. Updated in GHL for the 8 E01/E02 templates (renamed "APROBAT"); **the other 51 must be updated in GHL before their workflow is published** (HTML ready, combined hash c809531b504b72b9).
+- Next step for real customers: after a store-side test (an abandoned card checkout or a delivered order of contact@biohack-tech.ro), empty `WORKFLOWS_TEST_RECIPIENTS`.
