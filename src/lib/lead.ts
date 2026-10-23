@@ -2,6 +2,7 @@
  * Leads: the contact details a visitor types in the checkout's contact step. Shared by the form (what the
  * visitor reads and is checked against) and the server (what is stored as proof).
  */
+import { isDisposable } from '@/config/risk-blocklist'
 
 /** First-party cookies. */
 export const VISITOR_COOKIE = 'bt_vid'
@@ -33,6 +34,7 @@ export function validateContact(c: LeadContact, required: (keyof LeadContact)[] 
   if (!c.email) {
     if (required.includes('email')) e.email = 'Scrie adresa de email.'
   } else if (!EMAIL.test(c.email)) e.email = 'Verifică adresa de email. Exemplu: nume@exemplu.ro'
+  else if (isDisposable(c.email)) e.email = 'Folosește adresa ta de email obișnuită (Gmail, Yahoo sau alta).'
   const digits = c.phone.replace(/\D/g, '')
   if (!digits) {
     if (required.includes('phone')) e.phone = 'Scrie numărul de telefon.'

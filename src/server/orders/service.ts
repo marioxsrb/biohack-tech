@@ -38,7 +38,7 @@ import { orders } from './repository'
 import { ensureOrderLead, markLeadsPurchased } from '@/server/leads'
 import { syncEntitlement } from '@/server/digital/entitlements'
 import { autoEmailJob } from '@/server/digital/delivery'
-import { FAILED_CARD_LIMIT, ipKey, riskSignals, scoreRisk } from '@/server/risk'
+import { blocked, FAILED_CARD_LIMIT, held, ipKey, riskSignals, scoreRisk } from '@/server/risk'
 
 export type Source = 'checkout' | 'stripe.webhook' | 'stripe.reconcile' | 'upsell' | 'admin' | 'system' | 'assistant' | 'fulfillment'
 
@@ -82,8 +82,8 @@ const addressOf = (f: OrderForm, ship: boolean): Address =>
     : { address: f.address, city: f.city, county: f.county, postalCode: f.postalCode, country: f.country || 'RO' }
 
 /**
- * A card payment refused before any order is written: this contact, browser or network already had
- * FAILED_CARD_LIMIT failed card payments in the last 24 hours. The other methods stay open.
+ * An order refused before it is written: this contact, browser or network already had FAILED_CARD_LIMIT failed
+ * card payments in the last FAILED_WINDOW_DAYS days. Every payment method is closed to them; they call us.
  */
 /** Stripe's smallest card charge in lei (2 lei); euro and dollar orders are far above it. */
 const MIN_CARD_MINOR = 200
@@ -91,6 +91,13 @@ const MIN_CARD_MINOR = 200
 export class CardAttemptsError extends Error {
   constructor() {
     super('too many failed card payments')
+  }
+}
+
+/** The card testing attack's domain, phone or network (config/risk-blocklist.ts): no order is written. */
+export class BlockedError extends Error {
+  constructor() {
+    super('blocked source')
   }
 }
 
@@ -132,8 +139,14 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
       // The risk check (server/risk.ts) reads what happened before this order; it never blocks on one signal.
       const riskInput = { email: f.email, phone: f.phone, firstName: f.firstName, lastName: f.lastName, ip: ipKey(input.source?.ip), visitor: input.source?.visitor ?? null }
       const signals = await riskSignals(t, riskInput)
-      if (method === 'card' && signals.failedCards >= FAILED_CARD_LIMIT && !signals.known) throw new CardAttemptsError()
-      const risk = scoreRisk(signals)
+      const ship = addressOf(f, true)
+      const listed = { email: f.email, phone: f.phone, ip: riskInput.ip, city: f.city, address: f.address }
+      if (blocked(listed)) throw new BlockedError()
+      // Three failed payments from this network, browser, email or phone (30 days): no more orders, on any method; they call us.
+      if (signals.failedRecent >= FAILED_CARD_LIMIT && !signals.known) throw new CardAttemptsError()
+      const scored = scoreRisk(signals)
+      // Linked to the card testing attack (same phone, address or email domain): a person checks it, even when paid.
+      const risk = held(listed) || held({ ...listed, city: ship.city, address: ship.address }) ? { ...scored, review: true, reasons: [...scored.reasons, 'Legat de atacul de card testing (telefon, adresă sau domeniu)'] } : scored
       const subtotal = pricing.subtotalMinor
       const discount = pricing.discountMinor
       const now = new Date()

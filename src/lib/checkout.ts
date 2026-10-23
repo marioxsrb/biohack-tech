@@ -3,6 +3,7 @@
  * The server always re-runs normalizeOrder + validateOrder; the browser's checks are a courtesy.
  */
 import { isCountry } from './countries'
+import { isDisposable } from '@/config/risk-blocklist'
 
 export const COUNTIES = [
   'Alba', 'Arad', 'Argeș', 'Bacău', 'Bihor', 'Bistrița-Năsăud', 'Botoșani', 'Brașov', 'Brăila', 'București',
@@ -164,6 +165,7 @@ const MSG = {
     lastName: 'Completează numele.',
     emailEmpty: 'Completează adresa de email.',
     email: 'Verifică adresa de email. Exemplu: nume@exemplu.ro',
+    emailDisposable: 'Folosește adresa ta de email obișnuită (Gmail, Yahoo sau alta). Acolo primești confirmarea și factura.',
     phoneEmpty: 'Completează numărul de telefon, pentru curier.',
     phone: 'Verifică numărul de telefon. Exemplu: 0722 123 456',
     company: 'Completează denumirea firmei.',
@@ -186,6 +188,7 @@ const MSG = {
     lastName: 'Enter your last name.',
     emailEmpty: 'Enter your email address.',
     email: 'Check your email address. Example: name@example.com',
+    emailDisposable: 'Please use your regular email address (Gmail, Outlook or other). Your confirmation and invoice go there.',
     phoneEmpty: 'Enter your phone number, for the courier.',
     phone: 'Check your phone number. Example: 0722 123 456',
     company: 'Enter the company name.',
@@ -212,6 +215,7 @@ export function validateOrder(o: OrderForm, acceptedTerms: boolean, available?: 
   if (o.lastName.length < 1) e.lastName = m.lastName
   if (!o.email) e.email = m.emailEmpty
   else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(o.email)) e.email = m.email
+  else if (isDisposable(o.email)) e.email = m.emailDisposable
   const digits = o.phone.replace(/\D/g, '')
   if (!digits) e.phone = m.phoneEmpty
   else if (digits.length < 9 || digits.length > 15) e.phone = m.phone

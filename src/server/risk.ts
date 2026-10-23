@@ -12,20 +12,13 @@
 import 'server-only'
 import { createHmac } from 'node:crypto'
 import type { Queryable } from '@/server/db'
+import { BLOCKED, HOLD, isDisposable } from '@/config/risk-blocklist'
 
 export const REVIEW_AT = 40
+/** Failed payments from the same network, browser, email or phone after which the site takes no more orders from them. */
 export const FAILED_CARD_LIMIT = 3
+export const FAILED_WINDOW_DAYS = 30
 
-/** Disposable inboxes (the address works for minutes or hours, then nobody reads it). */
-const DISPOSABLE = new Set([
-  'mailnow.io', 'mailinator.com', 'guerrillamail.com', 'guerrillamail.net', 'guerrillamailblock.com', 'sharklasers.com', 'grr.la',
-  '10minutemail.com', '10minutemail.net', 'temp-mail.org', 'temp-mail.io', 'tempmail.com', 'tempmail.net', 'tempmailo.com', 'tempail.com',
-  'yopmail.com', 'yopmail.fr', 'yopmail.net', 'trashmail.com', 'trashmail.de', 'getnada.com', 'nada.email', 'maildrop.cc', 'dispostable.com',
-  'throwawaymail.com', 'fakeinbox.com', 'mohmal.com', 'emailondeck.com', 'minuteinbox.com', 'mail.tm', 'mail.gw', 'tmail.ws', 'tmpmail.org',
-  'tmpmail.net', 'mintemail.com', 'mytemp.email', 'spamgourmet.com', 'mailcatch.com', 'mailnesia.com', 'burnermail.io', 'inboxkitten.com',
-  'emailfake.com', 'fakemail.net', 'luxusmail.org', 'dropmail.me', 'cmail.club', 'tempinbox.com', 'mailpoof.com', 'moakt.com', 'tempr.email',
-  'discard.email', 'spambox.us', 'byom.de', 'trash-mail.com', 'wegwerfmail.de', 'einrot.com', 'mailforspam.com', 'tempmailaddress.com',
-])
 /** Addresses that are not anyone's (examples, tests). */
 const PLACEHOLDER = new Set(['example.com', 'example.org', 'example.net', 'test.com', 'test.ro', 'email.com', 'domain.com'])
 
@@ -33,7 +26,7 @@ export type EmailKind = 'disposable' | 'placeholder' | null
 
 export function emailKind(email: string): EmailKind {
   const domain = email.trim().toLowerCase().split('@')[1] ?? ''
-  if (DISPOSABLE.has(domain)) return 'disposable'
+  if (isDisposable(email)) return 'disposable'
   if (PLACEHOLDER.has(domain)) return 'placeholder'
   return null
 }
@@ -55,6 +48,8 @@ export type RiskSignals = {
   emailKind: EmailKind
   /** Failed card payments in the last 24 h on the same email, phone, browser or network (this order excluded). */
   failedCards: number
+  /** The same, over FAILED_WINDOW_DAYS: at FAILED_CARD_LIMIT the person has to call (no order on any method). */
+  failedRecent: number
   /** Different names on orders with the same email or phone in the last 7 days, this one included. */
   names: number
   /** Different email addresses from the same browser or network in the last 24 h, this one included. */
@@ -108,11 +103,14 @@ export async function riskSignals(q: Queryable, i: RiskInput): Promise<RiskSigna
   const visitor = i.visitor ?? ''
   const not = i.excludeOrderId ?? NO_ORDER
   // One round trip: every signal is a subquery of the same statement.
-  const { rows } = await q.query<{ failed: number; names: string[] | null; emails: string[] | null; burst: number; known: boolean }>(
+  const { rows } = await q.query<{ failed: number; failed_recent: number; names: string[] | null; emails: string[] | null; burst: number; known: boolean }>(
     `select
        (select count(*)::int from order_events e join orders o on o.id = e.order_id
          where e.type = 'payment.failed' and e.created_at >= now() - interval '24 hours' and o.id <> $5::uuid
            and (${contactSql('o.', '$1', '$2')} or ${sourceSql('o.', '$3', '$4')})) as failed,
+       (select count(*)::int from order_events e join orders o on o.id = e.order_id
+         where e.type = 'payment.failed' and e.created_at >= now() - make_interval(days => ${FAILED_WINDOW_DAYS}) and o.id <> $5::uuid
+           and (${contactSql('o.', '$1', '$2')} or ${sourceSql('o.', '$3', '$4')})) as failed_recent,
        (select array_agg(distinct lower(trim(coalesce(o.customer->>'firstName', '') || ' ' || coalesce(o.customer->>'lastName', '')))) from orders o
          where o.created_at >= now() - interval '7 days' and o.id <> $5::uuid and ${contactSql('o.', '$1', '$2')}) as names,
        (select array_agg(distinct x.email) from (
@@ -129,6 +127,7 @@ export async function riskSignals(q: Queryable, i: RiskInput): Promise<RiskSigna
   return {
     emailKind: emailKind(email),
     failedCards: Number(r?.failed ?? 0),
+    failedRecent: Number(r?.failed_recent ?? 0),
     names: allNames.size,
     emails: allEmails.size,
     burst: Number(r?.burst ?? 0),
@@ -150,6 +149,35 @@ export async function riskHold(q: Queryable, who: { email: string; phone?: strin
     [who.email.trim().toLowerCase(), phone, who.orderId ?? ''],
   )
   return rows.length > 0
+}
+
+const plain = (s: string) =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\b(str|strada|nr|numarul)\b/g, '').replace(/[^a-z0-9]/g, '')
+const domainOf = (email: string) => email.trim().toLowerCase().split('@')[1] ?? ''
+
+export type ListInput = { email: string; phone: string; ip: string | null; city?: string; address?: string }
+
+/** A temporary inbox, or the attack's email, phone or network (config/risk-blocklist.ts): no order is written. */
+export function blocked(i: ListInput): boolean {
+  const phone = phoneKey(i.phone)
+  const email = i.email.trim().toLowerCase()
+  return (
+    isDisposable(email) ||
+    BLOCKED.emailDomains.includes(domainOf(email)) ||
+    BLOCKED.emails.includes(email) ||
+    (!!phone && BLOCKED.phones.includes(phone)) ||
+    (!!i.ip && BLOCKED.ipKeys.includes(i.ip))
+  )
+}
+
+/** The attack's email domain, a phone or a delivery address it used: the order waits for a person. */
+export function held(i: ListInput): boolean {
+  const phone = phoneKey(i.phone)
+  if (HOLD.emailDomains.includes(domainOf(i.email)) || (!!phone && HOLD.phones.includes(phone))) return true
+  const city = plain(i.city ?? '')
+  const street = plain(i.address ?? '')
+  // The street and its number, and nothing more digits after it (Piața Unirii 2, never Piața Unirii 25).
+  return HOLD.addresses.some((a) => a.city === city && street.startsWith(a.street) && !/^\d/.test(street.slice(a.street.length)))
 }
 
 /** The pseudonymised identifiers are kept this long after the order (privacy policy, „Prevenirea fraudei”). */
