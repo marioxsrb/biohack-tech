@@ -42,7 +42,7 @@ const failedCard = async (who: Who = {}, src: { ip?: string; visitor?: string } 
   expect((await svc.recordPaymentFailure(order.id, 'stripe.webhook', 'authentication failed', `pi_${order.id}`)).changed).toBe(true)
   return (await orders.byId(db, order.id))!
 }
-const temp = (n: number): Who => ({ email: `client${n}@mailnow.io` })
+const temp = (n: number): Who => ({ email: `client${n}@yopmail.com` })
 const fresh = async (id: string) => (await orders.byId(db, id))!
 
 describe('the score', () => {
@@ -138,7 +138,7 @@ describe('placing orders', () => {
     expect(note.text).not.toContain('Email temporar')
   })
 
-  it('the same browser behind different addresses (johndoe@example.com, then a mailnow address)', async () => {
+  it('the same browser behind different addresses (johndoe@example.com, then a temporary address)', async () => {
     const visitor = crypto.randomUUID()
     await place('card', { email: 'johndoe@example.com' }, { visitor })
     const { order } = await place('card', temp(4), { visitor })
@@ -175,6 +175,40 @@ describe('placing orders', () => {
     await send()
     const s = await risk.riskSignals(db, { email: temp(6).email!, phone: person.phone, firstName: 'Ana', lastName: 'Popescu', ip: null, visitor: null })
     expect(s.failedCards).toBe(1)
+  })
+})
+
+describe('the card testing attack of 20–23.10 (config/risk-blocklist.ts)', () => {
+  it('its domain, phone or network: no order is written, on any payment method', async () => {
+    await expect(place('cod', { email: 'altcineva@mailnow.io' })).rejects.toBeInstanceOf(svc.BlockedError)
+    await expect(place('transfer', { email: 'nou@gmail.com', phone: '+40 724 541 662' })).rejects.toBeInstanceOf(svc.BlockedError)
+    expect(risk.blocked({ email: 'nou@gmail.com', phone: '0700000000', ip: '04c7541c20fc55cea8fa775a67b61a51' })).toBe(true)
+    expect(risk.blocked({ email: 'nou@gmail.com', phone: '0700000000', ip: risk.ipKey('203.0.113.50') })).toBe(false)
+    expect((await db.query('select count(*)::int as n from orders')).rows[0].n).toBe(0)
+  })
+
+  it('another phone or address of the attack: written, waits for a person even once paid', async () => {
+    const { order: byPhone } = await place('card', { email: 'a@gmail.com', phone: '0373 809 013' })
+    expect(byPhone.riskReview).toBe('pending')
+    expect(byPhone.riskReasons.join(' ')).toContain('card testing')
+    const { order: byAddress } = await place('cod', { email: 'b@gmail.com', phone: '0711111111', city: 'Cluj Napoca', address: 'Str. Piata Unirii nr. 2' })
+    expect(byAddress.riskReview).toBe('pending')
+    expect(risk.held({ email: 'c@gmail.com', phone: '0711111112', ip: null, city: 'Giroc', address: 'Strada Mușețel, Nr. 97' })).toBe(true)
+    // Similar but different: another number on the same street, another city.
+    expect(risk.held({ email: 'c@gmail.com', phone: '0711111112', ip: null, city: 'Cluj-Napoca', address: 'Piața Unirii 25' })).toBe(false)
+    expect(risk.held({ email: 'c@gmail.com', phone: '0711111112', ip: null, city: 'Oradea', address: 'Piața Unirii 2' })).toBe(false)
+    // Paid by card: still not preparable until a person clears it.
+    await svc.attachPaymentIntent(byPhone.id, `pi_${byPhone.id}`)
+    expect((await svc.confirmPayment(byPhone.id, 'stripe.webhook', { amountMinor: byPhone.totalMinor, currency: 'RON', paymentIntentId: `pi_${byPhone.id}` })).changed).toBe(true)
+    const after = await fresh(byPhone.id)
+    expect(after.paymentStatus).toBe('paid')
+    expect(after.riskReview).toBe('pending')
+    expect((await svc.markProcessing(after.id, 'admin')).changed).toBe(false)
+  })
+
+  it('a legitimate customer is untouched', async () => {
+    const { order } = await place('cod', { email: 'roxana@gmail.com', phone: '+40722503384', city: 'Suceava', address: 'Strada Ștefan Tomșa 21' })
+    expect(order.riskReview).toBeNull()
   })
 })
 
@@ -263,10 +297,12 @@ describe('the checkout route', () => {
 
 describe('migration 031', () => {
   it('flags only the four mailnow card attempts by number; a legitimate cash-on-delivery order between them is untouched', async () => {
+    // Placed with another address, then given the attack's mailnow address (that domain is now refused at checkout).
     const mk = async (number: string, method: 'card' | 'cod', who: Who) => {
       const w = { phone: `07${String(++seq).padStart(8, '0')}`, ...who }
       const o = method === 'card' ? await failedCard(w) : (await place('cod', w, {}, AMBER)).order
-      await db.query('update orders set order_number = $2, risk_review = null, risk_score = null, risk_reasons = null where id = $1', [o.id, number])
+      const email = who.email?.endsWith('@yopmail.com') ? who.email.replace('@yopmail.com', '@mailnow.io') : who.email
+      await db.query('update orders set order_number = $2, email = $3, risk_review = null, risk_score = null, risk_reasons = null where id = $1', [o.id, number, email])
       return o.id
     }
     const ids = [await mk('BHT-20261020-0002', 'card', temp(10)), await mk('BHT-20261021-0001', 'card', temp(11)), await mk('BHT-20261021-0002', 'card', temp(14)), await mk('BHT-20261021-0004', 'card', temp(12))]

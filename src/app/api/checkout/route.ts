@@ -14,14 +14,14 @@ import { cookieFrom, VISITOR_COOKIE } from '@/lib/lead'
 import { getDb } from '@/server/db'
 import { linkOrder } from '@/server/leads'
 import { customerName } from '@/server/orders/model'
-import { attachPaymentIntent, CardAttemptsError, placeOrder, PromoError, setStripeCustomer } from '@/server/orders/service'
+import { attachPaymentIntent, BlockedError, CardAttemptsError, placeOrder, PromoError, setStripeCustomer } from '@/server/orders/service'
 import { normalizeCode, promoMessage } from '@/server/promo'
 import { clientIp, rateLimit } from '@/server/rate-limit'
 import { ensureStoreSettings } from '@/server/store-settings'
 
 export const runtime = 'nodejs'
 
-type ErrorCode = 'BAD_REQUEST' | 'RATE_LIMIT' | 'CARD_ATTEMPTS' | 'EMPTY' | 'BAD_LINE' | 'INVALID' | 'UNAVAILABLE' | 'PAYMENT_PROVIDER' | 'SERVER' | 'PROMO'
+type ErrorCode = 'BAD_REQUEST' | 'RATE_LIMIT' | 'CARD_ATTEMPTS' | 'BLOCKED' | 'EMPTY' | 'BAD_LINE' | 'INVALID' | 'UNAVAILABLE' | 'PAYMENT_PROVIDER' | 'SERVER' | 'PROMO'
 type Locale = 'ro' | 'en'
 
 /** One error shape: a code for the client, a human sentence for the customer, in the customer's language. */
@@ -32,6 +32,7 @@ const MESSAGES = {
   ro: {
     RATE_LIMIT: 'Prea multe încercări într-un timp scurt. Încearcă din nou în câteva minute.',
     CARD_ATTEMPTS: `Plata cu cardul nu a reușit de mai multe ori, așa că am oprit-o temporar pentru siguranța ta. Poți alege plata ramburs sau prin transfer, ori ne poți suna la ${site.phone} și te ajutăm.`,
+    BLOCKED: `Pentru această comandă te rugăm să ne suni la ${site.phone}. Te ajutăm imediat.`,
     BAD_REQUEST: 'Cererea nu este validă. Reîncarcă pagina și încearcă din nou.',
     EMPTY: 'Coșul este gol.',
     BAD_LINE: 'Un produs din coș nu mai este disponibil sau s-a schimbat între timp. Reîncarcă pagina și verifică din nou coșul.',
@@ -44,6 +45,7 @@ const MESSAGES = {
   en: {
     RATE_LIMIT: 'Too many attempts in a short time. Please try again in a few minutes.',
     CARD_ATTEMPTS: `The card payment failed several times, so we paused it for your safety. Please try again later or write to us at ${site.email} and we will help.`,
+    BLOCKED: `For this order, please write to us at ${site.email}. We will help you right away.`,
     BAD_REQUEST: 'The request is not valid. Reload the page and try again.',
     EMPTY: 'Your cart is empty.',
     BAD_LINE: 'A product in your cart is no longer available or has changed. Reload the page and check your cart again.',
@@ -128,6 +130,10 @@ export async function POST(req: NextRequest) {
     }
   } catch (e) {
     // A promo code that cannot be used (expired, used up, not for these products...): said next to the code field.
+    if (e instanceof BlockedError) {
+      log.warn('checkout.blocked', { site: siteForHost(req.headers.get('host')) })
+      return fail(403, 'BLOCKED', m.BLOCKED)
+    }
     if (e instanceof CardAttemptsError) {
       log.warn('checkout.card_attempts', { site: siteForHost(req.headers.get('host')) })
       return fail(429, 'CARD_ATTEMPTS', m.CARD_ATTEMPTS)

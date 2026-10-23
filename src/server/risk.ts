@@ -12,6 +12,7 @@
 import 'server-only'
 import { createHmac } from 'node:crypto'
 import type { Queryable } from '@/server/db'
+import { BLOCKED, HOLD } from '@/config/risk-blocklist'
 
 export const REVIEW_AT = 40
 export const FAILED_CARD_LIMIT = 3
@@ -150,6 +151,28 @@ export async function riskHold(q: Queryable, who: { email: string; phone?: strin
     [who.email.trim().toLowerCase(), phone, who.orderId ?? ''],
   )
   return rows.length > 0
+}
+
+const plain = (s: string) =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\b(str|strada|nr|numarul)\b/g, '').replace(/[^a-z0-9]/g, '')
+const domainOf = (email: string) => email.trim().toLowerCase().split('@')[1] ?? ''
+
+export type ListInput = { email: string; phone: string; ip: string | null; city?: string; address?: string }
+
+/** The attack's email domain, phone or network (config/risk-blocklist.ts): no order is written. */
+export function blocked(i: ListInput): boolean {
+  const phone = phoneKey(i.phone)
+  return BLOCKED.emailDomains.includes(domainOf(i.email)) || (!!phone && BLOCKED.phones.includes(phone)) || (!!i.ip && BLOCKED.ipKeys.includes(i.ip))
+}
+
+/** The attack's email domain, a phone or a delivery address it used: the order waits for a person. */
+export function held(i: ListInput): boolean {
+  const phone = phoneKey(i.phone)
+  if (HOLD.emailDomains.includes(domainOf(i.email)) || (!!phone && HOLD.phones.includes(phone))) return true
+  const city = plain(i.city ?? '')
+  const street = plain(i.address ?? '')
+  // The street and its number, and nothing more digits after it (Piața Unirii 2, never Piața Unirii 25).
+  return HOLD.addresses.some((a) => a.city === city && street.startsWith(a.street) && !/^\d/.test(street.slice(a.street.length)))
 }
 
 /** The pseudonymised identifiers are kept this long after the order (privacy policy, „Prevenirea fraudei”). */

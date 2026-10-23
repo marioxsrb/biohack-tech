@@ -33,7 +33,7 @@ import { orders } from './repository'
 import { ensureOrderLead, markLeadsPurchased } from '@/server/leads'
 import { syncEntitlement } from '@/server/digital/entitlements'
 import { autoEmailJob } from '@/server/digital/delivery'
-import { FAILED_CARD_LIMIT, ipKey, riskSignals, scoreRisk } from '@/server/risk'
+import { blocked, FAILED_CARD_LIMIT, held, ipKey, riskSignals, scoreRisk } from '@/server/risk'
 
 export type Source = 'checkout' | 'stripe.webhook' | 'stripe.reconcile' | 'upsell' | 'admin' | 'system' | 'assistant' | 'fulfillment'
 
@@ -86,6 +86,13 @@ export class CardAttemptsError extends Error {
   }
 }
 
+/** The card testing attack's domain, phone or network (config/risk-blocklist.ts): no order is written. */
+export class BlockedError extends Error {
+  constructor() {
+    super('blocked source')
+  }
+}
+
 export async function placeOrder(input: PlaceInput): Promise<{ order: Order; created: boolean }> {
   const db = await getDb()
   const key = idempotencyKey(input)
@@ -117,8 +124,13 @@ export async function placeOrder(input: PlaceInput): Promise<{ order: Order; cre
       // The risk check (server/risk.ts) reads what happened before this order; it never blocks on one signal.
       const riskInput = { email: f.email, phone: f.phone, firstName: f.firstName, lastName: f.lastName, ip: ipKey(input.source?.ip), visitor: input.source?.visitor ?? null }
       const signals = await riskSignals(t, riskInput)
+      const ship = addressOf(f, true)
+      const listed = { email: f.email, phone: f.phone, ip: riskInput.ip, city: f.city, address: f.address }
+      if (blocked(listed)) throw new BlockedError()
       if (method === 'card' && signals.failedCards >= FAILED_CARD_LIMIT && !signals.known) throw new CardAttemptsError()
-      const risk = scoreRisk(signals)
+      const scored = scoreRisk(signals)
+      // Linked to the card testing attack (same phone, address or email domain): a person checks it, even when paid.
+      const risk = held(listed) || held({ ...listed, city: ship.city, address: ship.address }) ? { ...scored, review: true, reasons: [...scored.reasons, 'Legat de atacul de card testing (telefon, adresă sau domeniu)'] } : scored
       const subtotal = pricing.subtotalMinor
       const discount = pricing.discountMinor
       const now = new Date()
