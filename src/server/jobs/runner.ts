@@ -19,7 +19,8 @@ import { CART_INTEREST, interestOf, leads, recoveryDecision, recoveryFacts } fro
 import { renderLeadRecovery } from '@/server/leads-email'
 import { isIntlHost, siteOrigin } from '@/lib/sites'
 import { marketing } from '@/server/marketing/consent'
-import { CALL_TAGS, INTEREST_TAG, LEAD_TAGS, attributionTags, callOutcomeTag, siteTag } from '@/server/integrations/ghl'
+import { CALL_TAGS, INTEREST_TAG, LEAD_TAGS, attributionTags, callOutcomeTag, landingTag, siteTag } from '@/server/integrations/ghl'
+import { isLandingSlug } from '@/lib/landing-hosts'
 import { prospectFor } from '@/server/prospects'
 import { replies } from '@/server/replies'
 import { deliverPush, stillTrue, type PushEvent } from '@/server/app/push'
@@ -260,7 +261,9 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
     const email = String(j.payload.email ?? '').trim().toLowerCase()
     if (!email) throw new Permanent('no email')
     const contactId = await ghl.upsertLeadContact(c.ghl, { name: null, email, phone: null }, await knownContactId(db, email))
-    await ghl.addTags(c.ghl, contactId, [LEAD_TAGS.lead, LEAD_TAGS.popup])
+    // bt-landing-<slug> starts that landing's sequence in GoHighLevel (only set while LANDING_GHL_SEQUENCES=on).
+    const landing = isLandingSlug(j.payload.landing) ? [landingTag(j.payload.landing)] : []
+    await ghl.addTags(c.ghl, contactId, [LEAD_TAGS.lead, LEAD_TAGS.popup, ...landing])
     await syncProspect(db, c.ghl, email, contactId, j.payload.site === 'net' ? 'net' : 'ro')
     return contactId
   },

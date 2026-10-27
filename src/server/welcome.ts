@@ -17,6 +17,9 @@ import { popupProduct, popupVoucher, popupVouchersOn } from '@/server/popup-vouc
 
 export { WELCOME_CONSENT_TEXT }
 
+/** The landing sequences sent by GoHighLevel on the Shopify store (27.10.2026): off unless LANDING_GHL_SEQUENCES=on. */
+export const landingGhlSequencesOn = (env: Record<string, string | undefined> = process.env) => env.LANDING_GHL_SEQUENCES === 'on'
+
 const GIFT_IDS: WelcomeGift[] = ['p10', 'p1233', 'lei100']
 
 /** Opens a box: the server draws the gift (one in three each) and keeps it under a random id until an address claims it. */
@@ -52,10 +55,13 @@ export async function welcomeSignup(t: Queryable, email: string, page: string | 
   const product = popupVouchersOn() && site === 'ro' && locale === 'ro' && !giftId ? popupProduct(page, landing) : null
   const version = locale === 'en' ? 'welcome-en-2026-10-16' : giftId ? 'welcome-cadou-2026-10-20' : product ? 'welcome-voucher-2026-10-23' : 'welcome-2026-10-15'
   if (!state?.granted) await marketing.grant(t, { email: addr, source: 'popup', page: page ?? undefined, version })
+  // A landing popup whose sequence GoHighLevel sends (LANDING_GHL_SEQUENCES=on): the tag bt-landing-<slug> starts it,
+  // and its first email states the product's Shopify code, so the store's 10% email does not go as well.
+  const ghlLanding = !product && landingGhlSequencesOn() && site === 'ro' && locale === 'ro' && !giftId ? landing : null
   const voucher = product ? await popupVoucher(t, addr, product) : null
-  if (!voucher) await jobs.enqueue(t, { kind: 'email.welcome', dedupeKey: `email.welcome:${addr}`, payload: { email: addr, locale, site, gift } })
+  if (!voucher && !ghlLanding) await jobs.enqueue(t, { kind: 'email.welcome', dedupeKey: `email.welcome:${addr}`, payload: { email: addr, locale, site, gift } })
   // The address in the CRM (contact, lead tags, leads pipeline) for the team's follow-up and remarketing.
-  await jobs.enqueue(t, { kind: 'ghl.welcome', dedupeKey: `ghl.welcome:${addr}`, payload: { email: addr, site } })
+  await jobs.enqueue(t, { kind: 'ghl.welcome', dedupeKey: `ghl.welcome:${addr}`, payload: ghlLanding ? { email: addr, site, landing: ghlLanding } : { email: addr, site } })
   return { created: true, voucher: !!voucher }
 }
 

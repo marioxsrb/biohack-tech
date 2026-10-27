@@ -180,6 +180,8 @@ export const LEAD_TAGS = {
   /** Left the address in the website's 10% popup. */
   popup: 'bt-lead-popup-10',
 }
+/** The landing popup a person signed up on: bt-landing-calm, bt-landing-focus, bt-landing-amber. */
+export const landingTag = (slug: string) => `bt-landing-${slug}`
 /** Which website the person came through: bt-site-ro (biohack-tech.ro and its landings) or bt-site-net (international). */
 export const siteTag = (site: 'ro' | 'net') => (site === 'net' ? 'bt-site-net' : 'bt-site-ro')
 

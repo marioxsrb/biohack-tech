@@ -56,3 +56,30 @@ describe('the popup gift boxes', () => {
     expect(m.text).toContain('mai puțin cartea')
   })
 })
+
+describe('landing popups with the GoHighLevel sequences (LANDING_GHL_SEQUENCES)', () => {
+  beforeEach(async () => {
+    db = await freshDb()
+  })
+  const ghlPayload = async (email: string) => (await db.query<{ p: Record<string, unknown> }>(`select payload as p from jobs where dedupe_key = $1`, [`ghl.welcome:${email}`])).rows[0]?.p
+
+  it('off (the default): a landing popup sends the 10% email as today, no landing in the CRM job', async () => {
+    await db.tx((t) => welcomeSignup(t, 'ana@exemplu.ro', '/', 'ro', 'ro', undefined, 'calm'))
+    expect(await jobGift('ana@exemplu.ro')).toBe('p10')
+    expect(await ghlPayload('ana@exemplu.ro')).toEqual({ email: 'ana@exemplu.ro', site: 'ro' })
+  })
+
+  it('on: the landing goes to the CRM (its tag starts the sequence) and the 10% email does not go; the main site is unchanged', async () => {
+    vi.stubEnv('LANDING_GHL_SEQUENCES', 'on')
+    try {
+      await db.tx((t) => welcomeSignup(t, 'ana@exemplu.ro', '/', 'ro', 'ro', undefined, 'focus'))
+      expect(await jobGift('ana@exemplu.ro')).toBeUndefined()
+      expect(await ghlPayload('ana@exemplu.ro')).toEqual({ email: 'ana@exemplu.ro', site: 'ro', landing: 'focus' })
+      await db.tx((t) => welcomeSignup(t, 'ion@exemplu.ro', '/', 'ro', 'ro'))
+      expect(await jobGift('ion@exemplu.ro')).toBe('p10')
+      expect(await ghlPayload('ion@exemplu.ro')).toEqual({ email: 'ion@exemplu.ro', site: 'ro' })
+    } finally {
+      vi.unstubAllEnvs()
+    }
+  })
+})
