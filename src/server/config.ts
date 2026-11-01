@@ -129,6 +129,11 @@ export type Config = {
    * delivery can be configured and tested first; the release waits for the fiscal and CRM checks.
    */
   bookSales: boolean
+  /**
+   * Black Friday 2026: a Shopify buyer leaves the Brain Event BF workflow (server/marketing/bf-buyer-stop.ts).
+   * BF_BUYER_STOP=off (default) | dry | live; the Shopify Flow sends BF_BUYER_STOP_SECRET in x-bt-secret.
+   */
+  bfBuyerStop: { mode: 'off' | 'dry' | 'live'; secret: string | null }
 }
 
 export type DigitalConfig = { linkSecret: string; source: { url: string; secret: string } }
@@ -411,6 +416,12 @@ function readMetaCapi(appEnv: AppEnv, issues: ConfigIssue[]): Config['metaCapi']
 /** A feature switch: on only when set to "true". */
 export const flag = (k: string) => str(k) === 'true'
 
+function readBfBuyerStop(): Config['bfBuyerStop'] {
+  const mode = str('BF_BUYER_STOP')
+  const secret = str('BF_BUYER_STOP_SECRET') ?? null
+  return { mode: secret && (mode === 'dry' || mode === 'live') ? mode : 'off', secret }
+}
+
 const positiveInt = (v: string | undefined) => {
   const n = Number(v)
   return v !== undefined && Number.isInteger(n) && n > 0 ? n : null
@@ -513,6 +524,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     apns: isolated ? null : readApns(),
     digital: readDigital(appEnv, issues),
     bookSales: flag('BOOK_SALES_ENABLED'),
+    bfBuyerStop: readBfBuyerStop(),
   }
   cached = { config, issues }
   return cached

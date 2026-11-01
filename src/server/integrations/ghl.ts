@@ -532,6 +532,24 @@ export const ghl = {
   },
 
   /**
+   * Every contact with this exact address and its tags. GHL's email filter is case-sensitive and the imports
+   * stored addresses in lower case, so the address is trimmed and lowered first (verified on Brain Event, 01.11.2026).
+   */
+  async contactsByEmail(c: GhlConfig, email: string): Promise<{ id: string; tags: string[] }[]> {
+    const r = await call<{ contacts?: { id: string; tags?: string[] }[] }>(c, 'POST', '/contacts/search', {
+      locationId: c.locationId,
+      pageLimit: 10,
+      filters: [{ field: 'email', operator: 'eq', value: email.trim().toLowerCase() }],
+    })
+    return (r.contacts ?? []).map((x) => ({ id: x.id, tags: x.tags ?? [] }))
+  },
+
+  /** Takes the contact out of one workflow; a contact that is not in it is left as it is. */
+  async removeFromWorkflow(c: GhlConfig, contactId: string, workflowId: string) {
+    await call(c, 'DELETE', `/contacts/${encodeURIComponent(contactId)}/workflow/${encodeURIComponent(workflowId)}`)
+  },
+
+  /**
    * Creates the order's opportunity once (found again by name if our id was lost), then moves it. An order
    * added after payment (post-purchase offer) names its parent, so the team packs both in one parcel.
    */
