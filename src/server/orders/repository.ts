@@ -210,12 +210,26 @@ export const orders = {
     return withItems(q, rows)
   },
 
-  async list(q: Queryable, opts: { limit?: number; search?: string; queue?: QueueKey } = {}) {
+  /** `ids`: only these orders; `from`/`to`: Bucharest days (YYYY-MM-DD), both included (the CSV export). */
+  async list(q: Queryable, opts: { limit?: number; search?: string; queue?: QueueKey; ids?: string[]; from?: string; to?: string } = {}) {
     const params: unknown[] = [opts.limit ?? 100]
     const where: string[] = []
+    if (opts.ids) {
+      params.push(opts.ids.filter((id) => UUID.test(id)))
+      where.push(`id = any($${params.length}::uuid[])`)
+    }
+    if (opts.from) {
+      params.push(opts.from)
+      where.push(`created_at >= ($${params.length}::date)::timestamp at time zone 'Europe/Bucharest'`)
+    }
+    if (opts.to) {
+      params.push(opts.to)
+      where.push(`created_at < ($${params.length}::date + 1)::timestamp at time zone 'Europe/Bucharest'`)
+    }
     if (opts.search) {
       params.push(`%${opts.search.toLowerCase()}%`)
-      where.push(`(lower(order_number) like $2 or lower(email) like $2 or lower(customer->>'lastName') like $2 or lower(coalesce(customer->>'company','')) like $2)`)
+      const n = `$${params.length}`
+      where.push(`(lower(order_number) like ${n} or lower(email) like ${n} or lower(customer->>'lastName') like ${n} or lower(coalesce(customer->>'company','')) like ${n})`)
     }
     if (opts.queue && QUEUES[opts.queue]) where.push(`(${QUEUES[opts.queue].where})`)
     const { rows } = await q.query(`select * from orders ${where.length ? `where ${where.join(' and ')}` : ''} order by created_at desc limit $1`, params)

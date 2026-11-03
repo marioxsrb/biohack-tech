@@ -154,6 +154,25 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
         </div>
       )}
 
+      {/* A period as a CSV for Excel or Google Sheets, with the search and queue shown above. */}
+      <form action="/api/admin/export" method="get" className="mt-6 flex flex-wrap items-end gap-2 rounded-[14px] bg-paper px-5 py-4 text-[14px]">
+        <span className="mr-2 self-center font-medium text-ink">Export Excel (CSV)</span>
+        {queue && <input type="hidden" name="coada" value={queue} />}
+        {q && <input type="hidden" name="q" value={q} />}
+        <label className="flex flex-col gap-1 text-muted">
+          De la
+          <input type="date" name="de" className="field !min-h-10 !py-1.5" />
+        </label>
+        <label className="flex flex-col gap-1 text-muted">
+          Până la
+          <input type="date" name="pana" className="field !min-h-10 !py-1.5" />
+        </label>
+        <button className="btn-secondary sm !min-h-10">Descarcă perioada</button>
+        <span className="self-center text-[13px] text-muted">
+          {q || queue ? 'Doar comenzile din filtrul de mai sus.' : 'Fără date: toate comenzile.'} Sau bifează comenzile din tabel.
+        </span>
+      </form>
+
       {/* Select orders, then print their documents (A4) in one go. */}
       <form action="/admin/print" method="get" target="_blank" className="mt-6">
       <div className="mb-3 flex flex-wrap items-center gap-2 text-[14px]">
@@ -162,6 +181,7 @@ export default async function AdminPage({ searchParams }: PageProps<'/[lang]/adm
         <button name="doc" value="livrare" className="btn-secondary sm">Fișe de livrare</button>
         <button name="doc" value="eticheta" className="btn-secondary sm">Etichete colet (interne)</button>
         <button name="doc" value="detalii" className="btn-secondary sm">Detalii comenzi</button>
+        <button formAction="/api/admin/export" formTarget="_self" className="btn-secondary sm">Export Excel (CSV)</button>
       </div>
       <div className="overflow-x-auto rounded-[16px] bg-paper">
         <table className="w-full min-w-[900px] text-left text-[14.5px]">
