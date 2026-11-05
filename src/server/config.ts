@@ -138,7 +138,8 @@ export type Config = {
    * "Cumpără în rate prin TBI Bank" (/api/rate-tbi): the GHL inbound webhook of the workflow
    * "BT · Rate TBI · cerere nouă" (RATE_TBI_GHL_HOOK). Without it the contact, tags, note and task are still saved.
    */
-  rateTbi: { hook: string | null }
+  /** The store's price rules for the instalment simulator (RATE_TBI_PRICES_URL, default the theme's tbi-data view of Calm). */
+  rateTbi: { hook: string | null; pricesUrl: string }
 }
 
 export type DigitalConfig = { linkSecret: string; source: { url: string; secret: string } }
@@ -530,7 +531,10 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     digital: readDigital(appEnv, issues),
     bookSales: flag('BOOK_SALES_ENABLED'),
     bfBuyerStop: readBfBuyerStop(),
-    rateTbi: { hook: /^https:\/\/services\.leadconnectorhq\.com\/hooks\//.test(str('RATE_TBI_GHL_HOOK') ?? '') ? str('RATE_TBI_GHL_HOOK')! : null },
+    rateTbi: {
+      hook: /^https:\/\/services\.leadconnectorhq\.com\/hooks\//.test(str('RATE_TBI_GHL_HOOK') ?? '') ? str('RATE_TBI_GHL_HOOK')! : null,
+      pricesUrl: /^https:\/\//.test(str('RATE_TBI_PRICES_URL') ?? '') ? str('RATE_TBI_PRICES_URL')! : 'https://biohack-tech.ro/products/calm?view=tbi-data',
+    },
   }
   cached = { config, issues }
   return cached

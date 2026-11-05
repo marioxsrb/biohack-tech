@@ -1,116 +1,130 @@
 /**
- * A "Cumpără în rate prin TBI Bank" request from the Shopify store (lib/rate-tbi.ts has the shape).
- * 1. GoHighLevel (NEUROS, the Biohack location): the contact (found by email, created only if new, with the city), the
- *    fields bt_tbi_produs / bt_tbi_valoare / bt_tbi_cantitate, the tags rate-tbi and rate-tbi-<product> (the tag starts the
- *    workflow "BT · Rate TBI · cerere nouă"), a note with every detail, a task "Generează Link 2 Pay – X lei" due in 30 min
- *    and the card in the "Rate TBI" pipeline, column "Cerere nouă". The team pastes the TBI link in the contact field
- *    bt_tbi_link, which starts "BT · Rate TBI · trimite link" (email to the customer, card to "Link trimis").
- * 2. The workflow "BT · Rate TBI · cerere nouă" through its inbound webhook (RATE_TBI_GHL_HOOK): it notifies the team
- *    and confirms to the customer. While the workflow is a draft, GHL ignores the webhook; step 1 still happens.
- * 3. Meta Conversions API: Lead and RateTBIRequest with the browser's event ids, only with marketing consent.
- * Step 1 must succeed (the team works from it); steps 2 and 3 are logged when they fail.
+ * A "Cumpără în rate prin tbi bank" request from the Shopify store (lib/rate-tbi.ts has the shape).
+ * TBI's Link 2 Pay is not active yet: a colleague calls the customer within 24 hours and sends the TBI link by hand.
+ * 0. The basket is valued here with the store's price rules (lib/tbi.ts, server/tbi-prices.ts), never with the browser's.
+ * 1. GoHighLevel (NEUROS): the contact (found by email, created only if new), the fields bt_tbi_produs / bt_tbi_cantitate /
+ *    bt_tbi_valoare / bt_tbi_perioada / bt_tbi_avans, the tags rate-tbi (starts "BT · Rate TBI · cerere nouă": confirmation
+ *    email to the customer, notification to the team), rate-tbi-cerere and rate-tbi-<product>, a note with every line,
+ *    a task due in 24 hours and a new card in the "Rate TBI" pipeline, column "Cerere nouă".
+ * 2. Meta Conversions API: Lead and RateTBIRequest with the browser's event ids, only with marketing consent.
+ * Runs as the job "rate_tbi.submit" (jobs/runner.ts): when GHL does not answer, the job is retried with backoff.
  */
 import 'server-only'
-import { lei, RATE_TBI_PRODUCTS, type RateTbiRequest } from '@/lib/rate-tbi'
+import { lei, plausibleValue, RATE_TBI_PRODUCTS, type RateTbiRequest } from '@/lib/rate-tbi'
+import { monthlyRate, quote, type TbiQuoteLine } from '@/lib/tbi'
 import type { Config } from '@/server/config'
 import { ghl } from '@/server/integrations/ghl'
 import { metaFormUserData, sendMetaEvents } from '@/server/integrations/meta'
 import { errText, log } from '@/server/log'
+import { tbiPriceRules } from '@/server/tbi-prices'
 
-export const RATE_TBI_TAGS = { request: 'rate-tbi', product: (p: string) => `rate-tbi-${p}`, site: 'bt-site-ro', linkSent: 'rate-tbi-link-trimis' } as const
-/** The team's board in GHL (NEUROS, Opportunities): every request lands (back) in the first column. */
+export const RATE_TBI_TAGS = {
+  request: 'rate-tbi',
+  received: 'rate-tbi-cerere',
+  product: (p: string) => `rate-tbi-${p}`,
+  site: 'bt-site-ro',
+  linkSent: 'rate-tbi-link-trimis',
+} as const
+/** The team's board in GHL (NEUROS, Opportunities): every request is a new card in the first column. */
 export const RATE_TBI_PIPELINE = { name: 'Rate TBI', newStage: 'Cerere nouă' } as const
 /** Contact fields in GHL (NEUROS, folder BiohackTech Ecommerce), read by the workflow's notification and confirmation. */
-export const RATE_TBI_FIELDS = { product: 'contact.bt_tbi_produs', value: 'contact.bt_tbi_valoare', qty: 'contact.bt_tbi_cantitate', link: 'contact.bt_tbi_link' } as const
+export const RATE_TBI_FIELDS = {
+  product: 'contact.bt_tbi_produs',
+  value: 'contact.bt_tbi_valoare',
+  qty: 'contact.bt_tbi_cantitate',
+  period: 'contact.bt_tbi_perioada',
+  advance: 'contact.bt_tbi_avans',
+  link: 'contact.bt_tbi_link',
+} as const
+export const RATE_TBI_CALL_WITHIN_H = 24
 const STORE = 'https://biohack-tech.ro'
 
-export type RateTbiResult = { contactId: string; opportunityId: string | null; hook: 'sent' | 'off' | 'failed'; meta: 'sent' | 'off' | 'no-consent' | 'failed' }
+export type RateTbiValuation = { lines: TbiQuoteLine[]; total: number; verified: boolean }
 
-export function rateTbiNote(r: RateTbiRequest, now = new Date()): string {
-  const p = RATE_TBI_PRODUCTS[r.product]
+/** The basket's value with the store's rules; without them, the page's total if believable; otherwise null. */
+export async function valueRateTbi(cfg: Pick<Config, 'rateTbi'>, r: RateTbiRequest, now = Date.now()): Promise<RateTbiValuation | null> {
+  const rules = await tbiPriceRules(cfg.rateTbi.pricesUrl, now)
+  const q = rules ? quote(rules, r.items, now) : null
+  if (q) {
+    if (r.clientTotal !== null && Math.abs(r.clientTotal - q.total) > 1) log.warn('rate_tbi.total_mismatch', { client: r.clientTotal, server: q.total })
+    return { ...q, verified: true }
+  }
+  if (r.clientTotal === null || !plausibleValue(r.items, r.clientTotal)) return null
+  // The store did not answer: the page's total, split per product at full price for the note only.
+  const full = r.items.map((i) => ({ ...i, title: RATE_TBI_PRODUCTS[i.handle].title, full: RATE_TBI_PRODUCTS[i.handle].normalLei * i.qty }))
+  const sum = full.reduce((s, l) => s + l.full, 0)
+  const lines = full.map((l) => {
+    const total = Math.round((r.clientTotal! * l.full) / sum * 100) / 100
+    return { handle: l.handle, qty: l.qty, title: l.title, total, unit: Math.round((total / l.qty) * 100) / 100 }
+  })
+  return { lines, total: r.clientTotal, verified: false }
+}
+
+const short = (h: string) => RATE_TBI_PRODUCTS[h as keyof typeof RATE_TBI_PRODUCTS]?.short ?? h
+export const basketLabel = (lines: { handle: string; qty: number }[]) => lines.map((l) => `${short(l.handle)} x${l.qty}`).join(' + ')
+
+export function rateTbiNote(r: RateTbiRequest, v: RateTbiValuation, now = new Date()): string {
   const when = now.toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest', dateStyle: 'short', timeStyle: 'short' })
-  const source = Object.entries(r.utm).map(([k, v]) => `${k}=${v}`).join(', ') || 'direct / fără UTM'
+  const source = Object.entries(r.utm).map(([k, val]) => `${k}=${val}`).join(', ') || 'direct / fără UTM'
+  const financed = Math.max(0, v.total - r.advance)
   return [
-    `Cerere rate TBI (${when})`,
-    `Produs: ${p.title} × ${r.qty}`,
-    `Valoare comandă (de pus în Link 2 Pay): ${lei(r.valueLei)} lei`,
+    `Cerere rate tbi bank (${when})`,
+    ...v.lines.map((l) => `• ${l.title} × ${l.qty}: ${lei(l.unit)} lei/buc., subtotal ${lei(l.total)} lei`),
+    `Total comandă: ${lei(v.total)} lei${v.verified ? '' : ' (prețurile magazinului nu au putut fi citite: e totalul arătat pe pagină, verifică-l)'}`,
+    `Avans: ${r.advance > 0 ? `${lei(r.advance)} lei` : 'fără'}`,
+    `Perioada dorită: ${r.period} luni`,
+    `Rată orientativă: ${lei(monthlyRate(financed, r.period))} lei/lună (21%/an, fără comision și asigurare)`,
     `Nume: ${r.name}`,
     `Telefon: ${r.phone}`,
     `Email: ${r.email}`,
-    `Oraș: ${r.city}`,
+    ...(r.city ? [`Oraș: ${r.city}`] : []),
     `Pagina: ${r.page ? STORE + r.page : '-'}`,
     `Sursa: ${source}`,
-    'Pasul următor: generează Link 2 Pay în bankly.tbicredit.ro și lipește-l în câmpul „bt_tbi_link” al contactului; emailul către client pleacă singur.',
+    `Pasul următor: sună clientul în maximum ${RATE_TBI_CALL_WITHIN_H} de ore și trimite-i linkul tbi bank pentru cererea online.`,
   ].join('\n')
 }
 
-export async function submitRateTbi(cfg: Pick<Config, 'ghl' | 'metaCapi' | 'rateTbi'>, r: RateTbiRequest, client: { ip: string | null; ua: string | null }, now = new Date()): Promise<RateTbiResult> {
+export type RateTbiJob = { request: RateTbiRequest; valuation: RateTbiValuation; client: { ip: string | null; ua: string | null }; at: string }
+export type RateTbiResult = { contactId: string; opportunityId: string | null; meta: 'sent' | 'off' | 'no-consent' | 'failed' }
+
+export async function submitRateTbi(cfg: Pick<Config, 'ghl' | 'metaCapi'>, job: RateTbiJob): Promise<RateTbiResult> {
   if (!cfg.ghl) throw new Error('ghl not configured')
-  const p = RATE_TBI_PRODUCTS[r.product]
-  const value = lei(r.valueLei)
+  const { request: r, valuation: v, client } = job
+  const now = new Date(job.at)
+  const value = lei(v.total)
+  const label = basketLabel(v.lines)
 
   const contactId = await ghl.upsertLeadContact(cfg.ghl, { name: r.name, email: r.email, phone: r.phone, city: r.city })
   // The workflow's messages read these fields, so they are written before the tag that starts it.
   // The API takes the short key (without "contact."); with the full one GHL answers 200 and saves nothing.
   const field = (key: string, field_value: string) => ({ key: key.replace(/^contact\./, ''), field_value })
   await ghl.updateFields(cfg.ghl, contactId, [
-    field(RATE_TBI_FIELDS.product, p.title),
+    field(RATE_TBI_FIELDS.product, v.lines.map((l) => `${l.title} x${l.qty}`).join(', ')),
+    field(RATE_TBI_FIELDS.qty, String(v.lines.reduce((s, l) => s + l.qty, 0))),
     field(RATE_TBI_FIELDS.value, value),
-    field(RATE_TBI_FIELDS.qty, String(r.qty)),
-    // A new request needs a new TBI link: the old one is cleared, so the 30-minute reminder sees "no link yet".
+    field(RATE_TBI_FIELDS.period, `${r.period} luni`),
+    field(RATE_TBI_FIELDS.advance, r.advance > 0 ? lei(r.advance) : '0'),
+    // A new request needs a new TBI link: the old one is cleared.
     field(RATE_TBI_FIELDS.link, ''),
   ])
   // A repeated request starts the workflow again: GHL fires "tag added" only when the tag was absent.
-  await ghl.removeTags(cfg.ghl, contactId, [RATE_TBI_TAGS.request, RATE_TBI_TAGS.product(r.product), RATE_TBI_TAGS.linkSent])
-  await ghl.addTags(cfg.ghl, contactId, [RATE_TBI_TAGS.request, RATE_TBI_TAGS.product(r.product), RATE_TBI_TAGS.site])
-  const note = rateTbiNote(r, now)
+  await ghl.removeTags(cfg.ghl, contactId, [RATE_TBI_TAGS.request, RATE_TBI_TAGS.linkSent])
+  await ghl.addTags(cfg.ghl, contactId, [RATE_TBI_TAGS.request, RATE_TBI_TAGS.received, ...v.lines.map((l) => RATE_TBI_TAGS.product(l.handle)), RATE_TBI_TAGS.site])
+  const note = rateTbiNote(r, v, now)
   await ghl.addNote(cfg.ghl, contactId, note)
   await ghl.addTask(cfg.ghl, contactId, {
-    title: `Generează Link 2 Pay – ${value} lei`,
+    title: `Sună ${r.name} – cerere rate tbi (${value} lei)`,
     body: note,
-    dueDate: new Date(now.getTime() + 30 * 60_000).toISOString(),
+    dueDate: new Date(now.getTime() + RATE_TBI_CALL_WITHIN_H * 3_600_000).toISOString(),
   })
-  // The card: GHL shows its name and value on the board, and the date and time in stage on its own.
+  // One card per request: GHL shows its name and value on the board, and the date and time in stage on its own.
   const opportunityId = await ghl.placeOpportunity(cfg.ghl, contactId, {
     pipeline: RATE_TBI_PIPELINE.name,
     stage: RATE_TBI_PIPELINE.newStage,
-    name: `${r.firstName} – ${p.title} x${r.qty} – ${value} lei`,
-    valueRon: r.valueLei,
+    name: `${r.name} – ${label} – ${value} lei`,
+    valueRon: v.total,
+    newCard: true,
   })
-
-  let hook: RateTbiResult['hook'] = 'off'
-  if (cfg.rateTbi.hook) {
-    try {
-      const res = await fetch(cfg.rateTbi.hook, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          contact_id: contactId,
-          first_name: r.firstName,
-          name: r.name,
-          phone: r.phone,
-          email: r.email,
-          city: r.city,
-          produs: p.title,
-          cantitate: r.qty,
-          valoare: value,
-          pagina: r.page ? STORE + r.page : '',
-          utm_source: r.utm.source ?? '',
-          utm_medium: r.utm.medium ?? '',
-          utm_campaign: r.utm.campaign ?? '',
-          utm_content: r.utm.content ?? '',
-          utm_term: r.utm.term ?? '',
-        }),
-        cache: 'no-store',
-        signal: AbortSignal.timeout(15_000),
-      })
-      hook = res.ok ? 'sent' : 'failed'
-      if (!res.ok) log.warn('rate_tbi.hook_failed', { status: res.status })
-    } catch (e) {
-      hook = 'failed'
-      log.warn('rate_tbi.hook_failed', { error: errText(e) })
-    }
-  }
 
   let meta: RateTbiResult['meta'] = 'off'
   if (cfg.metaCapi) {
@@ -118,11 +132,18 @@ export async function submitRateTbi(cfg: Pick<Config, 'ghl' | 'metaCapi' | 'rate
     else {
       const base = {
         event_time: Math.floor(now.getTime() / 1000),
-        event_source_url: STORE + (r.page ?? `/products/${r.product}`),
+        event_source_url: STORE + (r.page ?? '/pages/rate-tbi'),
         action_source: 'website' as const,
-        user_data: metaFormUserData({ email: r.email, phone: r.phone, name: r.name, city: r.city, fbp: r.fbp, fbc: r.fbc, ip: client.ip, ua: client.ua }),
+        user_data: metaFormUserData({ email: r.email, phone: r.phone, name: r.name, city: r.city ?? undefined, fbp: r.fbp, fbc: r.fbc, ip: client.ip, ua: client.ua }),
       }
-      const custom_data = { currency: 'RON', value: r.valueLei, content_name: p.title, content_ids: [r.product], content_type: 'product', num_items: r.qty }
+      const custom_data = {
+        currency: 'RON',
+        value: v.total,
+        content_ids: v.lines.map((l) => l.handle),
+        contents: v.lines.map((l) => ({ id: l.handle, quantity: l.qty })),
+        content_type: 'product',
+        num_items: v.lines.reduce((s, l) => s + l.qty, 0),
+      }
       try {
         await sendMetaEvents(cfg.metaCapi, [
           { ...base, event_name: 'Lead', event_id: r.eventId, custom_data },
@@ -135,5 +156,5 @@ export async function submitRateTbi(cfg: Pick<Config, 'ghl' | 'metaCapi' | 'rate
       }
     }
   }
-  return { contactId, opportunityId, hook, meta }
+  return { contactId, opportunityId, meta }
 }

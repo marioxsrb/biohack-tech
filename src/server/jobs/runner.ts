@@ -4,6 +4,7 @@
  * A failure never touches the order's payment state: it is retried with backoff and,
  * after the last attempt, shown in /admin for a person.
  */
+import { submitRateTbi, type RateTbiJob } from '@/server/rate-tbi'
 import 'server-only'
 import { after } from 'next/server'
 import { getConfig, type GhlConfig } from '@/server/config'
@@ -620,6 +621,13 @@ const handlers: Record<Job['kind'], (j: Job) => Promise<string | void>> = {
   'stripe.reconcile': async (j) => reconcileCardPayment(j.orderId!),
   'upsell.release': async (j) => releaseUpsellCard(j.orderId!),
   'ghl.enquiry': async (j) => syncEnquiry(String(j.payload.enquiryId ?? '')),
+  // A "Cumpără în rate" request (server/rate-tbi.ts): saved first, sent to GHL here, retried while GHL does not answer.
+  'rate_tbi.submit': async (j) => {
+    const c = getConfig()
+    if (!c.ghl) throw new Skip('ghl not configured')
+    const r = await submitRateTbi(c, j.payload as unknown as RateTbiJob)
+    return `contact ${r.contactId}; card ${r.opportunityId ?? 'missing'}; meta ${r.meta}`
+  },
   'order.transfer_expiry': async (j) => {
     const r = await expireUnpaidTransfer(j.orderId!)
     return r.changed ? 'cancelled' : (r.reason ?? 'unchanged')

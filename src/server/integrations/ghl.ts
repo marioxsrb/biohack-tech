@@ -524,7 +524,7 @@ export const ghl = {
    * and value: a repeated request moves the same card back instead of adding a second one. Null while the
    * pipeline or the stage does not exist in GHL.
    */
-  async placeOpportunity(c: GhlConfig, contactId: string, p: { pipeline: string; stage: string; name: string; valueRon: number }) {
+  async placeOpportunity(c: GhlConfig, contactId: string, p: { pipeline: string; stage: string; name: string; valueRon: number; newCard?: boolean }) {
     const pipe = await pipelineByName(c, p.pipeline)
     const stageId = pipe?.stages.get(p.stage.toLowerCase())
     if (!pipe || !stageId) {
@@ -532,6 +532,11 @@ export const ghl = {
       return null
     }
     const body = { name: p.name.slice(0, 120), pipelineId: pipe.id, pipelineStageId: stageId, status: 'open', monetaryValue: Math.round(p.valueRon) }
+    // newCard: one card per request (the location allows several opportunities per contact).
+    if (p.newCard) {
+      const r = await call<{ opportunity: { id: string } }>(c, 'POST', '/opportunities/', { ...body, locationId: c.locationId, contactId })
+      return r.opportunity.id
+    }
     const found = await call<{ opportunities: { id: string }[] }>(
       c,
       'GET',

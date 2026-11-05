@@ -35,6 +35,7 @@ export type JobKind =
   | 'meta.purchase'
   | 'digital.email'
   | 'ghl.workflow_send'
+  | 'rate_tbi.submit'
 export type JobStatus = 'pending' | 'running' | 'retry' | 'done' | 'failed' | 'skipped'
 
 export type Job = {
