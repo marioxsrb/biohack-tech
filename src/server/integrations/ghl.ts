@@ -531,6 +531,16 @@ export const ghl = {
     if (tags.length) await call(c, 'DELETE', `/contacts/${contactId}/tags`, { tags })
   },
 
+  /** A note on the contact (shown in its timeline): the request's details, for the team. */
+  async addNote(c: GhlConfig, contactId: string, body: string) {
+    await call(c, 'POST', `/contacts/${encodeURIComponent(contactId)}/notes`, { body: body.slice(0, 5000) })
+  },
+
+  /** A task on the contact, due at `dueDate` (ISO), for the team to do by hand. */
+  async addTask(c: GhlConfig, contactId: string, t: { title: string; body: string; dueDate: string }) {
+    await call(c, 'POST', `/contacts/${encodeURIComponent(contactId)}/tasks`, { title: t.title.slice(0, 200), body: t.body.slice(0, 2000), dueDate: t.dueDate, completed: false })
+  },
+
   /**
    * Every contact with this exact address and its tags. GHL's email filter is case-sensitive and the imports
    * stored addresses in lower case, so the address is trimmed and lowered first (verified on Brain Event, 01.11.2026).

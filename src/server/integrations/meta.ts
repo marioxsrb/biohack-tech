@@ -114,3 +114,55 @@ export async function sendMetaPurchase(c: MetaCapiConfig, order: Order, siteUrl:
   if (!json.events_received) throw new MetaError(json.messages?.join('; ') || 'Meta accepted no events', 400)
   return `events_received=${json.events_received}`
 }
+
+/** A website event other than Purchase (Lead, a custom event), already shaped for the Conversions API. */
+export type MetaWebsiteEvent = {
+  event_name: string
+  event_time: number
+  event_id: string
+  event_source_url: string
+  action_source: 'website'
+  user_data: Record<string, unknown>
+  custom_data?: Record<string, unknown>
+}
+
+/** Hashed matching data from a form (email, phone, first and last name, city), plus the browser cookies and IP. */
+export function metaFormUserData(p: { email: string; phone: string | null; name: string; city?: string; fbp?: string | null; fbc?: string | null; ip?: string | null; ua?: string | null }) {
+  const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z]/g, '')
+  const [first, ...rest] = p.name.trim().split(/\s+/)
+  const user_data: Record<string, unknown> = {}
+  const email = metaEmail(p.email)
+  if (email) user_data.em = [sha256(email)]
+  const phone = metaPhoneDigits(p.phone)
+  if (phone) user_data.ph = [sha256(phone)]
+  if (first && norm(first)) user_data.fn = [sha256(norm(first))]
+  if (rest.length && norm(rest.join(''))) user_data.ln = [sha256(norm(rest[rest.length - 1]))]
+  if (p.city && norm(p.city)) user_data.ct = [sha256(norm(p.city))]
+  user_data.country = [sha256('ro')]
+  if (p.fbp) user_data.fbp = p.fbp
+  if (p.fbc) user_data.fbc = p.fbc
+  if (p.ip) user_data.client_ip_address = p.ip
+  if (p.ua) user_data.client_user_agent = p.ua
+  return user_data
+}
+
+/** Sends website events in one call. Throws MetaError on failure; the token is never logged. */
+export async function sendMetaEvents(c: MetaCapiConfig, events: MetaWebsiteEvent[]): Promise<string> {
+  const body: { data: MetaWebsiteEvent[]; test_event_code?: string } = { data: events }
+  if (c.testEventCode) body.test_event_code = c.testEventCode
+  let res: Response
+  try {
+    res = await fetch(`https://graph.facebook.com/v21.0/${encodeURIComponent(c.pixelId)}/events?access_token=${encodeURIComponent(c.accessToken)}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(body),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15_000),
+    })
+  } catch (e) {
+    throw new MetaError(`network: ${e instanceof Error ? e.message : e}`, 0)
+  }
+  const json = (await res.json().catch(() => ({}))) as { events_received?: number; error?: { message?: string } }
+  if (!res.ok) throw new MetaError(json.error?.message ?? `Meta ${res.status}`, res.status)
+  return `events_received=${json.events_received ?? 0}`
+}
