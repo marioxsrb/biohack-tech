@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const res = await submitRateTbi(getConfig(), r, { ip: ip === 'unknown' ? null : ip, ua: req.headers.get('user-agent') })
-    log.info('rate_tbi.received', { product: r.product, qty: r.qty, value: r.valueLei, hook: res.hook, meta: res.meta })
+    log.info('rate_tbi.received', { product: r.product, qty: r.qty, value: r.valueLei, card: res.opportunityId ? 'ok' : 'missing', hook: res.hook, meta: res.meta })
     return json({ ok: true })
   } catch (e) {
     log.error('rate_tbi.failed', { error: errText(e) })

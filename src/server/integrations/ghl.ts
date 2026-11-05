@@ -451,7 +451,7 @@ export const ghl = {
    * no pipeline or opportunity, so no ecommerce workflow (W1-W7) can start from it. The contact's own `source`
    * is never set here, so an existing NEUROS contact keeps its own; the source and campaign go in bt- tags.
    */
-  async upsertLeadContact(c: GhlConfig, l: { name: string | null; email: string; phone: string | null }, knownId?: string | null) {
+  async upsertLeadContact(c: GhlConfig, l: { name: string | null; email: string; phone: string | null; city?: string | null }, knownId?: string | null) {
     const [firstName, ...rest] = (l.name ?? '').split(' ')
     return saveContact(
       c,
@@ -461,6 +461,7 @@ export const ghl = {
         ...(firstName && { firstName }),
         ...(rest.length && { lastName: rest.join(' ') }),
         ...(l.phone && { phone: l.phone }),
+        ...(l.city && { city: l.city }),
       },
       knownId,
     )
@@ -513,6 +514,33 @@ export const ghl = {
         await call(c, 'PUT', `/opportunities/${id}`, body)
         return id
       }
+    }
+    const r = await call<{ opportunity: { id: string } }>(c, 'POST', '/opportunities/', { ...body, locationId: c.locationId, contactId })
+    return r.opportunity.id
+  },
+
+  /**
+   * The contact's single opportunity in a pipeline found by name, put (back) in a stage as open, with a new name
+   * and value: a repeated request moves the same card back instead of adding a second one. Null while the
+   * pipeline or the stage does not exist in GHL.
+   */
+  async placeOpportunity(c: GhlConfig, contactId: string, p: { pipeline: string; stage: string; name: string; valueRon: number }) {
+    const pipe = await pipelineByName(c, p.pipeline)
+    const stageId = pipe?.stages.get(p.stage.toLowerCase())
+    if (!pipe || !stageId) {
+      log.warn('ghl.pipeline_missing', { pipeline: p.pipeline, stage: p.stage })
+      return null
+    }
+    const body = { name: p.name.slice(0, 120), pipelineId: pipe.id, pipelineStageId: stageId, status: 'open', monetaryValue: Math.round(p.valueRon) }
+    const found = await call<{ opportunities: { id: string }[] }>(
+      c,
+      'GET',
+      `/opportunities/search?location_id=${encodeURIComponent(c.locationId)}&pipeline_id=${encodeURIComponent(pipe.id)}&contact_id=${encodeURIComponent(contactId)}&limit=1`,
+    )
+    const id = found.opportunities?.[0]?.id
+    if (id) {
+      await call(c, 'PUT', `/opportunities/${id}`, body)
+      return id
     }
     const r = await call<{ opportunity: { id: string } }>(c, 'POST', '/opportunities/', { ...body, locationId: c.locationId, contactId })
     return r.opportunity.id

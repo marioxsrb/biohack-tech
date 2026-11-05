@@ -1,8 +1,10 @@
 /**
  * A "Cumpără în rate prin TBI Bank" request from the Shopify store (lib/rate-tbi.ts has the shape).
- * 1. GoHighLevel (NEUROS, the Biohack location): the contact (found by email, created only if new), the fields
- *    bt_tbi_produs / bt_tbi_valoare / bt_tbi_cantitate, the tags rate-tbi and rate-tbi-<product> (the tag starts the workflow
- *    "BT · Rate TBI · cerere nouă"), a note with every detail and a task "Generează Link 2 Pay – X lei" due in 30 min.
+ * 1. GoHighLevel (NEUROS, the Biohack location): the contact (found by email, created only if new, with the city), the
+ *    fields bt_tbi_produs / bt_tbi_valoare / bt_tbi_cantitate, the tags rate-tbi and rate-tbi-<product> (the tag starts the
+ *    workflow "BT · Rate TBI · cerere nouă"), a note with every detail, a task "Generează Link 2 Pay – X lei" due in 30 min
+ *    and the card in the "Rate TBI" pipeline, column "Cerere nouă". The team pastes the TBI link in the contact field
+ *    bt_tbi_link, which starts "BT · Rate TBI · trimite link" (email to the customer, card to "Link trimis").
  * 2. The workflow "BT · Rate TBI · cerere nouă" through its inbound webhook (RATE_TBI_GHL_HOOK): it notifies the team
  *    and confirms to the customer. While the workflow is a draft, GHL ignores the webhook; step 1 still happens.
  * 3. Meta Conversions API: Lead and RateTBIRequest with the browser's event ids, only with marketing consent.
@@ -16,11 +18,13 @@ import { metaFormUserData, sendMetaEvents } from '@/server/integrations/meta'
 import { errText, log } from '@/server/log'
 
 export const RATE_TBI_TAGS = { request: 'rate-tbi', product: (p: string) => `rate-tbi-${p}`, site: 'bt-site-ro' } as const
+/** The team's board in GHL (NEUROS, Opportunities): every request lands (back) in the first column. */
+export const RATE_TBI_PIPELINE = { name: 'Rate TBI', newStage: 'Cerere nouă' } as const
 /** Contact fields in GHL (NEUROS, folder BiohackTech Ecommerce), read by the workflow's notification and confirmation. */
 export const RATE_TBI_FIELDS = { product: 'contact.bt_tbi_produs', value: 'contact.bt_tbi_valoare', qty: 'contact.bt_tbi_cantitate' } as const
 const STORE = 'https://biohack-tech.ro'
 
-export type RateTbiResult = { contactId: string; hook: 'sent' | 'off' | 'failed'; meta: 'sent' | 'off' | 'no-consent' | 'failed' }
+export type RateTbiResult = { contactId: string; opportunityId: string | null; hook: 'sent' | 'off' | 'failed'; meta: 'sent' | 'off' | 'no-consent' | 'failed' }
 
 export function rateTbiNote(r: RateTbiRequest, now = new Date()): string {
   const p = RATE_TBI_PRODUCTS[r.product]
@@ -36,7 +40,7 @@ export function rateTbiNote(r: RateTbiRequest, now = new Date()): string {
     `Oraș: ${r.city}`,
     `Pagina: ${r.page ? STORE + r.page : '-'}`,
     `Sursa: ${source}`,
-    'Pasul următor: generează Link 2 Pay în bankly.tbicredit.ro și trimite-l clientului pe SMS și email; apoi pune tagul rate-tbi-link-trimis.',
+    'Pasul următor: generează Link 2 Pay în bankly.tbicredit.ro și lipește-l în câmpul „bt_tbi_link” al contactului; emailul către client pleacă singur.',
   ].join('\n')
 }
 
@@ -45,7 +49,7 @@ export async function submitRateTbi(cfg: Pick<Config, 'ghl' | 'metaCapi' | 'rate
   const p = RATE_TBI_PRODUCTS[r.product]
   const value = lei(r.valueLei)
 
-  const contactId = await ghl.upsertLeadContact(cfg.ghl, { name: r.name, email: r.email, phone: r.phone })
+  const contactId = await ghl.upsertLeadContact(cfg.ghl, { name: r.name, email: r.email, phone: r.phone, city: r.city })
   // The workflow's messages read these fields, so they are written before the tag that starts it.
   // The API takes the short key (without "contact."); with the full one GHL answers 200 and saves nothing.
   const field = (key: string, field_value: string) => ({ key: key.replace(/^contact\./, ''), field_value })
@@ -63,6 +67,13 @@ export async function submitRateTbi(cfg: Pick<Config, 'ghl' | 'metaCapi' | 'rate
     title: `Generează Link 2 Pay – ${value} lei`,
     body: note,
     dueDate: new Date(now.getTime() + 30 * 60_000).toISOString(),
+  })
+  // The card: GHL shows its name and value on the board, and the date and time in stage on its own.
+  const opportunityId = await ghl.placeOpportunity(cfg.ghl, contactId, {
+    pipeline: RATE_TBI_PIPELINE.name,
+    stage: RATE_TBI_PIPELINE.newStage,
+    name: `${r.firstName} – ${p.title} x${r.qty} – ${value} lei`,
+    valueRon: r.valueLei,
   })
 
   let hook: RateTbiResult['hook'] = 'off'
@@ -122,5 +133,5 @@ export async function submitRateTbi(cfg: Pick<Config, 'ghl' | 'metaCapi' | 'rate
       }
     }
   }
-  return { contactId, hook, meta }
+  return { contactId, opportunityId, hook, meta }
 }

@@ -31,6 +31,9 @@ beforeEach(() => {
     if (url.endsWith('/contacts/search')) return json({ contacts: [] })
     if (url.endsWith('/contacts/upsert')) return json({ contact: { id: 'c-new' } })
     if (/\/contacts\/c-new\/(tags|notes|tasks)$/.test(url) || (init.method === 'PUT' && url.endsWith('/contacts/c-new'))) return json({ ok: true })
+    if (url.includes('/opportunities/pipelines')) return json({ pipelines: [{ id: 'pipe-tbi', name: 'Rate TBI', stages: [{ id: 'st-new', name: 'Cerere nouă' }, { id: 'st-sent', name: 'Link trimis' }] }] })
+    if (url.includes('/opportunities/search')) return json({ opportunities: [] })
+    if (url.endsWith('/opportunities/') && init.method === 'POST') return json({ opportunity: { id: 'opp-1' } })
     if (url.startsWith('https://services.leadconnectorhq.com/hooks/')) return json({ status: 'Success' })
     if (url.startsWith('https://graph.facebook.com/')) return json({ events_received: 2 })
     return json({ message: `unexpected ${url}` }, 400)
@@ -95,6 +98,16 @@ it('saves the request in GoHighLevel (contact by email, tags, note, task), calls
   expect(note).toContain('6.240 lei')
   expect(note).toContain('source=meta')
   expect(ghlCalls.find((c) => c.url.endsWith('/tasks'))!.body).toMatchObject({ title: 'Generează Link 2 Pay – 6.240 lei', completed: false })
+  // The card in "Rate TBI" / "Cerere nouă", and the city on the contact.
+  expect(ghlCalls.find((c) => c.url.endsWith('/opportunities/'))!.body).toMatchObject({
+    name: 'Ana – NEUROS Calm x2 – 6.240 lei',
+    pipelineId: 'pipe-tbi',
+    pipelineStageId: 'st-new',
+    status: 'open',
+    monetaryValue: 6240,
+    contactId: 'c-new',
+  })
+  expect(ghlCalls.find((c) => c.url.endsWith('/contacts/upsert'))!.body).toMatchObject({ city: 'Cluj-Napoca' })
   const hook = calls.find((c) => c.url.includes('/hooks/'))!
   expect(hook.body).toMatchObject({ contact_id: 'c-new', first_name: 'Ana', produs: 'NEUROS Calm', cantitate: 2, valoare: '6.240', utm_source: 'meta' })
   const meta = calls.find((c) => c.url.startsWith('https://graph.facebook.com/'))!
