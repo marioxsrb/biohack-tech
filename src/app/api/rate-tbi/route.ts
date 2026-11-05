@@ -9,6 +9,7 @@ import { kickJobs } from '@/server/jobs/runner'
 import { errText, log } from '@/server/log'
 import { clientIp, rateLimit } from '@/server/rate-limit'
 import { valueRateTbi, type RateTbiJob } from '@/server/rate-tbi'
+import { tbiPriceRules, tbiPriceStatus } from '@/server/tbi-prices'
 
 export const runtime = 'nodejs'
 
@@ -22,6 +23,12 @@ function cors(req: NextRequest): Record<string, string> {
   return ORIGINS.has(origin)
     ? { 'Access-Control-Allow-Origin': origin, 'Access-Control-Allow-Methods': 'POST, OPTIONS', 'Access-Control-Allow-Headers': 'content-type', 'Access-Control-Max-Age': '600', Vary: 'Origin' }
     : { Vary: 'Origin' }
+}
+
+/** GET /api/rate-tbi: whether the server can read the store's price rules (no personal data). */
+export async function GET() {
+  const rules = await tbiPriceRules(getConfig().rateTbi.pricesUrl)
+  return NextResponse.json({ ok: !!rules, products: rules ? Object.keys(rules.products) : [], ...tbiPriceStatus() }, { headers: { 'cache-control': 'no-store' } })
 }
 
 export function OPTIONS(req: NextRequest) {
