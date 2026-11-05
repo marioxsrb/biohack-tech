@@ -47,10 +47,12 @@ export async function submitRateTbi(cfg: Pick<Config, 'ghl' | 'metaCapi' | 'rate
 
   const contactId = await ghl.upsertLeadContact(cfg.ghl, { name: r.name, email: r.email, phone: r.phone })
   // The workflow's messages read these fields, so they are written before the tag that starts it.
+  // The API takes the short key (without "contact."); with the full one GHL answers 200 and saves nothing.
+  const field = (key: string, field_value: string) => ({ key: key.replace(/^contact\./, ''), field_value })
   await ghl.updateFields(cfg.ghl, contactId, [
-    { key: RATE_TBI_FIELDS.product, field_value: p.title },
-    { key: RATE_TBI_FIELDS.value, field_value: value },
-    { key: RATE_TBI_FIELDS.qty, field_value: String(r.qty) },
+    field(RATE_TBI_FIELDS.product, p.title),
+    field(RATE_TBI_FIELDS.value, value),
+    field(RATE_TBI_FIELDS.qty, String(r.qty)),
   ])
   // A repeated request starts the workflow again: GHL fires "tag added" only when the tag was absent.
   await ghl.removeTags(cfg.ghl, contactId, [RATE_TBI_TAGS.request, RATE_TBI_TAGS.product(r.product)])
