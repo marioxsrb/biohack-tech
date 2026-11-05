@@ -1,7 +1,8 @@
 /**
  * A "Cumpără în rate prin TBI Bank" request from the Shopify store (lib/rate-tbi.ts has the shape).
- * 1. GoHighLevel (NEUROS, the Biohack location): the contact (found by email, created only if new), the tags
- *    rate-tbi and rate-tbi-<product>, a note with every detail and a task "Generează Link 2 Pay – X lei" due in 30 min.
+ * 1. GoHighLevel (NEUROS, the Biohack location): the contact (found by email, created only if new), the fields
+ *    bt_tbi_produs / bt_tbi_valoare / bt_tbi_cantitate, the tags rate-tbi and rate-tbi-<product> (the tag starts the workflow
+ *    "BT · Rate TBI · cerere nouă"), a note with every detail and a task "Generează Link 2 Pay – X lei" due in 30 min.
  * 2. The workflow "BT · Rate TBI · cerere nouă" through its inbound webhook (RATE_TBI_GHL_HOOK): it notifies the team
  *    and confirms to the customer. While the workflow is a draft, GHL ignores the webhook; step 1 still happens.
  * 3. Meta Conversions API: Lead and RateTBIRequest with the browser's event ids, only with marketing consent.
@@ -15,6 +16,8 @@ import { metaFormUserData, sendMetaEvents } from '@/server/integrations/meta'
 import { errText, log } from '@/server/log'
 
 export const RATE_TBI_TAGS = { request: 'rate-tbi', product: (p: string) => `rate-tbi-${p}`, site: 'bt-site-ro' } as const
+/** Contact fields in GHL (NEUROS, folder BiohackTech Ecommerce), read by the workflow's notification and confirmation. */
+export const RATE_TBI_FIELDS = { product: 'contact.bt_tbi_produs', value: 'contact.bt_tbi_valoare', qty: 'contact.bt_tbi_cantitate' } as const
 const STORE = 'https://biohack-tech.ro'
 
 export type RateTbiResult = { contactId: string; hook: 'sent' | 'off' | 'failed'; meta: 'sent' | 'off' | 'no-consent' | 'failed' }
@@ -43,6 +46,14 @@ export async function submitRateTbi(cfg: Pick<Config, 'ghl' | 'metaCapi' | 'rate
   const value = lei(r.valueLei)
 
   const contactId = await ghl.upsertLeadContact(cfg.ghl, { name: r.name, email: r.email, phone: r.phone })
+  // The workflow's messages read these fields, so they are written before the tag that starts it.
+  await ghl.updateFields(cfg.ghl, contactId, [
+    { key: RATE_TBI_FIELDS.product, field_value: p.title },
+    { key: RATE_TBI_FIELDS.value, field_value: value },
+    { key: RATE_TBI_FIELDS.qty, field_value: String(r.qty) },
+  ])
+  // A repeated request starts the workflow again: GHL fires "tag added" only when the tag was absent.
+  await ghl.removeTags(cfg.ghl, contactId, [RATE_TBI_TAGS.request, RATE_TBI_TAGS.product(r.product)])
   await ghl.addTags(cfg.ghl, contactId, [RATE_TBI_TAGS.request, RATE_TBI_TAGS.product(r.product), RATE_TBI_TAGS.site])
   const note = rateTbiNote(r, now)
   await ghl.addNote(cfg.ghl, contactId, note)

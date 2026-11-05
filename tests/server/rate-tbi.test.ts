@@ -30,7 +30,7 @@ beforeEach(() => {
     const json = (x: unknown, status = 200) => new Response(JSON.stringify(x), { status, headers: { 'content-type': 'application/json' } })
     if (url.endsWith('/contacts/search')) return json({ contacts: [] })
     if (url.endsWith('/contacts/upsert')) return json({ contact: { id: 'c-new' } })
-    if (/\/contacts\/c-new\/(tags|notes|tasks)$/.test(url)) return json({ ok: true })
+    if (/\/contacts\/c-new\/(tags|notes|tasks)$/.test(url) || (init.method === 'PUT' && url.endsWith('/contacts/c-new'))) return json({ ok: true })
     if (url.startsWith('https://services.leadconnectorhq.com/hooks/')) return json({ status: 'Success' })
     if (url.startsWith('https://graph.facebook.com/')) return json({ events_received: 2 })
     return json({ message: `unexpected ${url}` }, 400)
@@ -81,7 +81,15 @@ it('saves the request in GoHighLevel (contact by email, tags, note, task), calls
   const ghlCalls = calls.filter((c) => c.url.startsWith('https://ghl.test'))
   expect(ghlCalls[0].body).toMatchObject({ filters: [{ field: 'email', operator: 'eq', value: 'ana.pop@example.com' }] })
   expect(ghlCalls.find((c) => c.url.endsWith('/contacts/upsert'))!.body).toMatchObject({ email: 'ana.pop@example.com', firstName: 'Ana', lastName: 'Maria Pop', phone: '+40722123456' })
-  expect(ghlCalls.find((c) => c.url.endsWith('/tags'))!.body).toEqual({ tags: ['rate-tbi', 'rate-tbi-calm', 'bt-site-ro'] })
+  const fields = ghlCalls.find((c) => c.method === 'PUT' && c.url.endsWith('/contacts/c-new'))!
+  expect(fields.body).toEqual({ customFields: [{ key: 'contact.bt_tbi_produs', field_value: 'NEUROS Calm' }, { key: 'contact.bt_tbi_valoare', field_value: '6.240' }, { key: 'contact.bt_tbi_cantitate', field_value: '2' }] })
+  const tagCalls = ghlCalls.filter((c) => c.url.endsWith('/tags'))
+  expect(tagCalls.map((c) => [c.method, c.body])).toEqual([
+    ['DELETE', { tags: ['rate-tbi', 'rate-tbi-calm'] }],
+    ['POST', { tags: ['rate-tbi', 'rate-tbi-calm', 'bt-site-ro'] }],
+  ])
+  // The fields are written before the tag that starts the workflow.
+  expect(ghlCalls.indexOf(fields)).toBeLessThan(ghlCalls.indexOf(tagCalls[1]))
   const note = String(ghlCalls.find((c) => c.url.endsWith('/notes'))!.body!.body)
   expect(note).toContain('NEUROS Calm × 2')
   expect(note).toContain('6.240 lei')
