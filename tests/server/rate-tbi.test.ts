@@ -85,10 +85,10 @@ it('saves the request in GoHighLevel (contact by email, tags, note, task), calls
   expect(ghlCalls[0].body).toMatchObject({ filters: [{ field: 'email', operator: 'eq', value: 'ana.pop@example.com' }] })
   expect(ghlCalls.find((c) => c.url.endsWith('/contacts/upsert'))!.body).toMatchObject({ email: 'ana.pop@example.com', firstName: 'Ana', lastName: 'Maria Pop', phone: '+40722123456' })
   const fields = ghlCalls.find((c) => c.method === 'PUT' && c.url.endsWith('/contacts/c-new'))!
-  expect(fields.body).toEqual({ customFields: [{ key: 'bt_tbi_produs', field_value: 'NEUROS Calm' }, { key: 'bt_tbi_valoare', field_value: '6.240' }, { key: 'bt_tbi_cantitate', field_value: '2' }] })
+  expect(fields.body).toEqual({ customFields: [{ key: 'bt_tbi_produs', field_value: 'NEUROS Calm' }, { key: 'bt_tbi_valoare', field_value: '6.240' }, { key: 'bt_tbi_cantitate', field_value: '2' }, { key: 'bt_tbi_link', field_value: '' }] })
   const tagCalls = ghlCalls.filter((c) => c.url.endsWith('/tags'))
   expect(tagCalls.map((c) => [c.method, c.body])).toEqual([
-    ['DELETE', { tags: ['rate-tbi', 'rate-tbi-calm'] }],
+    ['DELETE', { tags: ['rate-tbi', 'rate-tbi-calm', 'rate-tbi-link-trimis'] }],
     ['POST', { tags: ['rate-tbi', 'rate-tbi-calm', 'bt-site-ro'] }],
   ])
   // The fields are written before the tag that starts the workflow.

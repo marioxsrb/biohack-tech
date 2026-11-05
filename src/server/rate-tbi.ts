@@ -17,11 +17,11 @@ import { ghl } from '@/server/integrations/ghl'
 import { metaFormUserData, sendMetaEvents } from '@/server/integrations/meta'
 import { errText, log } from '@/server/log'
 
-export const RATE_TBI_TAGS = { request: 'rate-tbi', product: (p: string) => `rate-tbi-${p}`, site: 'bt-site-ro' } as const
+export const RATE_TBI_TAGS = { request: 'rate-tbi', product: (p: string) => `rate-tbi-${p}`, site: 'bt-site-ro', linkSent: 'rate-tbi-link-trimis' } as const
 /** The team's board in GHL (NEUROS, Opportunities): every request lands (back) in the first column. */
 export const RATE_TBI_PIPELINE = { name: 'Rate TBI', newStage: 'Cerere nouă' } as const
 /** Contact fields in GHL (NEUROS, folder BiohackTech Ecommerce), read by the workflow's notification and confirmation. */
-export const RATE_TBI_FIELDS = { product: 'contact.bt_tbi_produs', value: 'contact.bt_tbi_valoare', qty: 'contact.bt_tbi_cantitate' } as const
+export const RATE_TBI_FIELDS = { product: 'contact.bt_tbi_produs', value: 'contact.bt_tbi_valoare', qty: 'contact.bt_tbi_cantitate', link: 'contact.bt_tbi_link' } as const
 const STORE = 'https://biohack-tech.ro'
 
 export type RateTbiResult = { contactId: string; opportunityId: string | null; hook: 'sent' | 'off' | 'failed'; meta: 'sent' | 'off' | 'no-consent' | 'failed' }
@@ -57,9 +57,11 @@ export async function submitRateTbi(cfg: Pick<Config, 'ghl' | 'metaCapi' | 'rate
     field(RATE_TBI_FIELDS.product, p.title),
     field(RATE_TBI_FIELDS.value, value),
     field(RATE_TBI_FIELDS.qty, String(r.qty)),
+    // A new request needs a new TBI link: the old one is cleared, so the 30-minute reminder sees "no link yet".
+    field(RATE_TBI_FIELDS.link, ''),
   ])
   // A repeated request starts the workflow again: GHL fires "tag added" only when the tag was absent.
-  await ghl.removeTags(cfg.ghl, contactId, [RATE_TBI_TAGS.request, RATE_TBI_TAGS.product(r.product)])
+  await ghl.removeTags(cfg.ghl, contactId, [RATE_TBI_TAGS.request, RATE_TBI_TAGS.product(r.product), RATE_TBI_TAGS.linkSent])
   await ghl.addTags(cfg.ghl, contactId, [RATE_TBI_TAGS.request, RATE_TBI_TAGS.product(r.product), RATE_TBI_TAGS.site])
   const note = rateTbiNote(r, now)
   await ghl.addNote(cfg.ghl, contactId, note)
