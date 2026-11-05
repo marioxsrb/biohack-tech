@@ -15,7 +15,7 @@ const { runDueJobs } = await import('@/server/jobs/runner')
 const { resetTbiPrices } = await import('@/server/tbi-prices')
 const { resetLeadsPipelineCache } = await import('@/server/integrations/ghl')
 const { normalizeRoMobile, lei } = await import('@/lib/rate-tbi')
-const { lineTotal, monthlyRate, quote } = await import('@/lib/tbi')
+const { lineTotal, monthlyRate, quote, instalment, allowedPeriods, longestPeriod, TBI_TERMS } = await import('@/lib/tbi')
 
 // 5 Nov 2026 12:00 in Bucharest: Calm is at the 4.890 step, Amber 2+2 is on, Focus Black Friday starts on the 6th.
 const NOW = Date.parse('2026-11-05T10:00:00Z')
@@ -109,10 +109,18 @@ it('prices a basket the way the store does: Calm ladder, Focus Black Friday, Amb
   expect(quote(RULES, [{ handle: 'calm', qty: 1 }, { handle: 'amber', qty: 2 }], NOW)?.total).toBe(5520)
 })
 
-it('computes the indicative instalment as an annuity at 21% a year, rounded up to the leu', () => {
-  expect(monthlyRate(2000, 24)).toBe(103)
-  expect(monthlyRate(4890, 60)).toBe(133)
+it("matches tbi bank's representative example: 2.000 lei, 24 months, 21%, fee 170 lei, insurance → 124,62 lei a month", () => {
+  const ex = instalment(2000, 24)
+  expect(Math.abs(ex.exact - 124.62)).toBeLessThanOrEqual(0.05)
+  expect(Math.abs(ex.exact * 24 - 2990.88)).toBeLessThanOrEqual(1.2)
+  expect([ex.monthly, ex.total]).toEqual([125, 3000])
+  // Without the fee and insurance it is the plain annuity.
+  expect(monthlyRate(2000, 24, { ...TBI_TERMS, includeCosts: false })).toBe(103)
   expect(monthlyRate(0, 24)).toBe(0)
+  // The longest period by amount: under 1.000 lei 12 months, 1.000–2.999 lei 36, from 3.000 lei 60.
+  expect([999, 1000, 2999, 3000].map((a) => longestPeriod(a))).toEqual([12, 36, 36, 60])
+  expect(allowedPeriods(315)).toEqual([6, 12])
+  expect(longestPeriod(150)).toBeNull()
   expect(['0722 123 456', '+40 722-123-456', '0040722123456'].map(normalizeRoMobile)).toEqual(Array(3).fill('+40722123456'))
   expect([lei(6240), lei(3227.5)]).toEqual(['6.240', '3.227,50'])
 })
@@ -120,7 +128,7 @@ it('computes the indicative instalment as an annuity at 21% a year, rounded up t
 it('values the basket on the server, stores the request and sends it to GoHighLevel with a new card', async () => {
   // The page claims a lower total: the server keeps the store's 5.520.
   const res = await POST(req(good({ total: 4000 })))
-  expect([res.status, await res.json()]).toEqual([200, { ok: true, total: 5520, monthly: monthlyRate(5520, 24) }])
+  expect([res.status, await res.json()]).toEqual([200, { ok: true, total: 5520, monthly: monthlyRate(5520, 24), period: 24 }])
   expect(res.headers.get('access-control-allow-origin')).toBe('https://biohack-tech.ro')
   await runDueJobs()
   const g = ghlCalls()
@@ -132,6 +140,9 @@ it('values the basket on the server, stores the request and sends it to GoHighLe
       { key: 'bt_tbi_valoare', field_value: '5.520' },
       { key: 'bt_tbi_perioada', field_value: '24 luni' },
       { key: 'bt_tbi_avans', field_value: '0' },
+      { key: 'bt_tbi_rata', field_value: lei(monthlyRate(5520, 24)) },
+      { key: 'bt_tbi_total_plata', field_value: lei(monthlyRate(5520, 24) * 24) },
+      { key: 'bt_tbi_whatsapp', field_value: 'https://wa.me/40722123456' },
       { key: 'bt_tbi_link', field_value: '' },
     ],
   })
@@ -143,12 +154,17 @@ it('values the basket on the server, stores the request and sends it to GoHighLe
   expect(note).toContain('NEUROS Calm × 1: 4.890 lei/buc., subtotal 4.890 lei')
   expect(note).toContain('NEUROS Amber × 2: 315 lei/buc., subtotal 630 lei')
   expect(note).toContain('Total comandă: 5.520 lei')
-  expect(note).toContain(`Rată orientativă: ${monthlyRate(5520, 24)} lei/lună`)
+  expect(note).toContain(`Rată estimată: ${lei(monthlyRate(5520, 24))} lei/lună, total de plată ${lei(monthlyRate(5520, 24) * 24)} lei`)
+  expect(note).toContain('comision de analiză 170 lei și asigurare 0,532%/lună incluse')
+  expect(note).toContain('WhatsApp: https://wa.me/40722123456')
+  // Everything goes to Mario Sirbu (GHL user NbulDKs8dFmZAscEj2ej).
+  expect(g.find((c) => c.url.endsWith('/contacts/upsert'))!.body).toMatchObject({ assignedTo: 'NbulDKs8dFmZAscEj2ej' })
   expect(note).toContain('source=meta')
   expect(g.find((c) => c.url.endsWith('/tasks'))!.body).toMatchObject({
     title: 'Sună Ana Maria Pop – cerere rate tbi (5.520 lei)',
     completed: false,
     dueDate: new Date(NOW + 24 * 3_600_000).toISOString(),
+    assignedTo: 'NbulDKs8dFmZAscEj2ej',
   })
   expect(g.find((c) => c.url.endsWith('/opportunities/'))!.body).toMatchObject({
     name: 'Ana Maria Pop – Calm x1 + Amber x2 – 5.520 lei',
@@ -156,9 +172,19 @@ it('values the basket on the server, stores the request and sends it to GoHighLe
     pipelineStageId: 'st-new',
     monetaryValue: 5520,
     contactId: 'c-new',
+    assignedTo: 'NbulDKs8dFmZAscEj2ej',
   })
   // No search for an existing card: every request is its own card.
   expect(g.some((c) => c.url.includes('/opportunities/search'))).toBe(false)
+})
+
+it('uses the longest period tbi allows for the amount when the customer asked for more', async () => {
+  const res = await POST(req(good({ phone: '0747 555 666', email: 'g@example.com', items: [{ handle: 'amber', qty: 2 }], period: 60, total: 630 })))
+  expect(await res.json()).toMatchObject({ ok: true, total: 630, period: 12, monthly: monthlyRate(630, 12) })
+  await runDueJobs()
+  const g = ghlCalls()
+  expect(g.find((c) => c.method === 'PUT' && c.url.endsWith('/contacts/c-new'))!.body!.customFields).toContainEqual({ key: 'bt_tbi_perioada', field_value: '12 luni' })
+  expect(String(g.find((c) => c.url.endsWith('/notes'))!.body!.body)).toContain('Perioada: 12 luni (a cerut 60; pentru suma asta tbi dă maximum 12)')
 })
 
 it('ignores the same basket from the same person within 10 minutes, and takes another basket', async () => {

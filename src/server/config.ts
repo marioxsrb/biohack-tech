@@ -139,7 +139,8 @@ export type Config = {
    * "BT · Rate TBI · cerere nouă" (RATE_TBI_GHL_HOOK). Without it the contact, tags, note and task are still saved.
    */
   /** The store's price rules for the instalment simulator (RATE_TBI_PRICES_URL, default the theme's tbi-data view of Calm). */
-  rateTbi: { hook: string | null; pricesUrl: string }
+  /** assignee: the GHL user who gets every request (contact, card, task; RATE_TBI_ASSIGNEE, default Mario Sirbu). */
+  rateTbi: { hook: string | null; pricesUrl: string; assignee: string | null }
 }
 
 export type DigitalConfig = { linkSecret: string; source: { url: string; secret: string } }
@@ -534,6 +535,8 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     rateTbi: {
       hook: /^https:\/\/services\.leadconnectorhq\.com\/hooks\//.test(str('RATE_TBI_GHL_HOOK') ?? '') ? str('RATE_TBI_GHL_HOOK')! : null,
       pricesUrl: /^https:\/\//.test(str('RATE_TBI_PRICES_URL') ?? '') ? str('RATE_TBI_PRICES_URL')! : 'https://biohack-tech.ro/products/calm?view=tbi-data',
+      // Mario Sirbu (GHL NEUROS user, 05.11.2026); RATE_TBI_ASSIGNEE=off leaves requests unassigned.
+      assignee: str('RATE_TBI_ASSIGNEE') === 'off' ? null : (str('RATE_TBI_ASSIGNEE') ?? 'NbulDKs8dFmZAscEj2ej'),
     },
   }
   cached = { config, issues }

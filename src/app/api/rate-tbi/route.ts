@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto'
 import { NextResponse, type NextRequest } from 'next/server'
 import { parseRateTbi } from '@/lib/rate-tbi'
-import { monthlyRate } from '@/lib/tbi'
 import { getConfig } from '@/server/config'
 import { getDb } from '@/server/db'
 import { jobs } from '@/server/jobs/outbox'
@@ -80,16 +79,16 @@ export async function POST(req: NextRequest) {
       `select 1 from jobs where kind = 'rate_tbi.submit' and dedupe_key like $1 and created_at > now() - interval '${REPEAT_WINDOW_MIN} minutes' limit 1`,
       [`rate-tbi:${key}:%`],
     )
-    const monthly = monthlyRate(Math.max(0, v.total - r.advance), r.period)
+    const monthly = v.rate.monthly
     if (repeat.rows.length) {
       log.info('rate_tbi.repeat_ignored', { items: basket })
-      return json({ ok: true, total: v.total, monthly, repeat: true })
+      return json({ ok: true, total: v.total, monthly, period: v.period, repeat: true })
     }
     const payload: RateTbiJob = { request: r, valuation: v, client: { ip: ip === 'unknown' ? null : ip, ua: req.headers.get('user-agent') }, at: new Date().toISOString() }
     await jobs.enqueue(db, { kind: 'rate_tbi.submit', dedupeKey: `rate-tbi:${key}:${Date.now()}`, payload: payload as unknown as Record<string, unknown> })
     kickJobs()
     log.info('rate_tbi.received', { items: basket, total: v.total, verified: v.verified, period: r.period, advance: r.advance })
-    return json({ ok: true, total: v.total, monthly })
+    return json({ ok: true, total: v.total, monthly, period: v.period })
   } catch (e) {
     log.error('rate_tbi.failed', { error: errText(e) })
     return json({ error: 'SERVER', message: `Cererea nu a putut fi trimisă. Sună-ne la ${PHONE} și te ajutăm imediat.` }, 502)

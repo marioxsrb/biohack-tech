@@ -25,10 +25,54 @@ export type TbiLadder = {
   etape?: { de_la: string; pana_la: string; pret: number }[]
   bf_2plus?: { min?: number; pct?: number }
 }
-export type TbiPriceRules = { products: Record<string, TbiProductRules> }
 
-export type TbiTerms = { annualPct: number; periods: number[]; min: number; max: number }
-export const TBI_TERMS: TbiTerms = { annualPct: 21, periods: [6, 12, 18, 24, 36, 48, 60], min: 200, max: 30000 }
+/**
+ * tbi bank's terms (Setări temă → Rate TBI, published with the price rules): fixed annual interest, the analysis fee
+ * and the life insurance (a share of the credit per month) that tbi adds to the financed amount, the periods, the
+ * amounts it finances and the longest period by amount ([from lei, max months], ascending).
+ * TBI's representative example: 2.000 lei, 24 months, 21%, fee 170 lei, insurance 255,19 lei → 124,62 lei a month.
+ */
+export type TbiTerms = {
+  annualPct: number
+  commission: number
+  insurancePct: number
+  includeCosts: boolean
+  periods: number[]
+  min: number
+  max: number
+  limits: [number, number][]
+}
+export const TBI_TERMS: TbiTerms = {
+  annualPct: 21,
+  commission: 170,
+  insurancePct: 0.532,
+  includeCosts: true,
+  periods: [6, 12, 18, 24, 36, 48, 60],
+  min: 200,
+  max: 30000,
+  limits: [
+    [0, 12],
+    [1000, 36],
+    [3000, 60],
+  ],
+}
+export type TbiPriceRules = { products: Record<string, TbiProductRules>; terms?: Partial<TbiTerms> }
+/** The store's terms over the defaults (a missing or malformed value keeps the default). */
+export function tbiTerms(t?: Partial<TbiTerms> | null): TbiTerms {
+  const n = (v: unknown, d: number) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : d)
+  const periods = Array.isArray(t?.periods) && t.periods.every((p) => Number.isInteger(p) && p > 0) && t.periods.length ? [...t.periods].sort((a, b) => a - b) : TBI_TERMS.periods
+  const limits = Array.isArray(t?.limits) && t.limits.every((l) => Array.isArray(l) && l.length === 2 && l.every((x) => Number.isFinite(x))) ? [...t.limits].sort((a, b) => a[0] - b[0]) : TBI_TERMS.limits
+  return {
+    annualPct: n(t?.annualPct, TBI_TERMS.annualPct),
+    commission: n(t?.commission, TBI_TERMS.commission),
+    insurancePct: n(t?.insurancePct, TBI_TERMS.insurancePct),
+    includeCosts: typeof t?.includeCosts === 'boolean' ? t.includeCosts : TBI_TERMS.includeCosts,
+    periods,
+    min: n(t?.min, TBI_TERMS.min),
+    max: n(t?.max, TBI_TERMS.max),
+    limits,
+  }
+}
 
 const round2 = (v: number) => Math.round(v * 100) / 100
 
@@ -81,15 +125,36 @@ export function quote(rules: TbiPriceRules, items: TbiItem[], now = Date.now()) 
   return { lines, total: round2(lines.reduce((s, l) => s + l.total, 0)) }
 }
 
-/** The indicative monthly instalment: an annuity at a fixed annual rate, rounded up to the leu. */
-export function monthlyRate(amount: number, months: number, annualPct = TBI_TERMS.annualPct): number {
-  if (!(amount > 0) || !(months > 0)) return 0
-  const r = annualPct / 100 / 12
-  return Math.ceil(r === 0 ? amount / months : (amount * r) / (1 - (1 + r) ** -months))
+/** The periods tbi offers for an amount (the longest allowed by `limits`; at least the shortest period). */
+export function allowedPeriods(amount: number, terms: TbiTerms = TBI_TERMS): number[] {
+  let max = Infinity
+  for (const [from, months] of terms.limits) if (amount >= from) max = months
+  const ok = terms.periods.filter((p) => p <= max)
+  return ok.length ? ok : [Math.min(...terms.periods)]
 }
+
+export type TbiInstalment = { credit: number; costs: number; exact: number; monthly: number; total: number }
+
+/**
+ * The indicative instalment: the credit (amount minus down payment) plus the analysis fee and the insurance
+ * (credit × insurance % × months), as an annuity at the fixed annual rate. `exact` is unrounded; `monthly` is
+ * rounded up to the leu and `total` = monthly × months (what the page shows).
+ */
+export function instalment(credit: number, months: number, terms: TbiTerms = TBI_TERMS): TbiInstalment {
+  if (!(credit > 0) || !(months > 0)) return { credit: 0, costs: 0, exact: 0, monthly: 0, total: 0 }
+  const costs = terms.includeCosts ? terms.commission + (credit * terms.insurancePct * months) / 100 : 0
+  const p = credit + costs
+  const r = terms.annualPct / 100 / 12
+  const exact = r === 0 ? p / months : (p * r) / (1 - (1 + r) ** -months)
+  const monthly = Math.ceil(exact - 1e-9)
+  return { credit, costs: Math.round(costs * 100) / 100, exact, monthly, total: monthly * months }
+}
+
+/** The monthly instalment rounded up to the leu (instalment().monthly). */
+export const monthlyRate = (amount: number, months: number, terms: TbiTerms = TBI_TERMS) => instalment(amount, months, terms).monthly
 
 /** The longest period the amount allows (only amounts within min..max can be financed). */
 export function longestPeriod(amount: number, terms: TbiTerms = TBI_TERMS): number | null {
-  if (amount < terms.min || amount > terms.max || !terms.periods.length) return null
-  return Math.max(...terms.periods)
+  if (amount < terms.min || amount > terms.max) return null
+  return Math.max(...allowedPeriods(amount, terms))
 }

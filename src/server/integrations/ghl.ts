@@ -451,7 +451,7 @@ export const ghl = {
    * no pipeline or opportunity, so no ecommerce workflow (W1-W7) can start from it. The contact's own `source`
    * is never set here, so an existing NEUROS contact keeps its own; the source and campaign go in bt- tags.
    */
-  async upsertLeadContact(c: GhlConfig, l: { name: string | null; email: string; phone: string | null; city?: string | null }, knownId?: string | null) {
+  async upsertLeadContact(c: GhlConfig, l: { name: string | null; email: string; phone: string | null; city?: string | null; assignedTo?: string | null }, knownId?: string | null) {
     const [firstName, ...rest] = (l.name ?? '').split(' ')
     return saveContact(
       c,
@@ -462,6 +462,7 @@ export const ghl = {
         ...(rest.length && { lastName: rest.join(' ') }),
         ...(l.phone && { phone: l.phone }),
         ...(l.city && { city: l.city }),
+        ...(l.assignedTo && { assignedTo: l.assignedTo }),
       },
       knownId,
     )
@@ -524,14 +525,14 @@ export const ghl = {
    * and value: a repeated request moves the same card back instead of adding a second one. Null while the
    * pipeline or the stage does not exist in GHL.
    */
-  async placeOpportunity(c: GhlConfig, contactId: string, p: { pipeline: string; stage: string; name: string; valueRon: number; newCard?: boolean }) {
+  async placeOpportunity(c: GhlConfig, contactId: string, p: { pipeline: string; stage: string; name: string; valueRon: number; newCard?: boolean; assignedTo?: string | null }) {
     const pipe = await pipelineByName(c, p.pipeline)
     const stageId = pipe?.stages.get(p.stage.toLowerCase())
     if (!pipe || !stageId) {
       log.warn('ghl.pipeline_missing', { pipeline: p.pipeline, stage: p.stage })
       return null
     }
-    const body = { name: p.name.slice(0, 120), pipelineId: pipe.id, pipelineStageId: stageId, status: 'open', monetaryValue: Math.round(p.valueRon) }
+    const body = { name: p.name.slice(0, 120), pipelineId: pipe.id, pipelineStageId: stageId, status: 'open', monetaryValue: Math.round(p.valueRon), ...(p.assignedTo && { assignedTo: p.assignedTo }) }
     // newCard: one card per request (the location allows several opportunities per contact).
     if (p.newCard) {
       const r = await call<{ opportunity: { id: string } }>(c, 'POST', '/opportunities/', { ...body, locationId: c.locationId, contactId })
@@ -570,8 +571,14 @@ export const ghl = {
   },
 
   /** A task on the contact, due at `dueDate` (ISO), for the team to do by hand. */
-  async addTask(c: GhlConfig, contactId: string, t: { title: string; body: string; dueDate: string }) {
-    await call(c, 'POST', `/contacts/${encodeURIComponent(contactId)}/tasks`, { title: t.title.slice(0, 200), body: t.body.slice(0, 2000), dueDate: t.dueDate, completed: false })
+  async addTask(c: GhlConfig, contactId: string, t: { title: string; body: string; dueDate: string; assignedTo?: string | null }) {
+    await call(c, 'POST', `/contacts/${encodeURIComponent(contactId)}/tasks`, {
+      title: t.title.slice(0, 200),
+      body: t.body.slice(0, 2000),
+      dueDate: t.dueDate,
+      completed: false,
+      ...(t.assignedTo && { assignedTo: t.assignedTo }),
+    })
   },
 
   /**
