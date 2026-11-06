@@ -4,7 +4,7 @@
  *    server; the customer gets the URL ("Continuă cererea la TBI") right away. Saved in tbi_applications.
  * 2. applyToCard (in the job rate_tbi.submit, after the card exists): the URL in bt_tbi_link, the card on
  *    "Link trimis" with tbi_order_id / tbi_token (when those fields exist in GHL), and any status that arrived first.
- * 3. applyStatusUpdate (/api/tbi/status): 2 → "Cerere completată la TBI", 1 → "Aprobat", 0 / 3 → "Respins / Renunțat";
+ * 3. applyStatusUpdate (/api/tbi/status): 1 → "Aprobat", 0 / 3 → "Respins / Renunțat" (2, in progress, only in last_status);
  *    last_status and contract_number on the card, a note with the message, motive and contract on the contact.
  * Without TBI configured, without the webhook secret or without the category id nothing is registered and the
  * request follows the manual flow (a colleague sends the link).
@@ -24,9 +24,12 @@ export type TbiRegistration = { orderRef: string; orderId: number; token: string
 export const TBI_PIPELINE = 'Rate TBI'
 export const TBI_STAGES = { linkSent: 'Link trimis', inProgress: 'Cerere completată la TBI', approved: 'Aprobat', rejected: 'Respins / Renunțat' } as const
 
-/** The card's stage and status for a TBI status code (null: no move, e.g. refund statuses 4–6). */
+/**
+ * The card's stage and status for a TBI status code (null: no move). 2 ("Comanda in derulare TBI") is sent by TBI as
+ * soon as the application is registered, before the customer opens the link (seen on PROD, 6 Nov 2026): the card
+ * stays on "Link trimis" and only last_status shows it. Refund statuses 4–6 do not move it either.
+ */
 export function stageForTbiStatus(code: number | null): { stage: string; status: 'open' | 'lost' | 'abandoned' } | null {
-  if (code === 2) return { stage: TBI_STAGES.inProgress, status: 'open' }
   if (code === 1) return { stage: TBI_STAGES.approved, status: 'open' }
   if (code === 0) return { stage: TBI_STAGES.rejected, status: 'abandoned' }
   if (code === 3) return { stage: TBI_STAGES.rejected, status: 'lost' }
@@ -95,10 +98,12 @@ export async function registerForRequest(cfg: Pick<Config, 'tbi'>, db: Db, r: Ra
   }
   const orderRef = newOrderRef()
   try {
+    // The row exists before TBI is called: TBI posts its first status while RegisterApplication is still answering.
+    await db.query(`insert into tbi_applications (order_ref, env, email, amount, events) values ($1, $2, $3, $4, '[]'::jsonb)`, [orderRef, t!.env, r.email, v.total])
     const reg = await registerApplication(t!, buildApplication(t!, r, v, orderRef), fetchImpl)
     await db.query(
-      `insert into tbi_applications (order_ref, env, email, amount, tbi_order_id, token, url, events) values ($1, $2, $3, $4, $5, $6, $7, $8)`,
-      [orderRef, t!.env, r.email, v.total, reg.order_id, reg.token, reg.url, JSON.stringify([{ at: new Date().toISOString(), kind: 'registered', tbiOrderId: reg.order_id }])],
+      `update tbi_applications set tbi_order_id = $2, token = $3, url = $4, events = $5::jsonb || events, updated_at = now() where order_ref = $1`,
+      [orderRef, reg.order_id, reg.token, reg.url, JSON.stringify([{ at: new Date().toISOString(), kind: 'registered', tbiOrderId: reg.order_id }])],
     )
     log.info('tbi.registered', { orderRef, tbiOrderId: reg.order_id, env: t!.env, total: v.total })
     // A first GetApplicationStatus: shows in the log that TBI knows the application (best effort).
@@ -111,6 +116,7 @@ export async function registerForRequest(cfg: Pick<Config, 'tbi'>, db: Db, r: Ra
     return { orderRef, orderId: reg.order_id, token: reg.token, url: reg.url, env: t!.env }
   } catch (e) {
     log.warn('tbi.register_failed', { orderRef, error: errText(e) })
+    await db.query(`update tbi_applications set events = events || $2::jsonb, updated_at = now() where order_ref = $1`, [orderRef, JSON.stringify([{ at: new Date().toISOString(), kind: 'register_failed', error: errText(e) }])]).catch(() => {})
     return null
   }
 }

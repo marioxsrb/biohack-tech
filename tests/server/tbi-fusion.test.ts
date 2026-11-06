@@ -1,8 +1,8 @@
 /**
  * TBI Fusion Pay in the "Cumpără în rate" flow: /api/rate-tbi registers the application (RegisterApplication,
  * encrypted) and answers with TBI's URL; the job puts the URL in bt_tbi_link and the card on "Link trimis" with
- * tbi_order_id / tbi_token; /api/tbi/status (encrypted updates) moves the card: 2 → "Cerere completată la TBI",
- * 1 → "Aprobat", 0 / 3 → "Respins / Renunțat". TBI down, a missing category or webhook secret: the old manual flow.
+ * tbi_order_id / tbi_token; /api/tbi/status (encrypted updates) moves the card: 1 → "Aprobat", 0 / 3 → "Respins /
+ * Renunțat" (2, sent right after registering, only fills last_status). TBI down, a missing category or webhook secret: the old manual flow.
  * TBI, the store's prices and GoHighLevel are stubbed; the database is an in-memory Postgres.
  */
 import { NextRequest } from 'next/server'
@@ -40,6 +40,8 @@ const STAGES = ['Cerere nouă', 'Link trimis', 'Cerere completată la TBI', 'Apr
 let db: Awaited<ReturnType<typeof freshDb>>
 let calls: { url: string; method: string; body: Record<string, unknown> | null }[]
 let tbiUp: boolean
+let earlyStatus = false
+let earlyAnswer = 0
 let ip = 0
 let who = 0
 const setup = async (env: Record<string, string> = TBI_ENV) => {
@@ -54,6 +56,7 @@ beforeEach(async () => {
   resetTbiSchemes()
   calls = []
   tbiUp = true
+  earlyStatus = false
   // The phone / email rate limit lives in memory across tests: every test is another customer.
   who++
   vi.stubGlobal('fetch', async (input: string, init: RequestInit = {}) => {
@@ -65,7 +68,15 @@ beforeEach(async () => {
     if (url.startsWith('https://ro.tbi-uat.online/api/')) {
       if (!tbiUp) return json({ message: 'down' }, 503)
       if (url.endsWith('/GetCalculations')) return json(SCHEMES)
-      if (url.endsWith('/RegisterApplication')) return json({ error: 0, order_id: 77, token: 'tok-77', url: 'https://tbi.example/journey/77' })
+      if (url.endsWith('/RegisterApplication')) {
+        // TBI posts its first status (2) before RegisterApplication answers, as on PROD.
+        if (earlyStatus) {
+          const orderid = String(tbiDecryptJson<Record<string, unknown>>(String(body!.data), KEY).orderid)
+          earlyAnswer = (await STATUS(statusReq({ command: 'update_status', order_id: orderid, status: 2, message: 'Comanda in derulare TBI' }))).status
+        }
+        return json({ error: 0, order_id: 77, token: 'tok-77', url: 'https://tbi.example/journey/77' })
+      }
+      if (url.endsWith('/GetApplicationStatus')) return json({ error: 0, store_order_id: 'x', status: 'Comanda in derulare TBI', status_chain: [] })
     }
     if (url.endsWith('/contacts/search')) return json({ contacts: [] })
     if (url.endsWith('/contacts/upsert')) return json({ contact: { id: 'c-new' } })
@@ -164,13 +175,14 @@ it('the job puts the link in bt_tbi_link, marks it sent and moves the card to "L
   expect(row).toMatchObject({ contact_id: 'c-new', opportunity_id: 'opp-1' })
 })
 
-it('status updates move the card: 2 in progress, 1 approved (contract), 3 rejected; both field spellings', async () => {
+it('status updates move the card: 2 in progress (no move), 1 approved (contract), 3 rejected; both field spellings', async () => {
   await RATE(rateReq(good()))
   await settle()
   const ref = (await db.query<{ order_ref: string }>('select order_ref from tbi_applications')).rows[0].order_ref
   // The documentation's encrypted example: snake_case, numeric status.
   expect((await STATUS(statusReq({ command: 'update_status', order_id: ref, status: 2, message: 'Comanda in derulare TBI', motive: '', contract_id: '' }))).status).toBe(200)
-  expect(oppPuts().at(-1)).toMatchObject({ pipelineStageId: 'st-2', status: 'open', customFields: [{ id: 'cf-last_status', field_value: '2 Comanda in derulare TBI' }] })
+  // 2 comes right after RegisterApplication: the card stays on "Link trimis", only last_status changes.
+  expect(oppPuts().at(-1)).toEqual({ customFields: [{ id: 'cf-last_status', field_value: '2 Comanda in derulare TBI' }] })
   // The documentation's table: OrderId / Status / ContractNumber.
   expect((await STATUS(statusReq({ command: 'update_status', OrderId: ref, Status: '1', Message: 'Plata TBI acceptata', Motive: '', ContractNumber: '20266032281' }))).status).toBe(200)
   expect(oppPuts().at(-1)).toMatchObject({ pipelineStageId: 'st-3', status: 'open', customFields: [{ id: 'cf-last_status', field_value: '1 Plata TBI acceptata' }, { id: 'cf-contract_number', field_value: '20266032281' }] })
@@ -181,6 +193,17 @@ it('status updates move the card: 2 in progress, 1 approved (contract), 3 reject
   const row = (await db.query<{ status_code: number; contract_number: string; events: unknown[] }>('select * from tbi_applications')).rows[0]
   expect(row).toMatchObject({ status_code: 3, contract_number: '20266032281' })
   expect(row.events).toHaveLength(4)
+})
+
+it('the status TBI sends while RegisterApplication answers is kept; the card stays on Link trimis', async () => {
+  earlyStatus = true
+  await RATE(rateReq(good()))
+  await settle()
+  expect(earlyAnswer).toBe(200)
+  const row = (await db.query<{ status_code: number; url: string; tbi_order_id: number; events: { kind: string }[] }>('select * from tbi_applications')).rows[0]
+  expect(row).toMatchObject({ status_code: 2, url: 'https://tbi.example/journey/77', tbi_order_id: 77 })
+  expect(row.events.map((e) => e.kind)).toEqual(['registered', 'status'])
+  expect(oppPuts().map((p) => p.pipelineStageId).filter(Boolean)).toEqual(['st-1'])
 })
 
 it('a status that arrives before the card is applied when the job creates it', async () => {
@@ -210,7 +233,9 @@ it('TBI down: no link, the request goes on the manual way (link cleared, card on
   const fields = calls.find((c) => c.method === 'PUT' && c.url.endsWith('/contacts/c-new'))!.body!.customFields as { key: string; field_value: string }[]
   expect(fields.find((f) => f.key === 'bt_tbi_link')?.field_value).toBe('')
   expect(oppPuts()).toHaveLength(0)
-  expect((await db.query('select * from tbi_applications')).rows).toHaveLength(0)
+  const rows = (await db.query<{ url: string | null; events: { kind: string }[] }>('select * from tbi_applications')).rows
+  expect(rows).toHaveLength(1)
+  expect(rows[0]).toMatchObject({ url: null, events: [{ kind: 'register_failed' }] })
 })
 
 it('without the category id (or the webhook secret) nothing is sent to TBI', async () => {
