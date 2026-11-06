@@ -12,7 +12,7 @@
 import 'server-only'
 import { randomBytes } from 'node:crypto'
 import { RATE_TBI_PRODUCTS, type RateTbiRequest } from '@/lib/rate-tbi'
-import { registerApplication, TBI_STATUS_LABEL, type TbiApplication, type TbiStatusUpdate } from '@/lib/tbi/client'
+import { getApplicationStatus, registerApplication, TBI_STATUS_LABEL, type TbiApplication, type TbiStatusUpdate } from '@/lib/tbi/client'
 import type { Config, TbiConfig } from '@/server/config'
 import type { Db } from '@/server/db'
 import { ghl } from '@/server/integrations/ghl'
@@ -101,6 +101,13 @@ export async function registerForRequest(cfg: Pick<Config, 'tbi'>, db: Db, r: Ra
       [orderRef, t!.env, r.email, v.total, reg.order_id, reg.token, reg.url, JSON.stringify([{ at: new Date().toISOString(), kind: 'registered', tbiOrderId: reg.order_id }])],
     )
     log.info('tbi.registered', { orderRef, tbiOrderId: reg.order_id, env: t!.env, total: v.total })
+    // A first GetApplicationStatus: shows in the log that TBI knows the application (best effort).
+    try {
+      const st = await getApplicationStatus(t!, reg.order_id, reg.token, fetchImpl)
+      log.info('tbi.status_check', { orderRef, tbiOrderId: reg.order_id, storeOrderId: st.store_order_id, status: st.status })
+    } catch (e) {
+      log.warn('tbi.status_check_failed', { orderRef, error: errText(e) })
+    }
     return { orderRef, orderId: reg.order_id, token: reg.token, url: reg.url, env: t!.env }
   } catch (e) {
     log.warn('tbi.register_failed', { orderRef, error: errText(e) })
