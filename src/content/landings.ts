@@ -67,7 +67,7 @@ export const landings: Landing[] = [
       { q: 'Ce citește casca?', a: 'Stări precum concentrarea și relaxarea, ca să te ajute să le recunoști. Are trei senzori EEG. Gândurile rămân ale tale.' },
       { q: 'Cât ține bateria?', a: 'Până la 4 ore, după o oră de încărcare. Ajunge pentru mai multe sesiuni de focus.' },
       { q: 'Ce găsesc în aplicație?', a: 'Peste 10 jocuri și meditații ghidate, care te ajută să-ți antrenezi atenția și calmul. Fiecare sesiune rămâne salvată, ca să-ți vezi progresul.' },
-      { q: 'Cum încep?', a: 'Încarci casca, instalezi Neuros Game pe tabletă și o conectezi. Apoi alegi un joc scurt. Pentru întrebări, ne scrii sau ne suni.' },
+      { q: 'Cum încep?', a: 'Încarci casca, pornești tableta (Neuros Game e deja instalat) și o conectezi. Ne scrii pe WhatsApp la +40 765 874 571 și îți configurăm contul. Apoi alegi un joc scurt.' },
       { q: 'Pot să o returnez?', a: 'Da. Ai 14 zile de la primire să te răzgândești. Garanția este de 2 ani.', buy: true },
     ],
   },
