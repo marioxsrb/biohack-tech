@@ -263,6 +263,9 @@ it('calculations: TBI schemes cached a day, with (amount + analysis_fee) × inst
   const b = await (await get('?amount=3900')).json()
   expect(b).toMatchObject({ ok: true, env: 'uat', stale: false, amount: 3900 })
   expect(b.quotes).toEqual([{ schemeId: 2, name: 'Promo 0', ftosProduct: '3DECOM29CL', period: 6, nir: 29, analysisFee: 95, monthly: 731.95, total: 4391.71 }])
+  // The store's simulator asks only for the quotes.
+  const lite = await (await get('?amount=3900&only=quotes')).json()
+  expect(lite).toEqual({ ok: true, env: 'uat', stale: false, amount: 3900, quotes: b.quotes })
   await get('?amount=5000')
   expect(calls.filter((c) => c.url.endsWith('/GetCalculations'))).toHaveLength(1)
   // A day later TBI is down: the last list is served as stale.

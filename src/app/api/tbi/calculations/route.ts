@@ -29,13 +29,18 @@ export async function GET(req: NextRequest) {
   const amount = Number(req.nextUrl.searchParams.get('amount'))
   try {
     const { schemes, cachedAt, stale } = await getCalculations(t)
+    const hasAmount = Number.isFinite(amount) && amount > 0
+    // ?only=quotes (the store's simulator): just the quotes for the amount, without the full scheme list.
+    if (hasAmount && req.nextUrl.searchParams.get('only') === 'quotes') {
+      return NextResponse.json({ ok: true, env: t.env, stale, amount, quotes: quoteSchemes(schemes, amount) }, { headers: h })
+    }
     const body = {
       ok: true,
       env: t.env,
       cachedAt: new Date(cachedAt).toISOString(),
       stale,
       schemes: schemes.map((s) => ({ schemeId: s.scheme_id, name: s.name, ftosProduct: s.ftos_product, period: s.period, nir: s.nir, analysisFee: s.analysis_fee, installmentFactor: s.installment_factor, totalDueFactor: s.total_due_factor, amountMin: s.amount_min, amountMax: s.amount_max })),
-      ...(Number.isFinite(amount) && amount > 0 && { amount, quotes: quoteSchemes(schemes, amount) }),
+      ...(hasAmount && { amount, quotes: quoteSchemes(schemes, amount) }),
     }
     return NextResponse.json(body, { headers: h })
   } catch (e) {
