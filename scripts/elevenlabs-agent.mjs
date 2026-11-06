@@ -124,7 +124,28 @@ if (cmd === 'agents') {
     const r = await api('POST', '/v1/convai/agents/create', def)
     console.log(`Agent creat: ${r.agent_id}\nPune-l în ELEVENLABS_AGENT_ID (Vercel Production).`)
   }
+} else if (cmd === 'knowledge') {
+  // Only the knowledge base: the agent's prompt text, voice, tools and call settings stay exactly as they are in
+  // ElevenLabs (read back and compared); places no call.
+  const def = JSON.parse(readFileSync('docs/ai-calling/agent.json', 'utf8'))
+  const agents = (await api('GET', `/v1/convai/agents?page_size=100&search=${encodeURIComponent(def.name)}`)).agents ?? []
+  const same = agents.find((a) => a.name === def.name)
+  if (!same) throw new Error(`Agentul „${def.name}” nu există; nu fac nimic.`)
+  const id = encodeURIComponent(same.agent_id)
+  const before = await api('GET', `/v1/convai/agents/${id}`)
+  // `tools` is derived from `tool_ids` in the answer; sending both is refused.
+  const { tools: _tools, ...prompt } = before.conversation_config.agent.prompt
+  const kb = await pushKnowledge()
+  await api('PATCH', `/v1/convai/agents/${id}`, { conversation_config: { agent: { prompt: { ...prompt, knowledge_base: kb } } } })
+  const after = await api('GET', `/v1/convai/agents/${id}`)
+  const strip = (a) => {
+    const c = structuredClone(a.conversation_config)
+    delete c.agent.prompt.knowledge_base
+    return JSON.stringify({ c, p: a.platform_settings })
+  }
+  console.log(`Agent ${same.agent_id}: baza de cunoștințe = ${after.conversation_config.agent.prompt.knowledge_base.map((k) => `${k.name} (${k.id})`).join(', ')}`)
+  console.log(strip(before) === strip(after) ? 'Restul configurației (prompt, voce, tooluri, setări de apel): neschimbat.' : 'ATENȚIE: s-a schimbat și altceva decât baza de cunoștințe.')
 } else {
-  console.error('Folosire: node scripts/elevenlabs-agent.mjs agents | voices | phone-numbers | push')
+  console.error('Folosire: node scripts/elevenlabs-agent.mjs agents | voices | phone-numbers | push | knowledge')
   process.exit(1)
 }
