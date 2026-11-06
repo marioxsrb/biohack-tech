@@ -109,13 +109,14 @@ it('prices a basket the way the store does: Calm ladder, Focus Black Friday, Amb
   expect(quote(RULES, [{ handle: 'calm', qty: 1 }, { handle: 'amber', qty: 2 }], NOW)?.total).toBe(5520)
 })
 
-it("matches tbi bank's representative example: 2.000 lei, 24 months, 21%, fee 170 lei, insurance → 124,62 lei a month", () => {
+it('estimates the instalment as an annuity at 29% on credit + 95 lei fee + insurance (only when TBI does not answer)', () => {
   const ex = instalment(2000, 24)
-  expect(Math.abs(ex.exact - 124.62)).toBeLessThanOrEqual(0.05)
-  expect(Math.abs(ex.exact * 24 - 2990.88)).toBeLessThanOrEqual(1.2)
-  expect([ex.monthly, ex.total]).toEqual([125, 3000])
+  const p = 2000 + 95 + 2000 * 0.00532 * 24, r = 0.29 / 12
+  expect(Math.abs(ex.exact - (p * r) / (1 - (1 + r) ** -24))).toBeLessThan(0.01)
+  expect(ex.monthly).toBe(Math.ceil(ex.exact))
+  expect(ex.total).toBe(ex.monthly * 24)
   // Without the fee and insurance it is the plain annuity.
-  expect(monthlyRate(2000, 24, { ...TBI_TERMS, includeCosts: false })).toBe(103)
+  expect(monthlyRate(2000, 24, { ...TBI_TERMS, includeCosts: false })).toBe(Math.ceil((2000 * (0.29 / 12)) / (1 - (1 + 0.29 / 12) ** -24)))
   expect(monthlyRate(0, 24)).toBe(0)
   // The longest period by amount: under 1.000 lei 12 months, 1.000–2.999 lei 36, from 3.000 lei 60.
   expect([999, 1000, 2999, 3000].map((a) => longestPeriod(a))).toEqual([12, 36, 36, 60])
@@ -155,7 +156,7 @@ it('values the basket on the server, stores the request and sends it to GoHighLe
   expect(note).toContain('NEUROS Amber × 2: 315 lei/buc., subtotal 630 lei')
   expect(note).toContain('Total comandă: 5.520 lei')
   expect(note).toContain(`Rată estimată: ${lei(monthlyRate(5520, 24))} lei/lună, total de plată ${lei(monthlyRate(5520, 24) * 24)} lei`)
-  expect(note).toContain('comision de analiză 170 lei și asigurare 0,532%/lună incluse')
+  expect(note).toContain('comision de analiză 95 lei și asigurare 0,532%/lună incluse')
   expect(note).toContain('WhatsApp: https://wa.me/40722123456')
   // Everything goes to Mario Sirbu (GHL user NbulDKs8dFmZAscEj2ej).
   expect(g.find((c) => c.url.endsWith('/contacts/upsert'))!.body).toMatchObject({ assignedTo: 'NbulDKs8dFmZAscEj2ej' })

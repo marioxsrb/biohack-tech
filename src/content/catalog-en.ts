@@ -17,7 +17,7 @@ export const productTextEn: Record<ProductId, ProductText> = {
   'brainlink-pro': {
     kind: 'For focus and clarity',
     purpose: 'For concentration',
-    tagline: 'It helps you gather your attention. It comes with a tablet, over 10 games and 20 free sessions. The game moves forward when you focus.',
+    tagline: 'It helps you gather your attention. It comes with a tablet, over 10 games and 20 free credits (2 sessions of 30 minutes). The game moves forward when you focus.',
   },
   'ochelari-biohack': {
     kind: 'For calmer evenings',

@@ -63,7 +63,7 @@ export const landings: Landing[] = [
       description: 'NEUROS Focus te ajută să-ți aduni atenția. Susține focusul și energia. Jocuri scurte pe tabletă. Livrare gratuită.',
     },
     faqs: [
-      { q: 'Am nevoie de tabletă?', a: 'Da. Jocurile care îți antrenează atenția rulează pe tabletă, în Neuros Game. Casca se leagă prin Bluetooth.' },
+      { q: 'Am nevoie de tabletă?', a: 'Tableta Android e inclusă în pachet, cu aplicația Neuros Game instalată. După ce primești coletul, ne scrii pe WhatsApp la +40 765 874 571 și îți configurăm contul împreună. Casca se leagă prin Bluetooth, iar tu te concentrezi pe joc.' },
       { q: 'Ce citește casca?', a: 'Stări precum concentrarea și relaxarea, ca să te ajute să le recunoști. Are trei senzori EEG. Gândurile rămân ale tale.' },
       { q: 'Cât ține bateria?', a: 'Până la 4 ore, după o oră de încărcare. Ajunge pentru mai multe sesiuni de focus.' },
       { q: 'Ce găsesc în aplicație?', a: 'Peste 10 jocuri și meditații ghidate, care te ajută să-ți antrenezi atenția și calmul. Fiecare sesiune rămâne salvată, ca să-ți vezi progresul.' },

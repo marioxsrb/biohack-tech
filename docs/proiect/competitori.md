@@ -68,7 +68,7 @@ Regulile relevante (orientativ, nu consultanță juridică): Regulamentul (UE) 2
 
 ## 2. NEUROS Focus (3.337 lei)
 
-Cască EEG cu 3 senzori (hardware BrainLink Pro de la Macrotellect), Bluetooth, tabletă inclusă, 10 jocuri de atenție (aplicația Neuros Game), 20 de sesiuni gratuite. Pentru copii cu probleme de atenție și pentru adulți (concentrare).
+Cască EEG cu 3 senzori (hardware BrainLink Pro de la Macrotellect), Bluetooth, tabletă inclusă, 10 jocuri de atenție (aplicația Neuros Game), 20 de credite gratuite (2 sesiuni de 30 de minute). Pentru copii cu probleme de atenție și pentru adulți (concentrare).
 
 ### Tabel concurenți (dispozitive pentru acasă)
 
@@ -99,7 +99,7 @@ Clinicile recomandă cel puțin 20 de ședințe [39]. Cu deplasarea inclusă, un
 
 ### Ce înseamnă pentru biohack-tech.ro
 
-1. **Comparați cu clinica, nu cu Muse.** Mesajul cel mai puternic e „20 de sesiuni acasă, cu tableta inclusă, la jumătate din prețul unui program de 20 de ședințe la clinică, fără drumuri”. Puneți cifrele reale de mai sus, fără nume de clinici. Kitul de acasă de 7.000 lei (Biohacking Performance) arată că piața acceptă ideea de neurofeedback acasă la prețuri mai mari decât al nostru.
+1. **Comparați cu clinica, nu cu Muse.** Mesajul cel mai puternic e „antrenament acasă, cu tableta inclusă, la jumătate din prețul unui program de 20 de ședințe la clinică, fără drumuri”. Puneți cifrele reale de mai sus, fără nume de clinici. Kitul de acasă de 7.000 lei (Biohacking Performance) arată că piața acceptă ideea de neurofeedback acasă la prețuri mai mari decât al nostru.
 2. **Arătați pachetul ca pe niște piese separate.** Cine găsește BrainLink Pro la 2.340 lei sau BrainLink Lite la 1.650 lei trebuie să vadă imediat ce primește în plus: tableta (cu valoarea ei), 10 jocuri în română, 20 de sesiuni, suport. Fără preț barat, doar o listă clară.
 3. **Spuneți explicit „fără abonament”.** Muse și FocusCalm cer abonament; Mendi își face din „zero abonament” un argument principal [28]. Dacă noi nu avem costuri recurente, spunem asta. Ce se întâmplă după cele 20 de sesiuni trebuie scris clar.
 4. **Răspundeți la obiecția părintelui: „e sigur pentru copilul meu?”.** Concurenții pentru copii sunt aproape inexistenți la consumatori. Clinicile se ocupă de asta în evaluarea inițială. Avem nevoie de o secțiune scurtă: vârsta minimă, cât durează o sesiune, ce măsoară casca (nu „citește gânduri”), că nu emite curent.

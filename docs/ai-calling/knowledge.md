@@ -43,15 +43,15 @@ R: Îl încarci, îl așezi la gât și apeși butonul. Câteva minute de liniș
 R: Un produs de wellness, pentru calm în fiecare zi. Susține relaxarea. Pentru o afecțiune, vorbește întâi cu medicul tău.
 
 ## NEUROS Focus (Pentru focus și claritate)
-Pentru ce este: Pentru concentrare. Te ajută să-ți aduni atenția. Vine cu tabletă inclusă, peste 10 jocuri și 20 de ședințe gratuite. Jocul merge înainte când ești atent.
+Pentru ce este: Pentru concentrare. Te ajută să-ți aduni atenția. Vine cu tabletă inclusă, peste 10 jocuri și 20 de credite gratuite (2 sesiuni de 30 de minute). Jocul merge înainte când ești atent.
 Preț: 3.225 lei (TVA 21% inclus, livrare gratuită în românia).
 Promoție: Iei 2 bucăți din același produs: 10% reducere la ele. Iei 3: 20%. Reducerea apare în coș.
 Pagina produsului: https://biohack-tech.ro/products/focus
-Pe scurt: Te ajută să-ți aduni atenția când mintea fuge. Îți dă mai mult focus și o minte mai limpede. Primești și tableta, cu peste 10 jocuri care răspund la cât de atent ești, plus 20 de ședințe gratuite.
+Pe scurt: Te ajută să-ți aduni atenția când mintea fuge. Îți dă mai mult focus și o minte mai limpede. Primești și tableta, cu peste 10 jocuri care răspund la cât de atent ești, plus 20 de credite gratuite (2 sesiuni de 30 de minute).
 Ce oferă:
 - Tabletă inclusă, gata de joc
 - Peste 10 jocuri care merg înainte când ești atent
-- 20 de ședințe gratuite incluse
+- 20 de credite gratuite (2 sesiuni de 30 de minute)
 - Te ajută să intri mai ușor în concentrare
 - Focus mai clar: Te ajută să rămâi la ce ai de făcut, prin jocuri scurte.
 - Mai multă energie: Susține energia pentru muncă și studiu.
@@ -66,7 +66,7 @@ Creierul produce semnale electrice foarte slabe. Casca le citește prin trei sen
 Neuros Game transformă semnalul în joc. Când ești atent, jocul înaintează. Sunt peste 10 jocuri și meditații ghidate, iar fiecare sesiune rămâne salvată. Bateria ține până la 4 ore.
 Casca recunoaște stări, precum concentrarea și relaxarea. Gândurile rămân ale tale. Metoda vine din cercetarea despre biofeedback. Studiile de mai jos privesc metoda, în general.
 Specificații:
-- În pachet: Casca NEUROS Focus, tabletă, peste 10 jocuri în Neuros Game și 20 de ședințe gratuite
+- În pachet: Casca NEUROS Focus, tabletă, peste 10 jocuri în Neuros Game și 20 de credite gratuite (2 sesiuni de 30 de minute)
 - Senzori: 3 senzori EEG
 - Aplicație: Neuros Game: peste 10 jocuri și meditații ghidate
 - Conectare: Bluetooth, la tabletă
@@ -76,11 +76,13 @@ Specificații:
 - Garanție: 2 ani
 Întrebări frecvente:
 Î: Am nevoie de tabletă?
-R: Da. Jocurile care îți antrenează atenția rulează în Neuros Game, pe tabletă. Casca se leagă prin Bluetooth, iar tu te concentrezi pe joc.
+R: Tableta Android e inclusă în pachet, cu aplicația Neuros Game instalată. După ce primești coletul, ne scrii pe WhatsApp la +40 765 874 571 și îți configurăm contul împreună. Casca se leagă prin Bluetooth, iar tu te concentrezi pe joc.
 Î: Ce citește casca?
 R: Stări precum concentrarea și relaxarea, ca să te ajute să le recunoști. Gândurile rămân ale tale.
+Î: Cât costă sesiunile?
+R: La activarea contului primești 20 de credite gratuite. O sesiune completă de concentrare, de 30 de minute, costă 10 credite, deci primele 2 sesiuni sunt incluse. După aceea, o sesiune costă 5 €, iar în pachete e mai ieftin: 20 de sesiuni la 100 €, 100 la 400 € (4 € pe sesiune), 300 la 950 € (aproximativ 3,17 € pe sesiune). După ce primești coletul, ne scrii pe WhatsApp la +40 765 874 571 și îți configurăm contul împreună.
 Î: Cum încep?
-R: Încarci casca, instalezi Neuros Game pe tabletă și o conectezi. Apoi alegi un joc scurt. Pentru întrebări, ne scrii sau ne suni.
+R: Încarci casca, pornești tableta (Neuros Game e deja instalat) și o conectezi. Ne scrii pe WhatsApp la +40 765 874 571 și îți configurăm contul. Apoi alegi un joc scurt.
 
 ## NEUROS Amber (Pentru seri mai liniștite)
 Pentru ce este: Pentru seară și pentru somn. Lentile galbene pentru seară: lumina ecranelor și a becurilor se simte mai blândă, iar seara se așază mai ușor. Alegi din cinci rame.

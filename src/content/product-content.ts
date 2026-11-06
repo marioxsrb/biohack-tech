@@ -138,13 +138,13 @@ export const productContent: Record<ProductId, ProductContent> = {
   'brainlink-pro': {
     seo: {
       title: 'NEUROS Focus, pentru concentrare și claritate',
-      description: 'NEUROS Focus te ajută să-ți aduni atenția. Vine cu tabletă inclusă, peste 10 jocuri și 20 de ședințe gratuite. Livrare gratuită.',
+      description: 'NEUROS Focus te ajută să-ți aduni atenția. Vine cu tabletă inclusă, peste 10 jocuri și 20 de credite gratuite (2 sesiuni de 30 de minute). Livrare gratuită.',
     },
-    intro: 'Te ajută să-ți aduni atenția când mintea fuge. Îți dă mai mult focus și o minte mai limpede. Primești și tableta, cu peste 10 jocuri care răspund la cât de atent ești, plus 20 de ședințe gratuite.',
+    intro: 'Te ajută să-ți aduni atenția când mintea fuge. Îți dă mai mult focus și o minte mai limpede. Primești și tableta, cu peste 10 jocuri care răspund la cât de atent ești, plus 20 de credite gratuite (2 sesiuni de 30 de minute).',
     highlights: [
       'Tabletă inclusă, gata de joc',
       'Peste 10 jocuri care merg înainte când ești atent',
-      '20 de ședințe gratuite incluse',
+      '20 de credite gratuite (2 sesiuni de 30 de minute)',
       'Te ajută să intri mai ușor în concentrare',
     ],
     benefits: [
@@ -187,7 +187,7 @@ export const productContent: Record<ProductId, ProductContent> = {
       },
     ],
     specs: [
-      { label: 'În pachet', value: 'Casca NEUROS Focus, tabletă, peste 10 jocuri în Neuros Game și 20 de ședințe gratuite' },
+      { label: 'În pachet', value: 'Casca NEUROS Focus, tabletă, peste 10 jocuri în Neuros Game și 20 de credite gratuite (2 sesiuni de 30 de minute)' },
       { label: 'Senzori', value: '3 senzori EEG' },
       { label: 'Aplicație', value: 'Neuros Game: peste 10 jocuri și meditații ghidate' },
       { label: 'Conectare', value: 'Bluetooth, la tabletă' },
@@ -197,9 +197,10 @@ export const productContent: Record<ProductId, ProductContent> = {
       { label: 'Garanție', value: '2 ani' },
     ],
     faqs: [
-      { q: 'Am nevoie de tabletă?', a: 'Da. Jocurile care îți antrenează atenția rulează în Neuros Game, pe tabletă. Casca se leagă prin Bluetooth, iar tu te concentrezi pe joc.' },
+      { q: 'Am nevoie de tabletă?', a: 'Tableta Android e inclusă în pachet, cu aplicația Neuros Game instalată. După ce primești coletul, ne scrii pe WhatsApp la +40 765 874 571 și îți configurăm contul împreună. Casca se leagă prin Bluetooth, iar tu te concentrezi pe joc.' },
       { q: 'Ce citește casca?', a: 'Stări precum concentrarea și relaxarea, ca să te ajute să le recunoști. Gândurile rămân ale tale.' },
-      { q: 'Cum încep?', a: 'Încarci casca, instalezi Neuros Game pe tabletă și o conectezi. Apoi alegi un joc scurt. Pentru întrebări, ne scrii sau ne suni.' },
+      { q: 'Cât costă sesiunile?', a: 'La activarea contului primești 20 de credite gratuite. O sesiune completă de concentrare, de 30 de minute, costă 10 credite, deci primele 2 sesiuni sunt incluse. După aceea, o sesiune costă 5 €, iar în pachete e mai ieftin: 20 de sesiuni la 100 €, 100 la 400 € (4 € pe sesiune), 300 la 950 € (aproximativ 3,17 € pe sesiune). După ce primești coletul, ne scrii pe WhatsApp la +40 765 874 571 și îți configurăm contul împreună.' },
+      { q: 'Cum încep?', a: 'Încarci casca, pornești tableta (Neuros Game e deja instalat) și o conectezi. Ne scrii pe WhatsApp la +40 765 874 571 și îți configurăm contul. Apoi alegi un joc scurt.' },
     ],
   },
 
@@ -332,7 +333,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
     highlights: [
       'Tablet included, ready to play',
       'Over 10 games that move forward when you focus',
-      '20 free sessions included',
+      '20 free credits (2 sessions of 30 minutes)',
       'Helps you get into focus more easily',
     ],
     benefits: [
@@ -375,7 +376,7 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       },
     ],
     specs: [
-      { label: 'In the box', value: 'The NEUROS Focus headband, a tablet, over 10 games in Neuros Game and 20 free sessions' },
+      { label: 'In the box', value: 'The NEUROS Focus headband, a tablet, over 10 games in Neuros Game and 20 free credits (2 sessions of 30 minutes)' },
       { label: 'Sensors', value: '3 EEG sensors' },
       { label: 'App', value: 'Neuros Game: over 10 games and guided meditations' },
       { label: 'Connection', value: 'Bluetooth, to a tablet' },
@@ -385,9 +386,10 @@ export const productContentEn: Record<ProductId, ProductContent> = {
       { label: 'Warranty', value: '2 years' },
     ],
     faqs: [
-      { q: 'Do I need a tablet?', a: 'Yes. The games that train your attention run in Neuros Game, on a tablet. The headband connects by Bluetooth, and you focus on the game.' },
+      { q: 'Do I need a tablet?', a: 'An Android tablet is included, with the Neuros Game app installed. Once your parcel arrives, message us on WhatsApp at +40 765 874 571 and we set up your account together. The headband connects by Bluetooth, and you focus on the game.' },
       { q: 'What does the headband read?', a: 'States such as focus and relaxation, so it can help you recognise them. Your thoughts stay yours.' },
-      { q: 'How do I start?', a: 'Charge the headband, install Neuros Game on your tablet and connect it. Then choose a short game. If you have questions, write or call us.' },
+      { q: 'How much do the sessions cost?', a: 'When your account is activated you get 20 free credits. A full 30-minute focus session costs 10 credits, so your first 2 sessions are included. After that a session costs €5, and packs cost less: 20 sessions for €100, 100 for €400 (€4 a session), 300 for €950 (about €3.17 a session). Once your parcel arrives, message us on WhatsApp at +40 765 874 571 and we set up your account together.' },
+      { q: 'How do I start?', a: 'Charge the headband, switch on the tablet (Neuros Game is already installed) and connect them. Message us on WhatsApp at +40 765 874 571 and we set up your account. Then choose a short game.' },
     ],
   },
 

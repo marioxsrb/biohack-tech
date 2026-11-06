@@ -24,11 +24,11 @@ O cască EEG ușoară care citește atenția și relaxarea și o transformă în
 1. Casca NEUROS Focus
 2. Tabletă
 3. 10 jocuri în Neuros Game
-4. 20 de ședințe gratuite
+4. 20 de credite gratuite (2 sesiuni de 30 de minute)
 5. Geanta de transport (apare în poze, de confirmat)
 
 ## De clarificat urgent
-- **Ce sunt cele 20 de ședințe gratuite?** (ședințe de neurofeedback la clinica Neuros? online, cu un specialist? în aplicație?) Clienții vor întreba.
+- **Ce primește clientul gratuit?** Lămurit 06.11.2026: 20 de credite în aplicație = 2 sesiuni de 30 de minute (o sesiune = 10 credite). Apoi 5 € pe sesiune sau pachete: 20 = 100 €, 100 = 400 €, 300 = 950 €. Contul se configurează pe WhatsApp (+40 765 874 571), după livrare.
 - **Ce tabletă este?** (model, ecran, memorie). Apare pe site doar „tabletă”.
 - **„Redus de la 5.000 lei”**: nu e pe site. Legal (directiva Omnibus, ANPC) prețul „de la” trebuie să fie cel mai mic preț din ultimele 30 de zile. Variante: valoarea reală a componentelor, sau 5.000 lei timp de 30 de zile întâi.
 - **Aplicația are abonament?** (încă nedecis)
@@ -38,7 +38,7 @@ O cască EEG ușoară care citește atenția și relaxarea și o transformă în
 - [ ] Dimensiuni și greutate cască
 - [ ] Capacitate baterie (mAh), mufa de încărcare
 - [ ] Lista celor 10 jocuri (nume + ce antrenează)
-- [ ] Ce sunt cele 20 de ședințe și cum se programează
+- [x] Ce primește gratuit (20 de credite = 2 sesiuni de 30 de minute) și cum se configurează contul (WhatsApp, după livrare)
 - [ ] Declarația de conformitate CE / FCC ID
 - [ ] Cod EAN / cod de produs
 - [ ] Manualul complet (PDF)

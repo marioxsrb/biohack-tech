@@ -30,7 +30,8 @@ export type TbiLadder = {
  * tbi bank's terms (Setări temă → Rate TBI, published with the price rules): fixed annual interest, the analysis fee
  * and the life insurance (a share of the credit per month) that tbi adds to the financed amount, the periods, the
  * amounts it finances and the longest period by amount ([from lei, max months], ascending).
- * TBI's representative example: 2.000 lei, 24 months, 21%, fee 170 lei, insurance 255,19 lei → 124,62 lei a month.
+ * Since 6 Nov 2026 the store shows TBI's own quotes (/api/tbi/calculations); these terms are only the estimate used when
+ * TBI does not answer, and for the indicative instalment in the GHL note (29% and 95 lei, like TBI's "Promo 0" scheme).
  */
 export type TbiTerms = {
   annualPct: number
@@ -43,8 +44,8 @@ export type TbiTerms = {
   limits: [number, number][]
 }
 export const TBI_TERMS: TbiTerms = {
-  annualPct: 21,
-  commission: 170,
+  annualPct: 29,
+  commission: 95,
   insurancePct: 0.532,
   includeCosts: true,
   periods: [6, 12, 18, 24, 36, 48, 60],

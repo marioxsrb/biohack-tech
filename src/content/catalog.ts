@@ -318,7 +318,7 @@ const catalog: Omit<Product, 'price'>[] = [
     name: 'NEUROS Focus',
     kind: 'Pentru focus și claritate',
     purpose: 'Pentru concentrare',
-    tagline: 'Te ajută să-ți aduni atenția. Vine cu tabletă inclusă, peste 10 jocuri și 20 de ședințe gratuite. Jocul merge înainte când ești atent.',
+    tagline: 'Te ajută să-ți aduni atenția. Vine cu tabletă inclusă, peste 10 jocuri și 20 de credite gratuite (2 sesiuni de 30 de minute). Jocul merge înainte când ești atent.',
     cutout: cut(blCasca, 'NEUROS Focus, casca văzută din unghi'),
     lifestyle: photo(blTableta, 'Tânăr pe canapea, purtând NEUROS Focus și jucând pe tabletă'),
     images: [
