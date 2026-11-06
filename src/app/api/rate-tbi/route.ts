@@ -8,6 +8,7 @@ import { kickJobs } from '@/server/jobs/runner'
 import { errText, log } from '@/server/log'
 import { clientIp, rateLimit } from '@/server/rate-limit'
 import { valueRateTbi, type RateTbiJob } from '@/server/rate-tbi'
+import { registerForRequest } from '@/server/tbi-applications'
 import { tbiPriceRules, tbiPriceStatus } from '@/server/tbi-prices'
 
 export const runtime = 'nodejs'
@@ -82,13 +83,20 @@ export async function POST(req: NextRequest) {
     const monthly = v.rate.monthly
     if (repeat.rows.length) {
       log.info('rate_tbi.repeat_ignored', { items: basket })
-      return json({ ok: true, total: v.total, monthly, period: v.period, repeat: true })
+      // The same request again: the TBI link already given (same customer, same value, last 10 minutes), not a new one.
+      const prev = await db.query<{ url: string }>(
+        `select url from tbi_applications where email = $1 and amount = $2 and url is not null and created_at > now() - interval '${REPEAT_WINDOW_MIN} minutes' order by created_at desc limit 1`,
+        [r.email, v.total],
+      )
+      return json({ ok: true, total: v.total, monthly, period: v.period, repeat: true, ...(prev.rows[0] && { tbiUrl: prev.rows[0].url }) })
     }
-    const payload: RateTbiJob = { request: r, valuation: v, client: { ip: ip === 'unknown' ? null : ip, ua: req.headers.get('user-agent') }, at: new Date().toISOString() }
+    // TBI Fusion Pay: the application is registered now, so the customer continues at TBI straight from the form.
+    const tbi = await registerForRequest(cfg, db, r, v)
+    const payload: RateTbiJob = { request: r, valuation: v, client: { ip: ip === 'unknown' ? null : ip, ua: req.headers.get('user-agent') }, at: new Date().toISOString(), tbi }
     await jobs.enqueue(db, { kind: 'rate_tbi.submit', dedupeKey: `rate-tbi:${key}:${Date.now()}`, payload: payload as unknown as Record<string, unknown> })
     kickJobs()
-    log.info('rate_tbi.received', { items: basket, total: v.total, verified: v.verified, period: r.period, advance: r.advance })
-    return json({ ok: true, total: v.total, monthly, period: v.period })
+    log.info('rate_tbi.received', { items: basket, total: v.total, verified: v.verified, period: r.period, advance: r.advance, tbi: tbi ? tbi.orderRef : null })
+    return json({ ok: true, total: v.total, monthly, period: v.period, ...(tbi && { tbiUrl: tbi.url }) })
   } catch (e) {
     log.error('rate_tbi.failed', { error: errText(e) })
     return json({ error: 'SERVER', message: `Cererea nu a putut fi trimisă. Sună-ne la ${PHONE} și te ajutăm imediat.` }, 502)

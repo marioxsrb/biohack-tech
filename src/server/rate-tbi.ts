@@ -18,6 +18,8 @@ import type { Config } from '@/server/config'
 import { ghl } from '@/server/integrations/ghl'
 import { metaFormUserData, sendMetaEvents } from '@/server/integrations/meta'
 import { errText, log } from '@/server/log'
+import { getDb } from '@/server/db'
+import { applyToCard, type TbiRegistration } from '@/server/tbi-applications'
 import { tbiPriceRules } from '@/server/tbi-prices'
 
 export const RATE_TBI_TAGS = {
@@ -86,7 +88,7 @@ export async function valueRateTbi(cfg: Pick<Config, 'rateTbi'>, r: RateTbiReque
 const short = (h: string) => RATE_TBI_PRODUCTS[h as keyof typeof RATE_TBI_PRODUCTS]?.short ?? h
 export const basketLabel = (lines: { handle: string; qty: number }[]) => lines.map((l) => `${short(l.handle)} x${l.qty}`).join(' + ')
 
-export function rateTbiNote(r: RateTbiRequest, v: RateTbiValuation, now = new Date()): string {
+export function rateTbiNote(r: RateTbiRequest, v: RateTbiValuation, now = new Date(), tbi?: TbiRegistration | null): string {
   const when = now.toLocaleString('ro-RO', { timeZone: 'Europe/Bucharest', dateStyle: 'short', timeStyle: 'short' })
   const source = Object.entries(r.utm).map(([k, val]) => `${k}=${val}`).join(', ') || 'direct / fără UTM'
   const t = v.terms
@@ -104,19 +106,22 @@ export function rateTbiNote(r: RateTbiRequest, v: RateTbiValuation, now = new Da
     ...(r.city ? [`Oraș: ${r.city}`] : []),
     `Pagina: ${r.page ? STORE + r.page : '-'}`,
     `Sursa: ${source}`,
-    `Pasul următor: sună clientul în maximum ${RATE_TBI_CALL_WITHIN_H} de ore și trimite-i linkul tbi bank pentru cererea online.`,
+    tbi
+      ? `TBI: cererea e înregistrată (comanda ${tbi.orderRef}, TBI ${tbi.orderId}${tbi.env === 'uat' ? ', mediu de TEST' : ''}). Clientul a primit pe site butonul „Continuă cererea la TBI”: ${tbi.url}\nPasul următor: cardul se mută singur după statusul de la TBI; sună clientul dacă rămâne pe „Link trimis”.`
+      : `Pasul următor: sună clientul în maximum ${RATE_TBI_CALL_WITHIN_H} de ore și trimite-i linkul tbi bank pentru cererea online.`,
   ].join('\n')
 }
 
 /** +40722123456 → https://wa.me/40722123456 */
 export const whatsappLink = (phone: string) => `https://wa.me/${phone.replace(/\D/g, '')}`
 
-export type RateTbiJob = { request: RateTbiRequest; valuation: RateTbiValuation; client: { ip: string | null; ua: string | null }; at: string }
+export type RateTbiJob = { request: RateTbiRequest; valuation: RateTbiValuation; client: { ip: string | null; ua: string | null }; at: string; tbi?: TbiRegistration | null }
 export type RateTbiResult = { contactId: string; opportunityId: string | null; meta: 'sent' | 'off' | 'no-consent' | 'failed' }
 
 export async function submitRateTbi(cfg: Pick<Config, 'ghl' | 'metaCapi' | 'rateTbi'>, job: RateTbiJob): Promise<RateTbiResult> {
   if (!cfg.ghl) throw new Error('ghl not configured')
   const { request: r, valuation: v, client } = job
+  const tbi = job.tbi ?? null
   const now = new Date(job.at)
   const value = lei(v.total)
   const label = basketLabel(v.lines)
@@ -135,13 +140,14 @@ export async function submitRateTbi(cfg: Pick<Config, 'ghl' | 'metaCapi' | 'rate
     field(RATE_TBI_FIELDS.rate, lei(v.rate.monthly)),
     field(RATE_TBI_FIELDS.totalToPay, lei(v.rate.total)),
     field(RATE_TBI_FIELDS.whatsapp, whatsappLink(r.phone)),
-    // A new request needs a new TBI link: the old one is cleared.
-    field(RATE_TBI_FIELDS.link, ''),
+    // A new request needs a new TBI link: TBI's (Fusion Pay) when it was registered, otherwise cleared for the team.
+    field(RATE_TBI_FIELDS.link, tbi?.url ?? ''),
   ])
   // A repeated request starts the workflow again: GHL fires "tag added" only when the tag was absent.
   await ghl.removeTags(cfg.ghl, contactId, [RATE_TBI_TAGS.request, RATE_TBI_TAGS.linkSent])
-  await ghl.addTags(cfg.ghl, contactId, [RATE_TBI_TAGS.request, RATE_TBI_TAGS.received, ...v.lines.map((l) => RATE_TBI_TAGS.product(l.handle)), RATE_TBI_TAGS.site])
-  const note = rateTbiNote(r, v, now)
+  // With TBI's link already given on the site, "link sent" is set at once: the 30-minute reminder has nothing to remind.
+  await ghl.addTags(cfg.ghl, contactId, [RATE_TBI_TAGS.request, RATE_TBI_TAGS.received, ...v.lines.map((l) => RATE_TBI_TAGS.product(l.handle)), RATE_TBI_TAGS.site, ...(tbi ? [RATE_TBI_TAGS.linkSent] : [])])
+  const note = rateTbiNote(r, v, now, tbi)
   await ghl.addNote(cfg.ghl, contactId, note)
   await ghl.addTask(cfg.ghl, contactId, {
     title: `Sună ${r.name} – cerere rate tbi (${value} lei)`,
@@ -158,6 +164,7 @@ export async function submitRateTbi(cfg: Pick<Config, 'ghl' | 'metaCapi' | 'rate
     newCard: true,
     assignedTo,
   })
+  if (tbi) await applyToCard(cfg, await getDb(), tbi, contactId, opportunityId)
 
   let meta: RateTbiResult['meta'] = 'off'
   if (cfg.metaCapi) {

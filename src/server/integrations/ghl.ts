@@ -400,7 +400,25 @@ async function pipelineByName(c: GhlConfig, name: string) {
   return entry
 }
 /** Test helper. */
-export const resetLeadsPipelineCache = () => namedPipelines.clear()
+export const resetLeadsPipelineCache = () => {
+  namedPipelines.clear()
+  opportunityFields.clear()
+}
+
+const opportunityFields = new Map<string, { at: number; ids: Map<string, string> }>()
+/** The location's opportunity custom fields, key (without "opportunity.") → id, cached 10 minutes. */
+async function opportunityFieldIds(c: GhlConfig) {
+  const hit = opportunityFields.get(c.locationId)
+  if (hit && Date.now() - hit.at < 10 * 60_000) return hit.ids
+  const r = await call<{ customFields?: { id: string; fieldKey?: string; name?: string }[] }>(c, 'GET', `/locations/${encodeURIComponent(c.locationId)}/customFields?model=opportunity`)
+  const ids = new Map<string, string>()
+  for (const f of r.customFields ?? []) {
+    if (f.fieldKey) ids.set(f.fieldKey.replace(/^opportunity\./, ''), f.id)
+    if (f.name) ids.set(f.name, f.id)
+  }
+  opportunityFields.set(c.locationId, { at: Date.now(), ids })
+  return ids
+}
 
 export const ghl = {
   /**
@@ -550,6 +568,33 @@ export const ghl = {
     }
     const r = await call<{ opportunity: { id: string } }>(c, 'POST', '/opportunities/', { ...body, locationId: c.locationId, contactId })
     return r.opportunity.id
+  },
+
+  /**
+   * Moves a known card to a stage of the pipeline (by names), optionally with a status, and writes the card's
+   * custom fields that exist in GHL (by key, e.g. tbi_order_id); missing fields are skipped and returned.
+   */
+  async updateOpportunity(c: GhlConfig, id: string, p: { pipeline?: string; stage?: string; status?: 'open' | 'won' | 'lost' | 'abandoned'; fields?: Record<string, string> }) {
+    const body: Record<string, unknown> = {}
+    if (p.pipeline && p.stage) {
+      const pipe = await pipelineByName(c, p.pipeline)
+      const stageId = pipe?.stages.get(p.stage.toLowerCase())
+      if (!pipe || !stageId) log.warn('ghl.pipeline_missing', { pipeline: p.pipeline, stage: p.stage })
+      else Object.assign(body, { pipelineId: pipe.id, pipelineStageId: stageId })
+    }
+    if (p.status) body.status = p.status
+    const missing: string[] = []
+    if (p.fields && Object.keys(p.fields).length) {
+      const ids = await opportunityFieldIds(c)
+      const customFields = Object.entries(p.fields).flatMap(([k, v]) => {
+        const fid = ids.get(k)
+        if (!fid) missing.push(k)
+        return fid ? [{ id: fid, field_value: v }] : []
+      })
+      if (customFields.length) body.customFields = customFields
+    }
+    if (Object.keys(body).length) await call(c, 'PUT', `/opportunities/${encodeURIComponent(id)}`, body)
+    return { missing }
   },
 
   /** Custom fields of a known contact only (the workflow email's values); its tags and identity are left as they are. */

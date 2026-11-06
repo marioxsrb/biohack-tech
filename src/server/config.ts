@@ -141,6 +141,26 @@ export type Config = {
   /** The store's price rules for the instalment simulator (RATE_TBI_PRICES_URL, default the theme's tbi-data view of Calm). */
   /** assignee: the GHL user who gets every request (contact, card, task; RATE_TBI_ASSIGNEE, default Mario Sirbu). */
   rateTbi: { hook: string | null; pricesUrl: string; assignee: string | null }
+  /** TBI Bank Fusion Pay (lib/tbi/client.ts); null while the reseller code, key or encryption key are missing. */
+  tbi: TbiConfig | null
+}
+
+/**
+ * TBI Bank Fusion Pay (RO). TBI_RESELLER_CODE, TBI_RESELLER_KEY, TBI_ENCRYPTION_KEY (all three or TBI is off);
+ * TBI_API_BASE: only https://ro.tbi-uat.online/api (default, UAT) or https://ro.tbibank.support/api (PROD);
+ * TBI_STATUS_WEBHOOK_SECRET: in the statusURL TBI calls (without it no application is registered);
+ * TBI_DEFAULT_CATEGORY_ID: TBI's product category, mandatory per item (without it no application is registered).
+ */
+export type TbiConfig = {
+  resellerCode: string
+  resellerKey: string
+  encryptionKey: string
+  apiBase: string
+  env: 'uat' | 'prod'
+  webhookSecret: string | null
+  categoryId: number | null
+  /** Where TBI calls us back and sends the customer after the application (TBI_PUBLIC_BASE, default the Vercel app). */
+  publicBase: string
 }
 
 export type DigitalConfig = { linkSecret: string; source: { url: string; secret: string } }
@@ -429,6 +449,19 @@ function readBfBuyerStop(): Config['bfBuyerStop'] {
   return { mode: secret && (mode === 'dry' || mode === 'live') ? mode : 'off', secret }
 }
 
+const TBI_BASES = { uat: 'https://ro.tbi-uat.online/api', prod: 'https://ro.tbibank.support/api' } as const
+function readTbi(issues: ConfigIssue[]): TbiConfig | null {
+  const resellerCode = str('TBI_RESELLER_CODE'), resellerKey = str('TBI_RESELLER_KEY'), encryptionKey = str('TBI_ENCRYPTION_KEY')
+  if (!resellerCode || !resellerKey || !encryptionKey) return null
+  const base = (str('TBI_API_BASE') ?? TBI_BASES.uat).replace(/\/+$/, '')
+  const env = base === TBI_BASES.prod ? 'prod' : base === TBI_BASES.uat ? 'uat' : null
+  if (!env) {
+    issues.push({ area: 'tbi', level: 'warn', message: 'TBI_API_BASE trebuie să fie https://ro.tbi-uat.online/api sau https://ro.tbibank.support/api: TBI e oprit.' })
+    return null
+  }
+  return { resellerCode, resellerKey, encryptionKey, apiBase: base, env, webhookSecret: str('TBI_STATUS_WEBHOOK_SECRET') ?? null, categoryId: positiveInt(str('TBI_DEFAULT_CATEGORY_ID')), publicBase: /^https:\/\//.test(str('TBI_PUBLIC_BASE') ?? '') ? str('TBI_PUBLIC_BASE')!.replace(/\/+$/, '') : 'https://biohack-tech.vercel.app' }
+}
+
 const positiveInt = (v: string | undefined) => {
   const n = Number(v)
   return v !== undefined && Number.isInteger(n) && n > 0 ? n : null
@@ -532,6 +565,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     digital: readDigital(appEnv, issues),
     bookSales: flag('BOOK_SALES_ENABLED'),
     bfBuyerStop: readBfBuyerStop(),
+    tbi: readTbi(issues),
     rateTbi: {
       hook: /^https:\/\/services\.leadconnectorhq\.com\/hooks\//.test(str('RATE_TBI_GHL_HOOK') ?? '') ? str('RATE_TBI_GHL_HOOK')! : null,
       pricesUrl: /^https:\/\//.test(str('RATE_TBI_PRICES_URL') ?? '') ? str('RATE_TBI_PRICES_URL')! : 'https://biohack-tech.ro/products/calm?view=tbi-data',

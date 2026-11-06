@@ -1029,4 +1029,30 @@ alter table auth_attempts enable row level security`,
     sql: `alter table video_reviews add column if not exists ad_consent_withdrawn_at timestamptz;
 alter table video_reviews add column if not exists file_deleted_at timestamptz`,
   },
+  {
+    // TBI Fusion Pay applications (lib/tbi/client.ts): our order ref sent as "orderid", TBI's order id and token, the
+    // customer URL, and where the request sits in GoHighLevel, so the status updates TBI posts to /api/tbi/status
+    // move the right card. The last status received is kept even when it arrives before the card exists.
+    id: '035_tbi_applications',
+    sql: `create table if not exists tbi_applications (
+  order_ref text primary key,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  env text not null,
+  email text not null,
+  amount numeric(12,2) not null,
+  tbi_order_id integer,
+  token text,
+  url text,
+  contact_id text,
+  opportunity_id text,
+  status_code integer,
+  status_message text,
+  motive text,
+  contract_number text,
+  events jsonb not null default '[]'::jsonb
+);
+create index if not exists tbi_applications_email_idx on tbi_applications (email, created_at);
+alter table tbi_applications enable row level security`,
+  },
 ]
