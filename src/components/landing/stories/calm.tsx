@@ -71,7 +71,7 @@ export function CalmHow() {
           <div className="mt-5 max-w-[30em] space-y-4 text-[17.5px] leading-relaxed text-[var(--lp-muted)]">
             <p>Te ajută în trecerea din alertă spre repaus. Prin gât trece nervul vag, un nerv lung care leagă creierul de inimă, plămâni și digestie.</p>
             <p>Nervul vag are un rol în felul în care corpul se liniștește.</p>
-            <p>Pe partea stângă, 6 diode de 810 nm luminează zona nervului vag. Lumina infraroșie pătrunde mai adânc. Pe restul gâtului, lumină roșie de 660 nm. Este cel mai puternic dispozitiv de acest fel de pe piață.</p>
+            <p>Pe partea stângă, 6 diode de 810 nm luminează zona nervului vag. Lumina infraroșie pătrunde mai adânc. Pe restul gâtului, lumină roșie de 660 nm.</p>
             <p>Lumina pulsează de 14 ori pe secundă, ritmul undelor cerebrale SMR, asociat cu o stare calmă. Metoda se numește fotobiomodulare.</p>
           </div>
         </div>

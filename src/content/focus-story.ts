@@ -210,7 +210,7 @@ export const focusScience = {
     { key: 'meditation', label: 'Meditațiile', text: 'În meditațiile ghidate, casca îți arată cât de relaxat ești, așa că mintea se așază mai ușor.' },
   ] as const,
   studiesTitle: 'Studiile, explicate simplu',
-  footnote: 'Studiile privesc metoda de antrenament (neurofeedbackul și biofeedbackul), nu casca NEUROS Focus în sine. NEUROS Focus este un produs de wellness și nu înlocuiește un tratament medical.',
+  footnote: 'Studiile privesc metoda de antrenament (neurofeedbackul și biofeedbackul), nu casca NEUROS Focus în sine. NEUROS Focus este un produs de wellness. Nu este un dispozitiv medical și nu înlocuiește consultul de specialitate.',
 }
 
 export type FocusStudy = {

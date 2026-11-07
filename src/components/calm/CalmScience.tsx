@@ -252,7 +252,7 @@ export function CalmScience() {
         ))}
       </Row>
       <p className="mt-6 max-w-[46em] text-[13.5px] leading-relaxed text-muted">
-        Studiile privesc metodele pe care se bazează NEUROS Calm: stimularea nervului vag, lumina roșie și infraroșie, ritmul SMR. NEUROS Calm este un produs de wellness și nu înlocuiește un tratament medical.
+        Studiile privesc metodele pe care se bazează NEUROS Calm: stimularea nervului vag, lumina roșie și infraroșie, ritmul SMR. NEUROS Calm este un produs de wellness. Nu este un dispozitiv medical și nu înlocuiește consultul de specialitate.
       </p>
     </section>
   )

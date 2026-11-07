@@ -126,7 +126,7 @@ export const amberScience = {
   title: 'Ce spune știința, pe înțelesul tuturor',
   intro: 'Seara, corpul se pregătește de somn și produce melatonină. Lumina albastră, iar într-o măsură mai mică și cea verde, îi spune ceasului din creier că e încă zi. Lentilele galbene opresc o mare parte din această lumină.',
   studiesTitle: 'Studiile, explicate simplu',
-  footnote: 'Studiile privesc lentilele galbene și portocalii în general și lumina de seară, nu ochelarii NEUROS Amber în sine. Rezultatele diferă de la un studiu la altul: o analiză Cochrane din 2023 a găsit rezultate amestecate pentru somn. NEUROS Amber este un produs de wellness, nu un dispozitiv medical, și nu înlocuiește un tratament.',
+  footnote: 'Studiile privesc lentilele galbene și portocalii în general și lumina de seară, nu ochelarii NEUROS Amber în sine. Rezultatele diferă de la un studiu la altul: o analiză Cochrane din 2023 a găsit rezultate amestecate pentru somn. NEUROS Amber este un produs de wellness. Nu este un dispozitiv medical și nu înlocuiește consultul de specialitate.',
 }
 
 export type AmberStudy = {

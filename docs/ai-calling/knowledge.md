@@ -25,7 +25,7 @@ Cum se folosește:
 Cum funcționează:
 Te ajută în trecerea din alertă spre repaus. Pe gât trece nervul vag, un nerv lung care leagă creierul de inimă, plămâni și digestie.
 Nervul vag are un rol în felul în care corpul se liniștește.
-Pe partea stângă, 6 diode de 810 nm luminează zona nervului vag. Lumina infraroșie pătrunde mai adânc. Pe restul gâtului, lumină roșie de 660 nm. Este cel mai puternic dispozitiv de acest fel de pe piață.
+Pe partea stângă, 6 diode de 810 nm luminează zona nervului vag. Lumina infraroșie pătrunde mai adânc. Pe restul gâtului, lumină roșie de 660 nm.
 Lumina pulsează de 14 ori pe secundă, ritmul undelor cerebrale SMR, asociat cu o stare calmă. Metoda se numește fotobiomodulare.
 Specificații:
 - Tehnologie: Fotobiomodulare duală: 660 nm și 810 nm
