@@ -25,6 +25,7 @@ const COPY = {
     bannerTitle: 'Tu alegi ce cookie-uri folosim',
     customizeShort: 'Setări',
     bannerText: (what: string) => `Coșul și plata folosesc doar ce este necesar. Cu acordul tău, folosim și cookie-uri ${what}.`,
+    bannerShort: 'Folosim cookie-urile necesare pentru coș și plată. Cu acordul tău, și pe cele de analiză și marketing.',
     policy: 'Politica de cookies',
     reject: 'Refuz opționalele',
     accept: 'Accept toate',
@@ -50,6 +51,7 @@ const COPY = {
     bannerTitle: 'You choose which cookies we use',
     customizeShort: 'Settings',
     bannerText: (what: string) => `The cart and payment use only what is necessary. With your consent, we also use ${what}.`,
+    bannerShort: 'We use the cookies needed for the cart and payment. With your consent, analytics and marketing cookies too.',
     policy: 'Cookie policy',
     reject: 'Reject optional',
     accept: 'Accept all',
@@ -128,34 +130,75 @@ export function ConsentManager() {
   )
 }
 
+function intersects(a: DOMRect, b: DOMRect) {
+  return a.width > 1 && b.width > 1 && a.height > 1 && b.height > 1 && a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top
+}
+
 function Banner({ used, onAccept, onReject, onCustomize }: { used: Set<OptionalCategory>; onAccept: () => void; onReject: () => void; onCustomize: () => void }) {
   const titleId = useId()
+  const ref = useRef<HTMLElement>(null)
   const t = COPY[useLocale()]
   const what = [used.has('analytics') && t.whatAnalytics, used.has('marketing') && t.whatMarketing].filter(Boolean).join(t.whatJoin)
+
+  // Desktop: the card stays bottom-left unless it covers a buy control. Then it centers (1024–1279 and any wider
+  // width with the same overlap). If the center still covers one, it sits under the header. No page overlay, no scroll lock.
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    let raf = 0
+    const place = () => {
+      el.classList.remove('consent-center', 'consent-top')
+      if (window.innerWidth < 1024) return
+      const buys = [...document.querySelectorAll<HTMLElement>('[data-buy]')]
+      const hit = () => {
+        const box = el.getBoundingClientRect()
+        return buys.some((node) => intersects(box, node.getBoundingClientRect()))
+      }
+      if (!hit()) return
+      el.classList.add('consent-center')
+      if (hit()) {
+        el.classList.remove('consent-center')
+        el.classList.add('consent-top')
+      }
+    }
+    const schedule = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(place)
+    }
+    schedule()
+    window.addEventListener('resize', schedule)
+    return () => {
+      window.removeEventListener('resize', schedule)
+      cancelAnimationFrame(raf)
+    }
+  }, [])
+
   return (
     <section
+      ref={ref}
       role="region"
       aria-labelledby={titleId}
-      className="consent-in fixed z-[300] print:hidden rounded-[16px] bg-paper p-3.5 text-[13.5px] leading-snug text-text shadow-[0_18px_44px_-18px_rgba(8,17,19,.4),0_0_0_1px_rgba(8,17,19,.06)] md:bottom-5 md:left-5 md:w-[340px] max-md:inset-x-3 max-md:bottom-[max(10px,env(safe-area-inset-bottom))]"
+      className="consent consent-in fixed print:hidden rounded-[16px] bg-paper p-3 text-[13px] leading-snug text-text shadow-[0_18px_44px_-18px_rgba(8,17,19,.4),0_0_0_1px_rgba(8,17,19,.06)] lg:p-3.5 lg:text-[13.5px]"
     >
       <h2 id={titleId} className="sr-only">
         {t.bannerTitle}
       </h2>
-      <p>
-        {t.bannerText(what)}{' '}
+      <p className="consent-copy">
+        <span className="lg:hidden">{t.bannerShort}</span>
+        <span className="max-lg:hidden">{t.bannerText(what)}</span>{' '}
         <Link href="/politica-cookies" className="font-medium text-ink underline underline-offset-2">
           {t.policy}
         </Link>
       </p>
       {/* Refusing is as easy as accepting: the same button, side by side. */}
-      <div className="mt-2.5 grid grid-cols-[1fr_1fr_auto] items-center gap-1.5">
-        <button type="button" onClick={onReject} className="consent-btn sm">
+      <div className="consent-actions mt-2 flex items-center gap-1.5">
+        <button type="button" onClick={onReject} className="consent-btn">
           {t.reject}
         </button>
-        <button type="button" onClick={onAccept} className="consent-btn sm">
+        <button type="button" onClick={onAccept} className="consent-btn">
           {t.accept}
         </button>
-        <button type="button" onClick={onCustomize} className="flex min-h-10 items-center rounded-[10px] px-2 text-[13px] font-medium text-ink underline underline-offset-2 hover:bg-mist">
+        <button type="button" onClick={onCustomize} className="flex min-h-10 shrink-0 items-center rounded-[10px] px-2 text-[13px] font-medium text-ink underline underline-offset-2 hover:bg-mist">
           {t.customizeShort}
         </button>
       </div>

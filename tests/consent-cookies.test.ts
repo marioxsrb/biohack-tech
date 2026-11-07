@@ -3,7 +3,7 @@
  * the page. A minimal fake window/document stands in for the browser.
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ALL, COOKIE_POLICY_VERSION, CONSENT_STORAGE_KEY, NONE, actionFor, nextConsent, parseConsent, withdrawn } from '@/lib/consent/cookies'
+import { ALL, COOKIE_POLICY_VERSION, CONSENT_STORAGE_KEY, NONE, actionFor, consentCookieDomain, nextConsent, parseConsent, withdrawn } from '@/lib/consent/cookies'
 import type { Vendor } from '@/lib/consent/vendors'
 
 const vendors: Vendor[] = [
@@ -21,11 +21,13 @@ function fakeBrowser() {
   scripts = []
   storage = new Map()
   cookies = ['_ga=1', '_fbp=2', 'other=3']
+  const loc = { hostname: 'biohack-tech.ro', pathname: '/', protocol: 'https:' }
   const win: Record<string, unknown> = {
     localStorage: { getItem: (k: string) => storage.get(k) ?? null, setItem: (k: string, v: string) => void storage.set(k, v) },
+    location: loc,
   }
   vi.stubGlobal('window', win)
-  vi.stubGlobal('location', { hostname: 'biohack-tech.ro', pathname: '/' })
+  vi.stubGlobal('location', loc)
   vi.stubGlobal('document', {
     createElement: () => ({ async: false, src: '', dataset: {} }),
     head: { appendChild: (s: FakeScript) => void scripts.push(s) },
@@ -33,7 +35,9 @@ function fakeBrowser() {
       return cookies.join('; ')
     },
     set cookie(v: string) {
-      if (/Max-Age=0/.test(v)) cookies = cookies.filter((c) => c.split('=')[0] !== v.split('=')[0])
+      const name = v.split('=')[0]?.trim()
+      cookies = cookies.filter((c) => c.split('=')[0]?.trim() !== name)
+      if (!/Max-Age=0/i.test(v)) cookies.push(v)
     },
   })
   return win
@@ -53,6 +57,17 @@ const item = { item_id: 'balance-wave', item_name: 'NEUROS Calm', price: 6380, q
 beforeEach(() => {
   vi.unstubAllGlobals()
   vi.unstubAllEnvs()
+})
+
+describe('consent cookie domain', () => {
+  it('is shared on biohack-tech.ro and its subdomains, and host-only everywhere else', () => {
+    expect(consentCookieDomain('biohack-tech.ro')).toBe('.biohack-tech.ro')
+    expect(consentCookieDomain('calm.biohack-tech.ro')).toBe('.biohack-tech.ro')
+    expect(consentCookieDomain('AMBER.Biohack-Tech.ro:443')).toBe('.biohack-tech.ro')
+    expect(consentCookieDomain('biohack-tech.ro.evil.com')).toBeNull()
+    expect(consentCookieDomain('localhost')).toBeNull()
+    expect(consentCookieDomain('www.biohack-tech.net')).toBeNull()
+  })
 })
 
 describe('stored choice', () => {
@@ -95,6 +110,10 @@ describe('script blocking', () => {
     expect(win.dataLayer).toBeUndefined()
     expect(win.fbq).toBeUndefined()
     expect(JSON.parse(storage.get(CONSENT_STORAGE_KEY)!)).toMatchObject({ analytics: false, marketing: false, version: COOKIE_POLICY_VERSION })
+    const shared = cookies.find((c) => c.startsWith(`${CONSENT_STORAGE_KEY}=`))
+    expect(shared).toMatch(/domain=\.biohack-tech\.ro/)
+    expect(shared).toMatch(/secure/)
+    expect(shared).toMatch(/samesite=lax/)
   })
 
   it('accepts analytics only: GA4 and Clarity may start, Meta may not; events reach GA4 only', async () => {

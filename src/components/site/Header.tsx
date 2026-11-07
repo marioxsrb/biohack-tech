@@ -69,14 +69,14 @@ export function Header() {
     <>
       <a
         href="#main"
-        className="sr-only z-[300] rounded-md bg-paper px-4 py-2 text-ink focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+        className="sr-only z-[500] rounded-md bg-paper px-4 py-2 text-ink focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
       >
         {ui.skipToContent}
       </a>
       <header
         ref={navRef}
         onMouseLeave={() => setMenuOpen(false)}
-        className={`fixed inset-x-0 top-0 z-[250] transition-[background-color,color,box-shadow] duration-300 ${
+        className={`fixed inset-x-0 top-0 z-[100] transition-[background-color,color,box-shadow] duration-300 ${
           dark
             ? 'text-white max-md:bg-dark/70 max-md:backdrop-blur-[10px] md:bg-transparent'
             : 'bg-mist/95 text-ink shadow-[0_1px_0_rgb(8_17_19/0.07)] backdrop-blur-[14px]'

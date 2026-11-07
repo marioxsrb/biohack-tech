@@ -15,7 +15,7 @@ export function HeroCta({ slug, productId, label }: { slug: LandingSlug; product
   const hasVariants = !!getProduct(productId)?.variants?.length
   if (hasVariants) {
     return (
-      <a href="#comanda" className="cta">
+      <a href="#comanda" data-buy className="cta">
         {label} <Arrow />
       </a>
     )
@@ -23,6 +23,7 @@ export function HeroCta({ slug, productId, label }: { slug: LandingSlug; product
   return (
     <a
       href={checkoutHref(slug, { productId })}
+      data-buy
       onClick={(e) => {
         if (!isPlainClick(e)) return
         e.preventDefault()
