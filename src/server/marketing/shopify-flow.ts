@@ -88,7 +88,8 @@ export async function applyFlowEvent(c: GhlConfig, e: FlowEvent): Promise<FlowRe
     await ghl.addTags(c, contactId, [SHOPIFY_FLOW_TAGS.abandoned])
     return { contactId, action: 'abandoned' }
   }
-  const had = existing?.tags.includes(SHOPIFY_FLOW_TAGS.newsletter) ?? false
+  // Duplicates of the address count too: one that already got the Welcome series is not sent it again.
+  const had = known.some((x) => x.tags.includes(SHOPIFY_FLOW_TAGS.newsletter))
   const tags = [...(had ? [] : [SHOPIFY_FLOW_TAGS.newsletter]), ...(e.popup ? [SHOPIFY_FLOW_TAGS.popup] : [])]
   await ghl.addTags(c, contactId, tags)
   return { contactId, action: had ? 'already_subscribed' : 'subscribed' }

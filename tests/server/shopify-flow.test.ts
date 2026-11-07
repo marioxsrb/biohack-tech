@@ -66,7 +66,7 @@ it('signup: shopify_newsletter (and the BF popup tag) once; an address that alre
   expect(await r1.json()).toEqual({ ok: true, action: 'subscribed' })
   expect(calls.filter((c) => c.url.endsWith('/tags')).map((c) => [c.method, c.body!.tags])).toEqual([['POST', ['shopify_newsletter', 'shopify_popup-bf-2026']]])
   calls = []
-  contacts = [{ id: 'c1', tags: ['shopify_newsletter'] }]
+  contacts = [{ id: 'c1', tags: [] }, { id: 'c2', tags: ['shopify_newsletter'] }]
   const r2 = await POST(req({ type: 'subscribed', email: 'nou@example.com', tags: 'newsletter' }))
   expect(await r2.json()).toEqual({ ok: true, action: 'already_subscribed' })
   expect(calls.filter((c) => c.url.endsWith('/tags'))).toHaveLength(0)
