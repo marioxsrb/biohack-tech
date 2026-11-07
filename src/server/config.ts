@@ -134,6 +134,8 @@ export type Config = {
    * BF_BUYER_STOP=off (default) | dry | live; the Shopify Flow sends BF_BUYER_STOP_SECRET in x-bt-secret.
    */
   bfBuyerStop: { mode: 'off' | 'dry' | 'live'; secret: string | null }
+  /** Shopify Flow → /api/webhooks/shopify-flow (abandoned checkout, email signup → GHL); off without SHOPIFY_FLOW_SECRET. */
+  shopifyFlow: { secret: string | null }
   /**
    * "Cumpără în rate prin TBI Bank" (/api/rate-tbi): the GHL inbound webhook of the workflow
    * "BT · Rate TBI · cerere nouă" (RATE_TBI_GHL_HOOK). Without it the contact, tags, note and task are still saved.
@@ -565,6 +567,7 @@ export function loadConfig(): { config: Config; issues: ConfigIssue[] } {
     digital: readDigital(appEnv, issues),
     bookSales: flag('BOOK_SALES_ENABLED'),
     bfBuyerStop: readBfBuyerStop(),
+    shopifyFlow: { secret: (str('SHOPIFY_FLOW_SECRET')?.length ?? 0) >= 32 ? str('SHOPIFY_FLOW_SECRET')! : null },
     tbi: readTbi(issues),
     rateTbi: {
       hook: /^https:\/\/services\.leadconnectorhq\.com\/hooks\//.test(str('RATE_TBI_GHL_HOOK') ?? '') ? str('RATE_TBI_GHL_HOOK')! : null,
