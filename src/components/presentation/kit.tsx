@@ -18,7 +18,7 @@ export function PresentationShell({ landing, heroTone, children }: { landing: La
   const light = heroTone === 'light'
   return (
     <div style={themeVars(landing.theme)} className="lp min-h-dvh bg-[var(--lp-bg)] text-[var(--lp-ink)]">
-      <a href="#main" className="sr-only z-[300] rounded-md bg-paper px-4 py-2 text-ink focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
+      <a href="#main" className="sr-only z-[500] rounded-md bg-paper px-4 py-2 text-ink focus:not-sr-only focus:fixed focus:top-3 focus:left-3">
         Sari la conținut
       </a>
       <header className="absolute inset-x-0 top-0 z-30">

@@ -159,12 +159,9 @@ export function Assistant() {
 function AssistantChat({ initial }: { initial: Saved }) {
   const locale = useLocale()
   const t = COPY[locale]
-  const pathname = usePathname()
   const [open, setOpen] = useState(initial.open)
   const [input, setInput] = useState('')
   const [done, setDone] = useState<Record<string, string>>(initial.done)
-  const [offset, setOffset] = useState(0)
-  const [consentShown, setConsentShown] = useState(false)
   // The greeting bubble: 30 seconds into the visit, once per browser session, until opened or closed.
   const [teaser, setTeaser] = useState<'hidden' | 'new' | 'shown'>('hidden')
   // Phones: the panel follows the visible part of the screen, so the on-screen keyboard never covers the input.
@@ -187,35 +184,6 @@ function AssistantChat({ initial }: { initial: Saved }) {
     const el = listRef.current
     if (el) el.scrollTop = el.scrollHeight
   }, [messages, status, open])
-
-  // Above the sticky buy bars of product pages and landings, and out of the way of the cookie banner on phones.
-  useEffect(() => {
-    let raf = 0
-    const measure = () => {
-      raf = 0
-      let h = 0
-      document.querySelectorAll<HTMLElement>('[data-sticky-bar]').forEach((el) => {
-        const r = el.getBoundingClientRect()
-        if (r.height && r.top < window.innerHeight - 4) h = Math.max(h, window.innerHeight - r.top)
-      })
-      setOffset(h)
-      // The cookie banner hides the bubble only where it covers it (phones: full width at the bottom). On wider
-      // screens it sits at the bottom left, so a first visit (banner still open) gets the greeting too.
-      const banner = document.querySelector('.consent-in')?.getBoundingClientRect()
-      setConsentShown(!!banner && banner.height > 0 && banner.right > window.innerWidth - 400)
-    }
-    const schedule = () => (raf ||= requestAnimationFrame(measure))
-    measure()
-    window.addEventListener('scroll', schedule, { passive: true })
-    window.addEventListener('resize', schedule)
-    const timer = setInterval(schedule, 1500)
-    return () => {
-      window.removeEventListener('scroll', schedule)
-      window.removeEventListener('resize', schedule)
-      clearInterval(timer)
-      cancelAnimationFrame(raf)
-    }
-  }, [pathname])
 
   // Open: focus the input, Escape closes, the page behind does not scroll on phones.
   useEffect(() => {
@@ -307,11 +275,10 @@ function AssistantChat({ initial }: { initial: Saved }) {
 
   return (
     <>
-      {!open && teaser !== 'hidden' && !consentShown && (
+      {!open && teaser !== 'hidden' && (
         <Teaser
           t={t}
           fresh={teaser === 'new'}
-          bottom={`calc(${offset ? offset + 12 : 20}px + 68px + env(safe-area-inset-bottom, 0px))`}
           onOpen={(text) => {
             closeTeaser()
             setOpen(true)
@@ -330,8 +297,7 @@ function AssistantChat({ initial }: { initial: Saved }) {
           }}
           aria-label={t.open}
           aria-expanded={false}
-          style={{ bottom: `calc(${offset ? offset + 12 : 20}px + env(safe-area-inset-bottom, 0px))` }}
-          className={`assistant-launcher ${teaser !== 'hidden' ? 'assistant-attract' : ''} fixed right-4 z-[230] flex h-14 w-14 items-center justify-center rounded-full bg-ink text-white shadow-[0_14px_34px_-12px_rgba(8,17,19,.55),0_0_0_1px_rgba(255,255,255,.08)] transition-[transform,bottom,opacity] duration-300 ease-[var(--ease-brand)] hover:scale-[1.05] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-cyan-600 sm:right-5 print:hidden ${consentShown ? 'max-sm:pointer-events-none max-sm:opacity-0' : ''}`}
+          className={`assistant-launcher ${teaser !== 'hidden' ? 'assistant-attract' : ''} fixed right-4 bottom-[calc(20px+env(safe-area-inset-bottom,0px))] z-[150] flex h-14 w-14 items-center justify-center rounded-full bg-ink text-white shadow-[0_14px_34px_-12px_rgba(8,17,19,.55),0_0_0_1px_rgba(255,255,255,.08)] transition-[transform,bottom,opacity] duration-300 ease-[var(--ease-brand)] hover:scale-[1.05] focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-cyan-600 max-lg:bottom-[calc(var(--buybar-h,0px)+12px+env(safe-area-inset-bottom,0px))] sm:right-5 print:hidden`}
         >
           <ChatIcon />
           <span className="absolute top-0.5 right-0.5 h-3 w-3 rounded-full border-2 border-ink bg-cyan-400" aria-hidden />
@@ -343,7 +309,7 @@ function AssistantChat({ initial }: { initial: Saved }) {
           aria-modal="false"
           aria-labelledby={titleId}
           style={viewport ? { height: viewport.height, top: viewport.top, bottom: 'auto' } : undefined}
-          className="assistant-panel fixed z-[270] flex flex-col overflow-hidden bg-mist shadow-[0_30px_80px_-24px_rgba(8,17,19,.45),0_0_0_1px_rgba(8,17,19,.08)] max-sm:inset-0 max-sm:h-dvh sm:right-5 sm:bottom-5 sm:h-[min(680px,calc(100dvh_-_40px))] sm:w-[400px] sm:rounded-[24px] print:hidden"
+          className="assistant-panel fixed z-[400] flex flex-col overflow-hidden bg-mist shadow-[0_30px_80px_-24px_rgba(8,17,19,.45),0_0_0_1px_rgba(8,17,19,.08)] max-sm:inset-0 max-sm:h-dvh sm:right-5 sm:bottom-5 sm:h-[min(680px,calc(100dvh_-_40px))] sm:w-[400px] sm:rounded-[24px] print:hidden"
         >
           <header className="flex items-center gap-3 border-b border-line bg-paper px-4 py-3 pt-[max(12px,env(safe-area-inset-top))]">
             <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-ink text-white">
@@ -837,7 +803,7 @@ function CancelCard({ id, o, t, done, mark }: { id: string; o: { orderNumber: st
  * sound only after the visitor touched the page; until then the ping waits for the first touch, once. The replies
  * open the chat. It stays (gently floating) until opened or closed, for the rest of the visit.
  */
-function Teaser({ t, fresh, bottom, onOpen, onClose }: { t: Copy; fresh: boolean; bottom: string; onOpen: (text?: string) => void; onClose: () => void }) {
+function Teaser({ t, fresh, onOpen, onClose }: { t: Copy; fresh: boolean; onOpen: (text?: string) => void; onClose: () => void }) {
   const [typing, setTyping] = useState(fresh)
   // Bumped when the sound plays later than the bubble (sound blocked until the first touch): the pop replays with it.
   const [pop, setPop] = useState(0)
@@ -851,7 +817,7 @@ function Teaser({ t, fresh, bottom, onOpen, onClose }: { t: Copy; fresh: boolean
     return () => clearTimeout(show)
   }, [fresh])
   return (
-    <div role="status" aria-live="polite" style={{ bottom }} className="fixed right-4 z-[231] flex w-[min(290px,calc(100vw-32px))] flex-col items-end sm:right-5 print:hidden">
+    <div role="status" aria-live="polite" className="fixed right-4 bottom-[calc(20px+68px+env(safe-area-inset-bottom,0px))] z-[150] flex w-[min(290px,calc(100vw-32px))] flex-col items-end max-lg:bottom-[calc(var(--buybar-h,0px)+12px+68px+env(safe-area-inset-bottom,0px))] sm:right-5 print:hidden">
       <p className={`mb-1 mr-3 flex items-center gap-1.5 text-[11px] text-muted ${fresh ? 'assistant-teaser-in' : ''}`}>
         <span className="h-1.5 w-1.5 rounded-full bg-[#34c759]" aria-hidden />
         {t.teaserFrom}
