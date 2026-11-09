@@ -132,6 +132,7 @@ export const productContent: Record<ProductId, ProductContent> = {
       { q: 'Pot să lucrez în timp ce îl port?', a: 'Da. Poți citi, medita sau lucra ușor, în timp ce te relaxezi.' },
       { q: 'Cum încep?', a: 'Îl încarci, îl așezi la gât și apeși butonul. Câteva minute de liniște, apoi se oprește singur. Dacă vrei să știi cum ți se potrivește, ne scrii sau ne suni.' },
       { q: 'Ce fel de produs este?', a: 'Un produs de wellness, pentru calm în fiecare zi. Susține relaxarea. Pentru o afecțiune, vorbește întâi cu medicul tău.' },
+      { q: 'Pot să îl returnez?', a: 'Da, în 14 zile de la primire, cât timp cutia mică albă cu accesoriul pentru nas e sigilată, în starea în care ai primit-o. Din motive de igienă, dacă această cutie e desfăcută, aparatul nu mai poate fi returnat. Garanția este de 2 ani.' },
     ],
   },
 
@@ -188,6 +189,7 @@ export const productContent: Record<ProductId, ProductContent> = {
     ],
     specs: [
       { label: 'În pachet', value: 'Casca NEUROS Focus, tabletă, peste 10 jocuri în Neuros Game și 20 de credite gratuite (2 sesiuni de 30 de minute)' },
+      { label: 'Sesiuni', value: 'Se plătesc separat, în credite. Incluse: 20 de credite gratuite (2 sesiuni de 30 de minute), apoi 5 € / sesiune' },
       { label: 'Senzori', value: '3 senzori EEG' },
       { label: 'Aplicație', value: 'Neuros Game: peste 10 jocuri și meditații ghidate' },
       { label: 'Conectare', value: 'Bluetooth, la tabletă' },
@@ -199,6 +201,7 @@ export const productContent: Record<ProductId, ProductContent> = {
     faqs: [
       { q: 'Am nevoie de tabletă?', a: 'Tableta Android e inclusă în pachet, cu aplicația Neuros Game instalată. După ce primești coletul, ne scrii pe WhatsApp la +40 765 874 571 și îți configurăm contul împreună. Casca se leagă prin Bluetooth, iar tu te concentrezi pe joc.' },
       { q: 'Ce citește casca?', a: 'Stări precum concentrarea și relaxarea, ca să te ajute să le recunoști. Gândurile rămân ale tale.' },
+      { q: 'Sesiunile sunt incluse în preț?', a: 'Nu toate. NEUROS Focus funcționează cu software, iar sesiunile de concentrare se plătesc separat, în credite. În preț intră casca, tableta și 20 de credite gratuite, adică 2 sesiuni de 30 de minute. După aceea, o sesiune costă 5 €, iar în pachete e mai ieftin.' },
       { q: 'Cât costă sesiunile?', a: 'La activarea contului primești 20 de credite gratuite. O sesiune completă de concentrare, de 30 de minute, costă 10 credite, deci primele 2 sesiuni sunt incluse. După aceea, o sesiune costă 5 €, iar în pachete e mai ieftin: 20 de sesiuni la 100 €, 100 la 400 € (4 € pe sesiune), 300 la 950 € (aproximativ 3,17 € pe sesiune). După ce primești coletul, ne scrii pe WhatsApp la +40 765 874 571 și îți configurăm contul împreună.' },
       { q: 'Cum încep?', a: 'Încarci casca, pornești tableta (Neuros Game e deja instalat) și o conectezi. Ne scrii pe WhatsApp la +40 765 874 571 și îți configurăm contul. Apoi alegi un joc scurt.' },
     ],

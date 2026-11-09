@@ -41,6 +41,8 @@ R: Da. Poți citi, medita sau lucra ușor, în timp ce te relaxezi.
 R: Îl încarci, îl așezi la gât și apeși butonul. Câteva minute de liniște, apoi se oprește singur. Dacă vrei să știi cum ți se potrivește, ne scrii sau ne suni.
 Î: Ce fel de produs este?
 R: Un produs de wellness, pentru calm în fiecare zi. Susține relaxarea. Pentru o afecțiune, vorbește întâi cu medicul tău.
+Î: Pot să îl returnez?
+R: Da, în 14 zile de la primire, cât timp cutia mică albă cu accesoriul pentru nas e sigilată, în starea în care ai primit-o. Din motive de igienă, dacă această cutie e desfăcută, aparatul nu mai poate fi returnat. Garanția este de 2 ani.
 
 ## NEUROS Focus (Pentru focus și claritate)
 Pentru ce este: Pentru concentrare. Te ajută să-ți aduni atenția. Vine cu tabletă inclusă, peste 10 jocuri și 20 de credite gratuite (2 sesiuni de 30 de minute). Jocul merge înainte când ești atent.
@@ -67,6 +69,7 @@ Neuros Game transformă semnalul în joc. Când ești atent, jocul înaintează.
 Casca recunoaște stări, precum concentrarea și relaxarea. Gândurile rămân ale tale. Metoda vine din cercetarea despre biofeedback. Studiile de mai jos privesc metoda, în general.
 Specificații:
 - În pachet: Casca NEUROS Focus, tabletă, peste 10 jocuri în Neuros Game și 20 de credite gratuite (2 sesiuni de 30 de minute)
+- Sesiuni: Se plătesc separat, în credite. Incluse: 20 de credite gratuite (2 sesiuni de 30 de minute), apoi 5 € / sesiune
 - Senzori: 3 senzori EEG
 - Aplicație: Neuros Game: peste 10 jocuri și meditații ghidate
 - Conectare: Bluetooth, la tabletă
@@ -79,6 +82,8 @@ Specificații:
 R: Tableta Android e inclusă în pachet, cu aplicația Neuros Game instalată. După ce primești coletul, ne scrii pe WhatsApp la +40 765 874 571 și îți configurăm contul împreună. Casca se leagă prin Bluetooth, iar tu te concentrezi pe joc.
 Î: Ce citește casca?
 R: Stări precum concentrarea și relaxarea, ca să te ajute să le recunoști. Gândurile rămân ale tale.
+Î: Sesiunile sunt incluse în preț?
+R: Nu toate. NEUROS Focus funcționează cu software, iar sesiunile de concentrare se plătesc separat, în credite. În preț intră casca, tableta și 20 de credite gratuite, adică 2 sesiuni de 30 de minute. După aceea, o sesiune costă 5 €, iar în pachete e mai ieftin.
 Î: Cât costă sesiunile?
 R: La activarea contului primești 20 de credite gratuite. O sesiune completă de concentrare, de 30 de minute, costă 10 credite, deci primele 2 sesiuni sunt incluse. După aceea, o sesiune costă 5 €, iar în pachete e mai ieftin: 20 de sesiuni la 100 €, 100 la 400 € (4 € pe sesiune), 300 la 950 € (aproximativ 3,17 € pe sesiune). După ce primești coletul, ne scrii pe WhatsApp la +40 765 874 571 și îți configurăm contul împreună.
 Î: Cum încep?
